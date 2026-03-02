@@ -15,6 +15,7 @@ import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.SortOrder
@@ -506,6 +507,28 @@ class JellyfinMediaRepository @Inject constructor(
                 ),
             )
             response.content.items
+        }
+
+    suspend fun getNextEpisode(episodeId: String): ApiResult<BaseItemDto?> =
+        withServerClient("getNextEpisode") { server, client ->
+            val userUuid = parseUuid(server.userId ?: "", "user")
+            val currentEpisode = getItemDetailsById(episodeId, "episode", server, client)
+            val seriesUuid = currentEpisode.seriesId ?: return@withServerClient null
+
+            val response = client.itemsApi.getItems(
+                userId = userUuid,
+                parentId = seriesUuid,
+                recursive = true,
+                includeItemTypes = listOf(BaseItemKind.EPISODE),
+                sortBy = listOf(ItemSortBy.PARENT_INDEX_NUMBER, ItemSortBy.INDEX_NUMBER),
+                sortOrder = listOf(SortOrder.ASCENDING),
+                fields = listOf(ItemFields.MEDIA_SOURCES),
+            )
+
+            val episodes = response.content.items
+            val currentIndex = episodes.indexOfFirst { it.id == currentEpisode.id }
+            if (currentIndex == -1) return@withServerClient null
+            episodes.getOrNull(currentIndex + 1)
         }
 
     private suspend fun getItemDetailsById(
