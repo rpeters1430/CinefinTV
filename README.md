@@ -77,13 +77,10 @@ See `docs/plans/2026-03-02-cinefintv-status.md` for a detailed status snapshot a
 
 ## Getting started
 
-```bash
 git clone <your-fork-or-repo-url>
 cd CinefinTV
 ./gradlew :app:assembleDebug
-```
-
-Then install/run via Android Studio or with ADB on a TV device/emulator.
+adb install app/build/outputs/apk/debug/app-debug.apk
 
 ---
 
