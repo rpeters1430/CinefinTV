@@ -22,6 +22,8 @@ data class AuthUiState(
     val connectionError: String? = null,
     val loginError: String? = null,
     val loginSucceeded: Boolean = false,
+    val isSessionChecked: Boolean = false,
+    val isSessionActive: Boolean = false,
 )
 
 @HiltViewModel
@@ -31,6 +33,20 @@ class AuthViewModel @Inject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+
+    init {
+        checkSavedSession()
+    }
+
+    private fun checkSavedSession() {
+        val isActive = authRepository.isUserAuthenticated()
+        _uiState.update {
+            it.copy(
+                isSessionChecked = true,
+                isSessionActive = isActive,
+            )
+        }
+    }
 
     fun updateServerUrlInput(value: String) {
         _uiState.update {

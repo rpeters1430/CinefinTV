@@ -37,6 +37,14 @@ fun CinefinTvNavGraph(
     val authViewModel: AuthViewModel = hiltViewModel()
     val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
 
+    LaunchedEffect(authUiState.isSessionChecked) {
+        if (authUiState.isSessionChecked && authUiState.isSessionActive) {
+            navController.navigate(NavRoutes.HOME) {
+                popUpTo(AuthRoutes.SERVER_CONNECTION) { inclusive = true }
+            }
+        }
+    }
+
     LaunchedEffect(authUiState.connectedServerUrl) {
         if (authUiState.connectedServerUrl != null &&
             navController.currentDestination?.route == AuthRoutes.SERVER_CONNECTION
