@@ -2,6 +2,7 @@ package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,12 +17,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,7 +33,6 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.rpeters.cinefintv.ui.components.TvMediaCard
-import com.rpeters.cinefintv.ui.navigation.NavRoutes
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -90,125 +89,138 @@ fun DetailScreen(
 
         is DetailUiState.Content -> {
             val item = state.item
-            var selectedSeasonIndex by remember(state.seasons) { mutableIntStateOf(0) }
-            val selectedSeason = state.seasons.getOrNull(selectedSeasonIndex)
-            val episodes = selectedSeason?.let { state.episodesBySeasonId[it.id].orEmpty() }.orEmpty()
+            val episodes = state.episodesBySeasonId.values.flatten()
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 48.dp, vertical = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp),
-            ) {
-                item {
-                    if (item.backdropUrl != null) {
-                        AsyncImage(
-                            model = item.backdropUrl,
-                            contentDescription = item.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(240.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                        )
-                    }
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Backdrop fills the entire screen background
+                if (item.backdropUrl != null) {
+                    AsyncImage(
+                        model = item.backdropUrl,
+                        contentDescription = item.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surface),
+                    )
                 }
 
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(
-                            text = item.title,
-                            style = MaterialTheme.typography.displaySmall,
-                        )
-                        if (!item.subtitle.isNullOrBlank()) {
-                            Text(
-                                text = item.subtitle,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        if (item.genres.isNotEmpty()) {
-                            Text(
-                                text = item.genres.joinToString(" • "),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Button(onClick = { onPlay(item.id) }) {
-                                Text("Play")
-                            }
-                            OutlinedButton(onClick = onBack) {
-                                Text("Back")
-                            }
-                        }
-                    }
-                }
+                // Gradient overlay darkening toward the bottom
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color.Transparent,
+                                    0.45f to Color.Black.copy(alpha = 0.55f),
+                                    0.75f to Color.Black.copy(alpha = 0.88f),
+                                    1.0f to Color.Black,
+                                ),
+                            ),
+                        ),
+                )
 
-                if (listOfNotNull(item.rating, item.year, item.runtime).isNotEmpty()) {
+                // Scrollable content overlaid on the backdrop
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 48.dp, vertical = 0.dp),
+                ) {
+                    // Spacer so backdrop shows prominently at the top
+                    item { Spacer(Modifier.fillParentMaxHeight(0.35f)) }
+
+                    // Title / metadata section
                     item {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(
-                                listOfNotNull(item.rating, item.year, item.runtime),
-                                key = { it },
-                            ) { metadata ->
-                                Surface(shape = RoundedCornerShape(999.dp)) {
-                                    Text(
-                                        text = metadata,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                    )
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            val metaParts = listOfNotNull(
+                                item.genres.joinToString("/").ifBlank { null },
+                                item.year,
+                                item.runtime,
+                            )
+                            if (!item.rating.isNullOrBlank() || metaParts.isNotEmpty()) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                                ) {
+                                    if (!item.rating.isNullOrBlank()) {
+                                        Surface(shape = RoundedCornerShape(4.dp)) {
+                                            Text(
+                                                text = item.rating,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                modifier = Modifier.padding(
+                                                    horizontal = 8.dp,
+                                                    vertical = 4.dp,
+                                                ),
+                                            )
+                                        }
+                                    }
+                                    if (metaParts.isNotEmpty()) {
+                                        Text(
+                                            text = metaParts.joinToString(" • "),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            }
+
+                            Text(
+                                text = item.title,
+                                style = MaterialTheme.typography.displaySmall,
+                            )
+
+                            if (!item.overview.isNullOrBlank()) {
+                                Text(
+                                    text = item.overview,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 3,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                Button(onClick = { onPlay(item.id) }) {
+                                    Text("Play")
+                                }
+                                OutlinedButton(onClick = onBack) {
+                                    Text("Back")
                                 }
                             }
                         }
                     }
-                }
 
-                if (!item.overview.isNullOrBlank()) {
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(
-                                text = "Synopsis",
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-                            Text(
-                                text = item.overview,
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                        }
-                    }
-                }
+                    item { Spacer(Modifier.height(24.dp)) }
 
-                if (state.seasons.isNotEmpty()) {
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                text = "Seasons",
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                items(state.seasons, key = { it.id }) { season ->
-                                    val isSelected = season.id == selectedSeason?.id
-                                    if (isSelected) {
-                                        Button(onClick = {}) {
-                                            Text(season.title)
-                                        }
-                                    } else {
-                                        OutlinedButton(
-                                            onClick = {
-                                                selectedSeasonIndex = state.seasons.indexOfFirst { it.id == season.id }
-                                                    .coerceAtLeast(0)
-                                            },
-                                        ) {
-                                            Text(season.title)
-                                        }
+                    // Season cards (Series detail) — each card navigates to that season's detail
+                    if (state.seasons.isNotEmpty()) {
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(
+                                    text = "Seasons",
+                                    style = MaterialTheme.typography.titleLarge,
+                                )
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    items(state.seasons, key = { it.id }) { season ->
+                                        TvMediaCard(
+                                            title = season.title,
+                                            imageUrl = season.imageUrl,
+                                            onClick = { onOpenItem(season.id) },
+                                        )
                                     }
                                 }
                             }
                         }
                     }
 
-                    if (episodes.isNotEmpty()) {
+                    // Episode cards (Season detail — seasons list is empty but episodes exist)
+                    if (state.seasons.isEmpty() && episodes.isNotEmpty()) {
                         item {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Text(
@@ -221,45 +233,38 @@ fun DetailScreen(
                                             title = episode.title,
                                             subtitle = episode.subtitle,
                                             imageUrl = episode.imageUrl,
-                                            onClick = { onNavigate(NavRoutes.player(episode.id)) },
+                                            onClick = { onOpenItem(episode.id) },
                                         )
                                     }
                                 }
                             }
                         }
-                    } else {
-                        item {
-                            Text(
-                                text = "No episodes available for this season.",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
                     }
-                }
 
-                if (state.related.isNotEmpty()) {
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                text = "More Like This",
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                items(state.related, key = { it.id }) { related ->
-                                    TvMediaCard(
-                                        title = related.title,
-                                        subtitle = related.subtitle,
-                                        imageUrl = related.imageUrl,
-                                        onClick = { onOpenItem(related.id) },
-                                    )
+                    // Related / More Like This
+                    if (state.related.isNotEmpty()) {
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(
+                                    text = "More Like This",
+                                    style = MaterialTheme.typography.titleLarge,
+                                )
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    items(state.related, key = { it.id }) { related ->
+                                        TvMediaCard(
+                                            title = related.title,
+                                            subtitle = related.subtitle,
+                                            imageUrl = related.imageUrl,
+                                            onClick = { onOpenItem(related.id) },
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                item { Spacer(modifier = Modifier.height(8.dp)) }
+                    item { Spacer(Modifier.height(32.dp)) }
+                }
             }
         }
     }

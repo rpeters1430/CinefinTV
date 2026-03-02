@@ -54,6 +54,7 @@ enum class RatingCategory(val displayName: String, val color: String) {
  */
 fun BaseItemDto.isMovie(): Boolean = type == org.jellyfin.sdk.model.api.BaseItemKind.MOVIE
 fun BaseItemDto.isSeries(): Boolean = type == org.jellyfin.sdk.model.api.BaseItemKind.SERIES
+fun BaseItemDto.isSeason(): Boolean = type == org.jellyfin.sdk.model.api.BaseItemKind.SEASON
 fun BaseItemDto.isEpisode(): Boolean = type == org.jellyfin.sdk.model.api.BaseItemKind.EPISODE
 fun BaseItemDto.isMusic(): Boolean = type == org.jellyfin.sdk.model.api.BaseItemKind.AUDIO
 fun BaseItemDto.isPhoto(): Boolean = type == org.jellyfin.sdk.model.api.BaseItemKind.PHOTO
