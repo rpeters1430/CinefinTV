@@ -1,7 +1,7 @@
 [versions]
 agp = "9.0.1"
 kotlin = "2.3.10"
-ksp = "2.3.10-1.0.31"
+ksp = "2.3.6"
 compileSdk = "36"
 minSdk = "26"
 targetSdk = "35"
@@ -61,7 +61,7 @@ okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor",
 
 # Jellyfin
 jellyfin-core = { group = "org.jellyfin.sdk", name = "jellyfin-core", version.ref = "jellyfin" }
-jellyfin-media3-ffmpeg = { group = "org.jellyfin.media3", name = "media3-ffmpeg-decoder", version = "1.0.0-beta.4" }
+jellyfin-media3-ffmpeg = { group = "org.jellyfin.media3", name = "media3-ffmpeg-decoder", version = "1.9.0+1" }
 
 # Image
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
