@@ -2,7 +2,7 @@ package com.rpeters.cinefintv.ui.screens.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.rpeters.cinefintv.data.repository.JellyfinSearchRepository
+import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.ui.screens.home.HomeCardModel
 import com.rpeters.cinefintv.utils.getDisplayTitle
@@ -29,7 +29,7 @@ data class SearchUiState(
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
-    private val searchRepository: JellyfinSearchRepository,
+    private val repositories: JellyfinRepositoryCoordinator,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
@@ -73,7 +73,7 @@ class SearchViewModel @Inject constructor(
 
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-        when (val result = searchRepository.searchItems(query, limit = 60)) {
+        when (val result = repositories.search.searchItems(query, limit = 60)) {
             is ApiResult.Success -> {
                 _uiState.update {
                     it.copy(
@@ -105,7 +105,7 @@ class SearchViewModel @Inject constructor(
             id = id,
             title = item.getDisplayTitle(),
             subtitle = subtitle,
-            imageUrl = null,
+            imageUrl = repositories.stream.getSearchCardImageUrl(item),
         )
     }
 }
