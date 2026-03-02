@@ -30,7 +30,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.Player
 import androidx.media3.common.MediaItem
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -96,6 +100,8 @@ fun PlayerScreen(
 
         else -> {
             val player = rememberExoPlayer(uiState.streamUrl.orEmpty(), viewModel.okHttpClient)
+            val lifecycleOwner = LocalLifecycleOwner.current
+            var hasAppliedInitialSeek by remember(uiState.itemId) { mutableStateOf(false) }
 
             // Playback state — polled every 500ms
             var isPlaying by remember { mutableStateOf(true) }
@@ -107,6 +113,61 @@ fun PlayerScreen(
                     position = player.currentPosition.coerceAtLeast(0L)
                     duration = player.duration.coerceAtLeast(0L)
                     delay(500L)
+                }
+            }
+
+            LaunchedEffect(player, isPlaying) {
+                while (true) {
+                    if (isPlaying) {
+                        viewModel.savePlaybackPosition(
+                            positionMs = player.currentPosition,
+                            durationMs = player.duration.coerceAtLeast(0L),
+                            isPaused = false,
+                        )
+                    }
+                    delay(POSITION_SAVE_INTERVAL_MS)
+                }
+            }
+
+            DisposableEffect(player, uiState.savedPlaybackPositionMs) {
+                val listener = object : Player.Listener {
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        if (
+                            playbackState == Player.STATE_READY &&
+                            !hasAppliedInitialSeek &&
+                            uiState.savedPlaybackPositionMs > 0L
+                        ) {
+                            player.seekTo(uiState.savedPlaybackPositionMs)
+                            hasAppliedInitialSeek = true
+                        }
+                    }
+                }
+                player.addListener(listener)
+
+                onDispose {
+                    player.removeListener(listener)
+                    viewModel.savePlaybackPosition(
+                        positionMs = player.currentPosition,
+                        durationMs = player.duration.coerceAtLeast(0L),
+                        isPaused = !player.isPlaying,
+                    )
+                }
+            }
+
+            DisposableEffect(lifecycleOwner, player) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                        viewModel.savePlaybackPosition(
+                            positionMs = player.currentPosition,
+                            durationMs = player.duration.coerceAtLeast(0L),
+                            isPaused = true,
+                        )
+                    }
+                }
+
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
                 }
             }
 
@@ -234,6 +295,8 @@ fun PlayerScreen(
         }
     }
 }
+
+private const val POSITION_SAVE_INTERVAL_MS = 10_000L
 
 @Composable
 private fun rememberExoPlayer(streamUrl: String, okHttpClient: OkHttpClient): ExoPlayer {
