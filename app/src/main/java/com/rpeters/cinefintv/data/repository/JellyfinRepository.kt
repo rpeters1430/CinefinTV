@@ -18,8 +18,9 @@ import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.data.repository.common.ErrorType
 import com.rpeters.cinefintv.data.session.JellyfinSessionManager
 import com.rpeters.cinefintv.data.utils.RepositoryUtils
-import com.rpeters.cinefintv.ui.utils.ErrorHandler
-import com.rpeters.cinefintv.ui.utils.OfflineManager
+// TODO Task 24: restore when UI layer is copied
+// import com.rpeters.cinefintv.ui.utils.ErrorHandler
+// import com.rpeters.cinefintv.ui.utils.OfflineManager
 import com.rpeters.cinefintv.utils.AppResources
 import com.rpeters.cinefintv.utils.SecureLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -165,21 +166,20 @@ class JellyfinRepository @Inject constructor(
     }
 
     private fun <T> handleException(e: Exception, defaultMessage: String = getString(R.string.error_occurred)): ApiResult.Error<T> {
-        val processedError = ErrorHandler.processError(e, operation = defaultMessage)
-
-        // Log error analytics
-        val currentServer = authRepository.getCurrentServer()
-        ErrorHandler.logErrorAnalytics(
-            error = processedError,
-            operation = defaultMessage,
-            userId = currentServer?.userId,
-            serverUrl = currentServer?.url,
-        )
+        // TODO Task 24: restore ErrorHandler.processError and ErrorHandler.logErrorAnalytics when UI layer is copied
+        // val processedError = ErrorHandler.processError(e, operation = defaultMessage)
+        // val currentServer = authRepository.getCurrentServer()
+        // ErrorHandler.logErrorAnalytics(
+        //     error = processedError,
+        //     operation = defaultMessage,
+        //     userId = currentServer?.userId,
+        //     serverUrl = currentServer?.url,
+        // )
 
         return ApiResult.Error(
-            message = processedError.userMessage,
+            message = e.message ?: defaultMessage,
             cause = e,
-            errorType = processedError.errorType,
+            errorType = RepositoryUtils.getErrorType(e),
         )
     }
 
@@ -1370,7 +1370,8 @@ class JellyfinRepository @Inject constructor(
     fun getDirectStreamUrl(itemId: String, container: String? = null): String? =
         streamRepository.getDirectStreamUrl(itemId, container)
 
-    fun getBestStreamUrl(itemId: String, offlineManager: OfflineManager, container: String? = null): String? {
+    // TODO Task 24: restore when UI layer is copied - OfflineManager parameter types replaced with Any?
+    fun getBestStreamUrl(itemId: String, offlineManager: Any?, container: String? = null): String? {
         // This would require BaseItemDto to determine offline availability
         // For now, fall back to regular stream URL
         return getStreamUrl(itemId)
@@ -1382,8 +1383,10 @@ class JellyfinRepository @Inject constructor(
      * @param offlineManager The offline manager to check connectivity
      * @return True if should operate in offline mode
      */
-    fun shouldUseOfflineMode(offlineManager: OfflineManager): Boolean {
-        return !offlineManager.isCurrentlyOnline()
+    // TODO Task 24: restore when UI layer is copied - OfflineManager parameter type replaced with Any?
+    fun shouldUseOfflineMode(offlineManager: Any?): Boolean {
+        // return !offlineManager.isCurrentlyOnline()
+        return false
     }
 
     /**
@@ -1393,12 +1396,14 @@ class JellyfinRepository @Inject constructor(
      * @param operation The operation that failed
      * @return User-friendly error message with offline context
      */
-    fun getOfflineContextualError(offlineManager: OfflineManager, operation: String): String {
-        return if (!offlineManager.isCurrentlyOnline()) {
-            offlineManager.getOfflineErrorMessage(operation)
-        } else {
-            "$operation failed. Please check your connection and try again."
-        }
+    // TODO Task 24: restore when UI layer is copied - OfflineManager parameter type replaced with Any?
+    fun getOfflineContextualError(offlineManager: Any?, operation: String): String {
+        // return if (!offlineManager.isCurrentlyOnline()) {
+        //     offlineManager.getOfflineErrorMessage(operation)
+        // } else {
+        //     "$operation failed. Please check your connection and try again."
+        // }
+        return "$operation failed. Please check your connection and try again."
     }
 
     // ✅ PHASE 4: Utility methods replaced with centralized utilities

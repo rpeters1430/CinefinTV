@@ -7,7 +7,8 @@ import com.rpeters.cinefintv.data.cache.JellyfinCache
 import com.rpeters.cinefintv.data.repository.JellyfinAuthRepository
 import com.rpeters.cinefintv.data.session.JellyfinSessionManager
 import com.rpeters.cinefintv.data.utils.RepositoryUtils
-import com.rpeters.cinefintv.ui.utils.RetryManager
+// TODO Task 24: restore when UI layer is copied
+// import com.rpeters.cinefintv.ui.utils.RetryManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -185,21 +186,32 @@ open class BaseJellyfinRepository @Inject constructor(
      * Executes a block with automatic retry logic and error handling.
      * This provides smart retry behavior for all repository operations.
      * ✅ STRICTMODE FIX: All network operations run on IO dispatcher
+     *
+     * TODO Task 24: restore RetryManager.withRetry call when UI layer is copied
      */
     protected suspend fun <T> executeWithRetry(
         operationName: String,
         maxAttempts: Int = 3,
         block: suspend () -> T,
     ): ApiResult<T> = withContext(Dispatchers.IO) {
-        return@withContext RetryManager.withRetry(maxAttempts, operationName) { attempt ->
-            try {
-                val result = executeWithTokenRefresh { block() }
-                ApiResult.Success(result)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                handleRepositoryException(e, operationName)
-            }
+        // TODO Task 24: replace with RetryManager.withRetry when UI layer is copied
+        // return@withContext RetryManager.withRetry(maxAttempts, operationName) { attempt ->
+        //     try {
+        //         val result = executeWithTokenRefresh { block() }
+        //         ApiResult.Success(result)
+        //     } catch (e: CancellationException) {
+        //         throw e
+        //     } catch (e: Exception) {
+        //         handleRepositoryException(e, operationName)
+        //     }
+        // }
+        return@withContext try {
+            val result = executeWithTokenRefresh { block() }
+            ApiResult.Success(result)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            handleRepositoryException(e, operationName)
         }
     }
 
@@ -207,6 +219,8 @@ open class BaseJellyfinRepository @Inject constructor(
      * Executes a block with both retry logic and circuit breaker protection.
      * Use this for critical operations that should be protected from cascading failures.
      * ✅ STRICTMODE FIX: All network operations run on IO dispatcher
+     *
+     * TODO Task 24: restore RetryManager.withRetryAndCircuitBreaker call when UI layer is copied
      */
     protected suspend fun <T> executeWithRetryAndCircuitBreaker(
         operationName: String,
@@ -214,15 +228,24 @@ open class BaseJellyfinRepository @Inject constructor(
         circuitBreakerKey: String = operationName,
         block: suspend () -> T,
     ): ApiResult<T> = withContext(Dispatchers.IO) {
-        return@withContext RetryManager.withRetryAndCircuitBreaker(maxAttempts, operationName, circuitBreakerKey) { attempt ->
-            try {
-                val result = executeWithTokenRefresh { block() }
-                ApiResult.Success(result)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                handleRepositoryException(e, operationName)
-            }
+        // TODO Task 24: replace with RetryManager.withRetryAndCircuitBreaker when UI layer is copied
+        // return@withContext RetryManager.withRetryAndCircuitBreaker(maxAttempts, operationName, circuitBreakerKey) { attempt ->
+        //     try {
+        //         val result = executeWithTokenRefresh { block() }
+        //         ApiResult.Success(result)
+        //     } catch (e: CancellationException) {
+        //         throw e
+        //     } catch (e: Exception) {
+        //         handleRepositoryException(e, operationName)
+        //     }
+        // }
+        return@withContext try {
+            val result = executeWithTokenRefresh { block() }
+            ApiResult.Success(result)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            handleRepositoryException(e, operationName)
         }
     }
 
