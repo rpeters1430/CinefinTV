@@ -1,112 +1,111 @@
 # CinefinTV Status Snapshot
 
-**Date:** 2026-03-02
-**Status:** Buildable, core navigation partially implemented
+**Date:** 2026-03-02 (updated)
+**Status:** MVP feature-complete, running on device, build clean
+
+---
 
 ## Current State
 
-The project is now in a materially better state than the earlier bootstrap snapshot.
+The app is fully functional end-to-end on a real Android TV device connected to a live Jellyfin server. All major navigation destinations are implemented and data-backed. The build is clean.
 
 ### Build and project health
 
-- `./gradlew :app:compileDebugKotlin` succeeds
-- `./gradlew :app:assembleDebug` succeeds
-- Android SDK path is configured locally for this checkout
-- Gradle memory is configured locally so dexing no longer fails with heap exhaustion
+- `./gradlew :app:assembleDebug` — BUILD SUCCESSFUL
+- Android SDK path and Gradle memory configured locally
+- No compile errors; pre-existing warnings only (Hilt annotation target, redundant Json builder)
 
-### Implemented app flow
+### Verified on device (screenshots 2026-03-01)
 
-These user-facing areas are now real and data-backed:
+- **ServerConnectionScreen** — URL input + Continue, dark theme, TV keyboard
+- **LoginScreen** — Username/password fields, Sign In / Back, TV keyboard
+- **HomeScreen** — "Continue Watching" + "Recently Added Movies" rows with real poster images from server
+- **DetailScreen** — Backdrop image, title, Play / Back buttons (lean but functional)
+- **Auth flow** — Full login round-trip working against a live Jellyfin server
 
-- Auth flow
-  - `ServerConnectionScreen`
-  - `LoginScreen`
-  - `AuthViewModel` wired into `JellyfinAuthRepository`
-- Home
-  - `HomeScreen`
-  - `HomeViewModel`
-  - real sections backed by `JellyfinMediaRepository`
-- Detail
-  - `DetailScreen`
-  - `DetailViewModel`
-  - item metadata + similar items
-- Library
-  - Movies
-  - TV Shows
-  - Stuff (home videos)
-  - all routed through a shared `LibraryScreen` / `LibraryViewModel`
-- Search
-  - `SearchScreen`
-  - `SearchViewModel`
-  - debounced search backed by `JellyfinSearchRepository`
-- Playback
-  - `player/{itemId}` now renders an in-app Media3 player screen
-  - old `VideoPlayerActivity` path has been removed from the manifest
+---
 
-### Supporting infrastructure now in place
+## Implemented screens and features
 
-- TV theme and navigation shell
-- Reusable `TvMediaCard`
-- Simple in-app Media3 playback path using `OkHttpDataSource` so existing auth/network interceptors still apply
-- Temporary `AudioService` stub remains only to satisfy the manifest
+### Auth
+- `ServerConnectionScreen` — server URL input, connection test
+- `LoginScreen` — username/password, error handling
+- `AuthViewModel` wired to `JellyfinAuthRepository`
+- **Saved-session restore** — `JellyfinServer` serialized to DataStore on login; `tryRestoreSession()` seeds in-memory state on cold start; app skips auth if session is already active
 
-## What Is Still Missing
+### Home
+- `HomeScreen` + `HomeViewModel`
+- Sections: Continue Watching, Recently Added Movies, Recently Added TV, Recently Added Videos, Libraries
+- Parallel async fetches; images via `getSeriesImageUrl`
 
-The app is no longer mostly placeholders, but several major areas are still unfinished:
+### Library
+- `LibraryScreen` + `LibraryViewModel`
+- Categories: Movies, TV Shows, Stuff (home videos)
+- Shared screen routed by `LibraryCategory` enum
 
-- `Music` route is still a placeholder
-- Audio playback UX is not implemented beyond the service stub
-- Player UI is minimal
-  - no custom TV controls
-  - no track selection
-  - no next-episode logic
-- Detail screen is a lean implementation, not the full planned TV detail experience
-  - no seasons/episodes browser
-  - no cast row
-  - no richer hero treatment
-- Auth is functional but still basic
-  - no quick connect
-  - no saved-session restore on startup
-- The copied data/DI layer still includes mobile-era and out-of-scope pieces that should be trimmed later
+### Detail
+- `DetailScreen` + `DetailViewModel`
+- Full-bleed backdrop, item title, Play and Back actions
+- Lean implementation — no cast row, no seasons browser yet
 
-## Practical Progress Mapping
+### Search
+- `SearchScreen` + `SearchViewModel`
+- Debounced query, `LazyVerticalGrid` of `TvMediaCard` results
 
-Against the 2026-03-01 implementation plan:
+### Music
+- `MusicScreen` + `MusicViewModel`
+- Albums / Artists tab toggle (TV Button row)
+- Grid → AlbumDetail (track list) → play track via `player/{itemId}`
+- `MusicViewType` enum; `MusicUiState`: Loading | Grid | AlbumDetail | Error(message, viewType)
+- Error retry preserves the tab that was active when the error occurred
 
-- Tasks 1-6: Implemented enough to be buildable and navigable
-- Auth tasks: Implemented in a practical, lighter-weight form
-- Home task: Implemented in a practical first pass
-- Library task: Implemented for Movies / TV Shows / Stuff
-- Detail task: Implemented in a lean first pass
-- Search task: Implemented in a practical first pass
-- Player task: Implemented as a minimal Compose/Media3 route
-- Music task: Not started
-- Audio player task: Not started beyond service stub
-- Final DI cleanup / scope cleanup: Not started
+### Player
+- `PlayerScreen` with fullscreen `PlayerView` (`useController = false`)
+- Custom TV controls overlay: Back + title (top), −10s / play-pause / +10s (center), progress bar + timestamp (bottom)
+- Controls auto-hide after 3 seconds; any button press resets the timer
+- Playback state (isPlaying, position, duration) polled every 500ms locally
+- `OkHttpDataSource` so auth interceptors apply to all streams
 
-## Recommended Next Work
+### Supporting infrastructure
+- `TvMaterialTheme` — dark color scheme, min 18sp body text
+- `NavigationDrawer` sidebar with 6 destinations
+- `TvMediaCard` reusable component
+- `JellyfinRepositoryCoordinator` — media, stream, search, auth, user repos
+- `AudioService` stub in manifest (no audio player UX yet)
 
-The highest-value next task for tomorrow is:
+---
 
-1. Implement the `Music` route so the last major top-level navigation item is no longer a placeholder.
+## Known issues observed in device testing
 
-After that, the best follow-up sequence is:
+| Issue | Severity | Notes |
+|---|---|---|
+| Library cards on Home navigate to DetailScreen showing "Movies" / "Shows" as title | Medium | Home adds a "Libraries" section; tapping a library card routes to `detail/{libraryId}` instead of the library list. Fix: route library cards to `LIBRARY_MOVIES` / `LIBRARY_TVSHOWS` etc., or remove the Libraries section from Home (accessible via nav drawer already). |
+| Raw filenames shown as card titles on Home | Low | Server metadata issue — `getDisplayTitle()` is correct; the Jellyfin server items don't have clean titles set. Not a code bug. |
+| Detail screen is minimal | Low | No cast row, no seasons/episodes browser, no synopsis. Functional but sparse. |
 
-2. Improve the player from "works" to "TV-usable" with custom controls and better playback state handling.
-3. Add saved-session bootstrap on app launch so successful auth persists across restarts.
-4. Trim copied mobile-only or out-of-scope modules from the data/DI layer.
+---
 
-## Suggested Starting Point For Tomorrow
+## What is still missing / future work
 
-If you want the cleanest continuation path tomorrow:
+- Fix library card routing from Home (navigate to library list, not detail)
+- Detail screen improvements: synopsis, cast row, seasons browser for TV shows
+- Audio player UX (AudioService is a stub; no playback UI)
+- Player improvements: track/subtitle selection, next-episode auto-play
+- Quick Connect auth option
+- DI/scope cleanup — copied data layer still includes mobile-era modules
+- Smoke test: Music route, Search, saved-session restore on cold relaunch
 
-- build `MusicViewModel`
-- build `MusicScreen`
-- wire `library/music` in `NavGraph`
-- reuse the existing card patterns from Home/Library
-- keep it simple at first: album/artist browsing before richer playback controls
+---
 
-## Notes
+## Commit history (this session)
 
-- The repo still has uncommitted changes, including documentation and the current implementation work.
-- `.claude/` is still untracked and unrelated to the app build.
+```
+d9c8b8f fix: add NonCancellable guard to clearServerState
+dfb6830 fix: persist server state to DataStore so saved-session restore works on cold start
+814d6ac feat: skip auth on launch if saved session is active
+1d39e3b feat: add TV player controls overlay with auto-hide and seek
+7d364f9 fix: remove shadow state cast and sync artist view type on back navigation
+6067a98 fix: correct music image URL method and error retry view type
+aa044ac feat: implement MusicViewModel and MusicScreen with album/artist browsing
+392544e feat: implement core navigation screens and Media3 playback
+```

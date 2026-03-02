@@ -10,7 +10,9 @@
       "Bash(xargs grep:*)",
       "Bash(find:*)",
       "Bash(grep:*)",
-      "Bash(xargs ls:*)"
+      "Bash(xargs ls:*)",
+      "Bash(./gradlew :app:compileDebugKotlin:*)",
+      "Bash(./gradlew :app:assembleDebug:*)"
     ]
   }
 }
