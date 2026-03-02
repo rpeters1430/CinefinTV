@@ -26,6 +26,21 @@ data class DetailHeroModel(
     val genres: List<String>,
     val imageUrl: String?,
     val backdropUrl: String?,
+    val rating: String?,
+    val year: String?,
+    val runtime: String?,
+)
+
+data class DetailSeasonModel(
+    val id: String,
+    val title: String,
+)
+
+data class DetailEpisodeModel(
+    val id: String,
+    val title: String,
+    val subtitle: String?,
+    val imageUrl: String?,
 )
 
 sealed class DetailUiState {
@@ -33,6 +48,8 @@ sealed class DetailUiState {
     data class Error(val message: String) : DetailUiState()
     data class Content(
         val item: DetailHeroModel,
+        val seasons: List<DetailSeasonModel>,
+        val episodesBySeasonId: Map<String, List<DetailEpisodeModel>>,
         val related: List<DetailHeroModel>,
     ) : DetailUiState()
 }
@@ -62,9 +79,12 @@ class DetailViewModel @Inject constructor(
             when (val detailResult = repositories.media.getItemDetails(itemId)) {
                 is ApiResult.Success -> {
                     val item = detailResult.data
+                    val seasonsAndEpisodes = loadSeasonsAndEpisodes(item)
                     val relatedItems = loadRelated(item)
                     _uiState.value = DetailUiState.Content(
                         item = toHeroModel(item),
+                        seasons = seasonsAndEpisodes.first,
+                        episodesBySeasonId = seasonsAndEpisodes.second,
                         related = relatedItems.map(this@DetailViewModel::toHeroModel),
                     )
                 }
@@ -74,6 +94,38 @@ class DetailViewModel @Inject constructor(
                 is ApiResult.Loading -> Unit
             }
         }
+    }
+
+    private suspend fun loadSeasonsAndEpisodes(item: BaseItemDto): Pair<List<DetailSeasonModel>, Map<String, List<DetailEpisodeModel>>> {
+        if (!item.isSeries()) {
+            return emptyList<DetailSeasonModel>() to emptyMap()
+        }
+
+        val seasonsResult = repositories.media.getSeasonsForSeries(item.id.toString())
+        val seasons = when (seasonsResult) {
+            is ApiResult.Success -> seasonsResult.data
+            else -> emptyList()
+        }
+
+        val seasonModels = seasons.map {
+            DetailSeasonModel(
+                id = it.id.toString(),
+                title = it.getDisplayTitle(),
+            )
+        }
+
+        val episodesBySeasonId = seasons.associate { season ->
+            val seasonId = season.id.toString()
+            val episodesResult = repositories.media.getEpisodesForSeason(seasonId)
+            val episodes = when (episodesResult) {
+                is ApiResult.Success -> episodesResult.data
+                else -> emptyList()
+            }
+
+            seasonId to episodes.map(this::toEpisodeModel)
+        }
+
+        return seasonModels to episodesBySeasonId
     }
 
     private suspend fun loadRelated(item: BaseItemDto): List<BaseItemDto> {
@@ -104,6 +156,23 @@ class DetailViewModel @Inject constructor(
             genres = item.genres.orEmpty().take(4),
             imageUrl = repositories.stream.getSeriesImageUrl(item),
             backdropUrl = repositories.stream.getBackdropUrl(item),
+            rating = item.officialRating?.takeIf { it.isNotBlank() },
+            year = item.getYear()?.toString(),
+            runtime = item.getFormattedDuration(),
+        )
+    }
+
+    private fun toEpisodeModel(item: BaseItemDto): DetailEpisodeModel {
+        val episodeNumber = item.indexNumber?.let { "E$it" }
+        val seasonEpisode = listOfNotNull(item.parentIndexNumber?.let { "S$it" }, episodeNumber)
+            .joinToString(" • ")
+            .ifBlank { null }
+
+        return DetailEpisodeModel(
+            id = item.id.toString(),
+            title = item.getDisplayTitle(),
+            subtitle = seasonEpisode,
+            imageUrl = repositories.stream.getSeriesImageUrl(item),
         )
     }
 }
