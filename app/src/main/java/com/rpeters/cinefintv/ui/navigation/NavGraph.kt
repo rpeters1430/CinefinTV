@@ -172,6 +172,11 @@ fun CinefinTvNavGraph(
                 onBack = {
                     navController.popBackStack()
                 },
+                onOpenItem = { nextItemId ->
+                    navController.navigate(NavRoutes.player(nextItemId)) {
+                        popUpTo(NavRoutes.PLAYER) { inclusive = true }
+                    }
+                },
             )
         }
     }

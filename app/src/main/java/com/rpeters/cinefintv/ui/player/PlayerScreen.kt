@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,10 +35,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.media3.common.Player
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.common.Tracks
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -49,12 +49,14 @@ import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Switch
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun PlayerScreen(
     onBack: () -> Unit,
+    onOpenItem: (String) -> Unit = {},
     viewModel: PlayerViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -104,7 +106,11 @@ fun PlayerScreen(
         else -> {
             val player = rememberExoPlayer(uiState.streamUrl.orEmpty(), viewModel.okHttpClient)
             val lifecycleOwner = LocalLifecycleOwner.current
+            val coroutineScope = rememberCoroutineScope()
             var hasAppliedInitialSeek by remember(uiState.itemId) { mutableStateOf(false) }
+            var isTrackPanelVisible by remember { mutableStateOf(false) }
+            var audioTracks by remember { mutableStateOf<List<TrackOption>>(emptyList()) }
+            var subtitleTracks by remember { mutableStateOf<List<TrackOption>>(emptyList()) }
 
             // Playback state — polled every 500ms
             var isPlaying by remember { mutableStateOf(true) }
@@ -143,6 +149,53 @@ fun PlayerScreen(
                             player.seekTo(uiState.savedPlaybackPositionMs)
                             hasAppliedInitialSeek = true
                         }
+
+                        if (
+                            playbackState == Player.STATE_ENDED &&
+                            uiState.isEpisodicContent &&
+                            uiState.autoPlayNextEpisode
+                        ) {
+                            viewModel.savePlaybackPosition(
+                                positionMs = player.currentPosition,
+                                durationMs = player.duration.coerceAtLeast(0L),
+                                isPaused = true,
+                            )
+
+                            player.pause()
+                            player.seekTo(0L)
+
+                            coroutineScope.launch {
+                                viewModel.getNextEpisodeId()?.let { onOpenItem(it) }
+                            }
+                        }
+                    }
+
+                    override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+                        audioTracks = tracks.groups
+                            .filter { it.type == C.TRACK_TYPE_AUDIO }
+                            .flatMap { group ->
+                                (0 until group.length).map { index ->
+                                    val format = group.getTrackFormat(index)
+                                    TrackOption(
+                                        id = "audio-${group.mediaTrackGroup.id ?: index}-$index",
+                                        label = format.label ?: format.language ?: "Audio ${index + 1}",
+                                        language = format.language,
+                                    )
+                                }
+                            }
+
+                        subtitleTracks = tracks.groups
+                            .filter { it.type == C.TRACK_TYPE_TEXT }
+                            .flatMap { group ->
+                                (0 until group.length).map { index ->
+                                    val format = group.getTrackFormat(index)
+                                    TrackOption(
+                                        id = "sub-${group.mediaTrackGroup.id ?: index}-$index",
+                                        label = format.label ?: format.language ?: "Subtitle ${index + 1}",
+                                        language = format.language,
+                                    )
+                                }
+                            }
                     }
                 }
                 player.addListener(listener)

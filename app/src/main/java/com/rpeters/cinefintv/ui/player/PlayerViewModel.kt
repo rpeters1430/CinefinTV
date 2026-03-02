@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.PlaybackPositionStore
+import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.utils.getDisplayTitle
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import org.jellyfin.sdk.model.api.BaseItemKind
 import java.util.UUID
 import javax.inject.Inject
 
@@ -30,6 +32,10 @@ data class PlayerUiState(
     val title: String = "Player",
     val streamUrl: String? = null,
     val savedPlaybackPositionMs: Long = 0L,
+    val isEpisodicContent: Boolean = false,
+    val autoPlayNextEpisode: Boolean = true,
+    val selectedAudioTrack: TrackOption? = null,
+    val selectedSubtitleTrack: TrackOption? = null,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
 )
@@ -38,6 +44,7 @@ data class PlayerUiState(
 class PlayerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repositories: JellyfinRepositoryCoordinator,
+    private val playbackPreferencesRepository: PlaybackPreferencesRepository,
     @ApplicationContext private val appContext: Context,
     val okHttpClient: OkHttpClient,
 ) : ViewModel() {
@@ -96,8 +103,35 @@ class PlayerViewModel @Inject constructor(
                 title = title,
                 streamUrl = streamUrl,
                 savedPlaybackPositionMs = savedPlaybackPositionMs,
+                isEpisodicContent = isEpisodicContent,
+                autoPlayNextEpisode = _uiState.value.autoPlayNextEpisode,
+                selectedAudioTrack = _uiState.value.selectedAudioTrack,
+                selectedSubtitleTrack = _uiState.value.selectedSubtitleTrack,
                 isLoading = false,
             )
+        }
+    }
+
+    fun setAutoPlayNextEpisode(enabled: Boolean) {
+        viewModelScope.launch {
+            playbackPreferencesRepository.setAutoPlayNextEpisode(enabled)
+            _uiState.value = _uiState.value.copy(autoPlayNextEpisode = enabled)
+        }
+    }
+
+    fun onAudioTrackSelected(track: TrackOption?) {
+        _uiState.value = _uiState.value.copy(selectedAudioTrack = track)
+    }
+
+    fun onSubtitleTrackSelected(track: TrackOption?) {
+        _uiState.value = _uiState.value.copy(selectedSubtitleTrack = track)
+    }
+
+    suspend fun getNextEpisodeId(): String? {
+        if (!uiState.value.isEpisodicContent || !uiState.value.autoPlayNextEpisode) return null
+        return when (val result = repositories.media.getNextEpisode(itemId)) {
+            is ApiResult.Success -> result.data?.id?.toString()
+            else -> null
         }
     }
 
