@@ -63,7 +63,7 @@ fun CinefinTvApp(isAuthenticated: Boolean = false) {
                 // drawerContent receives DrawerValue but NavigationDrawerScope.hasFocus
                 // drives the open/closed animation internally; we ignore the parameter.
                 NavigationDrawer(
-                    drawerContent = { _ ->
+                    drawerContent = { drawerValue ->
                         navItems.forEach { item ->
                             NavigationDrawerItem(
                                 selected = currentRoute == item.route,
