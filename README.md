@@ -61,7 +61,7 @@ See `docs/plans/2026-03-02-cinefintv-status.md` for a detailed status snapshot a
 - **Dependency Injection:** Hilt (KSP)
 - **Playback:** AndroidX Media3 + Jellyfin FFmpeg integration
 - **Networking:** Retrofit + OkHttp
-- **Persistence:** DataStore Preferences + Android Security Crypto
+- **Persistence:** DataStore Preferences + Android Keystore–backed encryption
 - **Architecture:** MVVM-style ViewModels with repository coordination
 
 ---
