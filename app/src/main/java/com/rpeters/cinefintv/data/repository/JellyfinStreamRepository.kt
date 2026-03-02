@@ -444,6 +444,31 @@ class JellyfinStreamRepository @Inject constructor(
     }
 
     /**
+     * Get image URL for search cards with a fallback order of Primary -> Backdrop -> Thumb.
+     */
+    fun getSearchCardImageUrl(item: BaseItemDto): String? {
+        val itemId = item.id?.toString() ?: return null
+
+        if (item.type == BaseItemKind.EPISODE && item.seriesId != null) {
+            return getImageUrl(item.seriesId.toString(), "Primary")
+        }
+
+        item.imageTags?.get(ImageType.PRIMARY)?.let { primaryTag ->
+            return getImageUrl(itemId, "Primary", primaryTag)
+        }
+
+        item.backdropImageTags?.firstOrNull()?.let { backdropTag ->
+            return getImageUrl(itemId, "Backdrop", backdropTag)
+        }
+
+        item.imageTags?.get(ImageType.THUMB)?.let { thumbTag ->
+            return getImageUrl(itemId, "Thumb", thumbTag)
+        }
+
+        return null
+    }
+
+    /**
      * Get backdrop URL for an item
      */
     fun getBackdropUrl(item: BaseItemDto): String? {
