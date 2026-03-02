@@ -9,6 +9,7 @@ import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.isMovie
+import com.rpeters.cinefintv.utils.isSeason
 import com.rpeters.cinefintv.utils.isSeries
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,7 @@ data class DetailHeroModel(
 data class DetailSeasonModel(
     val id: String,
     val title: String,
+    val imageUrl: String? = null,
 )
 
 data class DetailEpisodeModel(
@@ -97,35 +99,33 @@ class DetailViewModel @Inject constructor(
     }
 
     private suspend fun loadSeasonsAndEpisodes(item: BaseItemDto): Pair<List<DetailSeasonModel>, Map<String, List<DetailEpisodeModel>>> {
-        if (!item.isSeries()) {
-            return emptyList<DetailSeasonModel>() to emptyMap()
-        }
-
-        val seasonsResult = repositories.media.getSeasonsForSeries(item.id.toString())
-        val seasons = when (seasonsResult) {
-            is ApiResult.Success -> seasonsResult.data
-            else -> emptyList()
-        }
-
-        val seasonModels = seasons.map {
-            DetailSeasonModel(
-                id = it.id.toString(),
-                title = it.getDisplayTitle(),
-            )
-        }
-
-        val episodesBySeasonId = seasons.associate { season ->
-            val seasonId = season.id.toString()
-            val episodesResult = repositories.media.getEpisodesForSeason(seasonId)
-            val episodes = when (episodesResult) {
-                is ApiResult.Success -> episodesResult.data
-                else -> emptyList()
+        return when {
+            item.isSeries() -> {
+                val seasonsResult = repositories.media.getSeasonsForSeries(item.id.toString())
+                val seasons = when (seasonsResult) {
+                    is ApiResult.Success -> seasonsResult.data
+                    else -> emptyList()
+                }
+                val seasonModels = seasons.map {
+                    DetailSeasonModel(
+                        id = it.id.toString(),
+                        title = it.getDisplayTitle(),
+                        imageUrl = repositories.stream.getSeriesImageUrl(it),
+                    )
+                }
+                // Episodes are loaded on demand when navigating to a Season's detail screen
+                seasonModels to emptyMap()
             }
-
-            seasonId to episodes.map(this::toEpisodeModel)
+            item.isSeason() -> {
+                val episodesResult = repositories.media.getEpisodesForSeason(item.id.toString())
+                val episodes = when (episodesResult) {
+                    is ApiResult.Success -> episodesResult.data.map(::toEpisodeModel)
+                    else -> emptyList()
+                }
+                emptyList<DetailSeasonModel>() to mapOf(item.id.toString() to episodes)
+            }
+            else -> emptyList<DetailSeasonModel>() to emptyMap()
         }
-
-        return seasonModels to episodesBySeasonId
     }
 
     private suspend fun loadRelated(item: BaseItemDto): List<BaseItemDto> {
