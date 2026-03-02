@@ -61,14 +61,12 @@ class HomeViewModel @Inject constructor(
             val moviesDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12) }
             val showsDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.SERIES, limit = 12) }
             val videosDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12) }
-            val librariesDeferred = async { repositories.media.getUserLibraries() }
 
             val results: List<ApiResult<List<BaseItemDto>>> = awaitAll(
                 continueDeferred,
                 moviesDeferred,
                 showsDeferred,
                 videosDeferred,
-                librariesDeferred,
             )
 
             val sections = buildList {
@@ -76,7 +74,6 @@ class HomeViewModel @Inject constructor(
                 addSection("Recently Added Movies", results[1])
                 addSection("Recently Added TV", results[2])
                 addSection("Recently Added Videos", results[3])
-                addSection("Libraries", results[4])
             }
 
             val featured = sections.firstNotNullOfOrNull { it.items.firstOrNull() }
