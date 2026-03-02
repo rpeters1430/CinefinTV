@@ -39,12 +39,14 @@ class AuthViewModel @Inject constructor(
     }
 
     private fun checkSavedSession() {
-        val isActive = authRepository.isUserAuthenticated()
-        _uiState.update {
-            it.copy(
-                isSessionChecked = true,
-                isSessionActive = isActive,
-            )
+        viewModelScope.launch {
+            val isActive = authRepository.tryRestoreSession()
+            _uiState.update {
+                it.copy(
+                    isSessionChecked = true,
+                    isSessionActive = isActive,
+                )
+            }
         }
     }
 

@@ -50,6 +50,7 @@ class SecureCredentialManager @Inject constructor(
         private const val KEY_ROTATION_INTERVAL_MS = 30L * 24 * 60 * 60 * 1000 // 30 days
         private const val DATASTORE_NAME = "secure_credentials"
         private const val USER_AUTH_VALIDITY_WINDOW_SECONDS = 300
+        private const val SERVER_STATE_KEY = "last_server_state"
     }
 
     // CRITICAL FIX: DataStore needs a CoroutineScope to properly persist data
@@ -522,6 +523,42 @@ class SecureCredentialManager @Inject constructor(
 
     suspend fun clearCredentials() {
         clearAllPasswords()
+    }
+
+    suspend fun saveServerState(server: JellyfinServer) {
+        try {
+            val json = kotlinx.serialization.json.Json.encodeToString(server)
+            withContext(NonCancellable + Dispatchers.IO) {
+                secureCredentialsDataStore.edit { prefs ->
+                    prefs[stringPreferencesKey(SERVER_STATE_KEY)] = json
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "saveServerState: failed to save server state", e)
+        }
+    }
+
+    suspend fun loadServerState(): JellyfinServer? {
+        return try {
+            val prefs = secureCredentialsDataStore.data.first()
+            val json = prefs[stringPreferencesKey(SERVER_STATE_KEY)] ?: return null
+            kotlinx.serialization.json.Json {
+                ignoreUnknownKeys = true
+            }.decodeFromString<JellyfinServer>(json)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "loadServerState: failed to load server state", e)
+            null
+        }
+    }
+
+    suspend fun clearServerState() {
+        secureCredentialsDataStore.edit { prefs ->
+            prefs.remove(stringPreferencesKey(SERVER_STATE_KEY))
+        }
     }
 
     private suspend fun exportPlaintextCredentials(): List<StoredCredential> = withContext(Dispatchers.IO) {

@@ -234,6 +234,21 @@ class JellyfinAuthRepository @Inject constructor(
         _tokenState.update { server?.accessToken }
     }
 
+    suspend fun tryRestoreSession(): Boolean {
+        return try {
+            val savedServer = secureCredentialManager.loadServerState() ?: return false
+            if (savedServer.accessToken.isNullOrBlank() || savedServer.url.isBlank()) return false
+            seedCurrentServer(savedServer)
+            Log.d(TAG, "tryRestoreSession: Restored session for ${savedServer.url}")
+            true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "tryRestoreSession: failed to restore session", e)
+            false
+        }
+    }
+
     suspend fun logout() {
         authMutex.withLock {
             val server = _currentServer.value
@@ -250,6 +265,11 @@ class JellyfinAuthRepository @Inject constructor(
             saveNewToken(null)
             _currentServer.update { null }
             _isConnected.update { false }
+            try {
+                secureCredentialManager.clearServerState()
+            } catch (e: Exception) {
+                Log.w(TAG, "logout: failed to clear server state", e)
+            }
             Log.d(TAG, "logout: User logged out successfully")
         }
     }
@@ -283,6 +303,11 @@ class JellyfinAuthRepository @Inject constructor(
         _currentServer.update { server }
         _isConnected.update { true }
         saveNewToken(authResult.accessToken)
+        try {
+            secureCredentialManager.saveServerState(server)
+        } catch (e: Exception) {
+            Log.w(TAG, "persistAuthenticationState: failed to persist server state", e)
+        }
     }
 
     suspend fun initiateQuickConnect(serverUrl: String): ApiResult<QuickConnectResult> {
