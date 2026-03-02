@@ -1,0 +1,51 @@
+{
+  "dependencyDashboard": true,
+  "enabledManagers": ["gradle"],
+  "packageRules": [
+    {
+      "description": "Enable pre-releases for AndroidX libraries",
+      "matchDatasources": ["maven"],
+      "matchPackageNames": [
+        "/^androidx\\./",
+        "/^androidx\\..*/",
+        "androidx.compose:compose-bom"
+      ],
+      "ignoreUnstable": false,
+      "rangeStrategy": "bump",
+      "versioning": "loose"
+    },
+    {
+      "description": "Enable pre-releases for other Android development libraries",
+      "matchDatasources": ["maven"],
+      "matchPackageNames": [
+        "com.google.android.material:material",
+        "/^com\\.google\\.accompanist\\./",
+        "/^io\\.coil-kt\\./",
+        "/^com\\.squareup\\.okhttp3\\./",
+        "/^com\\.squareup\\.retrofit2\\./",
+        "/^org\\.jetbrains\\.kotlinx\\./",
+        "/^com\\.google\\.dagger\\./",
+        "/^androidx\\.hilt\\./",
+        "/^com\\.android\\.tools\\.build\\./",
+        "com.android.tools.build:gradle"
+      ],
+      "ignoreUnstable": false,
+      "rangeStrategy": "bump",
+      "versioning": "loose"
+    },
+    {
+      "description": "Keep Kotlin and KSP stable (they must match)",
+      "matchDatasources": ["maven"],
+      "matchPackageNames": [
+        "/^org\\.jetbrains\\.kotlin\\./",
+        "/^com\\.google\\.devtools\\.ksp/"
+      ],
+      "ignoreUnstable": true,
+      "rangeStrategy": "bump",
+      "versioning": "gradle"
+    }
+  ],
+  "labels": ["dependencies"],
+  "automerge": false,
+  "rebaseWhen": "behind-base-branch"
+}
