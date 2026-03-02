@@ -28,7 +28,15 @@ fun LoginScreen(
     serverUrl: String,
     isAuthenticating: Boolean,
     errorMessage: String?,
+    isQuickConnectEnabled: Boolean,
+    isQuickConnectLoading: Boolean,
+    quickConnectCode: String?,
+    quickConnectPollStatus: String?,
+    quickConnectError: String?,
     onLogin: (username: String, password: String) -> Unit,
+    onUseQuickConnect: () -> Unit,
+    onGenerateNewCode: () -> Unit,
+    onLeaveScreen: () -> Unit,
     onBack: () -> Unit,
 ) {
     var username by rememberSaveable { mutableStateOf("") }
@@ -89,6 +97,47 @@ fun LoginScreen(
             OutlinedButton(onClick = onBack) {
                 Text("Back")
             }
+        }
+
+        if (isQuickConnectEnabled) {
+            Button(
+                onClick = onUseQuickConnect,
+                enabled = !isQuickConnectLoading && !isAuthenticating,
+            ) {
+                Text(if (isQuickConnectLoading) "Generating Code..." else "Use Quick Connect")
+            }
+        }
+
+        if (quickConnectCode != null) {
+            Text(
+                text = "Quick Connect code: $quickConnectCode",
+                style = MaterialTheme.typography.titleLarge,
+            )
+        }
+
+        if (quickConnectPollStatus != null) {
+            Text(
+                text = quickConnectPollStatus,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (quickConnectError != null) {
+            Text(
+                text = quickConnectError,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            OutlinedButton(onClick = onGenerateNewCode) {
+                Text("Generate new code")
+            }
+        }
+    }
+
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            onLeaveScreen()
         }
     }
 }
