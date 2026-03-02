@@ -556,8 +556,10 @@ class SecureCredentialManager @Inject constructor(
     }
 
     suspend fun clearServerState() {
-        secureCredentialsDataStore.edit { prefs ->
-            prefs.remove(stringPreferencesKey(SERVER_STATE_KEY))
+        withContext(NonCancellable + Dispatchers.IO) {
+            secureCredentialsDataStore.edit { prefs ->
+                prefs.remove(stringPreferencesKey(SERVER_STATE_KEY))
+            }
         }
     }
 
