@@ -3,6 +3,7 @@ package com.rpeters.cinefintv.di
 import android.content.Context
 import coil3.ImageLoader
 import com.rpeters.cinefintv.BuildConfig
+import com.rpeters.cinefintv.OptInAppExperimentalApis
 import com.rpeters.cinefintv.data.DeviceCapabilities
 import com.rpeters.cinefintv.data.cache.JellyfinCache
 import com.rpeters.cinefintv.data.playback.EnhancedPlaybackManager
@@ -118,6 +119,7 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @OptIn(OptInAppExperimentalApis::class)
     fun provideImageLoader(
         @ApplicationContext context: Context,
         okHttpClient: OkHttpClient,

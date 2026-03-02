@@ -12,6 +12,49 @@
 
 ---
 
+## Status Update (2026-03-02)
+
+This plan started as a greenfield build checklist. The repo is now past the bootstrap phase and has a buildable APK with several real screens, so the next work should follow the current codebase rather than blindly continuing from Task 1.
+
+### What already exists
+
+- Root and app Gradle files
+- Version catalog
+- Android TV manifest and resource scaffold
+- `CinefinTvApplication` and `MainActivity`
+- TV theme files
+- `CinefinTvApp`, `NavRoutes`, and a real `NavGraph`
+- A substantial copied `data/`, `core/`, `di/`, and `network/` layer
+- Working auth flow
+- Real Home, Detail, Library (Movies / TV Shows / Stuff), Search, and Compose player screens
+
+### What is still missing
+
+- `Music` route and music browsing UX
+- Custom TV playback controls and richer player behavior
+- Audio player UX beyond the existing service stub
+- Saved-session bootstrap / startup auth restoration
+- Scope cleanup for copied mobile-era modules
+
+### Current blockers / unfinished areas
+
+1. The `Music` nav route is still a placeholder.
+2. The current Compose player is functional but minimal and not yet TV-polished.
+3. The copied data layer still includes modules that were originally marked as out-of-scope for the TV MVP and should be trimmed after the main nav is complete.
+
+### Revised immediate execution order
+
+Treat the next work as a feature-completion pass on top of the now-stable build:
+
+1. Implement the `Music` route.
+2. Improve playback controls and player behavior.
+3. Add saved-session restore on launch.
+4. Trim copied mobile-only modules and finish DI cleanup.
+
+See `docs/plans/2026-03-02-cinefintv-status.md` for the current status snapshot.
+
+---
+
 ## Phase 1: Project Scaffold
 
 ### Task 1: Create Gradle build files

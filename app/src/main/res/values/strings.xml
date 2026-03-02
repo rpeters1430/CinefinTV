@@ -1,4 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">CinefinTV</string>
+    <string name="unknown">Unknown</string>
+    <string name="unknown_error">Unknown error</string>
+    <string name="error_occurred">An error occurred</string>
+
+    <string name="filter_all_movies">All Movies</string>
+    <string name="filter_all_home_videos">All Home Videos</string>
+    <string name="filter_favorites">Favorites</string>
+    <string name="filter_unwatched">Unwatched</string>
+    <string name="filter_watched">Watched</string>
+    <string name="filter_recent">Recent</string>
+    <string name="filter_recent_releases">Recent Releases</string>
+    <string name="filter_high_rated">High Rated</string>
+    <string name="filter_action">Action</string>
+    <string name="filter_comedy">Comedy</string>
+    <string name="filter_drama">Drama</string>
+    <string name="filter_sci_fi">Sci-Fi</string>
+
+    <string name="sort_title_asc">Title (A-Z)</string>
+    <string name="sort_title_desc">Title (Z-A)</string>
+    <string name="sort_date_added_desc">Date Added (Newest)</string>
+    <string name="sort_date_added_asc">Date Added (Oldest)</string>
+    <string name="sort_date_created_desc">Date Created (Newest)</string>
+    <string name="sort_date_created_asc">Date Created (Oldest)</string>
+    <string name="sort_year_desc">Year (Newest)</string>
+    <string name="sort_rating_desc">Rating (Highest)</string>
+    <string name="sort_runtime_desc">Runtime (Longest)</string>
 </resources>

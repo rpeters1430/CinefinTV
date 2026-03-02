@@ -34,14 +34,6 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".ui.player.VideoPlayerActivity"
-            android:exported="false"
-            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize"
-            android:launchMode="singleTop"
-            android:screenOrientation="landscape"
-            android:supportsPictureInPicture="false" />
-
         <service
             android:name=".ui.player.audio.AudioService"
             android:exported="false"

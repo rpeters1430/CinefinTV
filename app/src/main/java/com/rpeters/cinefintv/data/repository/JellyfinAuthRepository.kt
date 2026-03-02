@@ -12,6 +12,8 @@ import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.data.utils.RepositoryUtils
 import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.utils.normalizeServerUrl
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -80,8 +82,10 @@ class JellyfinAuthRepository @Inject constructor(
     suspend fun testServerConnection(serverUrl: String): ApiResult<PublicSystemInfo> {
         return try {
             SecureLogger.d(TAG, "testServerConnection: Attempting to connect to server")
-            val client = createApiClient(serverUrl)
-            val response = client.systemApi.getPublicSystemInfo()
+            val response = withContext(Dispatchers.IO) {
+                val client = createApiClient(serverUrl)
+                client.systemApi.getPublicSystemInfo()
+            }
             SecureLogger.d(TAG, "testServerConnection: Successfully connected to server")
             ApiResult.Success(response.content)
         } catch (e: Exception) {
@@ -112,13 +116,15 @@ class JellyfinAuthRepository @Inject constructor(
             SecureLogger.d(TAG, "authenticateUser: Attempting authentication")
             val normalizedServerUrl = normalizeServerUrl(serverUrl)
 
-            val client = createApiClient(serverUrl)
-            val response = client.userApi.authenticateUserByName(
-                AuthenticateUserByName(
-                    username = username,
-                    pw = password,
-                ),
-            )
+            val response = withContext(Dispatchers.IO) {
+                val client = createApiClient(serverUrl)
+                client.userApi.authenticateUserByName(
+                    AuthenticateUserByName(
+                        username = username,
+                        pw = password,
+                    ),
+                )
+            }
 
             val authResult = response.content
             SecureLogger.d(TAG, "authenticateUser: Authentication successful")
@@ -281,8 +287,10 @@ class JellyfinAuthRepository @Inject constructor(
 
     suspend fun initiateQuickConnect(serverUrl: String): ApiResult<QuickConnectResult> {
         return try {
-            val client = createApiClient(serverUrl)
-            val response = client.quickConnectApi.initiateQuickConnect()
+            val response = withContext(Dispatchers.IO) {
+                val client = createApiClient(serverUrl)
+                client.quickConnectApi.initiateQuickConnect()
+            }
             ApiResult.Success(response.content.toDomainQuickConnectResult())
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
@@ -294,8 +302,10 @@ class JellyfinAuthRepository @Inject constructor(
 
     suspend fun isQuickConnectEnabled(serverUrl: String): ApiResult<Boolean> {
         return try {
-            val client = createApiClient(serverUrl)
-            val response = client.quickConnectApi.getQuickConnectEnabled()
+            val response = withContext(Dispatchers.IO) {
+                val client = createApiClient(serverUrl)
+                client.quickConnectApi.getQuickConnectEnabled()
+            }
             ApiResult.Success(response.content)
         } catch (e: InvalidStatusException) {
             // Disabled quick connect may return unauthorized on some server versions.
@@ -317,8 +327,10 @@ class JellyfinAuthRepository @Inject constructor(
 
     suspend fun getQuickConnectState(serverUrl: String, secret: String): ApiResult<QuickConnectState> {
         return try {
-            val client = createApiClient(serverUrl)
-            val response = client.quickConnectApi.getQuickConnectState(secret)
+            val response = withContext(Dispatchers.IO) {
+                val client = createApiClient(serverUrl)
+                client.quickConnectApi.getQuickConnectState(secret)
+            }
             val state = if (response.content.authenticated) {
                 QuickConnectState(state = "Approved")
             } else {
@@ -344,10 +356,12 @@ class JellyfinAuthRepository @Inject constructor(
         return authMutex.withLock {
             _isAuthenticating.update { true }
             try {
-                val client = createApiClient(serverUrl)
-                val response = client.userApi.authenticateWithQuickConnect(
-                    org.jellyfin.sdk.model.api.QuickConnectDto(secret = secret),
-                )
+                val response = withContext(Dispatchers.IO) {
+                    val client = createApiClient(serverUrl)
+                    client.userApi.authenticateWithQuickConnect(
+                        org.jellyfin.sdk.model.api.QuickConnectDto(secret = secret),
+                    )
+                }
                 val authResult = response.content
 
                 persistAuthenticationState(

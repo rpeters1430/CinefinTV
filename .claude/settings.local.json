@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(gradle:*)",
+      "WebSearch",
+      "Bash(cp:*)",
+      "Bash(xargs grep:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(xargs ls:*)"
+    ]
+  }
+}

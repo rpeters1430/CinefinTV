@@ -1,0 +1,129 @@
+package com.rpeters.cinefintv.ui.screens.home
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
+import com.rpeters.cinefintv.data.repository.common.ApiResult
+import com.rpeters.cinefintv.utils.canResume
+import com.rpeters.cinefintv.utils.getDisplayTitle
+import com.rpeters.cinefintv.utils.getFormattedDuration
+import com.rpeters.cinefintv.utils.getWatchedPercentage
+import com.rpeters.cinefintv.utils.getYear
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.BaseItemKind
+import javax.inject.Inject
+
+data class HomeCardModel(
+    val id: String,
+    val title: String,
+    val subtitle: String?,
+    val imageUrl: String?,
+)
+
+data class HomeSectionModel(
+    val title: String,
+    val items: List<HomeCardModel>,
+)
+
+sealed class HomeUiState {
+    data object Loading : HomeUiState()
+    data class Error(val message: String) : HomeUiState()
+    data class Content(
+        val featured: HomeCardModel?,
+        val sections: List<HomeSectionModel>,
+    ) : HomeUiState()
+}
+
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val repositories: JellyfinRepositoryCoordinator,
+) : ViewModel() {
+    private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
+    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    init {
+        refresh()
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _uiState.value = HomeUiState.Loading
+
+            val continueDeferred = async { repositories.media.getContinueWatching(limit = 12) }
+            val moviesDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12) }
+            val showsDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.SERIES, limit = 12) }
+            val videosDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12) }
+            val librariesDeferred = async { repositories.media.getUserLibraries() }
+
+            val results: List<ApiResult<List<BaseItemDto>>> = awaitAll(
+                continueDeferred,
+                moviesDeferred,
+                showsDeferred,
+                videosDeferred,
+                librariesDeferred,
+            )
+
+            val sections = buildList {
+                addSection("Continue Watching", results[0])
+                addSection("Recently Added Movies", results[1])
+                addSection("Recently Added TV", results[2])
+                addSection("Recently Added Videos", results[3])
+                addSection("Libraries", results[4])
+            }
+
+            val featured = sections.firstNotNullOfOrNull { it.items.firstOrNull() }
+
+            if (sections.isEmpty()) {
+                val errorMessage = results.filterIsInstance<ApiResult.Error<List<BaseItemDto>>>()
+                    .firstOrNull()
+                    ?.message
+                    ?: "No content is available yet."
+                _uiState.value = HomeUiState.Error(errorMessage)
+            } else {
+                _uiState.value = HomeUiState.Content(
+                    featured = featured,
+                    sections = sections,
+                )
+            }
+        }
+    }
+
+    private fun MutableList<HomeSectionModel>.addSection(
+        title: String,
+        result: ApiResult<List<BaseItemDto>>,
+    ) {
+        if (result is ApiResult.Success && result.data.isNotEmpty()) {
+            add(
+                HomeSectionModel(
+                    title = title,
+                    items = result.data.mapNotNull(::toCardModel),
+                ),
+            )
+        }
+    }
+
+    private fun toCardModel(item: BaseItemDto): HomeCardModel? {
+        val id = item.id.toString()
+        val subtitle = when {
+            item.canResume() -> "Resume ${item.getWatchedPercentage().toInt()}%"
+            item.getYear() != null -> item.getYear().toString()
+            item.getFormattedDuration() != null -> item.getFormattedDuration()
+            else -> item.type.toString().replace('_', ' ')
+        }
+
+        return HomeCardModel(
+            id = id,
+            title = item.getDisplayTitle(),
+            subtitle = subtitle,
+            imageUrl = repositories.stream.getSeriesImageUrl(item),
+        )
+    }
+}
