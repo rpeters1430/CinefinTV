@@ -105,6 +105,9 @@ fun CinefinTvNavGraph(
                 onOpenItem = { itemId ->
                     navController.navigate(NavRoutes.detail(itemId))
                 },
+                onPlayItem = { itemId ->
+                    navController.navigate(NavRoutes.player(itemId))
+                },
             )
         }
         composable(NavRoutes.SEARCH) {
@@ -144,6 +147,9 @@ fun CinefinTvNavGraph(
                     navController.navigate(NavRoutes.player(itemId))
                 },
             )
+        }
+        composable(NavRoutes.SETTINGS) {
+            PlaceholderScreen("Settings")
         }
         composable(
             NavRoutes.DETAIL,

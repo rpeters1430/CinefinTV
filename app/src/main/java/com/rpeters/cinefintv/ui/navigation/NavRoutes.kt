@@ -7,6 +7,7 @@ object NavRoutes {
     const val LIBRARY_TVSHOWS = "library/tvshows"
     const val LIBRARY_STUFF = "library/stuff"
     const val LIBRARY_MUSIC = "library/music"
+    const val SETTINGS = "settings"
     const val DETAIL = "detail/{itemId}"
     const val PLAYER = "player/{itemId}"
 

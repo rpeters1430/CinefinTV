@@ -2,44 +2,39 @@ package com.rpeters.cinefintv.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.NavigationDrawer
-import androidx.tv.material3.NavigationDrawerItem
+import androidx.tv.material3.Tab
+import androidx.tv.material3.TabRow
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.navigation.AuthRoutes
 import com.rpeters.cinefintv.ui.navigation.CinefinTvNavGraph
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 
-private data class NavItem(
+private data class NavTabItem(
     val label: String,
-    val icon: ImageVector,
     val route: String,
 )
 
-private val navItems = listOf(
-    NavItem("Home", Icons.Default.Home, NavRoutes.HOME),
-    NavItem("Search", Icons.Default.Search, NavRoutes.SEARCH),
-    NavItem("Movies", Icons.Default.Movie, NavRoutes.LIBRARY_MOVIES),
-    NavItem("TV Shows", Icons.Default.Tv, NavRoutes.LIBRARY_TVSHOWS),
-    NavItem("Stuff", Icons.Default.VideoLibrary, NavRoutes.LIBRARY_STUFF),
-    NavItem("Music", Icons.Default.MusicNote, NavRoutes.LIBRARY_MUSIC),
+private val navTabItems = listOf(
+    NavTabItem("Search", NavRoutes.SEARCH),
+    NavTabItem("Home", NavRoutes.HOME),
+    NavTabItem("TV Shows", NavRoutes.LIBRARY_TVSHOWS),
+    NavTabItem("Movies", NavRoutes.LIBRARY_MOVIES),
+    NavTabItem("Music", NavRoutes.LIBRARY_MUSIC),
+    NavTabItem("Stuff", NavRoutes.LIBRARY_STUFF),
+    NavTabItem("Settings", NavRoutes.SETTINGS),
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -54,19 +49,32 @@ fun CinefinTvApp(isAuthenticated: Boolean = false) {
             !currentRoute.startsWith("auth/") &&
             !currentRoute.startsWith("player/")
 
+        val selectedTabIndex = navTabItems.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            if (showNav) {
-                // drawerContent receives DrawerValue but NavigationDrawerScope.hasFocus
-                // drives the open/closed animation internally; we ignore the parameter.
-                NavigationDrawer(
-                    drawerContent = { drawerValue ->
-                        navItems.forEach { item ->
-                            NavigationDrawerItem(
-                                selected = currentRoute == item.route,
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (showNav) {
+                    TabRow(
+                        selectedTabIndex = selectedTabIndex,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 48.dp, vertical = 12.dp),
+                    ) {
+                        navTabItems.forEachIndexed { index, item ->
+                            Tab(
+                                selected = index == selectedTabIndex,
+                                onFocus = {
+                                    if (currentRoute != item.route) {
+                                        navController.navigate(item.route) {
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
+                                },
                                 onClick = {
                                     if (currentRoute != item.route) {
                                         navController.navigate(item.route) {
@@ -75,29 +83,20 @@ fun CinefinTvApp(isAuthenticated: Boolean = false) {
                                         }
                                     }
                                 },
-                                leadingContent = {
-                                    Icon(
-                                        imageVector = item.icon,
-                                        contentDescription = item.label,
-                                    )
-                                },
                             ) {
                                 Text(item.label)
                             }
                         }
                     }
-                ) {
+                }
+                Box(modifier = Modifier.weight(1f)) {
                     CinefinTvNavGraph(
                         navController = navController,
                         startDestination = if (isAuthenticated) NavRoutes.HOME else AuthRoutes.SERVER_CONNECTION,
                     )
                 }
-            } else {
-                CinefinTvNavGraph(
-                    navController = navController,
-                    startDestination = if (isAuthenticated) NavRoutes.HOME else AuthRoutes.SERVER_CONNECTION,
-                )
             }
         }
     }
 }
+
