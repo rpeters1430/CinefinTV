@@ -69,7 +69,10 @@ class MusicViewModel @Inject constructor(
             _uiState.value = MusicUiState.Loading
             val result = repositories.media.getAlbumsForArtist(artist.id.toString())
             _uiState.value = when (result) {
-                is ApiResult.Success -> MusicUiState.Grid(result.data, MusicViewType.ALBUMS)
+                is ApiResult.Success -> {
+                    currentViewType = MusicViewType.ALBUMS
+                    MusicUiState.Grid(result.data, MusicViewType.ALBUMS)
+                }
                 is ApiResult.Error -> MusicUiState.Error(result.message ?: "Failed to load artist albums", viewType = currentViewType)
                 is ApiResult.Loading -> MusicUiState.Loading
             }

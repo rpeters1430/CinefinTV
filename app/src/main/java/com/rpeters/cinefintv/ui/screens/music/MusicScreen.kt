@@ -50,7 +50,8 @@ fun MusicScreen(
             }
         }
 
-        is MusicUiState.Error -> { val state = uiState as MusicUiState.Error
+        is MusicUiState.Error -> {
+            // state is already smart-cast to MusicUiState.Error here
             Column(
                 modifier = Modifier
                     .fillMaxSize()
