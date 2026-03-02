@@ -24,6 +24,7 @@ import com.rpeters.cinefintv.ui.screens.detail.DetailScreen
 import com.rpeters.cinefintv.ui.screens.home.HomeScreen
 import com.rpeters.cinefintv.ui.screens.library.LibraryCategory
 import com.rpeters.cinefintv.ui.screens.library.LibraryScreen
+import com.rpeters.cinefintv.ui.screens.music.MusicScreen
 import com.rpeters.cinefintv.ui.screens.search.SearchScreen
 import com.rpeters.cinefintv.ui.player.PlayerScreen
 
@@ -116,7 +117,11 @@ fun CinefinTvNavGraph(
             )
         }
         composable(NavRoutes.LIBRARY_MUSIC) {
-            PlaceholderScreen("Music")
+            MusicScreen(
+                onOpenItem = { itemId ->
+                    navController.navigate(NavRoutes.player(itemId))
+                },
+            )
         }
         composable(
             NavRoutes.DETAIL,
