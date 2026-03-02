@@ -13,10 +13,17 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import java.util.UUID
 import javax.inject.Inject
+
+data class TrackOption(
+    val id: String,
+    val label: String,
+    val language: String?,
+)
 
 data class PlayerUiState(
     val itemId: String = "",
@@ -44,6 +51,11 @@ class PlayerViewModel @Inject constructor(
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            playbackPreferencesRepository.preferences.collectLatest { prefs ->
+                _uiState.value = _uiState.value.copy(autoPlayNextEpisode = prefs.autoPlayNextEpisode)
+            }
+        }
         load()
     }
 
@@ -69,9 +81,14 @@ class PlayerViewModel @Inject constructor(
                 return@launch
             }
 
-            val title = when (val result = repositories.media.getItemDetails(itemId)) {
-                is ApiResult.Success -> result.data.getDisplayTitle()
+            val detailResult = repositories.media.getItemDetails(itemId)
+            val title = when (detailResult) {
+                is ApiResult.Success -> detailResult.data.getDisplayTitle()
                 else -> "Now Playing"
+            }
+            val isEpisodicContent = when (detailResult) {
+                is ApiResult.Success -> detailResult.data.type == BaseItemKind.EPISODE
+                else -> false
             }
 
             _uiState.value = PlayerUiState(

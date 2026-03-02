@@ -36,6 +36,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -44,6 +46,7 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
+import androidx.tv.material3.Switch
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import okhttp3.OkHttpClient
@@ -250,6 +253,92 @@ fun PlayerScreen(
                             },
                         ) {
                             Text("+10s")
+                        }
+                    }
+                }
+
+                AnimatedVisibility(
+                    visible = controlsVisible,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(end = 32.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        OutlinedButton(onClick = { onInteract(); isTrackPanelVisible = !isTrackPanelVisible }) {
+                            Text("Tracks")
+                        }
+                        if (uiState.isEpisodicContent) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Auto-play next", modifier = Modifier.padding(end = 12.dp))
+                                Switch(
+                                    checked = uiState.autoPlayNextEpisode,
+                                    onCheckedChange = {
+                                        onInteract()
+                                        viewModel.setAutoPlayNextEpisode(it)
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                AnimatedVisibility(
+                    visible = controlsVisible && isTrackPanelVisible,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(end = 32.dp, top = 100.dp)
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text("Audio", style = MaterialTheme.typography.titleMedium)
+                        audioTracks.forEach { track ->
+                            OutlinedButton(
+                                onClick = {
+                                    onInteract()
+                                    viewModel.onAudioTrackSelected(track)
+                                    player.trackSelectionParameters = player.trackSelectionParameters
+                                        .buildUpon()
+                                        .setPreferredAudioLanguage(track.language)
+                                        .build()
+                                },
+                            ) {
+                                Text(track.label)
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text("Subtitles", style = MaterialTheme.typography.titleMedium)
+                        OutlinedButton(
+                            onClick = {
+                                onInteract()
+                                viewModel.onSubtitleTrackSelected(null)
+                                player.trackSelectionParameters = player.trackSelectionParameters
+                                    .buildUpon()
+                                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                                    .build()
+                            },
+                        ) { Text("Off") }
+                        subtitleTracks.forEach { track ->
+                            OutlinedButton(
+                                onClick = {
+                                    onInteract()
+                                    viewModel.onSubtitleTrackSelected(track)
+                                    player.trackSelectionParameters = player.trackSelectionParameters
+                                        .buildUpon()
+                                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                                        .setPreferredTextLanguage(track.language)
+                                        .build()
+                                },
+                            ) {
+                                Text(track.label)
+                            }
                         }
                     }
                 }
