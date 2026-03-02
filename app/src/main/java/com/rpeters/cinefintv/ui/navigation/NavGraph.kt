@@ -77,8 +77,22 @@ fun CinefinTvNavGraph(
                 serverUrl = authUiState.connectedServerUrl ?: authUiState.serverUrlInput,
                 isAuthenticating = authUiState.isAuthenticating,
                 errorMessage = authUiState.loginError,
+                isQuickConnectEnabled = authUiState.isQuickConnectEnabled,
+                isQuickConnectLoading = authUiState.isQuickConnectLoading,
+                quickConnectCode = authUiState.quickConnectCode,
+                quickConnectPollStatus = authUiState.quickConnectPollStatus,
+                quickConnectError = authUiState.quickConnectError,
                 onLogin = { username, password ->
                     authViewModel.login(username, password)
+                },
+                onUseQuickConnect = {
+                    authViewModel.startQuickConnect()
+                },
+                onGenerateNewCode = {
+                    authViewModel.generateNewQuickConnectCode()
+                },
+                onLeaveScreen = {
+                    authViewModel.stopQuickConnect()
                 },
                 onBack = {
                     authViewModel.returnToServerEntry()
