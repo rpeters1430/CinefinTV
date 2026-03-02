@@ -33,21 +33,25 @@ class HomeViewModelTest {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
         } returns ApiResult.Success(emptyList())
         coEvery {
-            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.SERIES, limit = 12)
-        } returns ApiResult.Error("series failed")
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12)
+        } returns ApiResult.Error("episodes failed")
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12)
         } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12)
+        } returns ApiResult.Success(emptyList())
         every { fakeRepositories.stream.getSeriesImageUrl(any()) } returns "https://img/poster.jpg"
+        every { fakeRepositories.stream.getBackdropUrl(any()) } returns null
 
         val viewModel = HomeViewModel(fakeRepositories.coordinator)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value as HomeUiState.Content
-        assertEquals("Movie 1", state.featured?.title)
         assertEquals(1, state.sections.size)
         assertEquals("Continue Watching", state.sections.first().title)
         assertEquals(1, state.sections.first().items.size)
+        assertEquals("Movie 1", state.sections.first().items.first().title)
     }
 
     @Test
@@ -59,10 +63,13 @@ class HomeViewModelTest {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
         } returns ApiResult.Success(emptyList())
         coEvery {
-            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.SERIES, limit = 12)
-        } returns ApiResult.Error("series failed")
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12)
+        } returns ApiResult.Error("episodes failed")
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12)
         } returns ApiResult.Success(emptyList())
 
         val viewModel = HomeViewModel(fakeRepositories.coordinator)
@@ -73,6 +80,37 @@ class HomeViewModelTest {
         assertEquals("backend unavailable", (state as HomeUiState.Error).message)
     }
 
+    @Test
+    fun refresh_recentlyAddedMovies_populatesFeaturedItems() = runTest {
+        val fakeRepositories = FakeHomeRepositories()
+        val movie1 = mockBaseItemDto("Featured Movie 1")
+        val movie2 = mockBaseItemDto("Featured Movie 2")
+
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
+        } returns ApiResult.Success(listOf(movie1, movie2))
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        every { fakeRepositories.stream.getSeriesImageUrl(any()) } returns "https://img/poster.jpg"
+        every { fakeRepositories.stream.getBackdropUrl(any()) } returns "https://img/backdrop.jpg"
+
+        val viewModel = HomeViewModel(fakeRepositories.coordinator)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as HomeUiState.Content
+        assertEquals(2, state.featuredItems.size)
+        assertEquals("Featured Movie 1", state.featuredItems.first().title)
+        assertEquals("https://img/backdrop.jpg", state.featuredItems.first().backdropUrl)
+    }
+
     private fun mockBaseItemDto(name: String): BaseItemDto {
         val item: BaseItemDto = mockk()
         every { item.id } returns UUID.randomUUID()
@@ -81,6 +119,7 @@ class HomeViewModelTest {
         every { item.userData } returns null
         every { item.productionYear } returns null
         every { item.runTimeTicks } returns null
+        every { item.overview } returns null
         return item
     }
 }

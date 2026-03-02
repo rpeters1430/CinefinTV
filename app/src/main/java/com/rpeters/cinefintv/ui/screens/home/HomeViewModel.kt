@@ -26,6 +26,8 @@ data class HomeCardModel(
     val title: String,
     val subtitle: String?,
     val imageUrl: String?,
+    val backdropUrl: String? = null,
+    val description: String? = null,
 )
 
 data class HomeSectionModel(
@@ -37,7 +39,7 @@ sealed class HomeUiState {
     data object Loading : HomeUiState()
     data class Error(val message: String) : HomeUiState()
     data class Content(
-        val featured: HomeCardModel?,
+        val featuredItems: List<HomeCardModel>,
         val sections: List<HomeSectionModel>,
     ) : HomeUiState()
 }
@@ -59,26 +61,31 @@ class HomeViewModel @Inject constructor(
 
             val continueDeferred = async { repositories.media.getContinueWatching(limit = 12) }
             val moviesDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12) }
-            val showsDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.SERIES, limit = 12) }
+            val episodesDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12) }
             val videosDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12) }
+            val musicDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12) }
 
             val results: List<ApiResult<List<BaseItemDto>>> = awaitAll(
                 continueDeferred,
                 moviesDeferred,
-                showsDeferred,
+                episodesDeferred,
                 videosDeferred,
+                musicDeferred,
             )
 
             val sections = buildList {
                 addSection("Continue Watching", results[0])
+                addSection("Recently Added TV Episodes", results[2])
                 addSection("Recently Added Movies", results[1])
-                addSection("Recently Added TV", results[2])
+                addSection("Recently Added Music", results[4])
                 addSection("Recently Added Videos", results[3])
             }
 
-            val featured = sections.firstNotNullOfOrNull { it.items.firstOrNull() }
+            val featuredItems = (results[1] as? ApiResult.Success<List<BaseItemDto>>)
+                ?.data?.take(6)?.mapNotNull { toCardModel(it) }
+                ?: emptyList()
 
-            if (sections.isEmpty()) {
+            if (sections.isEmpty() && featuredItems.isEmpty()) {
                 val errorMessage = results.filterIsInstance<ApiResult.Error<List<BaseItemDto>>>()
                     .firstOrNull()
                     ?.message
@@ -86,7 +93,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.value = HomeUiState.Error(errorMessage)
             } else {
                 _uiState.value = HomeUiState.Content(
-                    featured = featured,
+                    featuredItems = featuredItems,
                     sections = sections,
                 )
             }
@@ -121,6 +128,8 @@ class HomeViewModel @Inject constructor(
             title = item.getDisplayTitle(),
             subtitle = subtitle,
             imageUrl = repositories.stream.getSeriesImageUrl(item),
+            backdropUrl = repositories.stream.getBackdropUrl(item),
+            description = item.overview?.take(140),
         )
     }
 }
