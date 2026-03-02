@@ -22,7 +22,7 @@ sealed class MusicUiState {
     data object Loading : MusicUiState()
     data class Grid(val items: List<BaseItemDto>, val viewType: MusicViewType) : MusicUiState()
     data class AlbumDetail(val album: BaseItemDto, val tracks: List<BaseItemDto>) : MusicUiState()
-    data class Error(val message: String) : MusicUiState()
+    data class Error(val message: String, val viewType: MusicViewType = MusicViewType.DEFAULT) : MusicUiState()
 }
 
 @HiltViewModel
@@ -46,7 +46,7 @@ class MusicViewModel @Inject constructor(
             }
             _uiState.value = when (result) {
                 is ApiResult.Success -> MusicUiState.Grid(result.data, viewType)
-                is ApiResult.Error -> MusicUiState.Error(result.message)
+                is ApiResult.Error -> MusicUiState.Error(result.message ?: "Failed to load music", viewType = viewType)
                 is ApiResult.Loading -> MusicUiState.Loading
             }
         }
@@ -58,7 +58,7 @@ class MusicViewModel @Inject constructor(
             val result = repositories.media.getAlbumTracks(album.id.toString())
             _uiState.value = when (result) {
                 is ApiResult.Success -> MusicUiState.AlbumDetail(album, result.data)
-                is ApiResult.Error -> MusicUiState.Error(result.message)
+                is ApiResult.Error -> MusicUiState.Error(result.message ?: "Failed to load album", viewType = currentViewType)
                 is ApiResult.Loading -> MusicUiState.Loading
             }
         }
@@ -70,7 +70,7 @@ class MusicViewModel @Inject constructor(
             val result = repositories.media.getAlbumsForArtist(artist.id.toString())
             _uiState.value = when (result) {
                 is ApiResult.Success -> MusicUiState.Grid(result.data, MusicViewType.ALBUMS)
-                is ApiResult.Error -> MusicUiState.Error(result.message)
+                is ApiResult.Error -> MusicUiState.Error(result.message ?: "Failed to load artist albums", viewType = currentViewType)
                 is ApiResult.Loading -> MusicUiState.Loading
             }
         }
@@ -80,5 +80,10 @@ class MusicViewModel @Inject constructor(
         loadGrid(currentViewType)
     }
 
-    fun imageUrl(item: BaseItemDto): String? = repositories.stream.getSeriesImageUrl(item)
+    fun imageUrl(item: BaseItemDto): String? =
+        repositories.stream.getImageUrl(
+            itemId = item.id.toString(),
+            imageType = "Primary",
+            tag = item.imageTags?.get(org.jellyfin.sdk.model.api.ImageType.PRIMARY),
+        )
 }

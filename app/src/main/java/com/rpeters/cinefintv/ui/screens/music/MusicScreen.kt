@@ -50,7 +50,7 @@ fun MusicScreen(
             }
         }
 
-        is MusicUiState.Error -> {
+        is MusicUiState.Error -> { val state = uiState as MusicUiState.Error
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -66,9 +66,7 @@ fun MusicScreen(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Button(onClick = { viewModel.loadGrid(viewModel.uiState.value.let {
-                    if (it is MusicUiState.Grid) it.viewType else MusicViewType.DEFAULT
-                }) }) {
+                Button(onClick = { viewModel.loadGrid(state.viewType) }) {
                     Text("Retry")
                 }
             }
