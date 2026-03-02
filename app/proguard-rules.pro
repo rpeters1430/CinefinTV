@@ -1,0 +1,3 @@
+-keep class org.jellyfin.** { *; }
+-keep class com.rpeters.cinefintv.data.model.** { *; }
+-dontwarn org.slf4j.**
