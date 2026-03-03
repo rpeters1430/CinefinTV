@@ -7,21 +7,22 @@
 
 ## Current State
 
-The app is fully functional end-to-end on a real Android TV device connected to a live Jellyfin server. All major navigation destinations are implemented and data-backed. The build is clean.
+The app is fully functional end-to-end on a real Android TV device connected to a live Jellyfin server. All major navigation destinations are implemented and data-backed. Multiple device-test bug rounds have been completed. The build is clean.
 
 ### Build and project health
 
 - `./gradlew :app:assembleDebug` — BUILD SUCCESSFUL
 - Android SDK path and Gradle memory configured locally
-- No compile errors; pre-existing warnings only (Hilt annotation target, redundant Json builder)
+- No compile errors; pre-existing warnings only (Hilt deprecation on `hiltViewModel` import, unnecessary safe call in stream repo)
 
-### Verified on device (screenshots 2026-03-01)
+### Verified on device (screenshots 2026-03-02)
 
 - **ServerConnectionScreen** — URL input + Continue, dark theme, TV keyboard
-- **LoginScreen** — Username/password fields, Sign In / Back, TV keyboard
-- **HomeScreen** — "Continue Watching" + "Recently Added Movies" rows with real poster images from server
+- **LoginScreen** — Username/password fields, Sign In / Back, Quick Connect panel
+- **HomeScreen** — Carousel (title/year/description/Play/More Info), Continue Watching + Recently Added rows, landscape thumbnails, centered card text
+- **LibraryScreen** — 4-column grid with landscape backdrop images for Movies and TV Shows
 - **DetailScreen** — Backdrop image, title, Play / Back buttons (lean but functional)
-- **Auth flow** — Full login round-trip working against a live Jellyfin server
+- **Auth flow** — Full login round-trip working; saved-session restore on cold start
 
 ---
 
@@ -30,17 +31,20 @@ The app is fully functional end-to-end on a real Android TV device connected to 
 ### Auth
 - `ServerConnectionScreen` — server URL input, connection test
 - `LoginScreen` — username/password, error handling
+- **Quick Connect** ✅ — mode-switch panel; large spaced code display (`8    3    7    4`); `New Code` / `Cancel`; polls ViewModel every 3s; handles Pending / Approved / Denied / Expired states; error shown first in `when` block (ViewModel does not clear code on denial)
 - `AuthViewModel` wired to `JellyfinAuthRepository`
 - **Saved-session restore** — `JellyfinServer` serialized to DataStore on login; `tryRestoreSession()` seeds in-memory state on cold start; app skips auth if session is already active
 
 ### Home
 - `HomeScreen` + `HomeViewModel`
-- Sections: Continue Watching, Recently Added Movies, Recently Added TV, Recently Added Videos, Libraries
-- Parallel async fetches; images via `getSeriesImageUrl`
+- Sections: Continue Watching, Recently Added TV Episodes, Recently Added Movies, Recently Added Videos, Recently Added Music
+- Parallel async fetches; images via `getLandscapeImageUrl` (landscape episode stills / backdrops)
+- Featured carousel auto-scrolls every 6s; explicit `color = onBackground` on title text
 
 ### Library
 - `LibraryScreen` + `LibraryViewModel`
 - Categories: Movies, TV Shows, Stuff (home videos)
+- 4-column `LazyVerticalGrid`; landscape backdrop images via `getLandscapeImageUrl`
 - Shared screen routed by `LibraryCategory` enum
 
 ### Detail
@@ -67,45 +71,33 @@ The app is fully functional end-to-end on a real Android TV device connected to 
 - `OkHttpDataSource` so auth interceptors apply to all streams
 
 ### Supporting infrastructure
-- `TvMaterialTheme` — dark color scheme, min 18sp body text
-- `NavigationDrawer` sidebar with 6 destinations
-- `TvMediaCard` reusable component
+- `CinefinTvTheme` — always-dark color scheme (`darkColorScheme`), min 18sp body text
+- `TvMediaCard` — `Surface`-based (not `Button`), `RoundedCornerShape(12.dp)`, centered title/subtitle text, landscape image slot
+- `JellyfinStreamRepository.getLandscapeImageUrl()` — episodes use episode `Primary` still; movies/series prefer `Backdrop`, fall back to `Primary`
+- `CinefinTvApp` TabRow — `onFocus = {}` (navigation only on D-pad OK press); TabRow hidden on `auth/`, `player/`, `detail/` routes
 - `JellyfinRepositoryCoordinator` — media, stream, search, auth, user repos
 - `AudioService` stub in manifest (no audio player UX yet)
 
 ---
 
-## Known issues observed in device testing
+## Bug fixes completed (device testing 2026-03-02)
 
-| Issue | Severity | Notes |
-|---|---|---|
-| Library cards on Home navigate to DetailScreen showing "Movies" / "Shows" as title | Medium | Home adds a "Libraries" section; tapping a library card routes to `detail/{libraryId}` instead of the library list. Fix: route library cards to `LIBRARY_MOVIES` / `LIBRARY_TVSHOWS` etc., or remove the Libraries section from Home (accessible via nav drawer already). |
-| Raw filenames shown as card titles on Home | Low | Server metadata issue — `getDisplayTitle()` is correct; the Jellyfin server items don't have clean titles set. Not a code bug. |
-| Detail screen is minimal | Low | No cast row, no seasons/episodes browser, no synopsis. Functional but sparse. |
+| Bug | Fix |
+|---|---|
+| App navigated to Search screen on login | `Tab.onFocus` was firing on initial focus; replaced with `onFocus = {}` — navigation only on `onClick` |
+| Clicking a home card navigated to Search instead of Detail | `detail/` routes not excluded from `showNav`; TabRow received focus and routed to Search tab; fixed by adding `!currentRoute.startsWith("detail/")` to `showNav` |
+| Media cards clipped to circles | `TvMediaCard` used `Button` (defaults to `RoundedCornerShape(50%)`); replaced with `Surface` + explicit `RoundedCornerShape(12.dp)` |
+| Card text black / unreadable | `Button` container overrode `LocalContentColor`; `Surface` inherits `colorScheme.onSurface` (light in dark theme) |
+| Carousel title text black | TV Material3 `Carousel` sets `LocalContentColor` from a transparent container (resolves to black); added `color = MaterialTheme.colorScheme.onBackground` explicitly |
+| Card images were portrait posters in landscape slots | `getSeriesImageUrl` returned portrait primary images; replaced with `getLandscapeImageUrl` |
+| Card text left-aligned | Added `textAlign = TextAlign.Center` + `Modifier.fillMaxWidth()` to title and subtitle `Text`; `horizontalAlignment = CenterHorizontally` on text `Column` |
 
 ---
 
-## What is still missing / future work
+## Known issues / future work
 
-- Fix library card routing from Home (navigate to library list, not detail)
 - Detail screen improvements: synopsis, cast row, seasons browser for TV shows
 - Audio player UX (AudioService is a stub; no playback UI)
 - Player improvements: track/subtitle selection, next-episode auto-play
-- Quick Connect auth option ✅ complete
 - DI/scope cleanup — copied data layer still includes mobile-era modules
-- Smoke test: Music route, Search, saved-session restore on cold relaunch
-
----
-
-## Commit history (this session)
-
-```
-d9c8b8f fix: add NonCancellable guard to clearServerState
-dfb6830 fix: persist server state to DataStore so saved-session restore works on cold start
-814d6ac feat: skip auth on launch if saved session is active
-1d39e3b feat: add TV player controls overlay with auto-hide and seek
-7d364f9 fix: remove shadow state cast and sync artist view type on back navigation
-6067a98 fix: correct music image URL method and error retry view type
-aa044ac feat: implement MusicViewModel and MusicScreen with album/artist browsing
-392544e feat: implement core navigation screens and Media3 playback
-```
+- Raw filenames shown as card titles for home-video items — server metadata issue, not a code bug
