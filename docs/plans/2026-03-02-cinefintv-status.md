@@ -91,7 +91,7 @@ The app is fully functional end-to-end on a real Android TV device connected to 
 - Detail screen improvements: synopsis, cast row, seasons browser for TV shows
 - Audio player UX (AudioService is a stub; no playback UI)
 - Player improvements: track/subtitle selection, next-episode auto-play
-- Quick Connect auth option
+- Quick Connect auth option ✅ complete
 - DI/scope cleanup — copied data layer still includes mobile-era modules
 - Smoke test: Music route, Search, saved-session restore on cold relaunch
 
