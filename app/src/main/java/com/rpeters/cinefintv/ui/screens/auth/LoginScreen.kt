@@ -157,6 +157,8 @@ private fun QuickConnectPanel(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
+        // error is checked first — the ViewModel does not clear quickConnectCode on denial/expiry,
+        // so error must take priority over code to avoid showing a stale code with no explanation.
         when {
             error != null -> {
                 Text(
