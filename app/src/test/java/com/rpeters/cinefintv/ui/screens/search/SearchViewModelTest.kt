@@ -1,7 +1,7 @@
 package com.rpeters.cinefintv.ui.screens.search
 
 import com.rpeters.cinefintv.data.repository.common.ApiResult
-import com.rpeters.cinefintv.testutil.FakeSearchRepository
+import com.rpeters.cinefintv.testutil.FakeHomeRepositories
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -21,10 +21,10 @@ class SearchViewModelTest {
 
     @Test
     fun updateQuery_whenBlank_clearsResultsWithoutCallingRepository() = runTest {
-        val fakeSearchRepository = FakeSearchRepository()
-        coEvery { fakeSearchRepository.instance.searchItems(any(), any(), any()) } returns ApiResult.Success(emptyList())
+        val fakeRepo = FakeHomeRepositories()
+        coEvery { fakeRepo.coordinator.search.searchItems(any(), any(), any()) } returns ApiResult.Success(emptyList())
 
-        val viewModel = SearchViewModel(fakeSearchRepository.instance)
+        val viewModel = SearchViewModel(fakeRepo.coordinator)
         advanceUntilIdle()
 
         viewModel.updateQuery("    ")
@@ -34,6 +34,6 @@ class SearchViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(null, state.errorMessage)
         assertEquals(0, state.results.size)
-        coVerify(exactly = 0) { fakeSearchRepository.instance.searchItems(any(), any(), any()) }
+        coVerify(exactly = 0) { fakeRepo.coordinator.search.searchItems(any(), any(), any()) }
     }
 }

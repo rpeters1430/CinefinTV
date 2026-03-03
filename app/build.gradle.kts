@@ -30,6 +30,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+        unitTests.all {
+            it.maxHeapSize = "2g"
+            it.jvmArgs("-XX:+EnableDynamicAgentLoading")
+        }
+    }
     buildFeatures {
         compose = true
         buildConfig = true
