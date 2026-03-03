@@ -184,6 +184,7 @@ private fun FeaturedCarousel(
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
                 item.description?.let {
                     Text(

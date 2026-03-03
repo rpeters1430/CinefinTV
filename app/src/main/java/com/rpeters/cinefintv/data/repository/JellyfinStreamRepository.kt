@@ -444,6 +444,35 @@ class JellyfinStreamRepository @Inject constructor(
     }
 
     /**
+     * Get a landscape (16:9 / backdrop) image URL suitable for horizontal card thumbnails.
+     * - Episodes: their own primary image (Jellyfin stores episode stills as Primary, not posters).
+     * - Movies / Series / everything else: prefer Backdrop; fall back to Primary.
+     */
+    fun getLandscapeImageUrl(item: BaseItemDto): String? {
+        return try {
+            val server = authRepository.getCurrentServer() ?: return null
+            if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) return null
+
+            when (item.type) {
+                BaseItemKind.EPISODE -> {
+                    // Episode primary is a landscape still screenshot, not a portrait poster
+                    "${server.url}/Items/${item.id}/Images/Primary?maxHeight=$BACKDROP_MAX_HEIGHT&maxWidth=$BACKDROP_MAX_WIDTH"
+                }
+                else -> {
+                    val backdropTag = item.backdropImageTags?.firstOrNull()
+                    if (backdropTag != null) {
+                        "${server.url}/Items/${item.id}/Images/Backdrop?tag=$backdropTag&maxHeight=$BACKDROP_MAX_HEIGHT&maxWidth=$BACKDROP_MAX_WIDTH"
+                    } else {
+                        getImageUrl(item.id.toString(), "Primary", item.imageTags?.get(ImageType.PRIMARY))
+                    }
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        }
+    }
+
+    /**
      * Get image URL for search cards with a fallback order of Primary -> Backdrop -> Thumb.
      */
     fun getSearchCardImageUrl(item: BaseItemDto): String? {

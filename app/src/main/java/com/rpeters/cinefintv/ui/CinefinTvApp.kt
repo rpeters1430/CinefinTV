@@ -47,7 +47,8 @@ fun CinefinTvApp(isAuthenticated: Boolean = false) {
 
         val showNav = currentRoute != null &&
             !currentRoute.startsWith("auth/") &&
-            !currentRoute.startsWith("player/")
+            !currentRoute.startsWith("player/") &&
+            !currentRoute.startsWith("detail/")
 
         val selectedTabIndex = navTabItems.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
 
@@ -67,14 +68,7 @@ fun CinefinTvApp(isAuthenticated: Boolean = false) {
                         navTabItems.forEachIndexed { index, item ->
                             Tab(
                                 selected = index == selectedTabIndex,
-                                onFocus = {
-                                    if (currentRoute != item.route) {
-                                        navController.navigate(item.route) {
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    }
-                                },
+                                onFocus = {},
                                 onClick = {
                                     if (currentRoute != item.route) {
                                         navController.navigate(item.route) {

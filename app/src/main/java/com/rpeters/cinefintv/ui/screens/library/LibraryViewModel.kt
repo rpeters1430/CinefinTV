@@ -79,7 +79,7 @@ class LibraryViewModel @Inject constructor(
             id = id,
             title = item.getDisplayTitle(),
             subtitle = subtitle,
-            imageUrl = repositories.stream.getSeriesImageUrl(item),
+            imageUrl = repositories.stream.getLandscapeImageUrl(item),
         )
     }
 }
