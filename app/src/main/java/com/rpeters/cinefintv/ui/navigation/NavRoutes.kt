@@ -9,10 +9,12 @@ object NavRoutes {
     const val LIBRARY_MUSIC = "library/music"
     const val SETTINGS = "settings"
     const val DETAIL = "detail/{itemId}"
+    const val STUFF_DETAIL = "stuff/detail/{itemId}"
     const val PLAYER = "player/{itemId}"
 
     fun detail(itemId: String) = "detail/$itemId"
     fun player(itemId: String) = "player/$itemId"
+    fun stuffDetail(itemId: String) = "stuff/detail/$itemId"
 }
 
 object AuthRoutes {

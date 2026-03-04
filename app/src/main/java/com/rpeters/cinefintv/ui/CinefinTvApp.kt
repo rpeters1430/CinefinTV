@@ -33,7 +33,7 @@ private val navTabItems = listOf(
     NavTabItem("TV Shows", NavRoutes.LIBRARY_TVSHOWS),
     NavTabItem("Movies", NavRoutes.LIBRARY_MOVIES),
     NavTabItem("Music", NavRoutes.LIBRARY_MUSIC),
-    NavTabItem("Stuff", NavRoutes.LIBRARY_STUFF),
+    NavTabItem("Stuff (Home Videos)", NavRoutes.LIBRARY_STUFF),
     NavTabItem("Settings", NavRoutes.SETTINGS),
 )
 
