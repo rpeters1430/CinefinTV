@@ -25,6 +25,8 @@ import com.rpeters.cinefintv.ui.screens.home.HomeScreen
 import com.rpeters.cinefintv.ui.screens.library.LibraryCategory
 import com.rpeters.cinefintv.ui.screens.library.LibraryScreen
 import com.rpeters.cinefintv.ui.screens.music.MusicScreen
+import com.rpeters.cinefintv.ui.screens.stuff.StuffDetailScreen
+import com.rpeters.cinefintv.ui.screens.stuff.StuffLibraryScreen
 import com.rpeters.cinefintv.ui.screens.search.SearchScreen
 import com.rpeters.cinefintv.ui.player.PlayerScreen
 
@@ -134,10 +136,9 @@ fun CinefinTvNavGraph(
             )
         }
         composable(NavRoutes.LIBRARY_STUFF) {
-            LibraryScreen(
-                category = LibraryCategory.STUFF,
+            StuffLibraryScreen(
                 onOpenItem = { itemId ->
-                    navController.navigate(NavRoutes.detail(itemId))
+                    navController.navigate(NavRoutes.stuffDetail(itemId))
                 },
             )
         }
@@ -164,6 +165,22 @@ fun CinefinTvNavGraph(
                 },
                 onNavigate = { route ->
                     navController.navigate(route)
+                },
+                onBack = {
+                    navController.popBackStack()
+                },
+            )
+        }
+        composable(
+            NavRoutes.STUFF_DETAIL,
+            arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
+        ) {
+            StuffDetailScreen(
+                onPlay = { itemId ->
+                    navController.navigate(NavRoutes.player(itemId))
+                },
+                onOpenItem = { itemId ->
+                    navController.navigate(NavRoutes.stuffDetail(itemId))
                 },
                 onBack = {
                     navController.popBackStack()
