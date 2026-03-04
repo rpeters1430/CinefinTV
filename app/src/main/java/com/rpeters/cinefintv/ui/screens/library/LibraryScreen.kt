@@ -105,7 +105,7 @@ fun LibraryScreen(
 
                     item {
                         Text(
-                            text = "All Movies",
+text = stringResource(R.string.all_movies),
                             style = MaterialTheme.typography.titleLarge,
                         )
                     }
