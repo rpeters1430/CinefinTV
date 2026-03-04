@@ -47,7 +47,7 @@ private val Context.offlineProgressDataStore: DataStore<Preferences> by preferen
 
 @Singleton
 class OfflineProgressRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
 ) {
     companion object {
         private const val MAX_QUEUED_UPDATES = 200

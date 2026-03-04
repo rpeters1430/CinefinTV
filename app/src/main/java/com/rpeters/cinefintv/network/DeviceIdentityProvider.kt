@@ -10,7 +10,7 @@ import javax.inject.Singleton
 
 @Singleton
 class DeviceIdentityProvider @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
 ) {
 
     private val deviceId: String by lazy { resolveDeviceId() }

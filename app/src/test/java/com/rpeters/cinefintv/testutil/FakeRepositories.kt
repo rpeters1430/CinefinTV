@@ -38,6 +38,19 @@ class FakePlayerRepositories(
     }
 }
 
+class FakeMusicRepositories(
+    val media: JellyfinMediaRepository = mockk(),
+    val stream: JellyfinStreamRepository = mockk(),
+) {
+    val coordinator: JellyfinRepositoryCoordinator = mockk {
+        every { this@mockk.media } returns this@FakeMusicRepositories.media
+        every { this@mockk.stream } returns this@FakeMusicRepositories.stream
+        every { this@mockk.user } returns mockk(relaxed = true)
+        every { this@mockk.search } returns mockk(relaxed = true)
+        every { this@mockk.auth } returns mockk(relaxed = true)
+    }
+}
+
 class FakeSearchRepository {
     val instance: JellyfinSearchRepository = mockk()
 }

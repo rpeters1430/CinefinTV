@@ -11,11 +11,18 @@ import com.rpeters.cinefintv.data.utils.RepositoryUtils
 // import com.rpeters.cinefintv.ui.utils.RetryManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemDto
+import retrofit2.HttpException
+import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
 /**
@@ -29,6 +36,13 @@ open class BaseJellyfinRepository @Inject constructor(
     protected val sessionManager: JellyfinSessionManager,
     protected val cache: JellyfinCache,
 ) {
+    companion object {
+        private const val CIRCUIT_BREAKER_FAILURE_THRESHOLD = 3
+        private const val CIRCUIT_BREAKER_OPEN_MS = 30_000L
+        private const val MAX_RETRY_DELAY_MS = 5_000L
+        private val circuitBreakerStates = ConcurrentHashMap<String, CircuitBreakerState>()
+    }
+
     // Mutex to prevent race conditions in token refresh
     private val tokenRefreshMutex = Mutex()
 
@@ -194,25 +208,37 @@ open class BaseJellyfinRepository @Inject constructor(
         maxAttempts: Int = 3,
         block: suspend () -> T,
     ): ApiResult<T> = withContext(Dispatchers.IO) {
-        // TODO Task 24: replace with RetryManager.withRetry when UI layer is copied
-        // return@withContext RetryManager.withRetry(maxAttempts, operationName) { attempt ->
-        //     try {
-        //         val result = executeWithTokenRefresh { block() }
-        //         ApiResult.Success(result)
-        //     } catch (e: CancellationException) {
-        //         throw e
-        //     } catch (e: Exception) {
-        //         handleRepositoryException(e, operationName)
-        //     }
-        // }
-        return@withContext try {
-            val result = executeWithTokenRefresh { block() }
-            ApiResult.Success(result)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            handleRepositoryException(e, operationName)
+        val safeMaxAttempts = maxAttempts.coerceAtLeast(1)
+        var lastException: Exception? = null
+
+        repeat(safeMaxAttempts) { attempt ->
+            try {
+                val result = executeWithTokenRefresh { block() }
+                return@withContext ApiResult.Success(result)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                lastException = e
+                val shouldRetry = attempt < safeMaxAttempts - 1 && shouldRetryException(e)
+                if (!shouldRetry) {
+                    return@withContext handleRepositoryException(e, operationName)
+                }
+
+                val delayMs = calculateRetryDelay(attempt, e)
+                Logger.w(
+                    LogCategory.NETWORK,
+                    javaClass.simpleName,
+                    "$operationName failed on attempt ${attempt + 1}/$safeMaxAttempts, retrying in ${delayMs}ms",
+                    e,
+                )
+                delay(delayMs)
+            }
         }
+
+        return@withContext handleRepositoryException(
+            lastException ?: IllegalStateException("Retry failed without an exception"),
+            operationName,
+        )
     }
 
     /**
@@ -228,26 +254,108 @@ open class BaseJellyfinRepository @Inject constructor(
         circuitBreakerKey: String = operationName,
         block: suspend () -> T,
     ): ApiResult<T> = withContext(Dispatchers.IO) {
-        // TODO Task 24: replace with RetryManager.withRetryAndCircuitBreaker when UI layer is copied
-        // return@withContext RetryManager.withRetryAndCircuitBreaker(maxAttempts, operationName, circuitBreakerKey) { attempt ->
-        //     try {
-        //         val result = executeWithTokenRefresh { block() }
-        //         ApiResult.Success(result)
-        //     } catch (e: CancellationException) {
-        //         throw e
-        //     } catch (e: Exception) {
-        //         handleRepositoryException(e, operationName)
-        //     }
-        // }
-        return@withContext try {
-            val result = executeWithTokenRefresh { block() }
-            ApiResult.Success(result)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            handleRepositoryException(e, operationName)
+        if (isCircuitBreakerOpen(circuitBreakerKey)) {
+            Logger.w(
+                LogCategory.NETWORK,
+                javaClass.simpleName,
+                "Circuit breaker open for $circuitBreakerKey, skipping $operationName",
+            )
+            return@withContext ApiResult.Error(
+                message = "Temporarily unavailable. Please retry shortly.",
+                errorType = ErrorType.NETWORK,
+            )
+        }
+
+        val result = executeWithRetry(operationName, maxAttempts, block)
+        when (result) {
+            is ApiResult.Success -> resetCircuitBreaker(circuitBreakerKey)
+            is ApiResult.Error -> recordCircuitBreakerFailure(circuitBreakerKey)
+            is ApiResult.Loading -> Unit
+        }
+        return@withContext result
+    }
+
+    private fun shouldRetryException(exception: Exception): Boolean {
+        return when (exception) {
+            is SocketTimeoutException, is ConnectException -> true
+            is UnknownHostException -> false
+            is IOException -> !isDnsResolutionError(exception)
+            is HttpException -> exception.code() in setOf(408, 429, 500, 502, 503, 504)
+            else -> false
         }
     }
+
+    private fun calculateRetryDelay(attempt: Int, exception: Exception): Long {
+        val baseDelayMs = when (exception) {
+            is HttpException -> if (exception.code() == 429) 1_500L else 750L
+            is SocketTimeoutException -> 1_000L
+            else -> 500L
+        }
+        val multiplier = 1L shl attempt.coerceAtMost(4)
+        return (baseDelayMs * multiplier).coerceAtMost(MAX_RETRY_DELAY_MS)
+    }
+
+    private fun isCircuitBreakerOpen(key: String): Boolean {
+        val state = circuitBreakerStates[key] ?: return false
+        val now = System.currentTimeMillis()
+        if (state.openUntilMs <= now) {
+            if (state.openUntilMs != 0L) {
+                circuitBreakerStates.computeIfPresent(key) { _, existing ->
+                    existing.copy(openUntilMs = 0L)
+                }
+            }
+            return false
+        }
+        return true
+    }
+
+    private fun resetCircuitBreaker(key: String) {
+        circuitBreakerStates.remove(key)
+    }
+
+    private fun recordCircuitBreakerFailure(key: String) {
+        val now = System.currentTimeMillis()
+        circuitBreakerStates.compute(key) { _, existing ->
+            val current = existing ?: CircuitBreakerState()
+            val nextFailures = current.consecutiveFailures + 1
+            if (nextFailures >= CIRCUIT_BREAKER_FAILURE_THRESHOLD) {
+                CircuitBreakerState(
+                    consecutiveFailures = nextFailures,
+                    openUntilMs = now + CIRCUIT_BREAKER_OPEN_MS,
+                )
+            } else {
+                CircuitBreakerState(
+                    consecutiveFailures = nextFailures,
+                    openUntilMs = current.openUntilMs,
+                )
+            }
+        }
+    }
+
+    private fun isDnsResolutionError(exception: IOException): Boolean {
+        var current: Throwable? = exception
+        while (current != null) {
+            val className = current.javaClass.name
+            val message = current.message.orEmpty()
+            if (className.contains("GaiException")) {
+                return true
+            }
+            if (message.contains("EAI_NODATA", ignoreCase = true) ||
+                message.contains("EAI_NONAME", ignoreCase = true) ||
+                message.contains("No address associated with hostname", ignoreCase = true) ||
+                message.contains("Unable to resolve host", ignoreCase = true)
+            ) {
+                return true
+            }
+            current = current.cause
+        }
+        return false
+    }
+
+    private data class CircuitBreakerState(
+        val consecutiveFailures: Int = 0,
+        val openUntilMs: Long = 0L,
+    )
 
     /**
      * Executes an operation with cache-first strategy and automatic fallback.

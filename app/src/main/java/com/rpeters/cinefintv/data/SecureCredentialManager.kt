@@ -41,9 +41,13 @@ import javax.inject.Singleton
 
 @Singleton
 class SecureCredentialManager @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val credentialSecurityPreferencesRepository: CredentialSecurityPreferencesRepository,
 ) {
+    private val jsonSerializer = kotlinx.serialization.json.Json {
+        ignoreUnknownKeys = true
+    }
+
     companion object {
         private const val TAG = "SecureCredentialManager"
         private const val KEY_VERSION = "v1"
@@ -544,9 +548,7 @@ class SecureCredentialManager @Inject constructor(
         return try {
             val prefs = secureCredentialsDataStore.data.first()
             val json = prefs[stringPreferencesKey(SERVER_STATE_KEY)] ?: return null
-            kotlinx.serialization.json.Json {
-                ignoreUnknownKeys = true
-            }.decodeFromString<JellyfinServer>(json)
+            jsonSerializer.decodeFromString<JellyfinServer>(json)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

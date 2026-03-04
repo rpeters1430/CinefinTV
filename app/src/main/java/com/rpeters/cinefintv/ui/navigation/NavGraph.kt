@@ -7,7 +7,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -29,6 +29,7 @@ import com.rpeters.cinefintv.ui.screens.stuff.StuffDetailScreen
 import com.rpeters.cinefintv.ui.screens.stuff.StuffLibraryScreen
 import com.rpeters.cinefintv.ui.screens.search.SearchScreen
 import com.rpeters.cinefintv.ui.player.PlayerScreen
+import com.rpeters.cinefintv.ui.player.audio.AudioPlayerScreen
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -144,8 +145,8 @@ fun CinefinTvNavGraph(
         }
         composable(NavRoutes.LIBRARY_MUSIC) {
             MusicScreen(
-                onOpenItem = { itemId ->
-                    navController.navigate(NavRoutes.player(itemId))
+                onPlayTrack = { request ->
+                    navController.navigate(NavRoutes.audioPlayer(request.trackId, request.queueIds))
                 },
             )
         }
@@ -162,9 +163,6 @@ fun CinefinTvNavGraph(
                 },
                 onOpenItem = { itemId ->
                     navController.navigate(NavRoutes.detail(itemId))
-                },
-                onNavigate = { route ->
-                    navController.navigate(route)
                 },
                 onBack = {
                     navController.popBackStack()
@@ -199,6 +197,23 @@ fun CinefinTvNavGraph(
                     navController.navigate(NavRoutes.player(nextItemId)) {
                         popUpTo(NavRoutes.PLAYER) { inclusive = true }
                     }
+                },
+            )
+        }
+        composable(
+            route = NavRoutes.AUDIO_PLAYER,
+            arguments = listOf(
+                navArgument("itemId") { type = NavType.StringType },
+                navArgument("queue") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = ""
+                },
+            ),
+        ) {
+            AudioPlayerScreen(
+                onBack = {
+                    navController.popBackStack()
                 },
             )
         }

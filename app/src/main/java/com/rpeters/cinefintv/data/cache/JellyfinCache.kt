@@ -27,7 +27,7 @@ import javax.inject.Singleton
 @Singleton
 class JellyfinCache @Inject constructor(
     private val context: Context,
-    @ApplicationScope private val applicationScope: CoroutineScope,
+    @param:ApplicationScope private val applicationScope: CoroutineScope,
 ) {
 
     companion object {

@@ -1,5 +1,7 @@
 package com.rpeters.cinefintv.ui.navigation
 
+import android.net.Uri
+
 object NavRoutes {
     const val HOME = "home"
     const val SEARCH = "search"
@@ -11,10 +13,15 @@ object NavRoutes {
     const val DETAIL = "detail/{itemId}"
     const val STUFF_DETAIL = "stuff/detail/{itemId}"
     const val PLAYER = "player/{itemId}"
+    const val AUDIO_PLAYER = "audio-player/{itemId}?queue={queue}"
 
     fun detail(itemId: String) = "detail/$itemId"
     fun player(itemId: String) = "player/$itemId"
     fun stuffDetail(itemId: String) = "stuff/detail/$itemId"
+    fun audioPlayer(itemId: String, queueIds: List<String>): String {
+        val encodedQueue = queueIds.joinToString(",") { Uri.encode(it) }
+        return "audio-player/$itemId?queue=$encodedQueue"
+    }
 }
 
 object AuthRoutes {

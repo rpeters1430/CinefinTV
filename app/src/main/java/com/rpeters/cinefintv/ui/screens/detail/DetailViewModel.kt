@@ -5,37 +5,48 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
+import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
+import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
 import com.rpeters.cinefintv.utils.getYear
+import com.rpeters.cinefintv.utils.isEpisode
 import com.rpeters.cinefintv.utils.isMovie
 import com.rpeters.cinefintv.utils.isSeason
 import com.rpeters.cinefintv.utils.isSeries
+import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.Locale
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemDto
-import javax.inject.Inject
+import org.jellyfin.sdk.model.api.BaseItemKind
+
+data class DetailInfoRowModel(
+    val label: String,
+    val value: String,
+)
 
 data class DetailHeroModel(
     val id: String,
     val title: String,
     val subtitle: String?,
     val overview: String?,
-    val genres: List<String>,
     val imageUrl: String?,
     val backdropUrl: String?,
-    val rating: String?,
-    val year: String?,
-    val runtime: String?,
+    val metaBadges: List<String>,
+    val infoRows: List<DetailInfoRowModel>,
 )
 
 data class DetailSeasonModel(
     val id: String,
     val title: String,
+    val subtitle: String? = null,
     val imageUrl: String? = null,
+    val episodeCount: Int = 0,
 )
 
 data class DetailEpisodeModel(
@@ -43,6 +54,8 @@ data class DetailEpisodeModel(
     val title: String,
     val subtitle: String?,
     val imageUrl: String?,
+    val canResume: Boolean = false,
+    val isWatched: Boolean = false,
 )
 
 sealed class DetailUiState {
@@ -53,6 +66,12 @@ sealed class DetailUiState {
         val seasons: List<DetailSeasonModel>,
         val episodesBySeasonId: Map<String, List<DetailEpisodeModel>>,
         val related: List<DetailHeroModel>,
+        val playableItemId: String?,
+        val playButtonLabel: String,
+        val isDeleteConfirmationVisible: Boolean = false,
+        val isDeleting: Boolean = false,
+        val isDeleted: Boolean = false,
+        val actionErrorMessage: String? = null,
     ) : DetailUiState()
 }
 
@@ -83,11 +102,19 @@ class DetailViewModel @Inject constructor(
                     val item = detailResult.data
                     val seasonsAndEpisodes = loadSeasonsAndEpisodes(item)
                     val relatedItems = loadRelated(item)
+                    val playbackTarget = resolvePlaybackTarget(item, seasonsAndEpisodes.second)
+
                     _uiState.value = DetailUiState.Content(
-                        item = toHeroModel(item),
+                        item = toHeroModel(
+                            item = item,
+                            seasons = seasonsAndEpisodes.first,
+                            episodesBySeasonId = seasonsAndEpisodes.second,
+                        ),
                         seasons = seasonsAndEpisodes.first,
                         episodesBySeasonId = seasonsAndEpisodes.second,
                         related = relatedItems.map(this@DetailViewModel::toHeroModel),
+                        playableItemId = playbackTarget?.id,
+                        playButtonLabel = playbackTarget?.label ?: "Play",
                     )
                 }
                 is ApiResult.Error -> {
@@ -98,7 +125,63 @@ class DetailViewModel @Inject constructor(
         }
     }
 
-    private suspend fun loadSeasonsAndEpisodes(item: BaseItemDto): Pair<List<DetailSeasonModel>, Map<String, List<DetailEpisodeModel>>> {
+    fun requestDelete() {
+        val state = _uiState.value as? DetailUiState.Content ?: return
+        _uiState.value = state.copy(
+            isDeleteConfirmationVisible = true,
+            actionErrorMessage = null,
+        )
+    }
+
+    fun cancelDelete() {
+        val state = _uiState.value as? DetailUiState.Content ?: return
+        if (state.isDeleting) return
+
+        _uiState.value = state.copy(
+            isDeleteConfirmationVisible = false,
+            actionErrorMessage = null,
+        )
+    }
+
+    fun dismissActionError() {
+        val state = _uiState.value as? DetailUiState.Content ?: return
+        _uiState.value = state.copy(actionErrorMessage = null)
+    }
+
+    fun confirmDelete() {
+        val state = _uiState.value as? DetailUiState.Content ?: return
+        if (state.isDeleting) return
+
+        _uiState.value = state.copy(
+            isDeleting = true,
+            actionErrorMessage = null,
+        )
+
+        viewModelScope.launch {
+            when (val result = repositories.user.deleteItem(state.item.id)) {
+                is ApiResult.Success -> {
+                    val latestState = _uiState.value as? DetailUiState.Content ?: return@launch
+                    _uiState.value = latestState.copy(
+                        isDeleting = false,
+                        isDeleteConfirmationVisible = false,
+                        isDeleted = true,
+                    )
+                }
+                is ApiResult.Error -> {
+                    val latestState = _uiState.value as? DetailUiState.Content ?: return@launch
+                    _uiState.value = latestState.copy(
+                        isDeleting = false,
+                        actionErrorMessage = result.message,
+                    )
+                }
+                is ApiResult.Loading -> Unit
+            }
+        }
+    }
+
+    private suspend fun loadSeasonsAndEpisodes(
+        item: BaseItemDto,
+    ): Pair<List<DetailSeasonModel>, Map<String, List<DetailEpisodeModel>>> {
         return when {
             item.isSeries() -> {
                 val seasonsResult = repositories.media.getSeasonsForSeries(item.id.toString())
@@ -106,15 +189,24 @@ class DetailViewModel @Inject constructor(
                     is ApiResult.Success -> seasonsResult.data
                     else -> emptyList()
                 }
-                val seasonModels = seasons.map {
+                val allEpisodes = mutableListOf<DetailEpisodeModel>()
+                val seasonModels = seasons.map { season ->
+                    val episodeModels = when (
+                        val episodesResult = repositories.media.getEpisodesForSeason(season.id.toString())
+                    ) {
+                        is ApiResult.Success -> episodesResult.data.map(::toEpisodeModel)
+                        else -> emptyList()
+                    }
+                    allEpisodes += episodeModels
                     DetailSeasonModel(
-                        id = it.id.toString(),
-                        title = it.getDisplayTitle(),
-                        imageUrl = repositories.stream.getSeriesImageUrl(it),
+                        id = season.id.toString(),
+                        title = season.getDisplayTitle(),
+                        subtitle = buildSeasonSubtitle(season, episodeModels.size),
+                        imageUrl = repositories.stream.getWideCardImageUrl(season),
+                        episodeCount = episodeModels.size.takeIf { it > 0 } ?: (season.childCount ?: 0),
                     )
                 }
-                // Episodes are loaded on demand when navigating to a Season's detail screen
-                seasonModels to emptyMap()
+                seasonModels to mapOf(item.id.toString() to allEpisodes)
             }
             item.isSeason() -> {
                 val episodesResult = repositories.media.getEpisodesForSeason(item.id.toString())
@@ -141,38 +233,144 @@ class DetailViewModel @Inject constructor(
         }
     }
 
-    private fun toHeroModel(item: BaseItemDto): DetailHeroModel {
+    private fun toHeroModel(
+        item: BaseItemDto,
+        seasons: List<DetailSeasonModel> = emptyList(),
+        episodesBySeasonId: Map<String, List<DetailEpisodeModel>> = emptyMap(),
+    ): DetailHeroModel {
+        val totalEpisodeCount = when {
+            item.isSeries() -> seasons.sumOf { it.episodeCount }
+            item.isSeason() -> episodesBySeasonId.values.flatten().size
+            else -> 0
+        }
         val subtitleParts = listOfNotNull(
             item.getYear()?.toString(),
             item.getFormattedDuration(),
-            item.officialRating,
         )
+        val metaBadges = buildList {
+            if (!item.isSeries()) {
+                add(item.getMediaTypeLabel())
+            }
+            item.officialRating?.takeIf { it.isNotBlank() }?.let(::add)
+            formatCommunityRating(item)?.let(::add)
+            item.getYear()?.toString()?.let(::add)
+            item.getFormattedDuration()?.let(::add)
+        }
+        val infoRows = buildList {
+            if (item.isSeries() && seasons.isNotEmpty()) {
+                add(DetailInfoRowModel("Seasons", seasons.size.toString()))
+            }
+            if (totalEpisodeCount > 0) {
+                add(DetailInfoRowModel("Episodes", totalEpisodeCount.toString()))
+            }
+            item.getUnwatchedEpisodeCount()
+                .takeIf { it > 0 }
+                ?.let { add(DetailInfoRowModel("Unwatched", it.toString())) }
+            item.genres.orEmpty()
+                .take(4)
+                .joinToString(", ")
+                .takeIf { it.isNotBlank() }
+                ?.let { add(DetailInfoRowModel("Genres", it)) }
+            item.studios.orEmpty()
+                .firstOrNull()
+                ?.name
+                ?.takeIf { it.isNotBlank() }
+                ?.let { add(DetailInfoRowModel("Studio", it)) }
+        }
 
         return DetailHeroModel(
             id = item.id.toString(),
             title = item.getDisplayTitle(),
-            subtitle = subtitleParts.joinToString(" - ").ifBlank { null },
+            subtitle = subtitleParts.joinToString(" | ").ifBlank { null },
             overview = item.overview?.takeIf { it.isNotBlank() },
-            genres = item.genres.orEmpty().take(4),
-            imageUrl = repositories.stream.getSeriesImageUrl(item),
+            imageUrl = repositories.stream.getLandscapeImageUrl(item),
             backdropUrl = repositories.stream.getBackdropUrl(item),
-            rating = item.officialRating?.takeIf { it.isNotBlank() },
-            year = item.getYear()?.toString(),
-            runtime = item.getFormattedDuration(),
+            metaBadges = metaBadges,
+            infoRows = infoRows,
         )
     }
 
     private fun toEpisodeModel(item: BaseItemDto): DetailEpisodeModel {
         val episodeNumber = item.indexNumber?.let { "E$it" }
-        val seasonEpisode = listOfNotNull(item.parentIndexNumber?.let { "S$it" }, episodeNumber)
-            .joinToString(" • ")
+        val episodeMetadata = listOfNotNull(
+            item.parentIndexNumber?.let { "S$it" },
+            episodeNumber,
+            item.getFormattedDuration(),
+        )
+            .joinToString(" | ")
             .ifBlank { null }
 
         return DetailEpisodeModel(
             id = item.id.toString(),
             title = item.getDisplayTitle(),
-            subtitle = seasonEpisode,
-            imageUrl = repositories.stream.getSeriesImageUrl(item),
+            subtitle = episodeMetadata,
+            imageUrl = repositories.stream.getLandscapeImageUrl(item),
+            canResume = item.canResume(),
+            isWatched = item.isWatched(),
         )
     }
+
+    private fun resolvePlaybackTarget(
+        item: BaseItemDto,
+        episodesBySeasonId: Map<String, List<DetailEpisodeModel>>,
+    ): PlaybackTarget? {
+        return when {
+            item.isMovie() || item.isEpisode() -> PlaybackTarget(
+                id = item.id.toString(),
+                label = if (item.canResume()) "Resume" else "Play",
+            )
+            item.isSeason() -> {
+                val firstEpisode = episodesBySeasonId.values.flatten().firstOrNull() ?: return null
+                PlaybackTarget(firstEpisode.id, "Play Season")
+            }
+            item.isSeries() -> {
+                val episodes = episodesBySeasonId[item.id.toString()].orEmpty()
+                val targetEpisode = episodes.firstOrNull { it.canResume }
+                    ?: episodes.firstOrNull { !it.isWatched }
+                    ?: episodes.firstOrNull()
+                    ?: return null
+                PlaybackTarget(
+                    id = targetEpisode.id,
+                    label = if (targetEpisode.canResume) "Resume Show" else "Play Show",
+                )
+            }
+            else -> null
+        }
+    }
+
+    private fun buildSeasonSubtitle(item: BaseItemDto, loadedEpisodeCount: Int): String? {
+        val episodeCount = (loadedEpisodeCount.takeIf { it > 0 } ?: (item.childCount ?: 0))
+            .takeIf { it > 0 }
+            ?.let { count -> if (count == 1) "1 episode" else "$count episodes" }
+        val unwatchedCount = item.userData?.unplayedItemCount
+            ?.takeIf { it > 0 }
+            ?.let { count -> if (count == 1) "1 left" else "$count left" }
+
+        return listOfNotNull(episodeCount, unwatchedCount)
+            .joinToString(" | ")
+            .ifBlank { null }
+    }
+
+    private fun formatCommunityRating(item: BaseItemDto): String? {
+        val rating = (item.communityRating as? Number)?.toDouble() ?: return null
+        if (rating <= 0.0) return null
+        return String.format(Locale.US, "%.1f/10", rating)
+    }
+
+    private fun BaseItemDto.getMediaTypeLabel(): String =
+        when (type) {
+            BaseItemKind.MOVIE -> "Movie"
+            BaseItemKind.SERIES -> "TV Show"
+            BaseItemKind.SEASON -> "Season"
+            BaseItemKind.EPISODE -> "Episode"
+            BaseItemKind.AUDIO -> "Track"
+            BaseItemKind.MUSIC_ALBUM -> "Album"
+            BaseItemKind.MUSIC_ARTIST -> "Artist"
+            else -> "Library Item"
+        }
+
+    private data class PlaybackTarget(
+        val id: String,
+        val label: String,
+    )
 }

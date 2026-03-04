@@ -41,7 +41,7 @@ class HomeViewModelTest {
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12)
         } returns ApiResult.Success(emptyList())
-        every { fakeRepositories.stream.getSeriesImageUrl(any()) } returns "https://img/poster.jpg"
+        every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
         every { fakeRepositories.stream.getBackdropUrl(any()) } returns null
 
         val viewModel = HomeViewModel(fakeRepositories.coordinator)
@@ -99,7 +99,7 @@ class HomeViewModelTest {
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12)
         } returns ApiResult.Success(emptyList())
-        every { fakeRepositories.stream.getSeriesImageUrl(any()) } returns "https://img/poster.jpg"
+        every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
         every { fakeRepositories.stream.getBackdropUrl(any()) } returns "https://img/backdrop.jpg"
 
         val viewModel = HomeViewModel(fakeRepositories.coordinator)

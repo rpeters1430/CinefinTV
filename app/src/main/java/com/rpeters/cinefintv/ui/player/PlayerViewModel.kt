@@ -45,7 +45,7 @@ class PlayerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repositories: JellyfinRepositoryCoordinator,
     private val playbackPreferencesRepository: PlaybackPreferencesRepository,
-    @ApplicationContext private val appContext: Context,
+    @param:ApplicationContext private val appContext: Context,
     val okHttpClient: OkHttpClient,
 ) : ViewModel() {
     private val playbackSessionId: String = UUID.randomUUID().toString()

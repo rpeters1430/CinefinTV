@@ -24,7 +24,7 @@ import javax.inject.Singleton
 @Singleton
 class ConnectionOptimizer @Inject constructor(
     private val sessionManager: JellyfinSessionManager,
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
 ) {
     companion object {
         private const val TAG = "ConnectionOptimizer"

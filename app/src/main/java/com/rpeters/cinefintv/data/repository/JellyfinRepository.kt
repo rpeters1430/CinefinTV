@@ -54,7 +54,7 @@ import javax.inject.Singleton
 class JellyfinRepository @Inject constructor(
     private val sessionManager: JellyfinSessionManager,
     private val secureCredentialManager: SecureCredentialManager,
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val deviceCapabilities: DeviceCapabilities,
     private val authRepository: JellyfinAuthRepository,
     private val streamRepository: JellyfinStreamRepository,

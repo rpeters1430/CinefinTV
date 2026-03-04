@@ -19,7 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -32,7 +32,7 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun MusicScreen(
-    onOpenItem: (itemId: String) -> Unit,
+    onPlayTrack: (AudioPlaybackRequest) -> Unit,
     viewModel: MusicViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -87,7 +87,9 @@ fun MusicScreen(
             AlbumDetailContent(
                 state = state,
                 onBack = { viewModel.backToGrid() },
-                onOpenItem = onOpenItem,
+                onPlayTrack = { track ->
+                    viewModel.buildPlaybackRequest(track, state.tracks)?.let(onPlayTrack)
+                },
                 imageUrl = { viewModel.imageUrl(it) },
             )
         }
@@ -104,11 +106,11 @@ private fun MusicGridContent(
     imageUrl: (BaseItemDto) -> String?,
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 220.dp),
+        columns = GridCells.Adaptive(minSize = 260.dp),
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 48.dp, vertical = 32.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+        contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
+        horizontalArrangement = Arrangement.spacedBy(24.dp),
+        verticalArrangement = Arrangement.spacedBy(32.dp),
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Text(
@@ -173,7 +175,7 @@ private fun MusicGridContent(
 private fun AlbumDetailContent(
     state: MusicUiState.AlbumDetail,
     onBack: () -> Unit,
-    onOpenItem: (String) -> Unit,
+    onPlayTrack: (BaseItemDto) -> Unit,
     imageUrl: (BaseItemDto) -> String?,
 ) {
     val album = state.album
@@ -182,7 +184,7 @@ private fun AlbumDetailContent(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 48.dp, vertical = 32.dp),
+        contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
@@ -228,7 +230,7 @@ private fun AlbumDetailContent(
             items(state.tracks, key = { it.id }) { track ->
                 TrackRow(
                     track = track,
-                    onPlay = { onOpenItem(track.id.toString()) },
+                    onPlay = { onPlayTrack(track) },
                 )
             }
         }

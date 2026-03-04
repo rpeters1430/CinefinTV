@@ -4,6 +4,7 @@ import android.util.Log
 import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import retrofit2.HttpException
 import java.io.IOException
 import java.net.ConnectException
@@ -33,8 +34,9 @@ class RetryStrategy @Inject constructor() {
         operation: suspend () -> T,
     ): ApiResult<T> {
         var lastException: Exception? = null
+        val attempts = maxRetries.coerceAtLeast(0) + 1
 
-        repeat(maxRetries + 1) { attempt ->
+        repeat(attempts) { attempt ->
             try {
                 val result = operation()
                 if (attempt > 0) {
@@ -44,11 +46,24 @@ class RetryStrategy @Inject constructor() {
             } catch (e: CancellationException) {
                 // Always re-throw cancellation exceptions for proper coroutine cancellation
                 throw e
+            } catch (e: Exception) {
+                lastException = e
+                val shouldRetry = attempt < attempts - 1 && shouldRetry(e, attempt)
+                if (!shouldRetry) {
+                    return ApiResult.Error(
+                        message = e.message ?: "Operation failed",
+                        cause = e,
+                    )
+                }
+
+                val delayMs = calculateRetryDelay(e, attempt)
+                logDebug("Retrying after ${delayMs}ms due to ${e.javaClass.simpleName}")
+                delay(delayMs)
             }
         }
 
         return ApiResult.Error(
-            message = "Operation failed after ${maxRetries + 1} attempts",
+            message = lastException?.message ?: "Operation failed after $attempts attempts",
             cause = lastException,
         )
     }
@@ -135,8 +150,9 @@ class RetryStrategy @Inject constructor() {
         operation: suspend () -> T,
     ): ApiResult<T> {
         var lastException: Exception? = null
+        val attempts = maxRetries.coerceAtLeast(0) + 1
 
-        repeat(maxRetries + 1) { attempt ->
+        repeat(attempts) { attempt ->
             try {
                 val result = operation()
                 if (attempt > 0) {
@@ -146,11 +162,24 @@ class RetryStrategy @Inject constructor() {
             } catch (e: CancellationException) {
                 // Always re-throw cancellation exceptions for proper coroutine cancellation
                 throw e
+            } catch (e: Exception) {
+                lastException = e
+                val shouldRetry = attempt < attempts - 1 && shouldRetryPredicate(e, attempt)
+                if (!shouldRetry) {
+                    return ApiResult.Error(
+                        message = e.message ?: "Custom retry operation failed",
+                        cause = e,
+                    )
+                }
+
+                val delayMs = calculateCustomRetryDelay(baseDelayMs, maxDelayMs, attempt)
+                logDebug("Custom retry waiting ${delayMs}ms after ${e.javaClass.simpleName}")
+                delay(delayMs)
             }
         }
 
         return ApiResult.Error(
-            message = "Custom retry operation failed after ${maxRetries + 1} attempts",
+            message = lastException?.message ?: "Custom retry operation failed after $attempts attempts",
             cause = lastException,
         )
     }

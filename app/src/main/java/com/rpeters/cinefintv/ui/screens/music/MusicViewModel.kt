@@ -25,6 +25,11 @@ sealed class MusicUiState {
     data class Error(val message: String, val viewType: MusicViewType = MusicViewType.DEFAULT) : MusicUiState()
 }
 
+data class AudioPlaybackRequest(
+    val trackId: String,
+    val queueIds: List<String>,
+)
+
 @HiltViewModel
 class MusicViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
@@ -46,7 +51,7 @@ class MusicViewModel @Inject constructor(
             }
             _uiState.value = when (result) {
                 is ApiResult.Success -> MusicUiState.Grid(result.data, viewType)
-                is ApiResult.Error -> MusicUiState.Error(result.message ?: "Failed to load music", viewType = viewType)
+                is ApiResult.Error -> MusicUiState.Error(result.message, viewType = viewType)
                 is ApiResult.Loading -> MusicUiState.Loading
             }
         }
@@ -58,7 +63,7 @@ class MusicViewModel @Inject constructor(
             val result = repositories.media.getAlbumTracks(album.id.toString())
             _uiState.value = when (result) {
                 is ApiResult.Success -> MusicUiState.AlbumDetail(album, result.data)
-                is ApiResult.Error -> MusicUiState.Error(result.message ?: "Failed to load album", viewType = currentViewType)
+                is ApiResult.Error -> MusicUiState.Error(result.message, viewType = currentViewType)
                 is ApiResult.Loading -> MusicUiState.Loading
             }
         }
@@ -73,7 +78,7 @@ class MusicViewModel @Inject constructor(
                     currentViewType = MusicViewType.ALBUMS
                     MusicUiState.Grid(result.data, MusicViewType.ALBUMS)
                 }
-                is ApiResult.Error -> MusicUiState.Error(result.message ?: "Failed to load artist albums", viewType = currentViewType)
+                is ApiResult.Error -> MusicUiState.Error(result.message, viewType = currentViewType)
                 is ApiResult.Loading -> MusicUiState.Loading
             }
         }
@@ -83,10 +88,21 @@ class MusicViewModel @Inject constructor(
         loadGrid(currentViewType)
     }
 
-    fun imageUrl(item: BaseItemDto): String? =
-        repositories.stream.getImageUrl(
-            itemId = item.id.toString(),
-            imageType = "Primary",
-            tag = item.imageTags?.get(org.jellyfin.sdk.model.api.ImageType.PRIMARY),
+    fun buildPlaybackRequest(
+        selectedTrack: BaseItemDto,
+        albumTracks: List<BaseItemDto>,
+    ): AudioPlaybackRequest? {
+        val selectedTrackId = selectedTrack.id.toString()
+        val queueIds = albumTracks
+            .map { it.id.toString() }
+            .ifEmpty { listOf(selectedTrackId) }
+
+        return AudioPlaybackRequest(
+            trackId = selectedTrackId,
+            queueIds = queueIds,
         )
+    }
+
+    fun imageUrl(item: BaseItemDto): String? =
+        repositories.stream.getLandscapeImageUrl(item)
 }

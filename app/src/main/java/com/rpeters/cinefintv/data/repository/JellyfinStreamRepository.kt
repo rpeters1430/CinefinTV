@@ -28,10 +28,10 @@ class JellyfinStreamRepository @Inject constructor(
         private const val DEFAULT_MAX_AUDIO_CHANNELS = 2
 
         // Image size constants
-        private const val DEFAULT_IMAGE_MAX_HEIGHT = 400
-        private const val DEFAULT_IMAGE_MAX_WIDTH = 400
-        private const val BACKDROP_MAX_HEIGHT = 400
-        private const val BACKDROP_MAX_WIDTH = 800
+        private const val DEFAULT_IMAGE_MAX_HEIGHT = 800
+        private const val DEFAULT_IMAGE_MAX_WIDTH = 800
+        private const val BACKDROP_MAX_HEIGHT = 1080
+        private const val BACKDROP_MAX_WIDTH = 1920
 
         // Default codecs
         private const val DEFAULT_VIDEO_CODEC = "h264"
@@ -445,56 +445,82 @@ class JellyfinStreamRepository @Inject constructor(
 
     /**
      * Get a landscape (16:9 / backdrop) image URL suitable for horizontal card thumbnails.
-     * - Episodes: their own primary image (Jellyfin stores episode stills as Primary, not posters).
-     * - Movies / Series / everything else: prefer Backdrop; fall back to Primary.
+     * Order of preference:
+     * - Episodes: Primary (landscape still screenshot) -> Backdrop -> Thumb
+     * - Others: Backdrop -> Thumb -> Primary (poster/square)
      */
     fun getLandscapeImageUrl(item: BaseItemDto): String? {
         return try {
             val server = authRepository.getCurrentServer() ?: return null
             if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) return null
 
-            when (item.type) {
-                BaseItemKind.EPISODE -> {
-                    // Episode primary is a landscape still screenshot, not a portrait poster
-                    "${server.url}/Items/${item.id}/Images/Primary?maxHeight=$BACKDROP_MAX_HEIGHT&maxWidth=$BACKDROP_MAX_WIDTH"
-                }
-                else -> {
-                    val backdropTag = item.backdropImageTags?.firstOrNull()
-                    if (backdropTag != null) {
-                        "${server.url}/Items/${item.id}/Images/Backdrop?tag=$backdropTag&maxHeight=$BACKDROP_MAX_HEIGHT&maxWidth=$BACKDROP_MAX_WIDTH"
-                    } else {
-                        getImageUrl(item.id.toString(), "Primary", item.imageTags?.get(ImageType.PRIMARY))
-                    }
+            val itemId = item.id.toString()
+
+            if (item.type == BaseItemKind.EPISODE) {
+                // Episode primary is a landscape still screenshot, not a portrait poster
+                item.imageTags?.get(ImageType.PRIMARY)?.let { tag ->
+                    return getImageUrl(itemId, "Primary", tag)
                 }
             }
+
+            // Prefer Backdrop (Horizontal)
+            item.backdropImageTags?.firstOrNull()?.let { tag ->
+                return getImageUrl(itemId, "Backdrop", tag)
+            }
+
+            // Fallback to Thumb (Horizontal)
+            item.imageTags?.get(ImageType.THUMB)?.let { tag ->
+                return getImageUrl(itemId, "Thumb", tag)
+            }
+
+            // Final fallback to Primary (might be portrait/square)
+            item.imageTags?.get(ImageType.PRIMARY)?.let { tag ->
+                return getImageUrl(itemId, "Primary", tag)
+            }
+
+            null
         } catch (e: CancellationException) {
             throw e
         }
     }
 
     /**
-     * Get image URL for search cards with a fallback order of Primary -> Backdrop -> Thumb.
+     * Get a strictly horizontal thumbnail for wide cards.
+     * Unlike [getLandscapeImageUrl], this intentionally avoids falling back to Primary art,
+     * which is often portrait for seasons and causes awkward crops in 16:9 cards.
+     */
+    fun getWideCardImageUrl(item: BaseItemDto): String? {
+        return try {
+            val server = authRepository.getCurrentServer() ?: return null
+            if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) return null
+
+            val itemId = item.id.toString()
+
+            if (item.type == BaseItemKind.EPISODE) {
+                item.imageTags?.get(ImageType.PRIMARY)?.let { tag ->
+                    return getImageUrl(itemId, "Primary", tag)
+                }
+            }
+
+            item.backdropImageTags?.firstOrNull()?.let { tag ->
+                return getImageUrl(itemId, "Backdrop", tag)
+            }
+
+            item.imageTags?.get(ImageType.THUMB)?.let { tag ->
+                return getImageUrl(itemId, "Thumb", tag)
+            }
+
+            null
+        } catch (e: CancellationException) {
+            throw e
+        }
+    }
+
+    /**
+     * Get image URL for search cards, preferring landscape images for consistency.
      */
     fun getSearchCardImageUrl(item: BaseItemDto): String? {
-        val itemId = item.id?.toString() ?: return null
-
-        if (item.type == BaseItemKind.EPISODE && item.seriesId != null) {
-            return getImageUrl(item.seriesId.toString(), "Primary")
-        }
-
-        item.imageTags?.get(ImageType.PRIMARY)?.let { primaryTag ->
-            return getImageUrl(itemId, "Primary", primaryTag)
-        }
-
-        item.backdropImageTags?.firstOrNull()?.let { backdropTag ->
-            return getImageUrl(itemId, "Backdrop", backdropTag)
-        }
-
-        item.imageTags?.get(ImageType.THUMB)?.let { thumbTag ->
-            return getImageUrl(itemId, "Thumb", thumbTag)
-        }
-
-        return null
+        return getLandscapeImageUrl(item)
     }
 
     /**

@@ -4,23 +4,23 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items as rowItems
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.rpeters.cinefintv.R
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 
 enum class LibraryCategory(
@@ -90,62 +90,36 @@ fun LibraryScreen(
         }
 
         is LibraryUiState.Content -> {
-            if (category == LibraryCategory.MOVIES) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 48.dp, vertical = 32.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
-                ) {
-                    item {
-                        Text(
-                            text = state.title,
-                            style = MaterialTheme.typography.displaySmall,
-                        )
-                    }
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 260.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp),
+                verticalArrangement = Arrangement.spacedBy(32.dp),
+            ) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Text(
+                        text = state.title,
+                        style = MaterialTheme.typography.displaySmall,
+                    )
+                }
 
-                    item {
+                if (category == LibraryCategory.MOVIES) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
                         Text(
-text = stringResource(R.string.all_movies),
+                            text = stringResource(R.string.filter_all_movies),
                             style = MaterialTheme.typography.titleLarge,
                         )
                     }
-
-                    item {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            rowItems(state.items, key = { it.id }) { item ->
-                                TvMediaCard(
-                                    title = item.title,
-                                    subtitle = item.subtitle,
-                                    imageUrl = item.imageUrl,
-                                    onClick = { onOpenItem(item.id) },
-                                )
-                            }
-                        }
-                    }
                 }
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 48.dp, vertical = 32.dp),
-                    horizontalArrangement = Arrangement.spacedBy(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
-                ) {
-                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                        Text(
-                            text = state.title,
-                            style = MaterialTheme.typography.displaySmall,
-                        )
-                    }
 
-                    items(state.items, key = { it.id }) { item ->
-                        TvMediaCard(
-                            title = item.title,
-                            subtitle = item.subtitle,
-                            imageUrl = item.imageUrl,
-                            onClick = { onOpenItem(item.id) },
-                        )
-                    }
+                items(state.items, key = { it.id }) { item ->
+                    TvMediaCard(
+                        title = item.title,
+                        subtitle = item.subtitle,
+                        imageUrl = item.imageUrl,
+                        onClick = { onOpenItem(item.id) },
+                    )
                 }
             }
         }

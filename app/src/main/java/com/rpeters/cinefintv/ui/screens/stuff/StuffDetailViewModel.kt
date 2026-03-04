@@ -80,7 +80,7 @@ class StuffDetailViewModel @Inject constructor(
                             id = it.id.toString(),
                             title = it.getDisplayTitle(),
                             subtitle = it.getYear()?.toString() ?: it.getFormattedDuration(),
-                            imageUrl = repositories.stream.getSeriesImageUrl(it),
+                            imageUrl = repositories.stream.getLandscapeImageUrl(it),
                         )
                     }
                     .toList()
@@ -94,7 +94,7 @@ class StuffDetailViewModel @Inject constructor(
                     title = item.getDisplayTitle(),
                     overview = item.overview,
                     metadataLine = metadata,
-                    imageUrl = repositories.stream.getSeriesImageUrl(item),
+                    imageUrl = repositories.stream.getLandscapeImageUrl(item),
                     backdropUrl = repositories.stream.getBackdropUrl(item),
                 ),
                 moreFromStuff = moreItems,

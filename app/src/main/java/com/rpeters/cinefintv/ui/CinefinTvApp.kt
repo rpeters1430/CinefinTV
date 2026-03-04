@@ -1,20 +1,35 @@
 package com.rpeters.cinefintv.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Tab
+import androidx.tv.material3.TabDefaults
 import androidx.tv.material3.TabRow
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.navigation.AuthRoutes
@@ -25,16 +40,17 @@ import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 private data class NavTabItem(
     val label: String,
     val route: String,
+    val icon: ImageVector,
 )
 
 private val navTabItems = listOf(
-    NavTabItem("Search", NavRoutes.SEARCH),
-    NavTabItem("Home", NavRoutes.HOME),
-    NavTabItem("TV Shows", NavRoutes.LIBRARY_TVSHOWS),
-    NavTabItem("Movies", NavRoutes.LIBRARY_MOVIES),
-    NavTabItem("Music", NavRoutes.LIBRARY_MUSIC),
-    NavTabItem("Stuff (Home Videos)", NavRoutes.LIBRARY_STUFF),
-    NavTabItem("Settings", NavRoutes.SETTINGS),
+    NavTabItem("Home", NavRoutes.HOME, Icons.Default.Home),
+    NavTabItem("TV Shows", NavRoutes.LIBRARY_TVSHOWS, Icons.Default.Tv),
+    NavTabItem("Movies", NavRoutes.LIBRARY_MOVIES, Icons.Default.Movie),
+    NavTabItem("Music", NavRoutes.LIBRARY_MUSIC, Icons.Default.MusicNote),
+    NavTabItem("Stuff", NavRoutes.LIBRARY_STUFF, Icons.Default.VideoLibrary),
+    NavTabItem("Search", NavRoutes.SEARCH, Icons.Default.Search),
+    NavTabItem("Settings", NavRoutes.SETTINGS, Icons.Default.Settings),
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -48,9 +64,15 @@ fun CinefinTvApp(isAuthenticated: Boolean = false) {
         val showNav = currentRoute != null &&
             !currentRoute.startsWith("auth/") &&
             !currentRoute.startsWith("player/") &&
+            !currentRoute.startsWith("audio-player/") &&
             !currentRoute.startsWith("detail/")
 
-        val selectedTabIndex = navTabItems.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
+        // Determine selected tab based on route prefix to keep it highlighted during sub-navigation
+        val selectedTabIndex = navTabItems.indexOfFirst { item ->
+            currentRoute != null && (currentRoute == item.route || 
+                (item.route.isNotEmpty() && currentRoute.startsWith(item.route)))
+        }.let { if (it == -1) navTabItems.indexOfFirst { it.route == NavRoutes.HOME } else it }
+        .coerceAtLeast(0)
 
         Box(
             modifier = Modifier
@@ -63,22 +85,53 @@ fun CinefinTvApp(isAuthenticated: Boolean = false) {
                         selectedTabIndex = selectedTabIndex,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 48.dp, vertical = 12.dp),
+                            .padding(horizontal = 48.dp, vertical = 24.dp),
                     ) {
+                        val activeRoute = currentRoute.orEmpty()
                         navTabItems.forEachIndexed { index, item ->
                             Tab(
                                 selected = index == selectedTabIndex,
-                                onFocus = {},
+                                onFocus = {
+                                    // Only navigate on focus if we're not already there and the route is valid
+                                    // This prevents the "default to search" and "redirect on return" issues
+                                    if (!activeRoute.startsWith("auth/") &&
+                                        activeRoute != item.route) {
+                                        navController.navigate(item.route) {
+                                            popUpTo(navController.graph.startDestinationId) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
+                                },
                                 onClick = {
                                     if (currentRoute != item.route) {
                                         navController.navigate(item.route) {
+                                            popUpTo(navController.graph.startDestinationId) {
+                                                saveState = true
+                                            }
                                             launchSingleTop = true
                                             restoreState = true
                                         }
                                     }
                                 },
                             ) {
-                                Text(item.label)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = item.icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = item.label,
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
                             }
                         }
                     }

@@ -10,14 +10,12 @@ import com.rpeters.cinefintv.data.repository.JellyfinStreamRepository
 import com.rpeters.cinefintv.network.ConnectivityChecker
 import com.rpeters.cinefintv.network.ConnectivityQuality
 import com.rpeters.cinefintv.network.NetworkType
-// TODO Task 24: restore when UI layer is copied
-// import com.rpeters.cinefintv.ui.utils.findDefaultAudioStream
-// import com.rpeters.cinefintv.ui.utils.findDefaultVideoStream
 import com.rpeters.cinefintv.utils.SecureLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.MediaSourceInfo
 import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.PlaybackInfoResponse
 import javax.inject.Inject
@@ -115,7 +113,7 @@ class EnhancedPlaybackManager @Inject constructor(
 
     /**
      * Fallback URL when Direct Play fails at runtime.
-     * First attempts Direct Stream (video copy + audio transcode) — far more efficient than
+     * First attempts Direct Stream (video copy + audio transcode) - far more efficient than
      * full transcoding when only the audio codec is incompatible. Falls back to full
      * transcoding only if the video codec itself cannot be copied.
      */
@@ -137,10 +135,10 @@ class EnhancedPlaybackManager @Inject constructor(
                 val anySource = playbackInfo.mediaSources.firstOrNull()
                     ?: return@withContext PlaybackResult.Error("No media sources available for fallback")
 
-                // Try Direct Stream first — copies video, only transcodes audio.
+                // Try Direct Stream first - copies video, only transcodes audio.
                 // This avoids unnecessary video re-encoding when only the audio was the problem.
                 if (canDirectStreamMediaSource(anySource, item, null)) {
-                    SecureLogger.d(TAG, "Direct Play fallback → trying Direct Stream (video copy, audio transcode)")
+                    SecureLogger.d(TAG, "Direct Play fallback -> trying Direct Stream (video copy, audio transcode)")
                     val directStreamResult = getDirectStreamWithAudioTranscode(
                         item, anySource, playbackInfo, audioStreamIndex, subtitleStreamIndex,
                     )
@@ -187,9 +185,9 @@ class EnhancedPlaybackManager @Inject constructor(
         // WORKAROUND: Force Direct Play if server incorrectly rejects (e.g. 10-bit HEVC).
         // IMPORTANT: Only bypass when audio passes a strict check (no stereo-downmix fallback).
         // If the server rejected because the audio codec needs transcoding (e.g. EAC3 5.1, DTS),
-        // we must NOT force direct play — instead let it fall through to Direct Stream below.
+        // we must NOT force direct play - instead let it fall through to Direct Stream below.
         if (!anySource.supportsDirectPlay) {
-            val audioStream = anySource.mediaStreams?.find { it.type == MediaStreamType.AUDIO } // TODO Task 24: restore findDefaultAudioStream() when UI layer is copied
+            val audioStream = anySource.findDefaultAudioStream()
             val audioCodec = audioStream?.codec
             val audioChannels = audioStream?.channels ?: 2
             val audioCanBeDirectPlayed = if (audioCodec != null) {
@@ -197,7 +195,7 @@ class EnhancedPlaybackManager @Inject constructor(
             } else true
 
             if (audioCanBeDirectPlayed && canDirectPlayMediaSource(anySource, item, reasons, bypassServerDecision = true)) {
-                // Audio is fine — server likely incorrectly rejected (e.g. 10-bit HEVC profile)
+                // Audio is fine - server likely incorrectly rejected (e.g. 10-bit HEVC profile)
                 val container = anySource.container ?: "mkv"
                 val url = buildDirectPlayUrl(serverUrl, itemId, anySource.id, container, playSessionId)
 
@@ -216,7 +214,7 @@ class EnhancedPlaybackManager @Inject constructor(
                     decisionTrace = trace
                 )
             }
-            // If audio failed strict check, fall through — Direct Stream will handle it below.
+            // If audio failed strict check, fall through - Direct Stream will handle it below.
         }
 
         // Try standard Direct Play
@@ -290,8 +288,8 @@ class EnhancedPlaybackManager @Inject constructor(
         network: String,
         isDirectStream: Boolean = false
     ): PlaybackDecisionTrace {
-        val videoStream = source.mediaStreams?.find { it.type == MediaStreamType.VIDEO } // TODO Task 24: restore findDefaultVideoStream() when UI layer is copied
-        val audioStream = source.mediaStreams?.find { it.type == MediaStreamType.AUDIO } // TODO Task 24: restore findDefaultAudioStream() when UI layer is copied
+        val videoStream = source.findDefaultVideoStream()
+        val audioStream = source.findDefaultAudioStream()
         
         return PlaybackDecisionTrace(
             sessionId = sessionId,
@@ -328,7 +326,7 @@ class EnhancedPlaybackManager @Inject constructor(
     ): Boolean {
         if (!bypassServerDecision) {
             if (!mediaSource.supportsDirectPlay && !mediaSource.supportsDirectStream) {
-                SecureLogger.d(TAG, "❌ Server says DirectPlay=false, DirectStream=false")
+                SecureLogger.d(TAG, "Server says DirectPlay=false, DirectStream=false")
                 return false
             }
         }
@@ -336,20 +334,20 @@ class EnhancedPlaybackManager @Inject constructor(
         // Check container support
         val container = mediaSource.container
         if (!deviceCapabilities.canPlayContainer(container)) {
-            SecureLogger.d(TAG, "❌ Container '$container' not supported for Direct Play")
+            SecureLogger.d(TAG, "Container '$container' not supported for Direct Play")
             reasons?.add(ReasonCodes.CONTAINER_UNSUPPORTED)
             return false
         }
 
         // Check video codec support
-        val videoStream = mediaSource.mediaStreams?.find { it.type == MediaStreamType.VIDEO } // TODO Task 24: restore findDefaultVideoStream() when UI layer is copied
+        val videoStream = mediaSource.findDefaultVideoStream()
         if (videoStream != null) {
             val videoCodec = videoStream.codec
             val width = videoStream.width ?: 0
             val height = videoStream.height ?: 0
 
             if (!deviceCapabilities.canPlayVideoCodec(videoCodec, width, height)) {
-                SecureLogger.d(TAG, "❌ Video codec '$videoCodec' at ${width}x$height not supported for Direct Play")
+                SecureLogger.d(TAG, "Video codec '$videoCodec' at ${width}x$height not supported for Direct Play")
                 reasons?.add(ReasonCodes.VIDEO_CODEC_UNSUPPORTED)
                 return false
             }
@@ -358,12 +356,12 @@ class EnhancedPlaybackManager @Inject constructor(
         // Check audio codec support with actual channel count.
         // Use strict check (no stereo fallback): Direct Play requires the device to fully
         // decode the audio at the source channel count without downmixing.
-        val audioStream = mediaSource.mediaStreams?.find { it.type == MediaStreamType.AUDIO } // TODO Task 24: restore findDefaultAudioStream() when UI layer is copied
+        val audioStream = mediaSource.findDefaultAudioStream()
         if (audioStream != null) {
             val audioCodec = audioStream.codec
             val audioChannels = audioStream.channels ?: 2
             if (!deviceCapabilities.canPlayAudioCodecStrict(audioCodec, audioChannels)) {
-                SecureLogger.d(TAG, "❌ Audio codec '$audioCodec' ($audioChannels ch) not supported for Direct Play (strict check)")
+                SecureLogger.d(TAG, "Audio codec '$audioCodec' ($audioChannels ch) not supported for Direct Play (strict check)")
                 reasons?.add(ReasonCodes.AUDIO_CODEC_UNSUPPORTED)
                 return false
             }
@@ -372,12 +370,12 @@ class EnhancedPlaybackManager @Inject constructor(
         // Check network conditions for high-bitrate content
         val bitrate = mediaSource.bitrate ?: 0
         if (!isNetworkSuitableForDirectPlay(bitrate)) {
-            SecureLogger.d(TAG, "❌ Network conditions not suitable for Direct Play (bitrate: ${bitrate / 1_000_000} Mbps)")
+            SecureLogger.d(TAG, "Network conditions not suitable for Direct Play (bitrate: ${bitrate / 1_000_000} Mbps)")
             reasons?.add(ReasonCodes.NETWORK_BITRATE_EXCEEDED)
             return false
         }
 
-        SecureLogger.d(TAG, "✅ Device CAN direct play: container=$container, video=${videoStream?.codec}, audio=${audioStream?.codec}")
+        SecureLogger.d(TAG, "Device CAN direct play: container=$container, video=${videoStream?.codec}, audio=${audioStream?.codec}")
         return true
     }
 
@@ -391,14 +389,14 @@ class EnhancedPlaybackManager @Inject constructor(
         reasons: MutableList<String>? = null,
     ): Boolean {
         // Check video codec support (REQUIRED for direct stream)
-        val videoStream = mediaSource.mediaStreams?.find { it.type == MediaStreamType.VIDEO } // TODO Task 24: restore findDefaultVideoStream() when UI layer is copied
+        val videoStream = mediaSource.findDefaultVideoStream()
         if (videoStream != null) {
             val videoCodec = videoStream.codec
             val width = videoStream.width ?: 0
             val height = videoStream.height ?: 0
 
             if (!deviceCapabilities.canPlayVideoCodec(videoCodec, width, height)) {
-                SecureLogger.d(TAG, "❌ Video codec '$videoCodec' at ${width}x$height not supported for Direct Stream")
+                SecureLogger.d(TAG, "Video codec '$videoCodec' at ${width}x$height not supported for Direct Stream")
                 return false
             }
         } else {
@@ -417,23 +415,23 @@ class EnhancedPlaybackManager @Inject constructor(
             val isRemuxable = videoCodec == "h264" || videoCodec == "h265" || videoCodec == "hevc" || videoCodec == "mpeg4"
             
             if (!isRemuxable) {
-                SecureLogger.d(TAG, "❌ Container '$container' and codec '$videoCodec' not supported for Direct Stream")
+                SecureLogger.d(TAG, "Container '$container' and codec '$videoCodec' not supported for Direct Stream")
                 return false
             }
-            SecureLogger.d(TAG, "⚠️ Container '$container' unsupported, but codec '$videoCodec' is remuxable - allowing Direct Stream")
+            SecureLogger.d(TAG, "Container '$container' unsupported, but codec '$videoCodec' is remuxable - allowing Direct Stream")
         }
 
         // Check network conditions
         val bitrate = mediaSource.bitrate ?: 0
         if (!isNetworkSuitableForDirectPlay(bitrate)) {
-            SecureLogger.d(TAG, "❌ Network conditions not suitable for Direct Stream (bitrate: ${bitrate / 1_000_000} Mbps)")
+            SecureLogger.d(TAG, "Network conditions not suitable for Direct Stream (bitrate: ${bitrate / 1_000_000} Mbps)")
             return false
         }
 
         // Audio codec check is intentionally NOT included - that's the whole point of Direct Stream!
-        val audioStream = mediaSource.mediaStreams?.find { it.type == MediaStreamType.AUDIO } // TODO Task 24: restore findDefaultAudioStream() when UI layer is copied
+        val audioStream = mediaSource.findDefaultAudioStream()
         val audioCodec = audioStream?.codec
-        SecureLogger.d(TAG, "✅ Device CAN direct stream: video=${videoStream.codec}, audio=$audioCodec (may transcode audio)")
+        SecureLogger.d(TAG, "Device CAN direct stream: video=${videoStream.codec}, audio=$audioCodec (may transcode audio)")
         return true
     }
 
@@ -471,8 +469,8 @@ class EnhancedPlaybackManager @Inject constructor(
         val prefs = playbackPreferencesRepository.preferences.first()
 
         // Get source video info (we're keeping this unchanged)
-        val sourceVideoStream = mediaSource.mediaStreams?.find { it.type == MediaStreamType.VIDEO } // TODO Task 24: restore findDefaultVideoStream() when UI layer is copied
-        val sourceAudioStream = mediaSource.mediaStreams?.find { it.type == MediaStreamType.AUDIO } // TODO Task 24: restore findDefaultAudioStream() when UI layer is copied
+        val sourceVideoStream = mediaSource.findDefaultVideoStream()
+        val sourceAudioStream = mediaSource.findDefaultAudioStream()
 
         val maxAudioChannels = prefs.audioChannels.channels ?: 2
 
@@ -501,8 +499,8 @@ class EnhancedPlaybackManager @Inject constructor(
         SecureLogger.d(
             TAG,
             "Direct Stream with audio transcode: video=${sourceVideoStream?.codec} (copy), " +
-                "audio=${sourceAudioStream?.codec} → aac, " +
-                "channels: ${sourceAudioStream?.channels} → $maxAudioChannels"
+                "audio=${sourceAudioStream?.codec} -> aac, " +
+                "channels: ${sourceAudioStream?.channels} -> $maxAudioChannels"
         )
 
         return PlaybackResult.Transcoding(
@@ -512,7 +510,7 @@ class EnhancedPlaybackManager @Inject constructor(
             targetVideoCodec = sourceVideoStream?.codec ?: "h264", // Original codec (video is copied)
             targetAudioCodec = "aac",
             targetContainer = "ts",
-            reason = "Direct Stream: Original video (${sourceVideoStream?.codec}), audio transcoded (${sourceAudioStream?.codec} → aac)",
+            reason = "Direct Stream: Original video (${sourceVideoStream?.codec}), audio transcoded (${sourceAudioStream?.codec} -> aac)",
             playSessionId = playSessionId,
             isDirectStream = true,
         )
@@ -538,7 +536,7 @@ class EnhancedPlaybackManager @Inject constructor(
         val prefs = playbackPreferencesRepository.preferences.first()
 
         // Get source video resolution and codec to prevent upscaling and unnecessary transcoding
-        val sourceVideoStream = transcodingSource?.mediaStreams?.find { it.type == MediaStreamType.VIDEO } // TODO Task 24: restore findDefaultVideoStream() when UI layer is copied
+        val sourceVideoStream = transcodingSource?.findDefaultVideoStream()
         val sourceWidth = sourceVideoStream?.width ?: 1920
         val sourceHeight = sourceVideoStream?.height ?: 1080
         val sourceVideoCodec = sourceVideoStream?.codec?.lowercase() ?: "h264"
@@ -686,14 +684,14 @@ class EnhancedPlaybackManager @Inject constructor(
      * Extract video codec from media source
      */
     private fun getVideoCodec(mediaSource: org.jellyfin.sdk.model.api.MediaSourceInfo): String? {
-        return mediaSource.mediaStreams?.find { it.type == MediaStreamType.VIDEO }?.codec // TODO Task 24: restore findDefaultVideoStream() when UI layer is copied
+        return mediaSource.findDefaultVideoStream()?.codec
     }
 
     /**
      * Extract audio codec from media source
      */
     private fun getAudioCodec(mediaSource: org.jellyfin.sdk.model.api.MediaSourceInfo): String? {
-        return mediaSource.mediaStreams?.find { it.type == MediaStreamType.AUDIO }?.codec
+        return mediaSource.findDefaultAudioStream()?.codec
     }
 
     private fun buildServerUrl(serverUrl: String, path: String): String {
@@ -704,6 +702,16 @@ class EnhancedPlaybackManager @Inject constructor(
         val normalizedPath = if (path.startsWith("/")) path else "/$path"
         return normalizedServer + normalizedPath
     }
+
+    private fun MediaSourceInfo.findDefaultVideoStream() =
+        mediaStreams
+            ?.firstOrNull { it.type == MediaStreamType.VIDEO && it.isDefault == true }
+            ?: mediaStreams?.firstOrNull { it.type == MediaStreamType.VIDEO }
+
+    private fun MediaSourceInfo.findDefaultAudioStream() =
+        mediaStreams
+            ?.firstOrNull { it.type == MediaStreamType.AUDIO && it.isDefault == true }
+            ?: mediaStreams?.firstOrNull { it.type == MediaStreamType.AUDIO }
 }
 
 /**
@@ -784,3 +792,4 @@ sealed class PlaybackResult {
 
     data class Error(val message: String) : PlaybackResult()
 }
+
