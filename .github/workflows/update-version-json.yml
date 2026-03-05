@@ -36,7 +36,7 @@ jobs:
           {
             "versionCode": ${{ env.VERSION_CODE }},
             "versionName": "${{ env.VERSION_NAME }}",
-            "updateUrl": "https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/app-release.apk",
+            "updateUrl": "https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/app-debug.apk",
             "releaseNotes": $RELEASE_NOTES,
             "isCritical": false
           }
