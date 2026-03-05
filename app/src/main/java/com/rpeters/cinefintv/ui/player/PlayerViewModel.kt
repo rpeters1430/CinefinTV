@@ -34,6 +34,8 @@ data class PlayerUiState(
     val savedPlaybackPositionMs: Long = 0L,
     val isEpisodicContent: Boolean = false,
     val autoPlayNextEpisode: Boolean = true,
+    val nextEpisodeId: String? = null,
+    val nextEpisodeTitle: String? = null,
     val selectedAudioTrack: TrackOption? = null,
     val selectedSubtitleTrack: TrackOption? = null,
     val isLoading: Boolean = true,
@@ -89,13 +91,19 @@ class PlayerViewModel @Inject constructor(
             }
 
             val detailResult = repositories.media.getItemDetails(itemId)
-            val title = when (detailResult) {
-                is ApiResult.Success -> detailResult.data.getDisplayTitle()
-                else -> "Now Playing"
-            }
-            val isEpisodicContent = when (detailResult) {
-                is ApiResult.Success -> detailResult.data.type == BaseItemKind.EPISODE
-                else -> false
+            val item = (detailResult as? ApiResult.Success)?.data
+            val title = item?.getDisplayTitle() ?: "Now Playing"
+            val isEpisodicContent = item?.type == BaseItemKind.EPISODE
+
+            var nextEpisodeId: String? = null
+            var nextEpisodeTitle: String? = null
+
+            if (isEpisodicContent) {
+                val nextResult = repositories.media.getNextEpisode(itemId)
+                if (nextResult is ApiResult.Success) {
+                    nextEpisodeId = nextResult.data?.id?.toString()
+                    nextEpisodeTitle = nextResult.data?.getDisplayTitle()
+                }
             }
 
             _uiState.value = PlayerUiState(
@@ -105,6 +113,8 @@ class PlayerViewModel @Inject constructor(
                 savedPlaybackPositionMs = savedPlaybackPositionMs,
                 isEpisodicContent = isEpisodicContent,
                 autoPlayNextEpisode = _uiState.value.autoPlayNextEpisode,
+                nextEpisodeId = nextEpisodeId,
+                nextEpisodeTitle = nextEpisodeTitle,
                 selectedAudioTrack = _uiState.value.selectedAudioTrack,
                 selectedSubtitleTrack = _uiState.value.selectedSubtitleTrack,
                 isLoading = false,

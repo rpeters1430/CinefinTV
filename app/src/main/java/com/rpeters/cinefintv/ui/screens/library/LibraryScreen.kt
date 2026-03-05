@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -64,6 +65,7 @@ fun LibraryScreen(
                 text = "Loading ${category.title}...",
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.padding(48.dp),
+                color = Color.White,
             )
         }
 
@@ -77,6 +79,7 @@ fun LibraryScreen(
                 Text(
                     text = "${category.title} could not load",
                     style = MaterialTheme.typography.headlineLarge,
+                    color = Color.White,
                 )
                 Text(
                     text = state.message,
@@ -101,6 +104,7 @@ fun LibraryScreen(
                     Text(
                         text = state.title,
                         style = MaterialTheme.typography.displaySmall,
+                        color = Color.White,
                     )
                 }
 
@@ -109,6 +113,7 @@ fun LibraryScreen(
                         Text(
                             text = stringResource(R.string.filter_all_movies),
                             style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
                         )
                     }
                 }

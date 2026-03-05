@@ -12,7 +12,8 @@
       "Bash(grep:*)",
       "Bash(xargs ls:*)",
       "Bash(./gradlew :app:compileDebugKotlin:*)",
-      "Bash(./gradlew :app:assembleDebug:*)"
+      "Bash(./gradlew :app:assembleDebug:*)",
+      "Bash(./gradlew :app:testDebugUnitTest:*)"
     ]
   }
 }

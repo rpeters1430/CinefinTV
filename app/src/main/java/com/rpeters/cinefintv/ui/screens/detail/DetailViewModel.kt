@@ -1,5 +1,15 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Domain
+import androidx.compose.material.icons.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,6 +20,7 @@ import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
 import com.rpeters.cinefintv.utils.getYear
+import com.rpeters.cinefintv.utils.getYearRange
 import com.rpeters.cinefintv.utils.isEpisode
 import com.rpeters.cinefintv.utils.isMovie
 import com.rpeters.cinefintv.utils.isSeason
@@ -28,6 +39,15 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 data class DetailInfoRowModel(
     val label: String,
     val value: String,
+    val icon: ImageVector? = null,
+)
+
+data class DetailPersonModel(
+    val id: String,
+    val name: String,
+    val role: String?,
+    val type: String?,
+    val imageUrl: String?,
 )
 
 data class DetailHeroModel(
@@ -39,12 +59,14 @@ data class DetailHeroModel(
     val backdropUrl: String?,
     val metaBadges: List<String>,
     val infoRows: List<DetailInfoRowModel>,
+    val cast: List<DetailPersonModel> = emptyList(),
 )
 
 data class DetailSeasonModel(
     val id: String,
     val title: String,
     val subtitle: String? = null,
+    val overview: String? = null,
     val imageUrl: String? = null,
     val episodeCount: Int = 0,
 )
@@ -53,6 +75,7 @@ data class DetailEpisodeModel(
     val id: String,
     val title: String,
     val subtitle: String?,
+    val overview: String?,
     val imageUrl: String?,
     val canResume: Boolean = false,
     val isWatched: Boolean = false,
@@ -66,6 +89,7 @@ sealed class DetailUiState {
         val seasons: List<DetailSeasonModel>,
         val episodesBySeasonId: Map<String, List<DetailEpisodeModel>>,
         val related: List<DetailHeroModel>,
+        val cast: List<DetailPersonModel>,
         val playableItemId: String?,
         val playButtonLabel: String,
         val isDeleteConfirmationVisible: Boolean = false,
@@ -103,16 +127,18 @@ class DetailViewModel @Inject constructor(
                     val seasonsAndEpisodes = loadSeasonsAndEpisodes(item)
                     val relatedItems = loadRelated(item)
                     val playbackTarget = resolvePlaybackTarget(item, seasonsAndEpisodes.second)
+                    val heroModel = toHeroModel(
+                        item = item,
+                        seasons = seasonsAndEpisodes.first,
+                        episodesBySeasonId = seasonsAndEpisodes.second,
+                    )
 
                     _uiState.value = DetailUiState.Content(
-                        item = toHeroModel(
-                            item = item,
-                            seasons = seasonsAndEpisodes.first,
-                            episodesBySeasonId = seasonsAndEpisodes.second,
-                        ),
+                        item = heroModel,
                         seasons = seasonsAndEpisodes.first,
                         episodesBySeasonId = seasonsAndEpisodes.second,
                         related = relatedItems.map(this@DetailViewModel::toHeroModel),
+                        cast = heroModel.cast,
                         playableItemId = playbackTarget?.id,
                         playButtonLabel = playbackTarget?.label ?: "Play",
                     )
@@ -202,6 +228,7 @@ class DetailViewModel @Inject constructor(
                         id = season.id.toString(),
                         title = season.getDisplayTitle(),
                         subtitle = buildSeasonSubtitle(season, episodeModels.size),
+                        overview = season.overview?.takeIf { it.isNotBlank() },
                         imageUrl = repositories.stream.getWideCardImageUrl(season),
                         episodeCount = episodeModels.size.takeIf { it > 0 } ?: (season.childCount ?: 0),
                     )
@@ -243,39 +270,72 @@ class DetailViewModel @Inject constructor(
             item.isSeason() -> episodesBySeasonId.values.flatten().size
             else -> 0
         }
-        val subtitleParts = listOfNotNull(
-            item.getYear()?.toString(),
-            item.getFormattedDuration(),
-        )
+        val subtitleParts = buildList {
+            add(item.getYearRange() ?: item.getYear()?.toString())
+            if (!item.isSeries() && !item.isSeason()) {
+                add(item.getFormattedDuration())
+            }
+        }.filterNotNull()
+
         val metaBadges = buildList {
-            if (!item.isSeries()) {
+            if (!item.isSeries() && !item.isSeason()) {
                 add(item.getMediaTypeLabel())
             }
             item.officialRating?.takeIf { it.isNotBlank() }?.let(::add)
             formatCommunityRating(item)?.let(::add)
-            item.getYear()?.toString()?.let(::add)
-            item.getFormattedDuration()?.let(::add)
         }
+
         val infoRows = buildList {
             if (item.isSeries() && seasons.isNotEmpty()) {
-                add(DetailInfoRowModel("Seasons", seasons.size.toString()))
+                add(DetailInfoRowModel("Seasons", seasons.size.toString(), Icons.Default.Layers))
             }
             if (totalEpisodeCount > 0) {
-                add(DetailInfoRowModel("Episodes", totalEpisodeCount.toString()))
+                add(DetailInfoRowModel("Episodes", totalEpisodeCount.toString(), Icons.Default.FormatListBulleted))
             }
             item.getUnwatchedEpisodeCount()
                 .takeIf { it > 0 }
-                ?.let { add(DetailInfoRowModel("Unwatched", it.toString())) }
+                ?.let { add(DetailInfoRowModel("Unwatched", it.toString(), Icons.Default.VisibilityOff)) }
+            
+            val yearRange = item.getYearRange()
+            if (yearRange != null) {
+                add(DetailInfoRowModel("Years", yearRange, Icons.Default.CalendarToday))
+            }
+
+            if (!item.isSeries() && !item.isSeason()) {
+                item.getFormattedDuration()?.let {
+                    add(DetailInfoRowModel("Duration", it, Icons.Default.Timer))
+                }
+            }
+
+            formatCommunityRating(item)?.let {
+                add(DetailInfoRowModel("Rating", it, Icons.Default.Star))
+            }
+
             item.genres.orEmpty()
-                .take(4)
+                .take(3)
                 .joinToString(", ")
                 .takeIf { it.isNotBlank() }
-                ?.let { add(DetailInfoRowModel("Genres", it)) }
+                ?.let { add(DetailInfoRowModel("Genres", it, Icons.Default.Category)) }
+            
             item.studios.orEmpty()
                 .firstOrNull()
                 ?.name
                 ?.takeIf { it.isNotBlank() }
-                ?.let { add(DetailInfoRowModel("Studio", it)) }
+                ?.let { add(DetailInfoRowModel("Studio", it, Icons.Default.Domain)) }
+        }
+
+        val cast = item.people.orEmpty().map { person ->
+            DetailPersonModel(
+                id = person.id.toString(),
+                name = person.name ?: "Unknown",
+                role = person.role,
+                type = person.type?.toString(),
+                imageUrl = repositories.stream.getImageUrl(
+                    itemId = person.id.toString(),
+                    imageType = "Primary",
+                    tag = person.primaryImageTag
+                )
+            )
         }
 
         return DetailHeroModel(
@@ -287,6 +347,7 @@ class DetailViewModel @Inject constructor(
             backdropUrl = repositories.stream.getBackdropUrl(item),
             metaBadges = metaBadges,
             infoRows = infoRows,
+            cast = cast,
         )
     }
 
@@ -304,6 +365,7 @@ class DetailViewModel @Inject constructor(
             id = item.id.toString(),
             title = item.getDisplayTitle(),
             subtitle = episodeMetadata,
+            overview = item.overview?.takeIf { it.isNotBlank() },
             imageUrl = repositories.stream.getLandscapeImageUrl(item),
             canResume = item.canResume(),
             isWatched = item.isWatched(),

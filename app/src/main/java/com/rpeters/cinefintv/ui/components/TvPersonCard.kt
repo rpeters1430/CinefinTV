@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,9 +26,9 @@ import coil3.compose.AsyncImage
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun TvMediaCard(
-    title: String,
-    subtitle: String? = null,
+fun TvPersonCard(
+    name: String,
+    role: String? = null,
     imageUrl: String? = null,
     onClick: () -> Unit,
     onFocus: () -> Unit = {},
@@ -36,15 +36,17 @@ fun TvMediaCard(
 ) {
     Column(
         modifier = modifier
-            .width(260.dp)
+            .width(120.dp)
             .onFocusChanged { if (it.isFocused) onFocus() },
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Card(
             onClick = onClick,
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(16f / 9f),
+                .aspectRatio(1f),
+            shape = CardDefaults.shape(CircleShape),
             scale = CardDefaults.scale(focusedScale = 1.1f),
             border = CardDefaults.border(
                 focusedBorder = androidx.tv.material3.Border(
@@ -64,13 +66,13 @@ fun TvMediaCard(
                 if (imageUrl != null) {
                     AsyncImage(
                         model = imageUrl,
-                        contentDescription = title,
+                        contentDescription = name,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
                     Text(
-                        text = title.take(1).uppercase(),
+                        text = name.take(1).uppercase(),
                         style = MaterialTheme.typography.headlineMedium
                     )
                 }
@@ -78,30 +80,25 @@ fun TvMediaCard(
         }
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
+                text = name,
+                style = MaterialTheme.typography.titleSmall,
                 color = androidx.compose.ui.graphics.Color.White,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                textAlign = TextAlign.Center
             )
-            if (!subtitle.isNullOrBlank()) {
+            if (!role.isNullOrBlank()) {
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
+                    text = role,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    textAlign = TextAlign.Center
                 )
             }
         }

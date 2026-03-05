@@ -113,9 +113,10 @@ fun HomeScreen(
                         Text(
                             text = section.title,
                             style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
                         )
                         LazyRow(
-                            contentPadding = PaddingValues(horizontal = 8.dp),
+                            contentPadding = PaddingValues(horizontal = 32.dp),
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             items(section.items, key = { it.id }) { item ->

@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -43,11 +44,16 @@ fun StuffDetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     when (val state = uiState) {
-        is StuffDetailUiState.Loading -> Text(
-            text = "Loading Stuff details...",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(48.dp),
-        )
+        is StuffDetailUiState.Loading -> Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = androidx.compose.ui.Alignment.Center
+        ) {
+            Text(
+                text = "Loading Stuff details...",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+            )
+        }
 
         is StuffDetailUiState.Error -> {
             Column(
@@ -56,7 +62,11 @@ fun StuffDetailScreen(
                     .padding(48.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Text("Stuff detail could not load", style = MaterialTheme.typography.headlineLarge)
+                Text(
+                    text = "Stuff detail could not load", 
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = Color.White
+                )
                 Text(
                     text = state.message,
                     style = MaterialTheme.typography.bodyLarge,
@@ -97,7 +107,7 @@ fun StuffDetailScreen(
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 48.dp),
+                    contentPadding = PaddingValues(horizontal = 48.dp, vertical = 32.dp),
                 ) {
                     item { Spacer(Modifier.fillParentMaxHeight(0.35f)) }
                     item {
@@ -112,7 +122,12 @@ fun StuffDetailScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            Text(item.title, style = MaterialTheme.typography.displaySmall)
+                            Text(
+                                text = item.title, 
+                                style = MaterialTheme.typography.displaySmall,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
                             item.overview?.takeIf { it.isNotBlank() }?.let {
                                 Text(
                                     text = it,
@@ -120,9 +135,13 @@ fun StuffDetailScreen(
                                     overflow = TextOverflow.Ellipsis,
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.fillMaxWidth(0.7f)
                                 )
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Row(
+                                modifier = Modifier.padding(top = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
                                 Button(onClick = { onPlay(item.id) }) { Text("Play") }
                                 OutlinedButton(onClick = onBack) { Text("Back") }
                             }
@@ -130,12 +149,16 @@ fun StuffDetailScreen(
                     }
 
                     if (state.moreFromStuff.isNotEmpty()) {
-                        item { Spacer(Modifier.height(28.dp)) }
+                        item { Spacer(Modifier.height(32.dp)) }
                         item {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text("More Stuff", style = MaterialTheme.typography.titleLarge)
+                                Text(
+                                    text = "More Stuff", 
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = Color.White
+                                )
                                 LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 8.dp),
+                                    contentPadding = PaddingValues(horizontal = 32.dp),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 ) {
                                     items(state.moreFromStuff, key = { it.id }) { related ->

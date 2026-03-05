@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -255,6 +256,22 @@ fun PlayerScreen(
                 lastInteraction = System.currentTimeMillis()
             }
 
+            var countdownRemaining by remember { mutableLongStateOf(-1L) }
+            val countdownThresholdMs = 15_000L // 15 seconds
+
+            LaunchedEffect(position, duration) {
+                if (duration > 0 && uiState.isEpisodicContent && uiState.autoPlayNextEpisode && uiState.nextEpisodeId != null) {
+                    val remaining = duration - position
+                    if (remaining in 1L..countdownThresholdMs) {
+                        countdownRemaining = remaining / 1000
+                    } else {
+                        countdownRemaining = -1L
+                    }
+                } else {
+                    countdownRemaining = -1L
+                }
+            }
+
             Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
                 // PlayerView (full screen, no built-in controller)
                 AndroidView(
@@ -384,6 +401,54 @@ fun PlayerScreen(
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // Next Episode Countdown Overlay
+                AnimatedVisibility(
+                    visible = countdownRemaining > 0,
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(48.dp),
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    androidx.tv.material3.Card(
+                        onClick = {
+                            coroutineScope.launch {
+                                viewModel.getNextEpisodeId()?.let { onOpenItem(it) }
+                            }
+                        },
+                        modifier = Modifier.width(300.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Next Episode",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = uiState.nextEpisodeTitle ?: "Coming up next",
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "Starting in $countdownRemaining seconds...",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Button(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        viewModel.getNextEpisodeId()?.let { onOpenItem(it) }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                            ) {
+                                Text("Play Now")
                             }
                         }
                     }

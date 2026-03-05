@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Movie
@@ -17,25 +19,38 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Surface
 import androidx.tv.material3.Tab
-import androidx.tv.material3.TabDefaults
 import androidx.tv.material3.TabRow
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.navigation.AuthRoutes
 import com.rpeters.cinefintv.ui.navigation.CinefinTvNavGraph
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
+import com.rpeters.cinefintv.update.UpdateInfo
+import com.rpeters.cinefintv.update.UpdateManager
+import com.rpeters.cinefintv.update.UpdateStatus
+import kotlinx.coroutines.launch
 
 private data class NavTabItem(
     val label: String,
@@ -55,17 +70,60 @@ private val navTabItems = listOf(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun CinefinTvApp(isAuthenticated: Boolean = false) {
+fun CinefinTvApp(
+    isAuthenticated: Boolean = false,
+    updateManager: UpdateManager? = null
+) {
     CinefinTvTheme {
         val navController = rememberNavController()
         val currentBackStack by navController.currentBackStackEntryAsState()
         val currentRoute = currentBackStack?.destination?.route
+        val coroutineScope = rememberCoroutineScope()
+
+        var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+        var isDownloading by remember { mutableStateOf(false) }
+        var downloadProgress by remember { mutableStateOf(0f) }
+
+        // Check for updates on startup
+        if (updateManager != null) {
+            LaunchedEffect(Unit) {
+                val status = updateManager.checkForUpdate()
+                if (status is UpdateStatus.UpdateAvailable) {
+                    updateInfo = status.info
+                }
+            }
+        }
+
+        if (updateInfo != null) {
+            UpdateDialog(
+                info = updateInfo!!,
+                isDownloading = isDownloading,
+                progress = downloadProgress,
+                onConfirm = {
+                    if (updateManager != null) {
+                        isDownloading = true
+                        coroutineScope.launch {
+                            updateManager.downloadAndInstallApk(updateInfo!!) { progress ->
+                                downloadProgress = progress
+                            }
+                            isDownloading = false
+                        }
+                    }
+                },
+                onDismiss = {
+                    if (!updateInfo!!.isCritical) {
+                        updateInfo = null
+                    }
+                }
+            )
+        }
 
         val showNav = currentRoute != null &&
             !currentRoute.startsWith("auth/") &&
             !currentRoute.startsWith("player/") &&
             !currentRoute.startsWith("audio-player/") &&
-            !currentRoute.startsWith("detail/")
+            !currentRoute.startsWith("detail/") &&
+            !currentRoute.startsWith("stuff/detail/")
 
         // Determine selected tab based on route prefix to keep it highlighted during sub-navigation
         val selectedTabIndex = navTabItems.indexOfFirst { item ->
@@ -92,10 +150,10 @@ fun CinefinTvApp(isAuthenticated: Boolean = false) {
                             Tab(
                                 selected = index == selectedTabIndex,
                                 onFocus = {
-                                    // Only navigate on focus if we're not already there and the route is valid
-                                    // This prevents the "default to search" and "redirect on return" issues
+                                    // Only navigate on focus if we're not already in a sub-route of this tab
                                     if (!activeRoute.startsWith("auth/") &&
-                                        activeRoute != item.route) {
+                                        activeRoute != item.route &&
+                                        !activeRoute.startsWith("${item.route}/")) {
                                         navController.navigate(item.route) {
                                             popUpTo(navController.graph.startDestinationId) {
                                                 saveState = true
@@ -147,3 +205,70 @@ fun CinefinTvApp(isAuthenticated: Boolean = false) {
     }
 }
 
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun UpdateDialog(
+    info: UpdateInfo,
+    isDownloading: Boolean,
+    progress: Float,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.width(450.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "New Update Available",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White
+                )
+                Text(
+                    text = "Version ${info.versionName} is ready to install.",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                if (!info.releaseNotes.isNullOrBlank()) {
+                    Text(
+                        text = info.releaseNotes,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (isDownloading) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                        Text(
+                            text = "Downloading... ${(progress * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.End)
+                    ) {
+                        if (!info.isCritical) {
+                            androidx.tv.material3.OutlinedButton(onClick = onDismiss) {
+                                Text("Later")
+                            }
+                        }
+                        Button(onClick = onConfirm) {
+                            Text("Update Now")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

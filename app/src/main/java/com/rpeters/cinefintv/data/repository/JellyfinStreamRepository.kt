@@ -510,6 +510,13 @@ class JellyfinStreamRepository @Inject constructor(
                 return getImageUrl(itemId, "Thumb", tag)
             }
 
+            // Fallback to Primary for seasons specifically
+            if (item.type == BaseItemKind.SEASON) {
+                item.imageTags?.get(ImageType.PRIMARY)?.let { tag ->
+                    return getImageUrl(itemId, "Primary", tag)
+                }
+            }
+
             null
         } catch (e: CancellationException) {
             throw e

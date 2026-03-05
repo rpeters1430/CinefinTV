@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,12 +47,12 @@ fun MusicScreen(
                 Text(
                     text = "Loading music...",
                     style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
                 )
             }
         }
 
         is MusicUiState.Error -> {
-            // state is already smart-cast to MusicUiState.Error here
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -61,6 +62,7 @@ fun MusicScreen(
                 Text(
                     text = "Music could not load",
                     style = MaterialTheme.typography.headlineLarge,
+                    color = Color.White,
                 )
                 Text(
                     text = state.message,
@@ -116,6 +118,7 @@ private fun MusicGridContent(
             Text(
                 text = "Music",
                 style = MaterialTheme.typography.displaySmall,
+                color = Color.White,
             )
         }
 
@@ -192,6 +195,7 @@ private fun AlbumDetailContent(
                 Text(
                     text = albumTitle,
                     style = MaterialTheme.typography.displaySmall,
+                    color = Color.White,
                 )
                 if (!albumYear.isNullOrBlank()) {
                     Text(
@@ -274,6 +278,7 @@ private fun TrackRow(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
+                color = Color.White,
                 modifier = Modifier.weight(1f),
             )
             if (!durationText.isNullOrBlank()) {

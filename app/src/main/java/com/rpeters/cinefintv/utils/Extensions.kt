@@ -66,6 +66,18 @@ fun BaseItemDto.getDisplayTitle(): String = name ?: AppResources.getString(R.str
 
 fun BaseItemDto.getYear(): Int? = (productionYear as? Number)?.toInt()
 
+fun BaseItemDto.getYearRange(): String? {
+    val startYear = getYear() ?: return null
+    if (!isSeries()) return startYear.toString()
+    
+    val endYear = (endDate as? Number)?.toInt()
+    return if (endYear != null) {
+        "$startYear - $endYear"
+    } else {
+        "$startYear - Present"
+    }
+}
+
 fun BaseItemDto.getFormattedDuration(): String? {
     val ticks = runTimeTicks ?: return null
     val totalSeconds = ticks / 10_000_000 // Convert from ticks to seconds

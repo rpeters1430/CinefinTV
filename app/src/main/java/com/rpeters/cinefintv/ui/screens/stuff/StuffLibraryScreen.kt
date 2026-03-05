@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,6 +40,7 @@ fun StuffLibraryScreen(
                 text = "Loading Stuff (Home Videos)...",
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.padding(48.dp),
+                color = Color.White,
             )
         }
 
@@ -49,7 +51,11 @@ fun StuffLibraryScreen(
                     .padding(48.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Text("Stuff could not load", style = MaterialTheme.typography.headlineLarge)
+                Text(
+                    text = "Stuff could not load", 
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = Color.White
+                )
                 Text(
                     text = state.message,
                     style = MaterialTheme.typography.bodyLarge,
@@ -73,6 +79,7 @@ fun StuffLibraryScreen(
                     Text(
                         text = "Stuff (Home Videos)",
                         style = MaterialTheme.typography.displaySmall,
+                        color = Color.White,
                     )
                 }
                 items(state.items, key = { it.id }) { item ->

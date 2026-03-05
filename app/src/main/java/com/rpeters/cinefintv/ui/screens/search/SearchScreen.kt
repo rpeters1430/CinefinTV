@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -44,6 +45,7 @@ fun SearchScreen(
             Text(
                 text = "Search",
                 style = MaterialTheme.typography.displaySmall,
+                color = Color.White,
             )
         }
 
@@ -70,6 +72,7 @@ fun SearchScreen(
                     Text(
                         text = "Searching...",
                         style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White,
                     )
                 }
             }
@@ -121,7 +124,7 @@ private fun SearchField(
         onValueChange = onValueChange,
         singleLine = true,
         textStyle = MaterialTheme.typography.bodyLarge.copy(
-            color = MaterialTheme.colorScheme.onSurface,
+            color = Color.White,
         ),
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         modifier = Modifier
