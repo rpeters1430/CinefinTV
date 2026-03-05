@@ -1,0 +1,7 @@
+{
+  "versionCode": 2,
+  "versionName": "1.0.1",
+  "updateUrl": "https://github.com/rpeters1430/CinefinTV/releases/download/v1.0.1/app-release.apk",
+  "releaseNotes": "- Fixed dark text visibility\n- Centered card text\n- Added cast & crew to details\n- Improved navigation focus",
+  "isCritical": false
+}

@@ -34,8 +34,8 @@ sealed class UpdateStatus {
     data class Error(val message: String) : UpdateStatus()
 }
 
-// Placeholder URL - replace with your actual hosting URL (e.g. GitHub Raw)
-private const val UPDATE_JSON_URL = "https://raw.githubusercontent.com/username/CinefinTV/main/updates/version.json"
+// URL pointing to the version JSON file in your repository
+private const val UPDATE_JSON_URL = "https://raw.githubusercontent.com/rpeters1430/CinefinTV/main/updates/version.json"
 
 @Singleton
 class UpdateManager @Inject constructor(
