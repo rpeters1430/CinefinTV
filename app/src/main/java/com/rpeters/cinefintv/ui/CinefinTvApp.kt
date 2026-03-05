@@ -149,20 +149,7 @@ fun CinefinTvApp(
                         navTabItems.forEachIndexed { index, item ->
                             Tab(
                                 selected = index == selectedTabIndex,
-                                onFocus = {
-                                    // Only navigate on focus if we're not already in a sub-route of this tab
-                                    if (!activeRoute.startsWith("auth/") &&
-                                        activeRoute != item.route &&
-                                        !activeRoute.startsWith("${item.route}/")) {
-                                        navController.navigate(item.route) {
-                                            popUpTo(navController.graph.startDestinationId) {
-                                                saveState = true
-                                            }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    }
-                                },
+                                onFocus = {},
                                 onClick = {
                                     if (currentRoute != item.route) {
                                         navController.navigate(item.route) {

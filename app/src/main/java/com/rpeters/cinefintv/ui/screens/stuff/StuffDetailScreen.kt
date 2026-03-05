@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -27,6 +30,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
@@ -142,7 +146,14 @@ fun StuffDetailScreen(
                                 modifier = Modifier.padding(top = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                Button(onClick = { onPlay(item.id) }) { Text("Play") }
+                                Button(onClick = { onPlay(item.id) }) {
+                                    Icon(
+                                        imageVector = Icons.Default.PlayArrow,
+                                        contentDescription = null,
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Play")
+                                }
                                 OutlinedButton(onClick = onBack) { Text("Back") }
                             }
                         }

@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.runtime.Composable
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -115,6 +117,14 @@ fun DetailScreen(
                 }
             }
 
+            BackHandler(onBack = onBack)
+
+            val listState = rememberLazyListState()
+            var headerHasFocus by remember { mutableStateOf(false) }
+            LaunchedEffect(headerHasFocus) {
+                if (headerHasFocus) listState.animateScrollToItem(0)
+            }
+
             Box(modifier = Modifier.fillMaxSize()) {
                 if (item.backdropUrl != null) {
                     AsyncImage(
@@ -147,6 +157,7 @@ fun DetailScreen(
                 )
 
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 48.dp, vertical = 0.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -155,7 +166,9 @@ fun DetailScreen(
 
                     item {
                         Column(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { headerHasFocus = it.hasFocus },
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             Text(

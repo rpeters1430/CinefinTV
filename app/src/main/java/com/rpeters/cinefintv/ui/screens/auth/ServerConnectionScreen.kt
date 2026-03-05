@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -92,7 +93,7 @@ internal fun AuthTextField(
         onValueChange = onValueChange,
         singleLine = true,
         textStyle = MaterialTheme.typography.bodyLarge.copy(
-            color = MaterialTheme.colorScheme.onSurface,
+            color = Color.White,
         ),
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
