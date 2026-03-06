@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.ui.screens.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,16 +13,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -37,7 +44,14 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -47,6 +61,9 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    var backgroundImageUrl by remember { mutableStateOf<String?>(null) }
 
     when (val state = uiState) {
         is HomeUiState.Loading -> {
@@ -86,46 +103,114 @@ fun HomeScreen(
         }
 
         is HomeUiState.Content -> {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(28.dp),
-            ) {
-                if (state.featuredItems.isNotEmpty()) {
-                    item {
-                        FeaturedCarousel(
-                            items = state.featuredItems,
-                            onMoreInfo = onOpenItem,
-                            onPlay = onPlayItem,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 48.dp)
-                                .padding(top = 16.dp),
-                        )
+            Box(modifier = Modifier.fillMaxSize()) {
+                AnimatedContent(
+                    targetState = backgroundImageUrl,
+                    transitionSpec = { fadeIn().togetherWith(fadeOut()) },
+                    label = "BackgroundContent"
+                ) { url ->
+                    if (url != null) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                    .data(url)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                Color.Black.copy(alpha = 0.3f),
+                                                Color.Black.copy(alpha = 0.8f),
+                                                Color.Black
+                                            )
+                                        )
+                                    )
+                            )
+                        }
                     }
                 }
 
-                items(state.sections, key = { it.title }) { section ->
-                    Column(
-                        modifier = Modifier.padding(horizontal = 48.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Text(
-                            text = section.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(28.dp),
+                ) {
+                    // Invisible focusable item to allow scrolling back to the very top
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .height(1.dp)
+                                .fillMaxWidth()
+                                .onFocusChanged {
+                                    if (it.isFocused) {
+                                        backgroundImageUrl = null
+                                        coroutineScope.launch {
+                                            listState.animateScrollToItem(0)
+                                        }
+                                    }
+                                }
+                                .focusable()
                         )
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 32.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    }
+
+                    if (state.featuredItems.isNotEmpty()) {
+                        item {
+                            FeaturedCarousel(
+                                items = state.featuredItems,
+                                onMoreInfo = onOpenItem,
+                                onPlay = onPlayItem,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 48.dp)
+                                    .padding(top = 16.dp)
+                                    .onFocusChanged {
+                                        if (it.hasFocus) {
+                                            backgroundImageUrl = null
+                                        }
+                                    },
+                            )
+                        }
+                    }
+
+                    items(
+                        state.sections,
+                        key = { it.title },
+                        contentType = { "Section" }
+                    ) { section ->
+                        Column(
+                            modifier = Modifier.padding(horizontal = 48.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            items(section.items, key = { it.id }) { item ->
-                                TvMediaCard(
-                                    title = item.title,
-                                    subtitle = item.subtitle,
-                                    imageUrl = item.imageUrl,
-                                    onClick = { onOpenItem(item.id) },
-                                )
+                            Text(
+                                text = section.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = Color.White,
+                            )
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 32.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            ) {
+                                items(
+                                    section.items,
+                                    key = { it.id },
+                                    contentType = { "MediaCard" }
+                                ) { item ->
+                                    TvMediaCard(
+                                        title = item.title,
+                                        subtitle = item.subtitle,
+                                        imageUrl = item.imageUrl,
+                                        onClick = { onOpenItem(item.id) },
+                                        onFocus = { backgroundImageUrl = item.backdropUrl ?: item.imageUrl }
+                                    )
+                                }
                             }
                         }
                     }

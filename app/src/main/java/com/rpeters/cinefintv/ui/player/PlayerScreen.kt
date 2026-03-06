@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -69,6 +70,7 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
 @OptIn(ExperimentalTvMaterial3Api::class)
+@UnstableApi
 @Composable
 fun PlayerScreen(
     onBack: () -> Unit,
@@ -598,6 +600,7 @@ fun PlayerScreen(
 
 private const val POSITION_SAVE_INTERVAL_MS = 10_000L
 
+@UnstableApi
 @Composable
 private fun rememberExoPlayer(streamUrl: String, okHttpClient: OkHttpClient): ExoPlayer {
     val context = LocalContext.current

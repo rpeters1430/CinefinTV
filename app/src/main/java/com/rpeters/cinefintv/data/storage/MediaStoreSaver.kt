@@ -38,7 +38,13 @@ object MediaStoreSaver {
             }
         }
 
-        return insert(context.contentResolver, MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        } else {
+            throw UnsupportedOperationException("MediaStoreSaver requires scoped storage support")
+        }
+
+        return insert(context.contentResolver, collection, values)
     }
 
     /**

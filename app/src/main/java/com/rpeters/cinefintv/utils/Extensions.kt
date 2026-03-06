@@ -58,19 +58,20 @@ fun BaseItemDto.isSeason(): Boolean = type == org.jellyfin.sdk.model.api.BaseIte
 fun BaseItemDto.isEpisode(): Boolean = type == org.jellyfin.sdk.model.api.BaseItemKind.EPISODE
 fun BaseItemDto.isMusic(): Boolean = type == org.jellyfin.sdk.model.api.BaseItemKind.AUDIO
 fun BaseItemDto.isPhoto(): Boolean = type == org.jellyfin.sdk.model.api.BaseItemKind.PHOTO
+fun BaseItemDto.isPerson(): Boolean = type == org.jellyfin.sdk.model.api.BaseItemKind.PERSON
 
 /**
  * ✅ PHASE 3: Enhanced display utilities
  */
 fun BaseItemDto.getDisplayTitle(): String = name ?: AppResources.getString(R.string.unknown)
 
-fun BaseItemDto.getYear(): Int? = (productionYear as? Number)?.toInt()
+fun BaseItemDto.getYear(): Int? = productionYear
 
 fun BaseItemDto.getYearRange(): String? {
     val startYear = getYear() ?: return null
     if (!isSeries()) return startYear.toString()
     
-    val endYear = (endDate as? Number)?.toInt()
+    val endYear = endDate
     return if (endYear != null) {
         "$startYear - $endYear"
     } else {

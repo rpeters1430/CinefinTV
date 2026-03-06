@@ -9,6 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -25,6 +26,7 @@ import com.rpeters.cinefintv.ui.screens.home.HomeScreen
 import com.rpeters.cinefintv.ui.screens.library.LibraryCategory
 import com.rpeters.cinefintv.ui.screens.library.LibraryScreen
 import com.rpeters.cinefintv.ui.screens.music.MusicScreen
+import com.rpeters.cinefintv.ui.screens.person.PersonScreen
 import com.rpeters.cinefintv.ui.screens.stuff.StuffDetailScreen
 import com.rpeters.cinefintv.ui.screens.stuff.StuffLibraryScreen
 import com.rpeters.cinefintv.ui.screens.search.SearchScreen
@@ -32,6 +34,7 @@ import com.rpeters.cinefintv.ui.player.PlayerScreen
 import com.rpeters.cinefintv.ui.player.audio.AudioPlayerScreen
 
 @OptIn(ExperimentalTvMaterial3Api::class)
+@UnstableApi
 @Composable
 fun CinefinTvNavGraph(
     navController: NavHostController = rememberNavController(),
@@ -161,6 +164,22 @@ fun CinefinTvNavGraph(
                 onPlay = { itemId ->
                     navController.navigate(NavRoutes.player(itemId))
                 },
+                onOpenItem = { itemId ->
+                    navController.navigate(NavRoutes.detail(itemId))
+                },
+                onOpenPerson = { personId ->
+                    navController.navigate(NavRoutes.personDetail(personId))
+                },
+                onBack = {
+                    navController.popBackStack()
+                },
+            )
+        }
+        composable(
+            NavRoutes.PERSON_DETAIL,
+            arguments = listOf(navArgument("personId") { type = NavType.StringType }),
+        ) {
+            PersonScreen(
                 onOpenItem = { itemId ->
                     navController.navigate(NavRoutes.detail(itemId))
                 },

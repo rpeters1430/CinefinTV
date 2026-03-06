@@ -1,7 +1,7 @@
 # CinefinTV Status Snapshot
 
-**Date:** 2026-03-04 (updated)
-**Status:** MVP feature-complete, build clean, audio playback, richer TV detail flow, and next-episode autoplay implemented
+**Date:** 2026-03-05 (updated)
+**Status:** MVP feature-complete, build clean, audio playback, richer TV detail flow, person detail screen, and infrastructure restoration implemented
 
 ---
 
@@ -9,8 +9,11 @@
 
 The app is functional end to end on Android TV against a live Jellyfin server. Core navigation, playback, auth, music, search, and library browsing are all in place. The project currently compiles cleanly and the active unit test suite passes.
 
-### Latest updates (2026-03-04)
+### Latest updates (2026-03-05)
 
+- **Person Detail Screen**: Added a dedicated screen for cast and crew members, showing their biography and a "Known For" media row.
+- **Infrastructure Restoration (Task 24)**: Restored `ErrorHandler` and `OfflineManager` integration in the legacy `JellyfinRepository`.
+- **Navigation Enhancements**: Integrated Person Detail into the main navigation graph and enabled clicking on cast members in the media detail screen.
 - **Quick Connect Refactor**: Replaced ad-hoc text with a proper switching panel in LoginScreen.
 - **Detail Screen Upgrade**: Added Cast & Crew row and enabled dynamic overview updates when focusing seasons/episodes/related items.
 - **Player Autoplay**: Implemented a "Next Episode" countdown overlay that appears 15 seconds before an episode ends, allowing users to play immediately or wait for auto-switch.
@@ -53,9 +56,15 @@ The app is functional end to end on Android TV against a live Jellyfin server. C
 - `DetailScreen` + `DetailViewModel`
 - Full-bleed backdrop, richer metadata chips, centered wrapping info rows
 - TV shows now list seasons with episode counts and resolve playback to a real episode target
-- **Cast & Crew**: Horizontal row of people with roles/images
+- **Cast & Crew**: Horizontal row of people with roles/images; clicking now navigates to Person Detail
 - **Deeper Episode Context**: Focus-driven overviews for seasons and episodes
 - Series detail action row is simplified to playback-only
+
+### Person
+
+- `PersonScreen` + `PersonViewModel`
+- Dedicated detail view for actors and directors
+- Biography/Overview and "Known For" media horizontal list
 
 ### Search
 
@@ -95,5 +104,5 @@ The app is functional end to end on Android TV against a live Jellyfin server. C
 - Run a live visual QA pass on actual TV hardware or emulator for focus, chip wrapping, and edge spacing
 - Review remaining broad refactor files for cleanup and split large changes into more maintainable units
 - Continue cleanup of older encoding-corrupted Kotlin files
-- Consider adding a dedicated Person detail screen
 - Improve track selection by supporting server-side transcoding overrides
+- Consider adding a "Search by Genre" or "Browse by Genre" feature

@@ -2,6 +2,7 @@ package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,19 +16,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.runtime.Composable
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
+import kotlinx.coroutines.launch
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
@@ -49,6 +53,8 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.TvPersonCard
 
@@ -63,6 +69,7 @@ fun DetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var focusedDescription by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
     when (val state = uiState) {
         is DetailUiState.Loading -> {
@@ -120,15 +127,14 @@ fun DetailScreen(
             BackHandler(onBack = onBack)
 
             val listState = rememberLazyListState()
-            var headerHasFocus by remember { mutableStateOf(false) }
-            LaunchedEffect(headerHasFocus) {
-                if (headerHasFocus) listState.animateScrollToItem(0)
-            }
 
             Box(modifier = Modifier.fillMaxSize()) {
                 if (item.backdropUrl != null) {
                     AsyncImage(
-                        model = item.backdropUrl,
+                        model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                            .data(item.backdropUrl)
+                            .crossfade(true)
+                            .build(),
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
@@ -162,13 +168,28 @@ fun DetailScreen(
                     contentPadding = PaddingValues(horizontal = 48.dp, vertical = 0.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
+                    // Invisible focusable item to allow scrolling back to the very top
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .height(1.dp)
+                                .fillMaxWidth()
+                                .onFocusChanged {
+                                    if (it.isFocused) {
+                                        coroutineScope.launch {
+                                            listState.animateScrollToItem(0)
+                                        }
+                                    }
+                                }
+                                .focusable()
+                        )
+                    }
+
                     item { Spacer(Modifier.fillParentMaxHeight(0.35f)) }
 
                     item {
                         Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .onFocusChanged { headerHasFocus = it.hasFocus },
+                            modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             Text(
@@ -359,7 +380,11 @@ fun DetailScreen(
                                     contentPadding = PaddingValues(horizontal = 32.dp),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 ) {
-                                    items(state.seasons, key = { it.id }) { season ->
+                                    items(
+                                        state.seasons,
+                                        key = { it.id },
+                                        contentType = { "MediaCard" }
+                                    ) { season ->
                                         TvMediaCard(
                                             title = season.title,
                                             subtitle = season.subtitle,
@@ -385,7 +410,11 @@ fun DetailScreen(
                                     contentPadding = PaddingValues(horizontal = 32.dp),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 ) {
-                                    items(episodes, key = { it.id }) { episode ->
+                                    items(
+                                        episodes,
+                                        key = { it.id },
+                                        contentType = { "MediaCard" }
+                                    ) { episode ->
                                         TvMediaCard(
                                             title = episode.title,
                                             subtitle = episode.subtitle,
@@ -411,7 +440,11 @@ fun DetailScreen(
                                     contentPadding = PaddingValues(horizontal = 32.dp),
                                     horizontalArrangement = Arrangement.spacedBy(24.dp),
                                 ) {
-                                    items(state.cast, key = { it.id + it.role }) { person ->
+                                    items(
+                                        state.cast,
+                                        key = { it.id + it.role },
+                                        contentType = { "PersonCard" }
+                                    ) { person ->
                                         TvPersonCard(
                                             name = person.name,
                                             role = person.role,
@@ -437,7 +470,11 @@ fun DetailScreen(
                                     contentPadding = PaddingValues(horizontal = 32.dp),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 ) {
-                                    items(state.related, key = { it.id }) { related ->
+                                    items(
+                                        state.related,
+                                        key = { it.id },
+                                        contentType = { "MediaCard" }
+                                    ) { related ->
                                         TvMediaCard(
                                             title = related.title,
                                             subtitle = related.subtitle,

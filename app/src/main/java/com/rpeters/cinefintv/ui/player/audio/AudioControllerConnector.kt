@@ -2,6 +2,7 @@ package com.rpeters.cinefintv.ui.player.audio
 
 import android.content.ComponentName
 import android.content.Context
+import androidx.core.content.ContextCompat
 import androidx.media3.session.SessionToken
 import androidx.media3.session.MediaController
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -26,7 +27,7 @@ class Media3AudioControllerConnector @Inject constructor() : AudioControllerConn
                         .onSuccess(continuation::resume)
                         .onFailure(continuation::resumeWithException)
                 },
-                context.mainExecutor,
+                ContextCompat.getMainExecutor(context),
             )
 
             continuation.invokeOnCancellation {

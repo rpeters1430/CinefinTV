@@ -212,6 +212,7 @@ object NetworkModule {
         authRepository: JellyfinAuthRepository,
         streamRepository: JellyfinStreamRepository,
         connectivityChecker: ConnectivityChecker,
+        analyticsHelper: com.rpeters.cinefintv.utils.AnalyticsHelper,
     ): JellyfinRepository {
         return JellyfinRepository(
             sessionManager,
@@ -221,6 +222,7 @@ object NetworkModule {
             authRepository,
             streamRepository,
             connectivityChecker,
+            analyticsHelper,
         )
     }
 

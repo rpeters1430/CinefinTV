@@ -20,7 +20,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemDto
 import java.net.URLDecoder
-import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 
 data class AudioPlayerUiState(
@@ -60,7 +59,7 @@ class AudioPlayerViewModel @Inject constructor(
             .takeIf { it.isNotBlank() }
             ?.split(",")
             ?.mapNotNull { encodedId ->
-                URLDecoder.decode(encodedId, StandardCharsets.UTF_8)
+                URLDecoder.decode(encodedId, Charsets.UTF_8.name())
                     .takeIf(String::isNotBlank)
             }
             .orEmpty()

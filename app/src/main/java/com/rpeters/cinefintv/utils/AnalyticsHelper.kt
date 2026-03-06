@@ -25,4 +25,8 @@ class AnalyticsHelper @Inject constructor() {
     fun logCastEvent(deviceType: String) {
         // No-op: no analytics in TV app
     }
+
+    fun logErrorAnalytics(error: Any?, operation: String, userId: String?) {
+        // No-op: no analytics in TV app
+    }
 }

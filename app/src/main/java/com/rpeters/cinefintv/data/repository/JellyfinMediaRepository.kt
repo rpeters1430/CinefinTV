@@ -531,6 +531,46 @@ class JellyfinMediaRepository @Inject constructor(
             episodes.getOrNull(currentIndex + 1)
         }
 
+    /**
+     * Get details for a specific person.
+     */
+    suspend fun getPersonDetails(personId: String): ApiResult<BaseItemDto> =
+        withServerClient("getPersonDetails") { server, client ->
+            getItemDetailsById(personId, "person", server, client)
+        }
+
+    /**
+     * Get all movies and TV shows for a specific person (actor/director/etc)
+     */
+    suspend fun getItemsByPerson(
+        personId: String,
+        limit: Int = 50,
+    ): ApiResult<List<BaseItemDto>> =
+        withServerClient("getItemsByPerson") { server, client ->
+            val userUuid = parseUuid(server.userId ?: "", "user")
+            val personUuid = parseUuid(personId, "person")
+
+            val response = client.itemsApi.getItems(
+                userId = userUuid,
+                personIds = listOf(personUuid),
+                recursive = true,
+                includeItemTypes = listOf(
+                    BaseItemKind.MOVIE,
+                    BaseItemKind.SERIES,
+                    BaseItemKind.EPISODE,
+                ),
+                sortBy = listOf(ItemSortBy.PREMIERE_DATE, ItemSortBy.SORT_NAME),
+                sortOrder = listOf(SortOrder.DESCENDING),
+                fields = listOf(
+                    org.jellyfin.sdk.model.api.ItemFields.PRIMARY_IMAGE_ASPECT_RATIO,
+                    org.jellyfin.sdk.model.api.ItemFields.OVERVIEW,
+                    org.jellyfin.sdk.model.api.ItemFields.GENRES,
+                ),
+                limit = limit,
+            )
+            response.content.items
+        }
+
     private suspend fun getItemDetailsById(
         itemId: String,
         itemTypeName: String,

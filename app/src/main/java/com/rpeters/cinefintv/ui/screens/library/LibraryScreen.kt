@@ -118,7 +118,11 @@ fun LibraryScreen(
                     }
                 }
 
-                items(state.items, key = { it.id }) { item ->
+                items(
+                    state.items,
+                    key = { it.id },
+                    contentType = { "MediaCard" }
+                ) { item ->
                     TvMediaCard(
                         title = item.title,
                         subtitle = item.subtitle,

@@ -11,11 +11,13 @@ object NavRoutes {
     const val LIBRARY_MUSIC = "library/music"
     const val SETTINGS = "settings"
     const val DETAIL = "detail/{itemId}"
+    const val PERSON_DETAIL = "detail/person/{personId}"
     const val STUFF_DETAIL = "stuff/detail/{itemId}"
     const val PLAYER = "player/{itemId}"
     const val AUDIO_PLAYER = "audio-player/{itemId}?queue={queue}"
 
     fun detail(itemId: String) = "detail/$itemId"
+    fun personDetail(personId: String) = "detail/person/$personId"
     fun player(itemId: String) = "player/$itemId"
     fun stuffDetail(itemId: String) = "stuff/detail/$itemId"
     fun audioPlayer(itemId: String, queueIds: List<String>): String {

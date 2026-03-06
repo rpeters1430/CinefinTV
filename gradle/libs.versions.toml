@@ -7,6 +7,7 @@ minSdk = "26"
 targetSdk = "35"
 composeBom = "2026.02.01"
 tvMaterial = "1.1.0-alpha01"
+tvFoundation = "1.0.0-alpha12"
 hilt = "2.59.2"
 media3 = "1.10.0-beta01"
 coil = "3.4.0"
@@ -39,7 +40,7 @@ navigation-compose = { group = "androidx.navigation", name = "navigation-compose
 
 # TV
 tv-material = { group = "androidx.tv", name = "tv-material", version.ref = "tvMaterial" }
-tv-foundation = { group = "androidx.tv", name = "tv-foundation", version.ref = "tvMaterial" }
+tv-foundation = { group = "androidx.tv", name = "tv-foundation", version.ref = "tvFoundation" }
 
 # Hilt
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
