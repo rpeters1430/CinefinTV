@@ -18,7 +18,6 @@ What is currently working:
 - Search with debounced query and grid results
 - Music browsing (albums/artists, album tracks)
 - Video playback with custom TV controls overlay
-- Real-device verification against a live Jellyfin server
 
 See `docs/plans/2026-03-02-cinefintv-status.md` for a detailed status snapshot and known issues.
 
