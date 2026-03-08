@@ -34,8 +34,12 @@ class JellyfinAuthInterceptor @Inject constructor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val shouldAttachToken = !isAuthenticationRequest(request)
         val repository = authRepositoryProvider.get()
+        val currentServer = repository.getCurrentServer()
+        
+        // Only attach Jellyfin auth headers if we're hitting the Jellyfin server
+        val isJellyfinRequest = currentServer?.url?.let { request.url.toString().startsWith(it) } ?: false
+        val shouldAttachToken = isJellyfinRequest && !isAuthenticationRequest(request)
 
         val token = if (shouldAttachToken) {
             ensureFreshToken(repository)
@@ -48,7 +52,13 @@ class JellyfinAuthInterceptor @Inject constructor(
             null
         }
 
-        val updatedRequest = buildRequestWithHeaders(request, token)
+        // Only build request with Jellyfin headers if it's a Jellyfin request
+        val updatedRequest = if (isJellyfinRequest) {
+            buildRequestWithHeaders(request, token)
+        } else {
+            request
+        }
+        
         return chain.proceed(updatedRequest)
     }
 
@@ -154,6 +164,14 @@ class JellyfinAuthInterceptor @Inject constructor(
     }
 
     private fun shouldRetry(response: Response): Boolean {
+        val repository = authRepositoryProvider.get()
+        val serverUrl = repository.getCurrentServer()?.url
+        
+        // Only retry with Jellyfin auth if it's a request to our Jellyfin server
+        if (serverUrl == null || !response.request.url.toString().startsWith(serverUrl)) {
+            return false
+        }
+
         if (isAuthenticationRequest(response.request)) {
             return false
         }

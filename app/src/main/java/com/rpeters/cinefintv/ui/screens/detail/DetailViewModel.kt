@@ -1,10 +1,10 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Domain
-import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Timer
@@ -290,7 +290,7 @@ class DetailViewModel @Inject constructor(
                 add(DetailInfoRowModel("Seasons", seasons.size.toString(), Icons.Default.Layers))
             }
             if (totalEpisodeCount > 0) {
-                add(DetailInfoRowModel("Episodes", totalEpisodeCount.toString(), Icons.Default.FormatListBulleted))
+                add(DetailInfoRowModel("Episodes", totalEpisodeCount.toString(), Icons.AutoMirrored.Filled.FormatListBulleted))
             }
             item.getUnwatchedEpisodeCount()
                 .takeIf { it > 0 }
@@ -329,7 +329,7 @@ class DetailViewModel @Inject constructor(
                 id = person.id.toString(),
                 name = person.name ?: "Unknown",
                 role = person.role,
-                type = person.type?.toString(),
+                type = person.type.toString(),
                 imageUrl = repositories.stream.getImageUrl(
                     itemId = person.id.toString(),
                     imageType = "Primary",

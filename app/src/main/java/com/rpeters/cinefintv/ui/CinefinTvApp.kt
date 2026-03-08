@@ -105,10 +105,13 @@ fun CinefinTvApp(
                     if (updateManager != null) {
                         isDownloading = true
                         coroutineScope.launch {
-                            updateManager.downloadAndInstallApk(updateInfo!!) { progress ->
+                            val result = updateManager.downloadAndInstallApk(updateInfo!!) { progress ->
                                 downloadProgress = progress
                             }
                             isDownloading = false
+                            if (result.isSuccess) {
+                                updateInfo = null
+                            }
                         }
                     }
                 },

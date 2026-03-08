@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -39,7 +40,7 @@ private const val UPDATE_JSON_URL = "https://raw.githubusercontent.com/rpeters14
 
 @Singleton
 class UpdateManager @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val okHttpClient: OkHttpClient
 ) {
     private val json = Json { ignoreUnknownKeys = true }
@@ -53,7 +54,8 @@ class UpdateManager @Inject constructor(
             val response = okHttpClient.newCall(request).execute()
             if (!response.isSuccessful) return@withContext UpdateStatus.Error("Failed to check for updates: ${response.code}")
 
-            val body = response.body?.string() ?: return@withContext UpdateStatus.Error("Empty response body")
+            val body = response.body.string()
+            Log.d("UpdateManager", "Received version JSON: $body")
             val updateInfo = json.decodeFromString<UpdateInfo>(body)
 
             val currentVersionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -62,10 +64,14 @@ class UpdateManager @Inject constructor(
                 @Suppress("DEPRECATION")
                 context.packageManager.getPackageInfo(context.packageName, 0).versionCode
             }
+            
+            Log.d("UpdateManager", "Current versionCode: $currentVersionCode, Remote versionCode: ${updateInfo.versionCode}")
 
             if (updateInfo.versionCode > currentVersionCode) {
+                Log.i("UpdateManager", "Update available: ${updateInfo.versionName} (${updateInfo.versionCode})")
                 UpdateStatus.UpdateAvailable(updateInfo)
             } else {
+                Log.i("UpdateManager", "App is up to date")
                 UpdateStatus.NoUpdate
             }
         } catch (e: Exception) {
@@ -85,7 +91,7 @@ class UpdateManager @Inject constructor(
                 return@withContext Result.failure<Unit>(Exception("Failed to download APK: ${response.code}"))
             }
 
-            val body = response.body ?: return@withContext Result.failure<Unit>(Exception("Empty download body"))
+            val body = response.body
             val totalBytes = body.contentLength()
             
             val apkFile = File(context.cacheDir, "update.apk")
@@ -116,6 +122,15 @@ class UpdateManager @Inject constructor(
     }
 
     private fun installApk(file: File) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
+            val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                data = Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            return
+        }
+
         val uri = FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",

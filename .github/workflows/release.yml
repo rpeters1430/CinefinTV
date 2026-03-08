@@ -1,0 +1,74 @@
+name: Build and Release CinefinTV
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on any version tag, e.g. v1.0.2
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew :app:assembleDebug
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/apk/debug/app-debug.apk
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update version.json on main
+        run: |
+          # 1. Switch back to main to update the JSON file
+          git checkout main
+          
+          # 2. Extract version info from build.gradle.kts
+          VERSION_CODE=$(grep "versionCode =" app/build.gradle.kts | awk '{print $3}')
+          VERSION_NAME=$(grep "versionName =" app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
+          
+          # 3. Use jq to safely escape notes if available from the release
+          RELEASE_NOTES=$(echo "${{ github.event.release.body || 'New Version' }}" | jq -R -s .)
+          
+          mkdir -p updates
+          cat <<EOF > updates/version.json
+          {
+            "versionCode": $VERSION_CODE,
+            "versionName": "$VERSION_NAME",
+            "updateUrl": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/app-debug.apk",
+            "releaseNotes": $RELEASE_NOTES,
+            "isCritical": false
+          }
+          EOF
+          
+          # 4. Commit and push back to main
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add updates/version.json
+          git commit -m "chore: auto-update version.json for ${{ github.ref_name }}"
+          git push origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
