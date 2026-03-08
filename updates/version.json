@@ -1,7 +1,7 @@
 {
-  "versionCode": 3,
-  "versionName": "1.0.2",
+  "versionCode": 2,
+  "versionName": "1.0.1",
   "updateUrl": "https://github.com/rpeters1430/CinefinTV/releases/download/v1.0.1/app-debug.apk",
-  "releaseNotes": "New Version\n",
+  "releaseNotes": "Fixes for in-app update system.\n",
   "isCritical": false
 }
