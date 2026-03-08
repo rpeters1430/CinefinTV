@@ -49,8 +49,12 @@ import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -106,7 +110,14 @@ fun HomeScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 AnimatedContent(
                     targetState = backgroundImageUrl,
-                    transitionSpec = { fadeIn().togetherWith(fadeOut()) },
+                    transitionSpec = {
+                        (fadeIn(animationSpec = tween(600, easing = FastOutSlowInEasing)) + 
+                         scaleIn(initialScale = 1.05f, animationSpec = tween(600, easing = FastOutSlowInEasing)))
+                            .togetherWith(
+                                fadeOut(animationSpec = tween(600, easing = FastOutSlowInEasing)) +
+                                scaleOut(targetScale = 1.05f, animationSpec = tween(600, easing = FastOutSlowInEasing))
+                            )
+                    },
                     label = "BackgroundContent"
                 ) { url ->
                     if (url != null) {
@@ -185,14 +196,18 @@ fun HomeScreen(
                         key = { it.title },
                         contentType = { "Section" }
                     ) { section ->
+                        var isSectionFocused by remember { mutableStateOf(false) }
+                        
                         Column(
-                            modifier = Modifier.padding(horizontal = 48.dp),
+                            modifier = Modifier
+                                .padding(horizontal = 48.dp)
+                                .onFocusChanged { isSectionFocused = it.hasFocus },
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             Text(
                                 text = section.title,
                                 style = MaterialTheme.typography.titleLarge,
-                                color = Color.White,
+                                color = if (isSectionFocused) Color.White else Color.White.copy(alpha = 0.5f),
                             )
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 32.dp),

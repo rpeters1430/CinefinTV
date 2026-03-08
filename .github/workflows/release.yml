@@ -58,7 +58,7 @@ jobs:
           {
             "versionCode": $VERSION_CODE,
             "versionName": "$VERSION_NAME",
-            "updateUrl": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/app-debug.apk",
+            "updateUrl": "https://github.com/${{ github.repository }}/releases/latest/download/app-debug.apk",
             "releaseNotes": $RELEASE_NOTES,
             "isCritical": false
           }

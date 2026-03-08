@@ -37,6 +37,7 @@ sealed class UpdateStatus {
 
 // URL pointing to the version JSON file in your repository
 private const val UPDATE_JSON_URL = "https://raw.githubusercontent.com/rpeters1430/CinefinTV/main/updates/version.json"
+private const val LATEST_RELEASE_URL = "https://github.com/rpeters1430/CinefinTV/releases/latest/download/app-debug.apk"
 
 @Singleton
 class UpdateManager @Inject constructor(
@@ -80,10 +81,10 @@ class UpdateManager @Inject constructor(
         }
     }
 
-    suspend fun downloadAndInstallApk(updateInfo: UpdateInfo, onProgress: (Float) -> Unit) = withContext(Dispatchers.IO) {
+    suspend fun downloadAndInstallApk(updateInfo: UpdateInfo, onProgress: (Float) -> Unit): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()
-                .url(updateInfo.updateUrl)
+                .url(LATEST_RELEASE_URL)
                 .build()
 
             val response = okHttpClient.newCall(request).execute()

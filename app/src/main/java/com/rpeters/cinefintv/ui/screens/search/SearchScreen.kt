@@ -1,8 +1,11 @@
 package com.rpeters.cinefintv.ui.screens.search
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,7 +18,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
@@ -37,7 +44,7 @@ fun SearchScreen(
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 260.dp),
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
+        contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 32.dp, bottom = 48.dp),
         horizontalArrangement = Arrangement.spacedBy(24.dp),
         verticalArrangement = Arrangement.spacedBy(32.dp),
     ) {
@@ -46,6 +53,7 @@ fun SearchScreen(
                 text = "Search",
                 style = MaterialTheme.typography.displaySmall,
                 color = Color.White,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
         }
 
@@ -53,6 +61,7 @@ fun SearchScreen(
             SearchField(
                 value = uiState.query,
                 onValueChange = viewModel::updateQuery,
+                modifier = Modifier.padding(bottom = 24.dp)
             )
         }
 
@@ -70,7 +79,7 @@ fun SearchScreen(
             uiState.isLoading -> {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Text(
-                        text = "Searching...",
+                        text = "Searching for \"${uiState.query}\"...",
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White,
                     )
@@ -87,10 +96,10 @@ fun SearchScreen(
                 }
             }
 
-            uiState.results.isEmpty() -> {
+            uiState.results.isEmpty() && !uiState.isLoading -> {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Text(
-                        text = "No results for \"${uiState.query}\"",
+                        text = "No results found for \"${uiState.query}\"",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -116,8 +125,16 @@ fun SearchScreen(
 private fun SearchField(
     value: String,
     onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
+    var isFocused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(12.dp)
+    
+    val borderColor by animateColorAsState(
+        targetValue = if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.border,
+        animationSpec = tween(300),
+        label = "SearchBorderColor"
+    )
 
     BasicTextField(
         value = value,
@@ -127,24 +144,30 @@ private fun SearchField(
             color = Color.White,
         ),
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
+            .onFocusChanged { isFocused = it.isFocused }
             .border(
-                width = 2.dp,
-                color = MaterialTheme.colorScheme.border,
+                width = if (isFocused) 3.dp else 2.dp,
+                color = borderColor,
                 shape = shape,
             )
-            .background(MaterialTheme.colorScheme.surfaceVariant, shape)
-            .padding(horizontal = 18.dp, vertical = 14.dp),
+            .background(
+                color = if (isFocused) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
+                shape = shape
+            )
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         decorationBox = { innerTextField ->
-            if (value.isBlank()) {
-                Text(
-                    text = "Search your Jellyfin library",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Box {
+                if (value.isBlank()) {
+                    Text(
+                        text = "Search your Jellyfin library...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                innerTextField()
             }
-            innerTextField()
         },
     )
 }

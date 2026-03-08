@@ -1,5 +1,9 @@
 package com.rpeters.cinefintv.ui.screens.library
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -59,76 +63,84 @@ fun LibraryScreen(
         viewModel.load(category)
     }
 
-    when (val state = uiState) {
-        is LibraryUiState.Loading -> {
-            Text(
-                text = "Loading ${category.title}...",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(48.dp),
-                color = Color.White,
-            )
-        }
-
-        is LibraryUiState.Error -> {
-            androidx.compose.foundation.layout.Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(48.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
+    AnimatedContent(
+        targetState = uiState,
+        transitionSpec = { fadeIn().togetherWith(fadeOut()) },
+        label = "LibraryContent"
+    ) { state ->
+        when (state) {
+            is LibraryUiState.Loading -> {
                 Text(
-                    text = "${category.title} could not load",
-                    style = MaterialTheme.typography.headlineLarge,
+                    text = "Loading ${category.title}...",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(48.dp),
                     color = Color.White,
                 )
-                Text(
-                    text = state.message,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Button(onClick = { viewModel.load(category, forceRefresh = true) }) {
-                    Text("Retry")
-                }
             }
-        }
 
-        is LibraryUiState.Content -> {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 260.dp),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
-                verticalArrangement = Arrangement.spacedBy(32.dp),
-            ) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
+            is LibraryUiState.Error -> {
+                androidx.compose.foundation.layout.Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(48.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
                     Text(
-                        text = state.title,
-                        style = MaterialTheme.typography.displaySmall,
+                        text = "${category.title} could not load",
+                        style = MaterialTheme.typography.headlineLarge,
                         color = Color.White,
                     )
-                }
-
-                if (category == LibraryCategory.MOVIES) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        Text(
-                            text = stringResource(R.string.filter_all_movies),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
-                        )
+                    Text(
+                        text = state.message,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(onClick = { viewModel.load(category, forceRefresh = true) }) {
+                        Text("Retry")
                     }
                 }
+            }
 
-                items(
-                    state.items,
-                    key = { it.id },
-                    contentType = { "MediaCard" }
-                ) { item ->
-                    TvMediaCard(
-                        title = item.title,
-                        subtitle = item.subtitle,
-                        imageUrl = item.imageUrl,
-                        onClick = { onOpenItem(item.id) },
-                    )
+            is LibraryUiState.Content -> {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 260.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 32.dp, bottom = 48.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(32.dp),
+                ) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            text = state.title,
+                            style = MaterialTheme.typography.displaySmall,
+                            color = Color.White,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    }
+
+                    if (category == LibraryCategory.MOVIES) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            Text(
+                                text = stringResource(R.string.filter_all_movies),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = Color.White,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+                    }
+
+                    items(
+                        state.items,
+                        key = { it.id },
+                        contentType = { "MediaCard" }
+                    ) { item ->
+                        TvMediaCard(
+                            title = item.title,
+                            subtitle = item.subtitle,
+                            imageUrl = item.imageUrl,
+                            onClick = { onOpenItem(item.id) },
+                        )
+                    }
                 }
             }
         }

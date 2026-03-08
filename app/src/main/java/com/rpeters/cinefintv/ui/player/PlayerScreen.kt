@@ -36,6 +36,14 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
@@ -128,6 +136,7 @@ fun PlayerScreen(
             var isTrackPanelVisible by remember { mutableStateOf(false) }
             var audioTracks by remember { mutableStateOf<List<TrackOption>>(emptyList()) }
             var subtitleTracks by remember { mutableStateOf<List<TrackOption>>(emptyList()) }
+            val playPauseFocusRequester = remember { FocusRequester() }
 
             // Playback state — polled every 500ms
             var isPlaying by remember { mutableStateOf(true) }
@@ -247,15 +256,29 @@ fun PlayerScreen(
             // Controls visibility — auto-hide after 3 seconds
             var controlsVisible by remember { mutableStateOf(true) }
             var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
-            LaunchedEffect(lastInteraction) {
-                delay(3_000L)
-                if (!isTrackPanelVisible) {
+            
+            LaunchedEffect(isPlaying) {
+                if (!isPlaying) {
+                    controlsVisible = true
+                }
+            }
+
+            LaunchedEffect(lastInteraction, isPlaying) {
+                if (isPlaying && !isTrackPanelVisible) {
+                    delay(3_000L)
                     controlsVisible = false
                 }
             }
+
             fun onInteract() {
                 controlsVisible = true
                 lastInteraction = System.currentTimeMillis()
+            }
+
+            LaunchedEffect(controlsVisible) {
+                if (controlsVisible && !isTrackPanelVisible) {
+                    playPauseFocusRequester.requestFocus()
+                }
             }
 
             var countdownRemaining by remember { mutableLongStateOf(-1L) }
@@ -274,7 +297,50 @@ fun PlayerScreen(
                 }
             }
 
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .onKeyEvent { keyEvent ->
+                        if (keyEvent.type == KeyEventType.KeyDown) {
+                            onInteract()
+                            when (keyEvent.key) {
+                                Key.DirectionCenter, Key.Enter, Key.Spacebar -> {
+                                    if (!controlsVisible) {
+                                        controlsVisible = true
+                                        true
+                                    } else {
+                                        if (isPlaying) player.pause() else player.play()
+                                        true
+                                    }
+                                }
+                                Key.DirectionLeft -> {
+                                    player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0))
+                                    true
+                                }
+                                Key.DirectionRight -> {
+                                    player.seekTo((player.currentPosition + 10_000).coerceAtMost(player.duration))
+                                    true
+                                }
+                                Key.Back, Key.Escape -> {
+                                    if (isTrackPanelVisible) {
+                                        isTrackPanelVisible = false
+                                        true
+                                    } else if (controlsVisible) {
+                                        controlsVisible = false
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                                else -> false
+                            }
+                        } else {
+                            false
+                        }
+                    }
+                    .focusable()
+            ) {
                 // PlayerView (full screen, no built-in controller)
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
@@ -334,6 +400,7 @@ fun PlayerScreen(
 
                             Button(
                                 onClick = { onInteract(); if (isPlaying) player.pause() else player.play() },
+                                modifier = Modifier.focusRequester(playPauseFocusRequester),
                                 scale = ButtonDefaults.scale(focusedScale = 1.1f)
                             ) {
                                 Icon(
