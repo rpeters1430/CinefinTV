@@ -42,6 +42,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Tab
+import androidx.tv.material3.TabDefaults
 import androidx.tv.material3.TabRow
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.navigation.AuthRoutes
@@ -166,6 +167,16 @@ fun CinefinTvApp(
                                         }
                                     }
                                 },
+                                colors = TabDefaults.pillIndicatorTabColors(
+                                    contentColor = Color.White,
+                                    inactiveContentColor = Color.White.copy(alpha = 0.7f),
+                                    selectedContentColor = Color.White,
+                                    focusedContentColor = Color.White,
+                                    focusedSelectedContentColor = Color.White,
+                                    disabledContentColor = Color.White.copy(alpha = 0.4f),
+                                    disabledInactiveContentColor = Color.White.copy(alpha = 0.4f),
+                                    disabledSelectedContentColor = Color.White.copy(alpha = 0.4f),
+                                ),
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
