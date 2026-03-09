@@ -1,6 +1,6 @@
 # CinefinTV Status Snapshot
 
-**Date:** 2026-03-05 (updated)
+**Date:** 2026-03-09 (updated)
 **Status:** MVP feature-complete, build clean, audio playback, richer TV detail flow, person detail screen, and infrastructure restoration implemented
 
 ---
@@ -101,8 +101,11 @@ The app is functional end to end on Android TV against a live Jellyfin server. C
 
 ## Current priorities / next work
 
-- Run a live visual QA pass on actual TV hardware or emulator for focus, chip wrapping, and edge spacing
-- Review remaining broad refactor files for cleanup and split large changes into more maintainable units
-- Continue cleanup of older encoding-corrupted Kotlin files
-- Improve track selection by supporting server-side transcoding overrides
-- Consider adding a "Search by Genre" or "Browse by Genre" feature
+Prioritized implementation and fix sequencing now lives in `docs/plans/2026-03-09-app-upgrade-roadmap.md`.
+
+Immediate next items:
+- Run a full regression QA pass on emulator + real Android TV hardware and triage defects
+- Fix top focus/navigation defects first (tabs, carousel entry, detail action rows, cast rails)
+- Harden playback/session failure paths (timeouts, retries, saved-position recovery)
+- Ship TV visual polish updates (contrast, spacing consistency, metadata readability)
+- Expand automated checks around autoplay/track-selection transitions and key Home mappings

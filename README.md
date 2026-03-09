@@ -20,6 +20,7 @@ What is currently working:
 - Video playback with custom TV controls overlay
 
 See `docs/plans/2026-03-02-cinefintv-status.md` for a detailed status snapshot and known issues.
+See `docs/plans/2026-03-09-app-upgrade-roadmap.md` for the prioritized upgrade plan.
 
 ---
 
@@ -97,11 +98,13 @@ Current tests are focused on ViewModels and supporting test utilities.
 
 ## Known gaps / next priorities
 
-- Fix Home "Libraries" card navigation behavior
-- Expand detail screens (synopsis/cast/seasons)
-- Add richer audio playback UX (current audio service is stub-level)
-- Add player niceties (subtitle/audio track selection, next episode autoplay)
-- Continue DI cleanup and module scope tightening
+- Execute a full TV QA regression sweep (emulator + real device) and prioritize defects
+- Fix focus/navigation consistency issues across home rows, tabs, and detail actions
+- Harden playback edge cases (stream errors, saved position recovery, autoplay boundaries)
+- Improve visual polish (contrast/readability, spacing, metadata density)
+- Expand tests for playback transitions and focus-critical UI behavior
+
+For full sequencing and success metrics, follow `docs/plans/2026-03-09-app-upgrade-roadmap.md`.
 
 ---
 
