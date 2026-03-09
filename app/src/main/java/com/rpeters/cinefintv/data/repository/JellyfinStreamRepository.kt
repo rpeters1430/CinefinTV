@@ -488,8 +488,11 @@ class JellyfinStreamRepository @Inject constructor(
      * Get a strictly horizontal thumbnail for wide cards.
      * Unlike [getLandscapeImageUrl], this intentionally avoids falling back to Primary art,
      * which is often portrait for seasons and causes awkward crops in 16:9 cards.
+     *
+     * For seasons without a backdrop/thumb, falls back to the parent series landscape image
+     * when [parentItem] is supplied.
      */
-    fun getWideCardImageUrl(item: BaseItemDto): String? {
+    fun getWideCardImageUrl(item: BaseItemDto, parentItem: BaseItemDto? = null): String? {
         return try {
             val server = authRepository.getCurrentServer() ?: return null
             if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) return null
@@ -510,7 +513,17 @@ class JellyfinStreamRepository @Inject constructor(
                 return getImageUrl(itemId, "Thumb", tag)
             }
 
-            // Fallback to Primary for seasons specifically
+            // For seasons without backdrop/thumb: try parent series landscape image
+            if (item.type == BaseItemKind.SEASON && parentItem != null) {
+                parentItem.backdropImageTags?.firstOrNull()?.let { tag ->
+                    return getImageUrl(parentItem.id.toString(), "Backdrop", tag)
+                }
+                parentItem.imageTags?.get(ImageType.THUMB)?.let { tag ->
+                    return getImageUrl(parentItem.id.toString(), "Thumb", tag)
+                }
+            }
+
+            // Last resort: Primary (may be portrait for seasons)
             if (item.type == BaseItemKind.SEASON) {
                 item.imageTags?.get(ImageType.PRIMARY)?.let { tag ->
                     return getImageUrl(itemId, "Primary", tag)

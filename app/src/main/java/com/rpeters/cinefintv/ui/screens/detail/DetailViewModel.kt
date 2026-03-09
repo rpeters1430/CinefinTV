@@ -229,7 +229,7 @@ class DetailViewModel @Inject constructor(
                         title = season.getDisplayTitle(),
                         subtitle = buildSeasonSubtitle(season, episodeModels.size),
                         overview = season.overview?.takeIf { it.isNotBlank() },
-                        imageUrl = repositories.stream.getWideCardImageUrl(season),
+                        imageUrl = repositories.stream.getWideCardImageUrl(season, parentItem = item),
                         episodeCount = episodeModels.size.takeIf { it > 0 } ?: (season.childCount ?: 0),
                     )
                 }
