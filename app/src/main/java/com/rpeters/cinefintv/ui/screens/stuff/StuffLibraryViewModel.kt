@@ -39,7 +39,7 @@ class StuffLibraryViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.value = StuffLibraryUiState.Loading
-            when (val result = repositories.media.getLibraryItems(collectionType = "homevideos", limit = 180)) {
+            when (val result = repositories.media.getLibraryItems(collectionType = "homevideos", limit = 500)) {
                 is ApiResult.Success -> {
                     val cards = result.data.map {
                         StuffItemCardModel(
