@@ -71,7 +71,7 @@ fun BaseItemDto.getYearRange(): String? {
     val startYear = getYear() ?: return null
     if (!isSeries()) return startYear.toString()
     
-    val endYear = endDate
+    val endYear = endDate?.year
     return if (endYear != null) {
         "$startYear - $endYear"
     } else {

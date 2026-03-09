@@ -298,7 +298,7 @@ class DetailViewModel @Inject constructor(
             
             val yearRange = item.getYearRange()
             if (yearRange != null) {
-                add(DetailInfoRowModel("Years", yearRange, Icons.Default.CalendarToday))
+                add(DetailInfoRowModel("Year", yearRange, Icons.Default.CalendarToday))
             }
 
             if (!item.isSeries() && !item.isSeason()) {
