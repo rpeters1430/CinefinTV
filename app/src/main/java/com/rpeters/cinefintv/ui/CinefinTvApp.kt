@@ -50,6 +50,7 @@ import com.rpeters.cinefintv.ui.navigation.CinefinTvNavGraph
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.update.UpdateInfo
+import com.rpeters.cinefintv.update.UpdateInstallResult
 import com.rpeters.cinefintv.update.UpdateManager
 import com.rpeters.cinefintv.update.UpdateStatus
 import kotlinx.coroutines.launch
@@ -86,6 +87,7 @@ fun CinefinTvApp(
         var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
         var isDownloading by remember { mutableStateOf(false) }
         var downloadProgress by remember { mutableStateOf(0f) }
+        var updateError by remember { mutableStateOf<String?>(null) }
 
         // Check for updates on startup
         if (updateManager != null) {
@@ -93,6 +95,7 @@ fun CinefinTvApp(
                 val status = updateManager.checkForUpdate()
                 if (status is UpdateStatus.UpdateAvailable) {
                     updateInfo = status.info
+                    updateError = null
                 }
             }
         }
@@ -102,23 +105,40 @@ fun CinefinTvApp(
                 info = updateInfo!!,
                 isDownloading = isDownloading,
                 progress = downloadProgress,
+                errorMessage = updateError,
                 onConfirm = {
                     if (updateManager != null) {
                         isDownloading = true
+                        downloadProgress = 0f
+                        updateError = null
                         coroutineScope.launch {
                             val result = updateManager.downloadAndInstallApk(updateInfo!!) { progress ->
                                 downloadProgress = progress
                             }
                             isDownloading = false
-                            if (result.isSuccess) {
-                                updateInfo = null
-                            }
+                            result.fold(
+                                onSuccess = { installResult ->
+                                    when (installResult) {
+                                        UpdateInstallResult.InstallerLaunched -> {
+                                            updateInfo = null
+                                            updateError = null
+                                        }
+                                        UpdateInstallResult.PermissionRequired -> {
+                                            updateError = "Allow installs from this app, then choose Update Now again."
+                                        }
+                                    }
+                                },
+                                onFailure = { error ->
+                                    updateError = error.message ?: "Update failed."
+                                }
+                            )
                         }
                     }
                 },
                 onDismiss = {
                     if (!updateInfo!!.isCritical) {
                         updateInfo = null
+                        updateError = null
                     }
                 }
             )
@@ -214,6 +234,7 @@ private fun UpdateDialog(
     info: UpdateInfo,
     isDownloading: Boolean,
     progress: Float,
+    errorMessage: String?,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -240,6 +261,14 @@ private fun UpdateDialog(
                         text = info.releaseNotes,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (!errorMessage.isNullOrBlank()) {
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
 

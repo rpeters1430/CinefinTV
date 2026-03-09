@@ -120,6 +120,8 @@ class HomeViewModelTest {
         every { item.productionYear } returns null
         every { item.runTimeTicks } returns null
         every { item.overview } returns null
+        every { item.communityRating } returns null
+        every { item.officialRating } returns null
         return item
     }
 }

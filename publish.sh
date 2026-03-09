@@ -1,40 +1,103 @@
 #!/bin/bash
 
-# CinefinTV One-Click Publish Script
-# This script bumps the version, tags the commit, and triggers the GitHub release build.
-# 
-# Usage:
-#   chmod +x publish.sh
-#   ./publish.sh
+set -euo pipefail
 
-set -e
+BUILD_FILE="app/build.gradle.kts"
+WORKFLOW_FILE=".github/workflows/release.yml"
 
-# 1. Get current version info
-OLD_VERSION_CODE=$(grep "versionCode =" app/build.gradle.kts | awk '{print $3}')
-OLD_VERSION_NAME=$(grep "versionName =" app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
+require_clean_worktree() {
+    if ! git diff --quiet --ignore-submodules -- || ! git diff --cached --quiet --ignore-submodules --; then
+        echo "Working tree has uncommitted changes. Commit or stash them before publishing."
+        exit 1
+    fi
+}
 
-echo "Current version: $OLD_VERSION_NAME (code $OLD_VERSION_CODE)"
+require_main_branch() {
+    local branch
+    branch="$(git rev-parse --abbrev-ref HEAD)"
+    if [[ "$branch" != "main" ]]; then
+        echo "Publish from main. Current branch: $branch"
+        exit 1
+    fi
+}
 
-# 2. Ask for new version info
-read -p "Enter new version name (e.g., 1.0.2): " NEW_VERSION_NAME
-NEW_VERSION_CODE=$((OLD_VERSION_CODE + 1))
+extract_version_code() {
+    grep "versionCode =" "$BUILD_FILE" | awk '{print $3}'
+}
 
-echo "Bumping to: $NEW_VERSION_NAME (code $NEW_VERSION_CODE)"
+extract_version_name() {
+    grep "versionName =" "$BUILD_FILE" | sed 's/.*"\(.*\)".*/\1/'
+}
 
-# 3. Update build.gradle.kts
-sed -i "s/versionCode = $OLD_VERSION_CODE/versionCode = $NEW_VERSION_CODE/" app/build.gradle.kts
-sed -i "s/versionName = \"$OLD_VERSION_NAME\"/versionName = \"$NEW_VERSION_NAME\"/" app/build.gradle.kts
+update_build_version() {
+    local old_code="$1"
+    local new_code="$2"
+    local old_name="$3"
+    local new_name="$4"
 
-# 4. Commit and Tag
-git add app/build.gradle.kts
-git commit -m "chore: bump version to $NEW_VERSION_NAME"
-git push origin main
+    perl -0pi -e "s/versionCode = \Q$old_code\E/versionCode = $new_code/" "$BUILD_FILE"
+    perl -0pi -e "s/versionName = \"\Q$old_name\E\"/versionName = \"$new_name\"/" "$BUILD_FILE"
+}
 
-TAG="v$NEW_VERSION_NAME"
-git tag "$TAG"
-git push origin "$TAG"
+main() {
+    require_clean_worktree
+    require_main_branch
 
-echo "-------------------------------------------------------"
-echo "Success! GitHub is now building and releasing $TAG."
-echo "The update will be live in a few minutes."
-echo "-------------------------------------------------------"
+    local old_version_code old_version_name
+    old_version_code="$(extract_version_code)"
+    old_version_name="$(extract_version_name)"
+
+    echo "Current version: $old_version_name (code $old_version_code)"
+    read -r -p "Enter new version name (e.g. 1.0.2): " new_version_name
+
+    if [[ -z "$new_version_name" ]]; then
+        echo "Version name cannot be empty."
+        exit 1
+    fi
+
+    if [[ "$new_version_name" == "$old_version_name" ]]; then
+        echo "New version name must differ from the current version."
+        exit 1
+    fi
+
+    local new_version_code
+    new_version_code=$((old_version_code + 1))
+    local tag="v$new_version_name"
+
+    if git rev-parse "$tag" >/dev/null 2>&1; then
+        echo "Tag $tag already exists."
+        exit 1
+    fi
+
+    local backup_file
+    backup_file="$(mktemp)"
+    cp "$BUILD_FILE" "$backup_file"
+    trap 'cp "$backup_file" "$BUILD_FILE"; rm -f "$backup_file"' EXIT
+
+    echo "Bumping to: $new_version_name (code $new_version_code)"
+    update_build_version "$old_version_code" "$new_version_code" "$old_version_name" "$new_version_name"
+
+    echo "Building debug APK locally"
+    ./gradlew :app:assembleDebug
+
+    git add "$BUILD_FILE"
+    git commit -m "chore: bump version to $new_version_name"
+    git tag "$tag"
+
+    trap 'rm -f "$backup_file"' EXIT
+    rm -f "$backup_file"
+
+    echo "Pushing main and tag $tag"
+    git push origin main
+    git push origin "$tag"
+
+    cat <<EOF
+-------------------------------------------------------
+Published $tag.
+GitHub Actions will build app-debug.apk and update updates/version.json after the release job succeeds.
+Workflow: $WORKFLOW_FILE
+-------------------------------------------------------
+EOF
+}
+
+main "$@"

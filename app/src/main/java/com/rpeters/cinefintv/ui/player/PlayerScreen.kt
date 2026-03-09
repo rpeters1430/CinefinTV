@@ -303,9 +303,23 @@ fun PlayerScreen(
                     .background(Color.Black)
                     .onKeyEvent { keyEvent ->
                         if (keyEvent.type == KeyEventType.KeyDown) {
-                            onInteract()
                             when (keyEvent.key) {
+                                Key.Back, Key.Escape -> {
+                                    when {
+                                        isTrackPanelVisible -> {
+                                            isTrackPanelVisible = false
+                                            true
+                                        }
+                                        controlsVisible -> {
+                                            onInteract()
+                                            controlsVisible = false
+                                            true
+                                        }
+                                        else -> false
+                                    }
+                                }
                                 Key.DirectionCenter, Key.Enter, Key.Spacebar -> {
+                                    onInteract()
                                     if (!controlsVisible) {
                                         controlsVisible = true
                                         true
@@ -315,23 +329,14 @@ fun PlayerScreen(
                                     }
                                 }
                                 Key.DirectionLeft -> {
+                                    onInteract()
                                     player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0))
                                     true
                                 }
                                 Key.DirectionRight -> {
+                                    onInteract()
                                     player.seekTo((player.currentPosition + 10_000).coerceAtMost(player.duration))
                                     true
-                                }
-                                Key.Back, Key.Escape -> {
-                                    if (isTrackPanelVisible) {
-                                        isTrackPanelVisible = false
-                                        true
-                                    } else if (controlsVisible) {
-                                        controlsVisible = false
-                                        true
-                                    } else {
-                                        false
-                                    }
                                 }
                                 else -> false
                             }
@@ -379,40 +384,9 @@ fun PlayerScreen(
                                 .fillMaxWidth()
                                 .padding(32.dp)
                                 .align(Alignment.TopStart),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            OutlinedButton(onClick = { onInteract(); onBack() }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                            }
-                            Text(uiState.title, style = MaterialTheme.typography.headlineSmall)
-                        }
-
-                        // Center Controls
-                        Row(
-                            modifier = Modifier.align(Alignment.Center),
-                            horizontalArrangement = Arrangement.spacedBy(32.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            OutlinedButton(onClick = { onInteract(); player.seekTo((position - 10_000).coerceAtLeast(0)) }) {
-                                Icon(Icons.Default.Replay10, contentDescription = "Rewind 10s")
-                            }
-
-                            Button(
-                                onClick = { onInteract(); if (isPlaying) player.pause() else player.play() },
-                                modifier = Modifier.focusRequester(playPauseFocusRequester),
-                                scale = ButtonDefaults.scale(focusedScale = 1.1f)
-                            ) {
-                                Icon(
-                                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                    contentDescription = if (isPlaying) "Pause" else "Play",
-                                    modifier = Modifier.size(48.dp)
-                                )
-                            }
-
-                            OutlinedButton(onClick = { onInteract(); player.seekTo((position + 10_000).coerceAtMost(duration)) }) {
-                                Icon(Icons.Default.Forward10, contentDescription = "Forward 10s")
-                            }
+                            Text(uiState.title, style = MaterialTheme.typography.headlineSmall)
                         }
 
                         // Bottom Controls
@@ -421,7 +395,7 @@ fun PlayerScreen(
                                 .align(Alignment.BottomStart)
                                 .fillMaxWidth()
                                 .padding(horizontal = 48.dp, vertical = 32.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             // Progress Bar
                             if (duration > 0) {
@@ -444,15 +418,78 @@ fun PlayerScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = "${formatMs(position)} / ${formatMs(duration)}",
-                                        style = MaterialTheme.typography.bodyLarge
-                                    )
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                onInteract()
+                                                player.seekTo((position - 10_000).coerceAtLeast(0))
+                                            }
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Replay10,
+                                                contentDescription = "Rewind 10s",
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
 
-                                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Button(
+                                            onClick = {
+                                                onInteract()
+                                                if (isPlaying) player.pause() else player.play()
+                                            },
+                                            modifier = Modifier.focusRequester(playPauseFocusRequester),
+                                            scale = ButtonDefaults.scale(focusedScale = 1.1f)
+                                        ) {
+                                            Icon(
+                                                if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = {
+                                                onInteract()
+                                                player.seekTo((position + 10_000).coerceAtMost(duration))
+                                            }
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Forward10,
+                                                contentDescription = "Forward 10s",
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+
+                                        OutlinedButton(onClick = { onInteract(); onBack() }) {
+                                            Icon(
+                                                Icons.AutoMirrored.Filled.ArrowBack,
+                                                contentDescription = "Stop",
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+
+                                        Spacer(Modifier.width(8.dp))
+
+                                        Text(
+                                            text = "${formatMs(position)} / ${formatMs(duration)}",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                         if (uiState.isEpisodicContent) {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text("Auto-play next", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(end = 8.dp))
+                                                Text(
+                                                    "Auto-play",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    modifier = Modifier.padding(end = 8.dp)
+                                                )
                                                 Switch(
                                                     checked = uiState.autoPlayNextEpisode,
                                                     onCheckedChange = {
@@ -464,9 +501,13 @@ fun PlayerScreen(
                                         }
 
                                         OutlinedButton(onClick = { onInteract(); isTrackPanelVisible = !isTrackPanelVisible }) {
-                                            Icon(Icons.Default.Settings, contentDescription = "Media Settings")
-                                            Spacer(Modifier.width(8.dp))
-                                            Text("Tracks")
+                                            Icon(
+                                                Icons.Default.Settings,
+                                                contentDescription = "Media Settings",
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Audio / Subs")
                                         }
                                     }
                                 }

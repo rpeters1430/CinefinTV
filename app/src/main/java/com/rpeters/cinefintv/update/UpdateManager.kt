@@ -35,9 +35,29 @@ sealed class UpdateStatus {
     data class Error(val message: String) : UpdateStatus()
 }
 
+sealed class UpdateInstallResult {
+    data object InstallerLaunched : UpdateInstallResult()
+    data object PermissionRequired : UpdateInstallResult()
+}
+
+internal enum class InstallAction {
+    LaunchInstaller,
+    RequestUnknownSourcesPermission,
+}
+
+internal fun determineInstallAction(
+    sdkInt: Int,
+    canRequestPackageInstalls: Boolean,
+): InstallAction {
+    return if (sdkInt >= Build.VERSION_CODES.O && !canRequestPackageInstalls) {
+        InstallAction.RequestUnknownSourcesPermission
+    } else {
+        InstallAction.LaunchInstaller
+    }
+}
+
 // URL pointing to the version JSON file in your repository
 private const val UPDATE_JSON_URL = "https://raw.githubusercontent.com/rpeters1430/CinefinTV/main/updates/version.json"
-private const val LATEST_RELEASE_URL = "https://github.com/rpeters1430/CinefinTV/releases/latest/download/app-debug.apk"
 
 @Singleton
 class UpdateManager @Inject constructor(
@@ -81,18 +101,21 @@ class UpdateManager @Inject constructor(
         }
     }
 
-    suspend fun downloadAndInstallApk(updateInfo: UpdateInfo, onProgress: (Float) -> Unit): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun downloadAndInstallApk(
+        updateInfo: UpdateInfo,
+        onProgress: (Float) -> Unit,
+    ): Result<UpdateInstallResult> = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()
-                .url(LATEST_RELEASE_URL)
+                .url(updateInfo.updateUrl)
                 .build()
 
             val response = okHttpClient.newCall(request).execute()
             if (!response.isSuccessful) {
-                return@withContext Result.failure<Unit>(Exception("Failed to download APK: ${response.code}"))
+                return@withContext Result.failure(Exception("Failed to download APK: ${response.code}"))
             }
 
-            val body = response.body
+            val body = requireNotNull(response.body) { "Empty response body" }
             val totalBytes = body.contentLength()
             
             val apkFile = File(context.cacheDir, "update.apk")
@@ -114,36 +137,47 @@ class UpdateManager @Inject constructor(
                 }
             }
 
-            installApk(apkFile)
-            Result.success(Unit)
+            val installResult = installApk(apkFile)
+            Result.success(installResult)
         } catch (e: Exception) {
             Log.e("UpdateManager", "Error downloading update", e)
             Result.failure(e)
         }
     }
 
-    private fun installApk(file: File) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
+    private fun installApk(file: File): UpdateInstallResult {
+        return when (
+            determineInstallAction(
+                sdkInt = Build.VERSION.SDK_INT,
+                canRequestPackageInstalls = context.packageManager.canRequestPackageInstalls(),
+            )
+        ) {
+            InstallAction.RequestUnknownSourcesPermission -> {
             val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
                 data = Uri.parse("package:${context.packageName}")
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
-            return
-        }
+                UpdateInstallResult.PermissionRequired
+            }
 
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
+            InstallAction.LaunchInstaller -> {
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    file
+                )
 
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                @Suppress("DEPRECATION")
+                val intent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+                    setData(uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+
+                context.startActivity(intent)
+                UpdateInstallResult.InstallerLaunched
+            }
         }
-        
-        context.startActivity(intent)
     }
 }

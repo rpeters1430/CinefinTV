@@ -13,7 +13,13 @@
       "Bash(xargs ls:*)",
       "Bash(./gradlew :app:compileDebugKotlin:*)",
       "Bash(./gradlew :app:assembleDebug:*)",
-      "Bash(./gradlew :app:testDebugUnitTest:*)"
+      "Bash(./gradlew :app:testDebugUnitTest:*)",
+      "Bash(git:*)",
+      "Read(//tmp/**)",
+      "Bash(jar tf /home/rpeters1428/.gradle/caches/9.3.1/transforms/638082a70e30b1d8bfe251264170eb46/transformed/tv-material-1.1.0-alpha01-api.jar)",
+      "Bash(jar xf:*)",
+      "Bash(jar tf:*)",
+      "Bash(javap:*)"
     ]
   }
 }
