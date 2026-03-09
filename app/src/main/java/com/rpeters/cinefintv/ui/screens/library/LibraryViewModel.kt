@@ -8,6 +8,7 @@ import com.rpeters.cinefintv.ui.screens.home.HomeCardModel
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getYear
+import com.rpeters.cinefintv.utils.isMovie
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,9 +72,17 @@ class LibraryViewModel @Inject constructor(
 
     private fun toCardModel(item: BaseItemDto): HomeCardModel? {
         val id = item.id.toString()
-        val subtitle = item.getYear()?.toString()
-            ?: item.getFormattedDuration()
-            ?: item.type.toString().replace('_', ' ')
+        val subtitle = if (item.isMovie()) {
+            listOfNotNull(
+                item.getYear()?.toString(),
+                item.getFormattedDuration(),
+                item.communityRating?.let { "★ ${"%.1f".format(it)}" },
+            ).joinToString(" · ").ifBlank { item.type.toString().replace('_', ' ') }
+        } else {
+            item.getYear()?.toString()
+                ?: item.getFormattedDuration()
+                ?: item.type.toString().replace('_', ' ')
+        }
 
         return HomeCardModel(
             id = id,
