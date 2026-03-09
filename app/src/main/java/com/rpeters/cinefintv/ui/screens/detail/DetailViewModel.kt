@@ -278,18 +278,17 @@ class DetailViewModel @Inject constructor(
         }.filterNotNull()
 
         val metaBadges = buildList {
-            if (!item.isSeries() && !item.isSeason()) {
+            if (!item.isSeries() && !item.isSeason() && !item.isMovie() && !item.isEpisode()) {
                 add(item.getMediaTypeLabel())
             }
             item.officialRating?.takeIf { it.isNotBlank() }?.let(::add)
-            formatCommunityRating(item)?.let(::add)
         }
 
         val infoRows = buildList {
             if (item.isSeries() && seasons.isNotEmpty()) {
                 add(DetailInfoRowModel("Seasons", seasons.size.toString(), Icons.Default.Layers))
             }
-            if (totalEpisodeCount > 0) {
+            if (item.isSeason() && totalEpisodeCount > 0) {
                 add(DetailInfoRowModel("Episodes", totalEpisodeCount.toString(), Icons.AutoMirrored.Filled.FormatListBulleted))
             }
             item.getUnwatchedEpisodeCount()
