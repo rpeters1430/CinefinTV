@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.jellyfin.sdk.model.api.MediaStreamType
 import javax.inject.Inject
 
 sealed class StuffDetailUiState {
@@ -24,6 +25,31 @@ sealed class StuffDetailUiState {
     ) : StuffDetailUiState()
 }
 
+data class StuffTechnicalDetails(
+    val videoCodec: String?,
+    val resolution: String?,
+    val audioCodec: String?,
+    val audioChannels: String?,
+    val duration: String?,
+) {
+    val summary: String?
+        get() {
+            val parts = buildList {
+                if (videoCodec != null) add(videoCodec)
+                if (resolution != null) add(resolution)
+                val audioLabel = when {
+                    audioCodec != null && audioChannels != null -> "$audioCodec $audioChannels"
+                    audioCodec != null -> audioCodec
+                    audioChannels != null -> audioChannels
+                    else -> null
+                }
+                if (audioLabel != null) add(audioLabel)
+                if (duration != null) add(duration)
+            }
+            return parts.joinToString(" · ").ifBlank { null }
+        }
+}
+
 data class StuffDetailModel(
     val id: String,
     val title: String,
@@ -31,6 +57,7 @@ data class StuffDetailModel(
     val metadataLine: String?,
     val imageUrl: String?,
     val backdropUrl: String?,
+    val technicalDetails: StuffTechnicalDetails? = null,
 )
 
 @HiltViewModel
@@ -45,6 +72,15 @@ class StuffDetailViewModel @Inject constructor(
 
     init {
         load()
+    }
+
+    private fun heightToResolutionLabel(height: Int?): String? = when {
+        height == null -> null
+        height >= 2160 -> "4K"
+        height >= 1080 -> "1080p"
+        height >= 720 -> "720p"
+        height >= 480 -> "480p"
+        else -> "${height}p"
     }
 
     fun load() {
@@ -69,6 +105,19 @@ class StuffDetailViewModel @Inject constructor(
             val metadata = listOfNotNull(item.getYear()?.toString(), item.getFormattedDuration())
                 .joinToString(" • ")
                 .ifBlank { null }
+
+            // Parse technical details from media streams
+            val streams = item.mediaSources?.firstOrNull()?.mediaStreams
+                ?: item.mediaStreams.orEmpty()
+            val videoStream = streams.firstOrNull { it.type == MediaStreamType.VIDEO }
+            val audioStream = streams.firstOrNull { it.type == MediaStreamType.AUDIO }
+            val technicalDetails = StuffTechnicalDetails(
+                videoCodec = videoStream?.codec?.uppercase(),
+                resolution = heightToResolutionLabel(videoStream?.height),
+                audioCodec = audioStream?.codec?.uppercase(),
+                audioChannels = audioStream?.channelLayout,
+                duration = item.getFormattedDuration(),
+            )
 
             val moreItems = if (libraryResult is ApiResult.Success) {
                 libraryResult.data
@@ -96,6 +145,7 @@ class StuffDetailViewModel @Inject constructor(
                     metadataLine = metadata,
                     imageUrl = repositories.stream.getLandscapeImageUrl(item),
                     backdropUrl = repositories.stream.getBackdropUrl(item),
+                    technicalDetails = technicalDetails,
                 ),
                 moreFromStuff = moreItems,
             )

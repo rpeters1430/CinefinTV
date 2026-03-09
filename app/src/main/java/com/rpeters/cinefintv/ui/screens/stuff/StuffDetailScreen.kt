@@ -142,6 +142,13 @@ fun StuffDetailScreen(
                                     modifier = Modifier.fillMaxWidth(0.7f)
                                 )
                             }
+                            item.technicalDetails?.summary?.let { techSummary ->
+                                Text(
+                                    text = techSummary,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                )
+                            }
                             Row(
                                 modifier = Modifier.padding(top = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
