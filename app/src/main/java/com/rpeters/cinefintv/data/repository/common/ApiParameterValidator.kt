@@ -19,7 +19,7 @@ object ApiParameterValidator {
     private const val MIN_START_INDEX = 0
     private const val MAX_START_INDEX = 100_000
     private const val MIN_LIMIT = 1
-    private const val MAX_LIMIT = 200
+    private const val MAX_LIMIT = 10_000
     private const val DEFAULT_LIMIT = 50
 
     /**

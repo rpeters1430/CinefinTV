@@ -190,9 +190,9 @@ fun CinefinTvApp(
                                 colors = TabDefaults.pillIndicatorTabColors(
                                     contentColor = Color.White,
                                     inactiveContentColor = Color.White.copy(alpha = 0.7f),
-                                    selectedContentColor = Color.White,
-                                    focusedContentColor = Color.White,
-                                    focusedSelectedContentColor = Color.White,
+                                    selectedContentColor = Color(0xFF0D1117),
+                                    focusedContentColor = Color(0xFFE50914),
+                                    focusedSelectedContentColor = Color(0xFF0D1117),
                                     disabledContentColor = Color.White.copy(alpha = 0.4f),
                                     disabledInactiveContentColor = Color.White.copy(alpha = 0.4f),
                                     disabledSelectedContentColor = Color.White.copy(alpha = 0.4f),

@@ -137,6 +137,7 @@ fun PlayerScreen(
             var audioTracks by remember { mutableStateOf<List<TrackOption>>(emptyList()) }
             var subtitleTracks by remember { mutableStateOf<List<TrackOption>>(emptyList()) }
             val playPauseFocusRequester = remember { FocusRequester() }
+            val playerFocusRequester = remember { FocusRequester() }
 
             // Playback state — polled every 500ms
             var isPlaying by remember { mutableStateOf(true) }
@@ -278,6 +279,8 @@ fun PlayerScreen(
             LaunchedEffect(controlsVisible) {
                 if (controlsVisible && !isTrackPanelVisible) {
                     playPauseFocusRequester.requestFocus()
+                } else if (!controlsVisible) {
+                    playerFocusRequester.requestFocus()
                 }
             }
 
@@ -330,13 +333,26 @@ fun PlayerScreen(
                                 }
                                 Key.DirectionLeft -> {
                                     onInteract()
-                                    player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0))
-                                    true
+                                    when {
+                                        isTrackPanelVisible -> {
+                                            isTrackPanelVisible = false
+                                            true
+                                        }
+                                        !controlsVisible -> {
+                                            player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0))
+                                            true
+                                        }
+                                        else -> false
+                                    }
                                 }
                                 Key.DirectionRight -> {
                                     onInteract()
-                                    player.seekTo((player.currentPosition + 10_000).coerceAtMost(player.duration))
-                                    true
+                                    if (!controlsVisible && !isTrackPanelVisible) {
+                                        player.seekTo((player.currentPosition + 10_000).coerceAtMost(player.duration))
+                                        true
+                                    } else {
+                                        false
+                                    }
                                 }
                                 else -> false
                             }
@@ -344,6 +360,7 @@ fun PlayerScreen(
                             false
                         }
                     }
+                    .focusRequester(playerFocusRequester)
                     .focusable()
             ) {
                 // PlayerView (full screen, no built-in controller)
@@ -354,6 +371,8 @@ fun PlayerScreen(
                             layoutParams = android.view.ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
                             useController = false
                             this.player = player
+                            isFocusable = false
+                            isFocusableInTouchMode = false
                         }
                     },
                     update = { pv -> pv.player = player },
