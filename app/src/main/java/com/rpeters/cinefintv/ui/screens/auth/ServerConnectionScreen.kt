@@ -3,6 +3,7 @@ package com.rpeters.cinefintv.ui.screens.auth
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -112,11 +113,10 @@ internal fun AuthTextField(
             .background(MaterialTheme.colorScheme.surfaceVariant, shape)
             .padding(horizontal = 18.dp, vertical = 14.dp),
         decorationBox = { innerTextField ->
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 28.dp),
-                horizontalArrangement = Arrangement.Start,
             ) {
                 if (value.isBlank()) {
                     Text(
