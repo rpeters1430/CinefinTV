@@ -566,6 +566,36 @@ class JellyfinStreamRepository @Inject constructor(
     }
 
     /**
+     * Get backdrop URL, falling back to the parent item's backdrop when the item has none.
+     * Useful for Seasons/Episodes that often lack their own backdrop image.
+     */
+    fun getBackdropUrlWithFallback(item: BaseItemDto, parentItem: BaseItemDto? = null): String? {
+        return try {
+            val server = authRepository.getCurrentServer() ?: return null
+            if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) return null
+
+            // Try item's own backdrop first
+            val backdropTag = item.backdropImageTags?.firstOrNull()
+            if (backdropTag != null) {
+                return "${server.url}/Items/${item.id}/Images/Backdrop?tag=$backdropTag&maxHeight=$BACKDROP_MAX_HEIGHT&maxWidth=$BACKDROP_MAX_WIDTH"
+            }
+
+            // Try parent's backdrop
+            if (parentItem != null) {
+                val parentBackdropTag = parentItem.backdropImageTags?.firstOrNull()
+                if (parentBackdropTag != null) {
+                    return "${server.url}/Items/${parentItem.id}/Images/Backdrop?tag=$parentBackdropTag&maxHeight=$BACKDROP_MAX_HEIGHT&maxWidth=$BACKDROP_MAX_WIDTH"
+                }
+            }
+
+            // Fall back to existing logic (may use Primary)
+            getBackdropUrl(item)
+        } catch (e: CancellationException) {
+            throw e
+        }
+    }
+
+    /**
      * Get logo URL for an item (for detail screens)
      */
     fun getLogoUrl(item: BaseItemDto): String? {

@@ -127,10 +127,17 @@ class DetailViewModel @Inject constructor(
                     val seasonsAndEpisodes = loadSeasonsAndEpisodes(item)
                     val relatedItems = loadRelated(item)
                     val playbackTarget = resolvePlaybackTarget(item, seasonsAndEpisodes.second)
+                    // For Season items, fetch parent series for better backdrop quality
+                    val parentForBackdrop: BaseItemDto? = if (item.isSeason()) {
+                        item.seriesId?.toString()?.let { seriesId ->
+                            (repositories.media.getItemDetails(seriesId) as? ApiResult.Success)?.data
+                        }
+                    } else null
                     val heroModel = toHeroModel(
                         item = item,
                         seasons = seasonsAndEpisodes.first,
                         episodesBySeasonId = seasonsAndEpisodes.second,
+                        parentForBackdrop = parentForBackdrop,
                     )
 
                     _uiState.value = DetailUiState.Content(
@@ -264,6 +271,7 @@ class DetailViewModel @Inject constructor(
         item: BaseItemDto,
         seasons: List<DetailSeasonModel> = emptyList(),
         episodesBySeasonId: Map<String, List<DetailEpisodeModel>> = emptyMap(),
+        parentForBackdrop: BaseItemDto? = null,
     ): DetailHeroModel {
         val totalEpisodeCount = when {
             item.isSeries() -> seasons.sumOf { it.episodeCount }
@@ -343,7 +351,7 @@ class DetailViewModel @Inject constructor(
             subtitle = subtitleParts.joinToString(" | ").ifBlank { null },
             overview = item.overview?.takeIf { it.isNotBlank() },
             imageUrl = repositories.stream.getLandscapeImageUrl(item),
-            backdropUrl = repositories.stream.getBackdropUrl(item),
+            backdropUrl = repositories.stream.getBackdropUrlWithFallback(item, parentForBackdrop),
             metaBadges = metaBadges,
             infoRows = infoRows,
             cast = cast,
