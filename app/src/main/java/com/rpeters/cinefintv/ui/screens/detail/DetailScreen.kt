@@ -199,6 +199,7 @@ fun DetailScreen(
                         item {
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.Start,
                                 verticalArrangement = Arrangement.spacedBy(16.dp),
                             ) {
                                 Text(
@@ -222,7 +223,7 @@ fun DetailScreen(
                                         text = displayOverview,
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 5,
+                                        maxLines = 4,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.fillMaxWidth(0.7f)
                                     )
