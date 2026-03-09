@@ -61,6 +61,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.TvPersonCard
+import com.rpeters.cinefintv.ui.components.WatchStatus
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -439,6 +440,11 @@ fun DetailScreen(
                                                 imageUrl = episode.imageUrl,
                                                 onClick = { onOpenItem(episode.id) },
                                                 onFocus = { focusedDescription = episode.overview },
+                                                watchStatus = when {
+                                                    episode.isWatched -> WatchStatus.WATCHED
+                                                    episode.canResume -> WatchStatus.IN_PROGRESS
+                                                    else -> WatchStatus.NONE
+                                                },
                                             )
                                         }
                                     }
