@@ -30,6 +30,8 @@ data class TrackOption(
 data class PlayerUiState(
     val itemId: String = "",
     val title: String = "Player",
+    val seasonNumber: Int? = null,
+    val episodeNumber: Int? = null,
     val streamUrl: String? = null,
     val savedPlaybackPositionMs: Long = 0L,
     val isEpisodicContent: Boolean = false,
@@ -38,6 +40,7 @@ data class PlayerUiState(
     val nextEpisodeTitle: String? = null,
     val selectedAudioTrack: TrackOption? = null,
     val selectedSubtitleTrack: TrackOption? = null,
+    val playbackSpeed: Float = 1.0f,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
 )
@@ -94,6 +97,8 @@ class PlayerViewModel @Inject constructor(
             val item = (detailResult as? ApiResult.Success)?.data
             val title = item?.getDisplayTitle() ?: "Now Playing"
             val isEpisodicContent = item?.type == BaseItemKind.EPISODE
+            val seasonNumber = if (isEpisodicContent) item?.parentIndexNumber else null
+            val episodeNumber = if (isEpisodicContent) item?.indexNumber else null
 
             var nextEpisodeId: String? = null
             var nextEpisodeTitle: String? = null
@@ -109,6 +114,8 @@ class PlayerViewModel @Inject constructor(
             _uiState.value = PlayerUiState(
                 itemId = itemId,
                 title = title,
+                seasonNumber = seasonNumber,
+                episodeNumber = episodeNumber,
                 streamUrl = streamUrl,
                 savedPlaybackPositionMs = savedPlaybackPositionMs,
                 isEpisodicContent = isEpisodicContent,
@@ -117,6 +124,7 @@ class PlayerViewModel @Inject constructor(
                 nextEpisodeTitle = nextEpisodeTitle,
                 selectedAudioTrack = _uiState.value.selectedAudioTrack,
                 selectedSubtitleTrack = _uiState.value.selectedSubtitleTrack,
+                playbackSpeed = _uiState.value.playbackSpeed,
                 isLoading = false,
             )
         }
@@ -135,6 +143,10 @@ class PlayerViewModel @Inject constructor(
 
     fun onSubtitleTrackSelected(track: TrackOption?) {
         _uiState.value = _uiState.value.copy(selectedSubtitleTrack = track)
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        _uiState.value = _uiState.value.copy(playbackSpeed = speed)
     }
 
     suspend fun getNextEpisodeId(): String? {

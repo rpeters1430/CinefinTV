@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -31,12 +32,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Forward10
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
@@ -47,6 +53,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -76,6 +83,11 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+
+private enum class SettingsSection { AUDIO, SUBTITLES, QUALITY, SPEED, ALL }
+
+private val PLAYBACK_SPEEDS = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+private val QUALITY_OPTIONS = listOf("Auto", "1080p", "720p", "480p")
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @UnstableApi
@@ -134,6 +146,8 @@ fun PlayerScreen(
             val coroutineScope = rememberCoroutineScope()
             var hasAppliedInitialSeek by remember(uiState.itemId) { mutableStateOf(false) }
             var isTrackPanelVisible by remember { mutableStateOf(false) }
+            var trackPanelSection by remember { mutableStateOf(SettingsSection.ALL) }
+            var selectedQuality by remember { mutableStateOf("Auto") }
             var audioTracks by remember { mutableStateOf<List<TrackOption>>(emptyList()) }
             var subtitleTracks by remember { mutableStateOf<List<TrackOption>>(emptyList()) }
             val playPauseFocusRequester = remember { FocusRequester() }
@@ -163,6 +177,10 @@ fun PlayerScreen(
                     }
                     delay(POSITION_SAVE_INTERVAL_MS)
                 }
+            }
+
+            LaunchedEffect(player, uiState.playbackSpeed) {
+                player.setPlaybackSpeed(uiState.playbackSpeed)
             }
 
             DisposableEffect(player, uiState.savedPlaybackPositionMs) {
@@ -325,30 +343,30 @@ fun PlayerScreen(
                                     onInteract()
                                     if (!controlsVisible) {
                                         controlsVisible = true
-                                        true
                                     } else {
                                         if (isPlaying) player.pause() else player.play()
-                                        true
                                     }
+                                    true
                                 }
                                 Key.DirectionLeft -> {
-                                    onInteract()
                                     when {
                                         isTrackPanelVisible -> {
+                                            onInteract()
                                             isTrackPanelVisible = false
                                             true
                                         }
                                         !controlsVisible -> {
-                                            player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0))
+                                            // Show controls; do NOT seek automatically
+                                            onInteract()
                                             true
                                         }
                                         else -> false
                                     }
                                 }
-                                Key.DirectionRight -> {
-                                    onInteract()
-                                    if (!controlsVisible && !isTrackPanelVisible) {
-                                        player.seekTo((player.currentPosition + 10_000).coerceAtMost(player.duration))
+                                Key.DirectionRight, Key.DirectionUp, Key.DirectionDown -> {
+                                    if (!controlsVisible) {
+                                        // Show controls; do NOT seek automatically
+                                        onInteract()
                                         true
                                     } else {
                                         false
@@ -397,7 +415,7 @@ fun PlayerScreen(
                                 )
                             )
                     ) {
-                        // Top Bar
+                        // Top Bar: Logo + Title + Season/Episode
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -405,7 +423,43 @@ fun PlayerScreen(
                                 .align(Alignment.TopStart),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(uiState.title, style = MaterialTheme.typography.headlineSmall)
+                            // App logo
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(MaterialTheme.colorScheme.primary, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "CF",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                )
+                            }
+                            Spacer(Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = uiState.title,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                val episodeInfo = buildString {
+                                    uiState.seasonNumber?.let { append("Season $it") }
+                                    uiState.episodeNumber?.let {
+                                        if (isNotEmpty()) append("  •  ")
+                                        append("Episode $it")
+                                    }
+                                }
+                                if (episodeInfo.isNotEmpty()) {
+                                    Text(
+                                        text = episodeInfo,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
                         }
 
                         // Bottom Controls
@@ -418,6 +472,23 @@ fun PlayerScreen(
                         ) {
                             // Progress Bar
                             if (duration > 0) {
+                                // Time label above progress bar
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text(
+                                        text = formatMs(position),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                    Text(
+                                        text = formatMs(duration),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+
+                                // Seek bar
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -432,14 +503,13 @@ fun PlayerScreen(
                                     )
                                 }
 
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                                // Playback controls row
+                                Box(modifier = Modifier.fillMaxWidth()) {
+                                    // Centered: Rewind / Play-Pause / Forward
                                     Row(
+                                        modifier = Modifier.align(Alignment.Center),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         OutlinedButton(
                                             onClick = {
@@ -465,7 +535,7 @@ fun PlayerScreen(
                                             Icon(
                                                 if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                                 contentDescription = if (isPlaying) "Pause" else "Play",
-                                                modifier = Modifier.size(24.dp)
+                                                modifier = Modifier.size(28.dp)
                                             )
                                         }
 
@@ -481,26 +551,13 @@ fun PlayerScreen(
                                                 modifier = Modifier.size(20.dp)
                                             )
                                         }
-
-                                        OutlinedButton(onClick = { onInteract(); onBack() }) {
-                                            Icon(
-                                                Icons.AutoMirrored.Filled.ArrowBack,
-                                                contentDescription = "Stop",
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-
-                                        Spacer(Modifier.width(8.dp))
-
-                                        Text(
-                                            text = "${formatMs(position)} / ${formatMs(duration)}",
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
                                     }
 
+                                    // Right side: settings buttons + back
                                     Row(
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                        modifier = Modifier.align(Alignment.CenterEnd),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         if (uiState.isEpisodicContent) {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -517,16 +574,96 @@ fun PlayerScreen(
                                                     },
                                                 )
                                             }
+                                            Spacer(Modifier.width(4.dp))
                                         }
 
-                                        OutlinedButton(onClick = { onInteract(); isTrackPanelVisible = !isTrackPanelVisible }) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                onInteract()
+                                                trackPanelSection = SettingsSection.SUBTITLES
+                                                isTrackPanelVisible = true
+                                            }
+                                        ) {
                                             Icon(
-                                                Icons.Default.Settings,
-                                                contentDescription = "Media Settings",
+                                                Icons.Default.Subtitles,
+                                                contentDescription = "Subtitles",
                                                 modifier = Modifier.size(18.dp)
                                             )
-                                            Spacer(Modifier.width(6.dp))
-                                            Text("Audio / Subs")
+                                            Spacer(Modifier.width(4.dp))
+                                            Text("CC")
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = {
+                                                onInteract()
+                                                trackPanelSection = SettingsSection.AUDIO
+                                                isTrackPanelVisible = true
+                                            }
+                                        ) {
+                                            Icon(
+                                                Icons.Default.AudioFile,
+                                                contentDescription = "Audio",
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(Modifier.width(4.dp))
+                                            Text("Audio")
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = {
+                                                onInteract()
+                                                trackPanelSection = SettingsSection.QUALITY
+                                                isTrackPanelVisible = true
+                                            }
+                                        ) {
+                                            Icon(
+                                                Icons.Default.HighQuality,
+                                                contentDescription = "Quality",
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(Modifier.width(4.dp))
+                                            Text(selectedQuality)
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = {
+                                                onInteract()
+                                                trackPanelSection = SettingsSection.SPEED
+                                                isTrackPanelVisible = true
+                                            }
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Speed,
+                                                contentDescription = "Speed",
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(Modifier.width(4.dp))
+                                            Text(
+                                                if (uiState.playbackSpeed == 1.0f) "1×"
+                                                else "${uiState.playbackSpeed}×"
+                                            )
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = {
+                                                onInteract()
+                                                trackPanelSection = SettingsSection.ALL
+                                                isTrackPanelVisible = true
+                                            }
+                                        ) {
+                                            Icon(
+                                                Icons.Default.MoreHoriz,
+                                                contentDescription = "More",
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+
+                                        OutlinedButton(onClick = { onInteract(); onBack() }) {
+                                            Icon(
+                                                Icons.AutoMirrored.Filled.ArrowBack,
+                                                contentDescription = "Exit player",
+                                                modifier = Modifier.size(18.dp)
+                                            )
                                         }
                                     }
                                 }
@@ -583,7 +720,7 @@ fun PlayerScreen(
                     }
                 }
 
-                // Tracks Side Panel
+                // Tracks / Settings Side Panel
                 AnimatedVisibility(
                     visible = controlsVisible && isTrackPanelVisible,
                     modifier = Modifier.align(Alignment.CenterEnd),
@@ -593,124 +730,218 @@ fun PlayerScreen(
                     Surface(
                         modifier = Modifier
                             .fillMaxHeight()
-                            .width(360.dp),
+                            .width(380.dp),
                         shape = RectangleShape,
                         colors = SurfaceDefaults.colors(
                             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
                         )
                     ) {
+                        val panelTitle = when (trackPanelSection) {
+                            SettingsSection.AUDIO -> "Audio Track"
+                            SettingsSection.SUBTITLES -> "Subtitles"
+                            SettingsSection.QUALITY -> "Quality"
+                            SettingsSection.SPEED -> "Playback Speed"
+                            SettingsSection.ALL -> "Media Settings"
+                        }
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(32.dp),
-                            verticalArrangement = Arrangement.spacedBy(24.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("Media Settings", style = MaterialTheme.typography.headlineSmall)
+                            Text(panelTitle, style = MaterialTheme.typography.headlineSmall)
+                            Spacer(Modifier.height(8.dp))
 
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text("Audio Track", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                                audioTracks.forEach { track ->
-                                    val isSelected = uiState.selectedAudioTrack?.id == track.id
-                                    if (isSelected) {
-                                        Button(
-                                            onClick = {
-                                                onInteract()
-                                                viewModel.onAudioTrackSelected(track)
-                                                player.trackSelectionParameters = player.trackSelectionParameters
-                                                    .buildUpon()
-                                                    .setPreferredAudioLanguage(track.language)
-                                                    .build()
-                                            },
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Text(track.label)
+                            LazyColumn(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                // Audio section
+                                if (trackPanelSection == SettingsSection.AUDIO || trackPanelSection == SettingsSection.ALL) {
+                                    if (trackPanelSection == SettingsSection.ALL) {
+                                        item {
+                                            Text(
+                                                "Audio Track",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
                                         }
-                                    } else {
-                                        OutlinedButton(
-                                            onClick = {
-                                                onInteract()
-                                                viewModel.onAudioTrackSelected(track)
-                                                player.trackSelectionParameters = player.trackSelectionParameters
-                                                    .buildUpon()
-                                                    .setPreferredAudioLanguage(track.language)
-                                                    .build()
-                                            },
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Text(track.label)
+                                    }
+                                    items(audioTracks.size) { index ->
+                                        val track = audioTracks[index]
+                                        val isSelected = uiState.selectedAudioTrack?.id == track.id
+                                        if (isSelected) {
+                                            Button(
+                                                onClick = {
+                                                    onInteract()
+                                                    viewModel.onAudioTrackSelected(track)
+                                                    player.trackSelectionParameters = player.trackSelectionParameters
+                                                        .buildUpon()
+                                                        .setPreferredAudioLanguage(track.language)
+                                                        .build()
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) { Text(track.label) }
+                                        } else {
+                                            OutlinedButton(
+                                                onClick = {
+                                                    onInteract()
+                                                    viewModel.onAudioTrackSelected(track)
+                                                    player.trackSelectionParameters = player.trackSelectionParameters
+                                                        .buildUpon()
+                                                        .setPreferredAudioLanguage(track.language)
+                                                        .build()
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) { Text(track.label) }
+                                        }
+                                    }
+                                }
+
+                                // Subtitles section
+                                if (trackPanelSection == SettingsSection.SUBTITLES || trackPanelSection == SettingsSection.ALL) {
+                                    if (trackPanelSection == SettingsSection.ALL) {
+                                        item {
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                "Subtitles",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
+                                        }
+                                    }
+                                    // None option
+                                    item {
+                                        val isNoneSelected = uiState.selectedSubtitleTrack == null
+                                        if (isNoneSelected) {
+                                            Button(
+                                                onClick = {
+                                                    onInteract()
+                                                    viewModel.onSubtitleTrackSelected(null)
+                                                    player.trackSelectionParameters = player.trackSelectionParameters
+                                                        .buildUpon()
+                                                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                                                        .build()
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) { Text("None") }
+                                        } else {
+                                            OutlinedButton(
+                                                onClick = {
+                                                    onInteract()
+                                                    viewModel.onSubtitleTrackSelected(null)
+                                                    player.trackSelectionParameters = player.trackSelectionParameters
+                                                        .buildUpon()
+                                                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                                                        .build()
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) { Text("None") }
+                                        }
+                                    }
+                                    items(subtitleTracks.size) { index ->
+                                        val track = subtitleTracks[index]
+                                        val isSelected = uiState.selectedSubtitleTrack?.id == track.id
+                                        if (isSelected) {
+                                            Button(
+                                                onClick = {
+                                                    onInteract()
+                                                    viewModel.onSubtitleTrackSelected(track)
+                                                    player.trackSelectionParameters = player.trackSelectionParameters
+                                                        .buildUpon()
+                                                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                                                        .setPreferredTextLanguage(track.language)
+                                                        .build()
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) { Text(track.label) }
+                                        } else {
+                                            OutlinedButton(
+                                                onClick = {
+                                                    onInteract()
+                                                    viewModel.onSubtitleTrackSelected(track)
+                                                    player.trackSelectionParameters = player.trackSelectionParameters
+                                                        .buildUpon()
+                                                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                                                        .setPreferredTextLanguage(track.language)
+                                                        .build()
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) { Text(track.label) }
+                                        }
+                                    }
+                                }
+
+                                // Quality section
+                                if (trackPanelSection == SettingsSection.QUALITY || trackPanelSection == SettingsSection.ALL) {
+                                    if (trackPanelSection == SettingsSection.ALL) {
+                                        item {
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                "Quality",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
+                                        }
+                                    }
+                                    items(QUALITY_OPTIONS.size) { index ->
+                                        val quality = QUALITY_OPTIONS[index]
+                                        if (selectedQuality == quality) {
+                                            Button(
+                                                onClick = {
+                                                    onInteract()
+                                                    selectedQuality = quality
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) { Text(quality) }
+                                        } else {
+                                            OutlinedButton(
+                                                onClick = {
+                                                    onInteract()
+                                                    selectedQuality = quality
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) { Text(quality) }
+                                        }
+                                    }
+                                }
+
+                                // Speed section
+                                if (trackPanelSection == SettingsSection.SPEED || trackPanelSection == SettingsSection.ALL) {
+                                    if (trackPanelSection == SettingsSection.ALL) {
+                                        item {
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                "Playback Speed",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
+                                        }
+                                    }
+                                    items(PLAYBACK_SPEEDS.size) { index ->
+                                        val speed = PLAYBACK_SPEEDS[index]
+                                        val label = if (speed == 1.0f) "Normal (1×)" else "${speed}×"
+                                        if (uiState.playbackSpeed == speed) {
+                                            Button(
+                                                onClick = {
+                                                    onInteract()
+                                                    viewModel.setPlaybackSpeed(speed)
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) { Text(label) }
+                                        } else {
+                                            OutlinedButton(
+                                                onClick = {
+                                                    onInteract()
+                                                    viewModel.setPlaybackSpeed(speed)
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) { Text(label) }
                                         }
                                     }
                                 }
                             }
 
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text("Subtitles", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                                
-                                val isNoneSelected = uiState.selectedSubtitleTrack == null
-                                if (isNoneSelected) {
-                                    Button(
-                                        onClick = {
-                                            onInteract()
-                                            viewModel.onSubtitleTrackSelected(null)
-                                            player.trackSelectionParameters = player.trackSelectionParameters
-                                                .buildUpon()
-                                                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-                                                .build()
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) { Text("None") }
-                                } else {
-                                    OutlinedButton(
-                                        onClick = {
-                                            onInteract()
-                                            viewModel.onSubtitleTrackSelected(null)
-                                            player.trackSelectionParameters = player.trackSelectionParameters
-                                                .buildUpon()
-                                                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-                                                .build()
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) { Text("None") }
-                                }
-
-                                subtitleTracks.forEach { track ->
-                                    val isSelected = uiState.selectedSubtitleTrack?.id == track.id
-                                    if (isSelected) {
-                                        Button(
-                                            onClick = {
-                                                onInteract()
-                                                viewModel.onSubtitleTrackSelected(track)
-                                                player.trackSelectionParameters = player.trackSelectionParameters
-                                                    .buildUpon()
-                                                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                                                    .setPreferredTextLanguage(track.language)
-                                                    .build()
-                                            },
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Text(track.label)
-                                        }
-                                    } else {
-                                        OutlinedButton(
-                                            onClick = {
-                                                onInteract()
-                                                viewModel.onSubtitleTrackSelected(track)
-                                                player.trackSelectionParameters = player.trackSelectionParameters
-                                                    .buildUpon()
-                                                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                                                    .setPreferredTextLanguage(track.language)
-                                                    .build()
-                                            },
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Text(track.label)
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            Spacer(Modifier.weight(1f))
-                            
                             Button(
                                 onClick = { onInteract(); isTrackPanelVisible = false },
                                 modifier = Modifier.fillMaxWidth()
