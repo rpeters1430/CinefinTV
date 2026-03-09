@@ -121,7 +121,23 @@ class HomeViewModel @Inject constructor(
     private fun toCardModel(item: BaseItemDto): HomeCardModel? {
         val id = item.id.toString()
         val subtitle = when {
-            item.canResume() -> "Resume ${item.getWatchedPercentage().toInt()}%"
+            item.canResume() -> {
+                val pct = item.getWatchedPercentage()
+                val ticks = item.runTimeTicks
+                if (ticks != null && ticks > 0) {
+                    val remainingTicks = (ticks * (1.0 - pct / 100.0)).toLong()
+                    val totalSeconds = remainingTicks / 10_000_000L
+                    val hours = totalSeconds / 3600
+                    val minutes = (totalSeconds % 3600) / 60
+                    when {
+                        hours > 0 -> "${hours}h ${minutes}m left"
+                        minutes > 0 -> "${minutes}m left"
+                        else -> "< 1m left"
+                    }
+                } else {
+                    "${pct.toInt()}% watched"
+                }
+            }
             item.getYear() != null -> item.getYear().toString()
             item.getFormattedDuration() != null -> item.getFormattedDuration()
             else -> item.type.toString().replace('_', ' ')
