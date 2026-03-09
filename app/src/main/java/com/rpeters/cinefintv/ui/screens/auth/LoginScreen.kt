@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -72,6 +73,7 @@ fun LoginScreen(
             Text(
                 text = "Sign In",
                 style = MaterialTheme.typography.headlineLarge,
+                color = Color.White,
             )
             Text(
                 text = helperText,
@@ -150,6 +152,7 @@ private fun QuickConnectPanel(
         Text(
             text = "Quick Connect",
             style = MaterialTheme.typography.headlineLarge,
+            color = Color.White,
         )
         Text(
             text = "Enter this code in the Jellyfin app on your phone or computer:",
@@ -178,6 +181,7 @@ private fun QuickConnectPanel(
                 Text(
                     text = code.toCharArray().joinToString("    "),
                     style = MaterialTheme.typography.displayLarge,
+                    color = Color.White,
                 )
             }
         }

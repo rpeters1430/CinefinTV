@@ -42,6 +42,7 @@ fun ServerConnectionScreen(
         Text(
             text = "Connect to Jellyfin",
             style = MaterialTheme.typography.headlineLarge,
+            color = Color.White,
         )
         Text(
             text = "Enter your server URL. Local IPs and reverse-proxy URLs are supported.",
