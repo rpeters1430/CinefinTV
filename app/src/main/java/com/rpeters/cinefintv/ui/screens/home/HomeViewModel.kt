@@ -28,6 +28,10 @@ data class HomeCardModel(
     val imageUrl: String?,
     val backdropUrl: String? = null,
     val description: String? = null,
+    val year: Int? = null,
+    val runtime: String? = null,
+    val rating: String? = null,
+    val officialRating: String? = null,
 )
 
 data class HomeSectionModel(
@@ -130,6 +134,12 @@ class HomeViewModel @Inject constructor(
             imageUrl = repositories.stream.getLandscapeImageUrl(item),
             backdropUrl = repositories.stream.getBackdropUrl(item),
             description = item.overview?.take(140),
+            year = item.getYear(),
+            runtime = item.getFormattedDuration(),
+            rating = (item.communityRating as? Number)?.toDouble()
+                ?.takeIf { it > 0.0 }
+                ?.let { String.format(java.util.Locale.US, "%.1f", it) },
+            officialRating = item.officialRating?.takeIf { it.isNotBlank() },
         )
     }
 }

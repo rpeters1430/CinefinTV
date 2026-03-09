@@ -268,6 +268,19 @@ private fun FeaturedCarousel(
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
+                val carouselMeta = listOfNotNull(
+                    item.year?.toString(),
+                    item.runtime,
+                    item.officialRating,
+                    item.rating?.let { "★ $it" },
+                ).joinToString("  ·  ")
+                if (carouselMeta.isNotBlank()) {
+                    Text(
+                        text = carouselMeta,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 item.description?.let {
                     Text(
                         text = it,
