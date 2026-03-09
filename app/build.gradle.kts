@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -12,6 +13,30 @@ android {
     namespace = "com.rpeters.cinefintv"
     compileSdk = 36
 
+    val localProperties = Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) {
+            file.inputStream().use(::load)
+        }
+    }
+
+    fun signingValue(name: String): String? {
+        return providers.gradleProperty(name).orNull
+            ?: providers.environmentVariable(name).orNull
+            ?: localProperties.getProperty(name)
+    }
+
+    val releaseStoreFile = signingValue("CINEFIN_RELEASE_STORE_FILE")
+    val releaseStorePassword = signingValue("CINEFIN_RELEASE_STORE_PASSWORD")
+    val releaseKeyAlias = signingValue("CINEFIN_RELEASE_KEY_ALIAS")
+    val releaseKeyPassword = signingValue("CINEFIN_RELEASE_KEY_PASSWORD")
+    val hasReleaseSigning = listOf(
+        releaseStoreFile,
+        releaseStorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword,
+    ).all { !it.isNullOrBlank() }
+
     defaultConfig {
         applicationId = "com.rpeters.cinefintv"
         minSdk = 26
@@ -20,10 +45,24 @@ android {
         versionName = "1.0.1"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(requireNotNull(releaseStoreFile))
+                storePassword = requireNotNull(releaseStorePassword)
+                keyAlias = requireNotNull(releaseKeyAlias)
+                keyPassword = requireNotNull(releaseKeyPassword)
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {

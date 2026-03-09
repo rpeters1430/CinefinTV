@@ -27,14 +27,22 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew :app:assembleDebug
+      - name: Decode signing keystore
+        run: echo "${{ secrets.CINEFIN_RELEASE_KEYSTORE_B64 }}" | base64 --decode > "$RUNNER_TEMP/cinefintv-release.keystore"
+
+      - name: Build Release APK
+        run: ./gradlew :app:assembleRelease
+        env:
+          CINEFIN_RELEASE_STORE_FILE: ${{ runner.temp }}/cinefintv-release.keystore
+          CINEFIN_RELEASE_STORE_PASSWORD: ${{ secrets.CINEFIN_RELEASE_STORE_PASSWORD }}
+          CINEFIN_RELEASE_KEY_ALIAS: ${{ secrets.CINEFIN_RELEASE_KEY_ALIAS }}
+          CINEFIN_RELEASE_KEY_PASSWORD: ${{ secrets.CINEFIN_RELEASE_KEY_PASSWORD }}
 
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/debug/app-debug.apk
+          files: app/build/outputs/apk/release/app-release.apk
           draft: false
           prerelease: false
           generate_release_notes: true
@@ -50,15 +58,15 @@ jobs:
           VERSION_CODE=$(grep "versionCode =" app/build.gradle.kts | awk '{print $3}')
           VERSION_NAME=$(grep "versionName =" app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
           
-          # 3. Use jq to safely escape notes if available from the release
-          RELEASE_NOTES=$(echo "${{ github.event.release.body || 'New Version' }}" | jq -R -s .)
+          # 3. There is no release payload on a tag-push event, so use the tag as the note source.
+          RELEASE_NOTES=$(printf 'Release %s\n' "${{ github.ref_name }}" | jq -R -s .)
           
           mkdir -p updates
           cat <<EOF > updates/version.json
           {
             "versionCode": $VERSION_CODE,
             "versionName": "$VERSION_NAME",
-            "updateUrl": "https://github.com/${{ github.repository }}/releases/latest/download/app-debug.apk",
+            "updateUrl": "https://github.com/${{ github.repository }}/releases/latest/download/app-release.apk",
             "releaseNotes": $RELEASE_NOTES,
             "isCritical": false
           }
@@ -68,6 +76,10 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add updates/version.json
+          if git diff --cached --quiet; then
+            echo "version.json already up to date"
+            exit 0
+          fi
           git commit -m "chore: auto-update version.json for ${{ github.ref_name }}"
           git push origin main
         env:

@@ -5,6 +5,13 @@ set -euo pipefail
 BUILD_FILE="app/build.gradle.kts"
 WORKFLOW_FILE=".github/workflows/release.yml"
 
+has_release_signing() {
+    [[ -n "${CINEFIN_RELEASE_STORE_FILE:-}" ]] &&
+    [[ -n "${CINEFIN_RELEASE_STORE_PASSWORD:-}" ]] &&
+    [[ -n "${CINEFIN_RELEASE_KEY_ALIAS:-}" ]] &&
+    [[ -n "${CINEFIN_RELEASE_KEY_PASSWORD:-}" ]]
+}
+
 require_clean_worktree() {
     if ! git diff --quiet --ignore-submodules -- || ! git diff --cached --quiet --ignore-submodules --; then
         echo "Working tree has uncommitted changes. Commit or stash them before publishing."
@@ -77,14 +84,19 @@ main() {
     echo "Bumping to: $new_version_name (code $new_version_code)"
     update_build_version "$old_version_code" "$new_version_code" "$old_version_name" "$new_version_name"
 
-    echo "Building debug APK locally"
-    ./gradlew :app:assembleDebug
+    if has_release_signing; then
+        echo "Building signed release APK locally"
+        ./gradlew :app:assembleRelease
+    else
+        echo "Release signing variables not set locally; building debug APK for a compile check only"
+        ./gradlew :app:assembleDebug
+    fi
 
     git add "$BUILD_FILE"
     git commit -m "chore: bump version to $new_version_name"
     git tag "$tag"
 
-    trap 'rm -f "$backup_file"' EXIT
+    trap - EXIT
     rm -f "$backup_file"
 
     echo "Pushing main and tag $tag"
@@ -94,7 +106,7 @@ main() {
     cat <<EOF
 -------------------------------------------------------
 Published $tag.
-GitHub Actions will build app-debug.apk and update updates/version.json after the release job succeeds.
+GitHub Actions will build app-release.apk and update updates/version.json after the release job succeeds.
 Workflow: $WORKFLOW_FILE
 -------------------------------------------------------
 EOF
