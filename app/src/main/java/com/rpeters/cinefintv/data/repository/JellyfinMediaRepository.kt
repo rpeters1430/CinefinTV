@@ -133,7 +133,8 @@ class JellyfinMediaRepository @Inject constructor(
                     "movies" -> listOf(ItemSortBy.SORT_NAME)
                     "tvshows" -> listOf(ItemSortBy.SORT_NAME)
                     "music" -> listOf(ItemSortBy.SORT_NAME)
-                    else -> emptyList()
+                    "homevideos" -> listOf(ItemSortBy.SORT_NAME)
+                    else -> listOf(ItemSortBy.SORT_NAME)
                 }
                 val sortOrder = listOf(SortOrder.ASCENDING)
                 val fields = listOf(

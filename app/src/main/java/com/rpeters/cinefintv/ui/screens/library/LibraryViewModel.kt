@@ -47,7 +47,7 @@ class LibraryViewModel @Inject constructor(
             when (
                 val result = repositories.media.getLibraryItems(
                     itemTypes = category.itemTypes,
-                    limit = 120,
+                    limit = 10_000,
                     collectionType = category.collectionType,
                 )
             ) {
