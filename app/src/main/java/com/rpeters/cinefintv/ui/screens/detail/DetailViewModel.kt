@@ -303,9 +303,22 @@ class DetailViewModel @Inject constructor(
                 .takeIf { it > 0 }
                 ?.let { add(DetailInfoRowModel("Unwatched", it.toString(), Icons.Default.VisibilityOff)) }
             
-            val yearRange = item.getYearRange()
-            if (yearRange != null) {
-                add(DetailInfoRowModel("Year", yearRange, Icons.Default.CalendarToday))
+            if (item.isEpisode()) {
+                // For episodes: show air date
+                item.premiereDate?.let { airDate ->
+                    val formatted = String.format(
+                        "%d-%02d-%02d",
+                        airDate.year,
+                        airDate.monthValue,
+                        airDate.dayOfMonth
+                    )
+                    add(DetailInfoRowModel("Date Aired", formatted, Icons.Default.CalendarToday))
+                }
+            } else {
+                val yearRange = item.getYearRange()
+                if (yearRange != null) {
+                    add(DetailInfoRowModel("Year", yearRange, Icons.Default.CalendarToday))
+                }
             }
 
             if (!item.isSeries() && !item.isSeason()) {
