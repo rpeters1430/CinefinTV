@@ -77,6 +77,7 @@ class StuffDetailViewModel @Inject constructor(
     private fun heightToResolutionLabel(height: Int?): String? = when {
         height == null -> null
         height >= 2160 -> "4K"
+        height >= 1440 -> "1440p"
         height >= 1080 -> "1080p"
         height >= 720 -> "720p"
         height >= 480 -> "480p"
