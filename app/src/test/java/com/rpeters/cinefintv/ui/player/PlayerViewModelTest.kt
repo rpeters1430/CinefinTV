@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.rpeters.cinefintv.data.PlaybackPositionStore
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferences
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
+import com.rpeters.cinefintv.data.repository.JellyfinRepository
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.testutil.FakePlayerRepositories
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
@@ -36,6 +37,7 @@ class PlayerViewModelTest {
     private val playbackPreferencesRepository: PlaybackPreferencesRepository = mockk {
         every { preferences } returns flowOf(PlaybackPreferences.DEFAULT)
     }
+    private val jellyfinRepository: JellyfinRepository = mockk(relaxed = true)
 
     init {
         mockkObject(PlaybackPositionStore)
@@ -46,6 +48,7 @@ class PlayerViewModelTest {
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "")),
             repositories = FakePlayerRepositories().coordinator,
+            jellyfinRepository = jellyfinRepository,
             playbackPreferencesRepository = playbackPreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
@@ -61,11 +64,13 @@ class PlayerViewModelTest {
     fun load_whenStreamUrlMissing_setsStreamError() = runTest {
         val fakeRepositories = FakePlayerRepositories()
         every { fakeRepositories.stream.getStreamUrl("item-1") } returns null
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
         coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "item-1") } returns 0L
 
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
+            jellyfinRepository = jellyfinRepository,
             playbackPreferencesRepository = playbackPreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
@@ -81,12 +86,14 @@ class PlayerViewModelTest {
     fun load_whenDetailsFail_usesFallbackTitle() = runTest {
         val fakeRepositories = FakePlayerRepositories()
         every { fakeRepositories.stream.getStreamUrl("item-1") } returns "https://stream/item-1"
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
         coEvery { fakeRepositories.media.getItemDetails("item-1") } returns ApiResult.Error("not found")
         coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "item-1") } returns 0L
 
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
+            jellyfinRepository = jellyfinRepository,
             playbackPreferencesRepository = playbackPreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
@@ -102,6 +109,7 @@ class PlayerViewModelTest {
     fun load_whenEpisodeItem_populatesSeasonAndEpisodeNumbers() = runTest {
         val fakeRepositories = FakePlayerRepositories()
         every { fakeRepositories.stream.getStreamUrl("ep-1") } returns "https://stream/ep-1"
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
 
         val episodeItem: BaseItemDto = mockk()
         every { episodeItem.id } returns UUID.fromString("00000000-0000-0000-0000-000000000001")
@@ -109,6 +117,7 @@ class PlayerViewModelTest {
         every { episodeItem.type } returns BaseItemKind.EPISODE
         every { episodeItem.parentIndexNumber } returns 2
         every { episodeItem.indexNumber } returns 5
+        every { episodeItem.seriesId } returns null
 
         coEvery { fakeRepositories.media.getItemDetails("ep-1") } returns ApiResult.Success(episodeItem)
         coEvery { fakeRepositories.media.getNextEpisode("ep-1") } returns ApiResult.Error("none")
@@ -117,6 +126,7 @@ class PlayerViewModelTest {
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "ep-1")),
             repositories = fakeRepositories.coordinator,
+            jellyfinRepository = jellyfinRepository,
             playbackPreferencesRepository = playbackPreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
@@ -133,11 +143,13 @@ class PlayerViewModelTest {
     fun load_whenMovieItem_seasonAndEpisodeNumbersAreNull() = runTest {
         val fakeRepositories = FakePlayerRepositories()
         every { fakeRepositories.stream.getStreamUrl("movie-1") } returns "https://stream/movie-1"
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
 
         val movieItem: BaseItemDto = mockk()
         every { movieItem.id } returns UUID.fromString("00000000-0000-0000-0000-000000000002")
         every { movieItem.name } returns "Test Movie"
         every { movieItem.type } returns BaseItemKind.MOVIE
+        every { movieItem.seriesId } returns null
 
         coEvery { fakeRepositories.media.getItemDetails("movie-1") } returns ApiResult.Success(movieItem)
         coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "movie-1") } returns 0L
@@ -145,6 +157,7 @@ class PlayerViewModelTest {
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "movie-1")),
             repositories = fakeRepositories.coordinator,
+            jellyfinRepository = jellyfinRepository,
             playbackPreferencesRepository = playbackPreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
@@ -160,12 +173,14 @@ class PlayerViewModelTest {
     fun setPlaybackSpeed_updatesPlaybackSpeedInState() = runTest {
         val fakeRepositories = FakePlayerRepositories()
         every { fakeRepositories.stream.getStreamUrl("item-1") } returns "https://stream/item-1"
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
         coEvery { fakeRepositories.media.getItemDetails("item-1") } returns ApiResult.Error("not found")
         coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "item-1") } returns 0L
 
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
+            jellyfinRepository = jellyfinRepository,
             playbackPreferencesRepository = playbackPreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),

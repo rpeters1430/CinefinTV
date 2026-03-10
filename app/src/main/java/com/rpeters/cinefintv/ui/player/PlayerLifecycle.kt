@@ -6,7 +6,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -20,10 +19,6 @@ internal fun PlayerLifecycleManager(
     viewModel: PlayerViewModel,
     uiState: PlayerUiState,
     isPlaying: Boolean,
-    onHasAppliedInitialSeekChange: (Boolean) -> Unit,
-    hasAppliedInitialSeek: Boolean,
-    onAudioTracksChanged: (List<TrackOption>) -> Unit,
-    onSubtitleTracksChanged: (List<TrackOption>) -> Unit,
     onNextEpisodeRequest: (String) -> Unit
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -47,15 +42,6 @@ internal fun PlayerLifecycleManager(
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (
-                    playbackState == Player.STATE_READY &&
-                    !hasAppliedInitialSeek &&
-                    uiState.savedPlaybackPositionMs > 0L
-                ) {
-                    player.seekTo(uiState.savedPlaybackPositionMs)
-                    onHasAppliedInitialSeekChange(true)
-                }
-
-                if (
                     playbackState == Player.STATE_ENDED &&
                     uiState.isEpisodicContent &&
                     uiState.autoPlayNextEpisode
@@ -73,35 +59,6 @@ internal fun PlayerLifecycleManager(
                 }
             }
 
-            override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
-                val audio = tracks.groups
-                    .filter { it.type == C.TRACK_TYPE_AUDIO }
-                    .flatMap { group ->
-                        (0 until group.length).map { index ->
-                            val format = group.getTrackFormat(index)
-                            TrackOption(
-                                id = "audio-${group.mediaTrackGroup.id}-$index",
-                                label = format.label ?: format.language ?: "Audio ${index + 1}",
-                                language = format.language,
-                            )
-                        }
-                    }
-                onAudioTracksChanged(audio)
-
-                val subtitles = tracks.groups
-                    .filter { it.type == C.TRACK_TYPE_TEXT }
-                    .flatMap { group ->
-                        (0 until group.length).map { index ->
-                            val format = group.getTrackFormat(index)
-                            TrackOption(
-                                id = "sub-${group.mediaTrackGroup.id}-$index",
-                                label = format.label ?: format.language ?: "Subtitle ${index + 1}",
-                                language = format.language,
-                            )
-                        }
-                    }
-                onSubtitleTracksChanged(subtitles)
-            }
         }
         player.addListener(listener)
 

@@ -167,9 +167,6 @@ class JellyfinStreamRepository @Inject constructor(
         params.add("AllowAudioStreamCopy=true") // Allow audio copy if compatible
         params.add("PlaySessionId=${UUID.randomUUID()}")
 
-        // Prevent subtitle encoding to avoid forced transcoding
-        params.add("SubtitleMethod=Skip")
-
         val transcodingUrl = "$serverUrl/Videos/$itemId/stream?${params.joinToString("&")}"
 
         Log.d(

@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -101,11 +102,9 @@ fun PlayerScreen(
         else -> {
             val player = viewModel.setupPlayer(context)
             val coroutineScope = rememberCoroutineScope()
-            var hasAppliedInitialSeek by remember(uiState.itemId) { mutableStateOf(false) }
             var isTrackPanelVisible by remember { mutableStateOf(false) }
             var trackPanelSection by remember { mutableStateOf(SettingsSection.ALL) }
-            var audioTracks by remember { mutableStateOf<List<TrackOption>>(emptyList()) }
-            var subtitleTracks by remember { mutableStateOf<List<TrackOption>>(emptyList()) }
+            var trackPanelAnchor by remember { mutableStateOf<Rect?>(null) }
             val playPauseFocusRequester = remember { FocusRequester() }
             val playerFocusRequester = remember { FocusRequester() }
 
@@ -128,10 +127,6 @@ fun PlayerScreen(
                 viewModel = viewModel,
                 uiState = uiState,
                 isPlaying = isPlaying,
-                onHasAppliedInitialSeekChange = { hasAppliedInitialSeek = it },
-                hasAppliedInitialSeek = hasAppliedInitialSeek,
-                onAudioTracksChanged = { audioTracks = it },
-                onSubtitleTracksChanged = { subtitleTracks = it },
                 onNextEpisodeRequest = { nextId ->
                     coroutineScope.launch {
                         if (nextId.isNotBlank()) onOpenItem(nextId)
@@ -258,8 +253,9 @@ fun PlayerScreen(
                     player = player,
                     playPauseFocusRequester = playPauseFocusRequester,
                     onInteract = ::onInteract,
-                    onSettingsClick = { 
-                        trackPanelSection = it
+                    onSettingsClick = { section, anchor ->
+                        trackPanelSection = section
+                        trackPanelAnchor = anchor
                         isTrackPanelVisible = true
                     },
                     onBack = onBack,
@@ -281,14 +277,17 @@ fun PlayerScreen(
                 PlayerTrackPanel(
                     isVisible = controlsVisible && isTrackPanelVisible,
                     section = trackPanelSection,
+                    anchorBounds = trackPanelAnchor,
                     uiState = uiState,
-                    player = player,
-                    audioTracks = audioTracks,
-                    subtitleTracks = subtitleTracks,
-                    onAudioTrackSelected = { viewModel.onAudioTrackSelected(it) },
-                    onSubtitleTrackSelected = { viewModel.onSubtitleTrackSelected(it) },
+                    audioTracks = uiState.audioTracks,
+                    subtitleTracks = uiState.subtitleTracks,
+                    onAudioTrackSelected = { viewModel.selectAudioTrack(it, position, isPlaying) },
+                    onSubtitleTrackSelected = { viewModel.selectSubtitleTrack(it, position, isPlaying) },
                     onPlaybackSpeedSelected = { viewModel.setPlaybackSpeed(it) },
-                    onClose = { isTrackPanelVisible = false },
+                    onClose = {
+                        isTrackPanelVisible = false
+                        trackPanelAnchor = null
+                    },
                     onInteract = ::onInteract
                 )
             }

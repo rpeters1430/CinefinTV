@@ -7,6 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -29,16 +31,21 @@ import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -48,6 +55,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Switch
 import androidx.tv.material3.Text
+import coil3.compose.AsyncImage
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -60,10 +68,17 @@ internal fun PlayerControls(
     player: ExoPlayer,
     playPauseFocusRequester: FocusRequester,
     onInteract: () -> Unit,
-    onSettingsClick: (SettingsSection) -> Unit,
+    onSettingsClick: (SettingsSection, Rect) -> Unit,
     onBack: () -> Unit,
     onAutoPlayChange: (Boolean) -> Unit
 ) {
+    val defaultBounds = Rect.Zero
+    val (subtitleButtonBounds, setSubtitleButtonBounds) = remember { mutableStateOf(defaultBounds) }
+    val (audioButtonBounds, setAudioButtonBounds) = remember { mutableStateOf(defaultBounds) }
+    val (qualityButtonBounds, setQualityButtonBounds) = remember { mutableStateOf(defaultBounds) }
+    val (speedButtonBounds, setSpeedButtonBounds) = remember { mutableStateOf(defaultBounds) }
+    val (moreButtonBounds, setMoreButtonBounds) = remember { mutableStateOf(defaultBounds) }
+
     AnimatedVisibility(
         visible = isVisible,
         enter = fadeIn(),
@@ -90,21 +105,32 @@ internal fun PlayerControls(
                     .align(Alignment.TopStart),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // App logo
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(MaterialTheme.colorScheme.primary, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "CF",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary,
+                // Show/Movie logo or fallback
+                if (uiState.logoUrl != null) {
+                    AsyncImage(
+                        model = uiState.logoUrl,
+                        contentDescription = "Logo",
+                        modifier = Modifier
+                            .height(60.dp)
+                            .width(IntrinsicSize.Max),
+                        contentScale = ContentScale.Fit
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(MaterialTheme.colorScheme.primary, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = uiState.title.take(1).uppercase(),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
                 }
-                Spacer(Modifier.width(16.dp))
+                Spacer(Modifier.width(20.dp))
                 Column {
                     Text(
                         text = uiState.title,
@@ -170,24 +196,33 @@ internal fun PlayerControls(
                         )
                     }
 
-                    // Playback controls row
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        // Centered: Rewind / Play-Pause / Forward
+                    // Playback controls row - improved to prevent overlapping
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // Left: Space to balance right side if needed, or just let Center occupy space
+                        Spacer(modifier = Modifier.width(48.dp))
+
+                        // Center: Rewind / Play-Pause / Forward
                         Row(
-                            modifier = Modifier.align(Alignment.Center),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             OutlinedButton(
                                 onClick = {
                                     onInteract()
                                     player.seekTo((position - 10_000).coerceAtLeast(0))
-                                }
+                                },
+                                modifier = Modifier.size(48.dp),
+                                shape = ButtonDefaults.shape(CircleShape),
+                                contentPadding = PaddingValues(0.dp)
                             ) {
                                 Icon(
                                     Icons.Default.Replay10,
                                     contentDescription = "Rewind 10s",
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
 
@@ -196,13 +231,17 @@ internal fun PlayerControls(
                                     onInteract()
                                     if (isPlaying) player.pause() else player.play()
                                 },
-                                modifier = Modifier.focusRequester(playPauseFocusRequester),
-                                scale = ButtonDefaults.scale(focusedScale = 1.1f)
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .focusRequester(playPauseFocusRequester),
+                                shape = ButtonDefaults.shape(CircleShape),
+                                scale = ButtonDefaults.scale(focusedScale = 1.1f),
+                                contentPadding = PaddingValues(0.dp)
                             ) {
                                 Icon(
                                     if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     contentDescription = if (isPlaying) "Pause" else "Play",
-                                    modifier = Modifier.size(28.dp)
+                                    modifier = Modifier.size(36.dp)
                                 )
                             }
 
@@ -210,19 +249,21 @@ internal fun PlayerControls(
                                 onClick = {
                                     onInteract()
                                     player.seekTo((position + 10_000).coerceAtMost(duration))
-                                }
+                                },
+                                modifier = Modifier.size(48.dp),
+                                shape = ButtonDefaults.shape(CircleShape),
+                                contentPadding = PaddingValues(0.dp)
                             ) {
                                 Icon(
                                     Icons.Default.Forward10,
                                     contentDescription = "Forward 10s",
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
 
                         // Right side: settings buttons + back
                         Row(
-                            modifier = Modifier.align(Alignment.CenterEnd),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -241,90 +282,97 @@ internal fun PlayerControls(
                                         },
                                     )
                                 }
-                                Spacer(Modifier.width(4.dp))
+                                Spacer(Modifier.width(8.dp))
                             }
 
                             OutlinedButton(
                                 onClick = {
                                     onInteract()
-                                    onSettingsClick(SettingsSection.SUBTITLES)
-                                }
+                                    onSettingsClick(SettingsSection.SUBTITLES, subtitleButtonBounds)
+                                },
+                                modifier = Modifier.onGloballyPositioned { coordinates ->
+                                    setSubtitleButtonBounds(coordinates.boundsInRoot())
+                                },
                             ) {
                                 Icon(
                                     Icons.Default.Subtitles,
                                     contentDescription = "Subtitles",
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
-                                Spacer(Modifier.width(4.dp))
-                                Text("CC")
                             }
 
                             OutlinedButton(
                                 onClick = {
                                     onInteract()
-                                    onSettingsClick(SettingsSection.AUDIO)
-                                }
+                                    onSettingsClick(SettingsSection.AUDIO, audioButtonBounds)
+                                },
+                                modifier = Modifier.onGloballyPositioned { coordinates ->
+                                    setAudioButtonBounds(coordinates.boundsInRoot())
+                                },
                             ) {
                                 Icon(
                                     Icons.Default.AudioFile,
                                     contentDescription = "Audio",
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
-                                Spacer(Modifier.width(4.dp))
-                                Text("Audio")
                             }
 
                             OutlinedButton(
                                 onClick = {
                                     onInteract()
-                                    onSettingsClick(SettingsSection.QUALITY)
-                                }
+                                    onSettingsClick(SettingsSection.QUALITY, qualityButtonBounds)
+                                },
+                                modifier = Modifier.onGloballyPositioned { coordinates ->
+                                    setQualityButtonBounds(coordinates.boundsInRoot())
+                                },
                             ) {
                                 Icon(
                                     Icons.Default.HighQuality,
                                     contentDescription = "Quality",
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
-                                Spacer(Modifier.width(4.dp))
-                                Text("Auto")
                             }
 
                             OutlinedButton(
                                 onClick = {
                                     onInteract()
-                                    onSettingsClick(SettingsSection.SPEED)
-                                }
+                                    onSettingsClick(SettingsSection.SPEED, speedButtonBounds)
+                                },
+                                modifier = Modifier.onGloballyPositioned { coordinates ->
+                                    setSpeedButtonBounds(coordinates.boundsInRoot())
+                                },
                             ) {
-                                Icon(
-                                    Icons.Default.Speed,
-                                    contentDescription = "Speed",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(Modifier.width(4.dp))
                                 Text(
                                     if (uiState.playbackSpeed == 1.0f) "1×"
-                                    else "${uiState.playbackSpeed}×"
+                                    else "${uiState.playbackSpeed}×",
+                                    style = MaterialTheme.typography.labelLarge
                                 )
                             }
 
                             OutlinedButton(
                                 onClick = {
                                     onInteract()
-                                    onSettingsClick(SettingsSection.ALL)
-                                }
+                                    onSettingsClick(SettingsSection.ALL, moreButtonBounds)
+                                },
+                                modifier = Modifier.onGloballyPositioned { coordinates ->
+                                    setMoreButtonBounds(coordinates.boundsInRoot())
+                                },
                             ) {
                                 Icon(
                                     Icons.Default.MoreHoriz,
                                     contentDescription = "More",
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
 
-                            OutlinedButton(onClick = { onInteract(); onBack() }) {
+                            OutlinedButton(
+                                onClick = { onInteract(); onBack() },
+                                modifier = Modifier.padding(start = 8.dp)
+                            ) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Exit player",
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
