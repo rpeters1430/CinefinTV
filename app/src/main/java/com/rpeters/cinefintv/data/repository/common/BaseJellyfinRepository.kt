@@ -7,8 +7,6 @@ import com.rpeters.cinefintv.data.cache.JellyfinCache
 import com.rpeters.cinefintv.data.repository.JellyfinAuthRepository
 import com.rpeters.cinefintv.data.session.JellyfinSessionManager
 import com.rpeters.cinefintv.data.utils.RepositoryUtils
-// TODO Task 24: restore when UI layer is copied
-// import com.rpeters.cinefintv.ui.utils.RetryManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -200,8 +198,6 @@ open class BaseJellyfinRepository @Inject constructor(
      * Executes a block with automatic retry logic and error handling.
      * This provides smart retry behavior for all repository operations.
      * ✅ STRICTMODE FIX: All network operations run on IO dispatcher
-     *
-     * TODO Task 24: restore RetryManager.withRetry call when UI layer is copied
      */
     protected suspend fun <T> executeWithRetry(
         operationName: String,
@@ -245,8 +241,6 @@ open class BaseJellyfinRepository @Inject constructor(
      * Executes a block with both retry logic and circuit breaker protection.
      * Use this for critical operations that should be protected from cascading failures.
      * ✅ STRICTMODE FIX: All network operations run on IO dispatcher
-     *
-     * TODO Task 24: restore RetryManager.withRetryAndCircuitBreaker call when UI layer is copied
      */
     protected suspend fun <T> executeWithRetryAndCircuitBreaker(
         operationName: String,

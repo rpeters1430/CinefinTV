@@ -31,10 +31,9 @@ import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import kotlin.math.roundToInt
 
-internal enum class SettingsSection { AUDIO, SUBTITLES, QUALITY, SPEED, ALL }
+internal enum class SettingsSection { AUDIO, SUBTITLES, SPEED, ALL }
 
 private val PLAYBACK_SPEEDS = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
-private val QUALITY_OPTIONS = listOf("Auto", "1080p", "720p", "480p")
 private val PopupWidth = 420.dp
 private val PopupMaxHeight = 420.dp
 private val PopupVerticalGap = 16.dp
@@ -87,7 +86,6 @@ internal fun PlayerTrackPanel(
                 val panelTitle = when (section) {
                     SettingsSection.AUDIO -> "Audio"
                     SettingsSection.SUBTITLES -> "Subtitles"
-                    SettingsSection.QUALITY -> "Quality"
                     SettingsSection.SPEED -> "Playback Speed"
                     SettingsSection.ALL -> "Playback Options"
                 }
@@ -167,31 +165,6 @@ internal fun PlayerTrackPanel(
                                         onClose()
                                     },
                                 )
-                            }
-                        }
-
-                        if (section == SettingsSection.QUALITY || section == SettingsSection.ALL) {
-                            if (section == SettingsSection.ALL) {
-                                item {
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        text = "Quality",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
-                            }
-                            items(QUALITY_OPTIONS.size) { index ->
-                                val quality = QUALITY_OPTIONS[index]
-                                OutlinedButton(
-                                    onClick = {
-                                        onInteract()
-                                        onClose()
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Text(quality)
-                                }
                             }
                         }
 
