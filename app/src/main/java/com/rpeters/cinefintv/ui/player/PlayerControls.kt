@@ -23,7 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Forward10
-import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -75,7 +74,6 @@ internal fun PlayerControls(
     val defaultBounds = Rect.Zero
     val (subtitleButtonBounds, setSubtitleButtonBounds) = remember { mutableStateOf(defaultBounds) }
     val (audioButtonBounds, setAudioButtonBounds) = remember { mutableStateOf(defaultBounds) }
-    val (qualityButtonBounds, setQualityButtonBounds) = remember { mutableStateOf(defaultBounds) }
     val (speedButtonBounds, setSpeedButtonBounds) = remember { mutableStateOf(defaultBounds) }
     val (moreButtonBounds, setMoreButtonBounds) = remember { mutableStateOf(defaultBounds) }
 
@@ -313,22 +311,6 @@ internal fun PlayerControls(
                                 Icon(
                                     Icons.Default.AudioFile,
                                     contentDescription = "Audio",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            OutlinedButton(
-                                onClick = {
-                                    onInteract()
-                                    onSettingsClick(SettingsSection.QUALITY, qualityButtonBounds)
-                                },
-                                modifier = Modifier.onGloballyPositioned { coordinates ->
-                                    setQualityButtonBounds(coordinates.boundsInRoot())
-                                },
-                            ) {
-                                Icon(
-                                    Icons.Default.HighQuality,
-                                    contentDescription = "Quality",
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
