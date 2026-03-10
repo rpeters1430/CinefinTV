@@ -136,7 +136,7 @@ fun TvMediaCard(
             }
 
             // Watch status overlay (top-right corner)
-            if (watchStatus != WatchStatus.NONE) {
+            if (watchStatus != WatchStatus.NONE && !isFocused) {
                 WatchStatusOverlay(
                     status = watchStatus,
                     modifier = Modifier.align(Alignment.TopEnd)
