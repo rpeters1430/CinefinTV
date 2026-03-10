@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.MediaStreamType
 
 data class DetailInfoRowModel(
     val label: String,
@@ -59,7 +60,16 @@ data class DetailHeroModel(
     val backdropUrl: String?,
     val metaBadges: List<String>,
     val infoRows: List<DetailInfoRowModel>,
+    val technicalDetails: DetailTechnicalDetails? = null,
+    val subtitleOptions: List<String> = emptyList(),
     val cast: List<DetailPersonModel> = emptyList(),
+)
+
+data class DetailTechnicalDetails(
+    val videoQuality: String?,
+    val audioCodec: String?,
+    val audioType: String?,
+    val language: String?,
 )
 
 data class DetailSeasonModel(
@@ -104,6 +114,24 @@ class DetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repositories: JellyfinRepositoryCoordinator,
 ) : ViewModel() {
+    private fun Int?.toVideoQualityLabel(): String? = when {
+        this == null -> null
+        this >= 2160 -> "4K"
+        this >= 1440 -> "1440p"
+        this >= 1080 -> "1080p"
+        this >= 720 -> "720p"
+        this >= 480 -> "480p"
+        else -> "${this}p"
+    }
+
+    private fun Int?.toAudioTypeLabel(): String? = when {
+        this == null || this <= 0 -> null
+        this >= 8 -> "7.1"
+        this >= 6 -> "5.1"
+        this >= 2 -> "Stereo"
+        else -> "Mono"
+    }
+
     private val itemId: String = savedStateHandle.get<String>("itemId").orEmpty()
     private val _uiState = MutableStateFlow<DetailUiState>(DetailUiState.Loading)
     val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
@@ -358,6 +386,29 @@ class DetailViewModel @Inject constructor(
             )
         }
 
+        val streams = item.mediaSources?.firstOrNull()?.mediaStreams ?: item.mediaStreams.orEmpty()
+        val videoStream = streams.firstOrNull { it.type == MediaStreamType.VIDEO }
+        val audioStream = streams.firstOrNull { it.type == MediaStreamType.AUDIO }
+        val subtitleOptions = streams
+            .filter { it.type == MediaStreamType.SUBTITLE }
+            .mapNotNull {
+                it.displayTitle
+                    ?: it.displayLanguage
+                    ?: it.language
+                    ?: it.title
+            }
+            .filter { it.isNotBlank() }
+            .distinct()
+
+        val technicalDetails = DetailTechnicalDetails(
+            videoQuality = videoStream?.height.toVideoQualityLabel(),
+            audioCodec = videoStream?.audioCodec?.takeIf { it.isNotBlank() }
+                ?: audioStream?.codec?.takeIf { it.isNotBlank() }?.uppercase(),
+            audioType = audioStream?.channels.toAudioTypeLabel(),
+            language = audioStream?.displayLanguage?.takeIf { it.isNotBlank() }
+                ?: audioStream?.language?.takeIf { it.isNotBlank() },
+        )
+
         return DetailHeroModel(
             id = item.id.toString(),
             title = item.getDisplayTitle(),
@@ -367,6 +418,8 @@ class DetailViewModel @Inject constructor(
             backdropUrl = repositories.stream.getBackdropUrlWithFallback(item, parentForBackdrop),
             metaBadges = metaBadges,
             infoRows = infoRows,
+            technicalDetails = technicalDetails,
+            subtitleOptions = subtitleOptions,
             cast = cast,
         )
     }

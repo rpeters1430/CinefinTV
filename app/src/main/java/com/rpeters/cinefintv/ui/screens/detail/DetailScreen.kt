@@ -28,6 +28,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.ClosedCaption
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Speaker
 import androidx.compose.runtime.Composable
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.LaunchedEffect
@@ -127,6 +132,10 @@ fun DetailScreen(
                 val item = state.item
                 val episodes = state.episodesBySeasonId.values.flatten()
                 val isSeriesDetail = state.seasons.isNotEmpty()
+                var subtitlesExpanded by remember { mutableStateOf(false) }
+                var selectedSubtitle by remember(item.subtitleOptions) {
+                    mutableStateOf(item.subtitleOptions.firstOrNull())
+                }
 
                 LaunchedEffect(state.isDeleted) {
                     if (state.isDeleted) {
@@ -302,6 +311,126 @@ fun DetailScreen(
                                                             maxLines = 1,
                                                             overflow = TextOverflow.Ellipsis,
                                                         )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                item.technicalDetails?.let { details ->
+                                    val technicalRows = listOfNotNull(
+                                        details.videoQuality?.let {
+                                            DetailInfoRowModel("Video Quality", it, Icons.Default.HighQuality)
+                                        },
+                                        details.audioCodec?.let {
+                                            DetailInfoRowModel("Audio Codec", it, Icons.Default.GraphicEq)
+                                        },
+                                        details.audioType?.let {
+                                            DetailInfoRowModel("Audio Type", it, Icons.Default.Speaker)
+                                        },
+                                        details.language?.let {
+                                            DetailInfoRowModel("Language", it, Icons.Default.Language)
+                                        },
+                                    )
+
+                                    if (technicalRows.isNotEmpty()) {
+                                        FlowRow(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                                        ) {
+                                            technicalRows.forEach { infoRow ->
+                                                Surface(
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    colors = SurfaceDefaults.colors(
+                                                        containerColor = Color.Black.copy(alpha = 0.4f)
+                                                    ),
+                                                    modifier = Modifier.border(
+                                                        width = 1.dp,
+                                                        color = MaterialTheme.colorScheme.border.copy(alpha = 0.3f),
+                                                        shape = RoundedCornerShape(12.dp)
+                                                    )
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                                    ) {
+                                                        infoRow.icon?.let {
+                                                            Icon(
+                                                                imageVector = it,
+                                                                contentDescription = null,
+                                                                modifier = Modifier.size(20.dp),
+                                                                tint = MaterialTheme.colorScheme.primary
+                                                            )
+                                                        }
+                                                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                            Text(
+                                                                text = infoRow.label.uppercase(),
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                            Text(
+                                                                text = infoRow.value,
+                                                                style = MaterialTheme.typography.titleSmall,
+                                                                color = MaterialTheme.colorScheme.onBackground,
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (item.subtitleOptions.isNotEmpty()) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(
+                                            text = "Subtitles",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onBackground,
+                                            fontWeight = FontWeight.SemiBold,
+                                        )
+                                        Button(
+                                            onClick = { subtitlesExpanded = !subtitlesExpanded },
+                                            modifier = Modifier.onFocusChanged { if (it.isFocused) focusedDescription = null }
+                                        ) {
+                                            Icon(Icons.Default.ClosedCaption, contentDescription = null)
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(selectedSubtitle ?: "Choose subtitle")
+                                        }
+
+                                        if (subtitlesExpanded) {
+                                            Surface(
+                                                shape = RoundedCornerShape(12.dp),
+                                                colors = SurfaceDefaults.colors(
+                                                    containerColor = Color.Black.copy(alpha = 0.7f)
+                                                ),
+                                                modifier = Modifier.fillMaxWidth(0.45f)
+                                            ) {
+                                                Column(
+                                                    modifier = Modifier.padding(12.dp),
+                                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    item.subtitleOptions.forEach { option ->
+                                                        val isSelected = selectedSubtitle == option
+                                                        if (isSelected) {
+                                                            Button(onClick = {
+                                                                selectedSubtitle = option
+                                                                subtitlesExpanded = false
+                                                            }) {
+                                                                Text(option)
+                                                            }
+                                                        } else {
+                                                            OutlinedButton(onClick = {
+                                                                selectedSubtitle = option
+                                                                subtitlesExpanded = false
+                                                            }) {
+                                                                Text(option)
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
