@@ -40,23 +40,6 @@ That said, there are several concrete issues the roadmap doesn't call out: a dep
 
 ## Issues & Concerns
 
-### 🔴 Critical
-
-#### 1. KSP Version Mismatch — Will Likely Break Builds
-
-In `libs.versions.toml`:
-```toml
-kotlin = "2.3.10"
-ksp   = "2.3.6"
-```
-
-KSP 2.x versions must match the Kotlin version they compile against. The version `2.3.6` does not correspond to Kotlin `2.3.10`. This will cause Hilt annotation processing failures at build time. The KSP version for Kotlin `2.3.10` should be `2.3.10-1.0.x` (check the KSP releases page for the latest patch). Fix this before anything else.
-
-**Fix:**
-```toml
-ksp = "2.3.10-1.0.24"  # or whatever the latest 2.3.10-compatible release is
-```
-
 ---
 
 ### 🟠 High Priority
@@ -178,7 +161,6 @@ The `2026-03-09-app-upgrade-roadmap.md` is well-written and the phasing is corre
 
 ## Recommended Immediate Actions (ordered)
 
-1. **Fix KSP version** in `libs.versions.toml` to match Kotlin `2.3.10` — verify the build compiles clean.
 2. **Delete `FeatureFlags.AI`** constants and clean up `Phase4Module` TODO — reduce noise before Phase A QA work begins.
 3. **Replace `Color.White` hardcodes** with `MaterialTheme.colorScheme.onBackground` across all screens — mechanical find/replace, low risk.
 4. **Remove Settings from nav graph** or show a proper placeholder screen with a visible back action.
