@@ -17,7 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -71,7 +71,7 @@ fun LibraryScreen(
                     text = "Loading ${category.title}...",
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.padding(48.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
             }
 
@@ -85,7 +85,7 @@ fun LibraryScreen(
                     Text(
                         text = "${category.title} could not load",
                         style = MaterialTheme.typography.headlineLarge,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                     )
                     Text(
                         text = state.message,

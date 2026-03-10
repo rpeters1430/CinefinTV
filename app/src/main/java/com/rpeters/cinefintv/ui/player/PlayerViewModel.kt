@@ -4,6 +4,12 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.rpeters.cinefintv.data.PlaybackPositionStore
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
@@ -45,22 +51,27 @@ data class PlayerUiState(
     val errorMessage: String? = null,
 )
 
+@UnstableApi
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repositories: JellyfinRepositoryCoordinator,
     private val playbackPreferencesRepository: PlaybackPreferencesRepository,
     @param:ApplicationContext private val appContext: Context,
-    val okHttpClient: OkHttpClient,
+    private val okHttpClient: OkHttpClient,
 ) : ViewModel() {
     private val playbackSessionId: String = UUID.randomUUID().toString()
-    private val itemId: String = savedStateHandle.get<String>("itemId").orEmpty()
+    val itemId: String = savedStateHandle.get<String>("itemId").orEmpty()
+    
     private val _uiState = MutableStateFlow(
         PlayerUiState(
             itemId = itemId,
         ),
     )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+
+    private var _player: ExoPlayer? = null
+    val player: ExoPlayer? get() = _player
 
     init {
         viewModelScope.launch {
@@ -85,8 +96,7 @@ class PlayerViewModel @Inject constructor(
             val savedPlaybackPositionMs = PlaybackPositionStore.getPlaybackPosition(appContext, itemId)
             val streamUrl = repositories.stream.getStreamUrl(itemId)
             if (streamUrl == null) {
-                _uiState.value = PlayerUiState(
-                    itemId = itemId,
+                _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     errorMessage = "Unable to create a stream for this item.",
                 )
@@ -96,9 +106,15 @@ class PlayerViewModel @Inject constructor(
             val detailResult = repositories.media.getItemDetails(itemId)
             val item = (detailResult as? ApiResult.Success)?.data
             val title = item?.getDisplayTitle() ?: "Now Playing"
+            
             val isEpisodicContent = item?.type == BaseItemKind.EPISODE
-            val seasonNumber = if (isEpisodicContent) item?.parentIndexNumber else null
-            val episodeNumber = if (isEpisodicContent) item?.indexNumber else null
+            var seasonNumber: Int? = null
+            var episodeNumber: Int? = null
+            
+            if (item != null && isEpisodicContent) {
+                seasonNumber = item.parentIndexNumber
+                episodeNumber = item.indexNumber
+            }
 
             var nextEpisodeId: String? = null
             var nextEpisodeTitle: String? = null
@@ -106,28 +122,51 @@ class PlayerViewModel @Inject constructor(
             if (isEpisodicContent) {
                 val nextResult = repositories.media.getNextEpisode(itemId)
                 if (nextResult is ApiResult.Success) {
-                    nextEpisodeId = nextResult.data?.id?.toString()
-                    nextEpisodeTitle = nextResult.data?.getDisplayTitle()
+                    val nextEpisode = nextResult.data
+                    if (nextEpisode != null) {
+                        nextEpisodeId = nextEpisode.id.toString()
+                        nextEpisodeTitle = nextEpisode.getDisplayTitle()
+                    }
                 }
             }
 
-            _uiState.value = PlayerUiState(
-                itemId = itemId,
+            _uiState.value = _uiState.value.copy(
                 title = title,
                 seasonNumber = seasonNumber,
                 episodeNumber = episodeNumber,
                 streamUrl = streamUrl,
                 savedPlaybackPositionMs = savedPlaybackPositionMs,
                 isEpisodicContent = isEpisodicContent,
-                autoPlayNextEpisode = _uiState.value.autoPlayNextEpisode,
                 nextEpisodeId = nextEpisodeId,
                 nextEpisodeTitle = nextEpisodeTitle,
-                selectedAudioTrack = _uiState.value.selectedAudioTrack,
-                selectedSubtitleTrack = _uiState.value.selectedSubtitleTrack,
-                playbackSpeed = _uiState.value.playbackSpeed,
                 isLoading = false,
             )
         }
+    }
+
+    fun setupPlayer(context: Context): ExoPlayer {
+        _player?.let { return it }
+        
+        val factory = DefaultMediaSourceFactory(OkHttpDataSource.Factory(okHttpClient))
+        val newPlayer = ExoPlayer.Builder(context)
+            .setMediaSourceFactory(factory)
+            .build()
+            .apply {
+                val streamUrl = uiState.value.streamUrl
+                if (streamUrl != null) {
+                    setMediaItem(MediaItem.fromUri(streamUrl))
+                    prepare()
+                    playWhenReady = true
+                }
+            }
+        _player = newPlayer
+        return newPlayer
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        _player?.release()
+        _player = null
     }
 
     fun setAutoPlayNextEpisode(enabled: Boolean) {
@@ -147,6 +186,7 @@ class PlayerViewModel @Inject constructor(
 
     fun setPlaybackSpeed(speed: Float) {
         _uiState.value = _uiState.value.copy(playbackSpeed = speed)
+        _player?.setPlaybackSpeed(speed)
     }
 
     suspend fun getNextEpisodeId(): String? {

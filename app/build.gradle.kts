@@ -80,6 +80,14 @@ android {
         compose = true
         buildConfig = true
     }
+
+    packaging {
+        jniLibs {
+            keepDebugSymbols.add("**/libffmpegJNI.so")
+            keepDebugSymbols.add("**/libandroidx.graphics.path.so")
+            keepDebugSymbols.add("**/libdatastore_shared_counter.so")
+        }
+    }
 }
 
 kotlin {

@@ -91,7 +91,7 @@ fun TvPersonCard(
             Text(
                 text = name,
                 style = MaterialTheme.typography.titleSmall,
-                color = androidx.compose.ui.graphics.Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center

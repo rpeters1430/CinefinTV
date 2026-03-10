@@ -26,7 +26,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -55,7 +55,7 @@ fun StuffDetailScreen(
             Text(
                 text = "Loading Stuff details...",
                 style = MaterialTheme.typography.headlineMedium,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
             )
         }
 
@@ -69,7 +69,7 @@ fun StuffDetailScreen(
                 Text(
                     text = "Stuff detail could not load", 
                     style = MaterialTheme.typography.headlineLarge,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = state.message,
@@ -129,7 +129,7 @@ fun StuffDetailScreen(
                             Text(
                                 text = item.title, 
                                 style = MaterialTheme.typography.displaySmall,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onBackground,
                                 fontWeight = FontWeight.Bold
                             )
                             item.overview?.takeIf { it.isNotBlank() }?.let {
@@ -173,7 +173,7 @@ fun StuffDetailScreen(
                                 Text(
                                     text = "More Stuff", 
                                     style = MaterialTheme.typography.titleLarge,
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                                 LazyRow(
                                     contentPadding = PaddingValues(horizontal = 32.dp),

@@ -67,7 +67,7 @@ fun TvMediaCard(
         label = "CardScale"
     )
     val titleColor by animateColorAsState(
-        targetValue = if (isFocused) Color.White else Color.White.copy(alpha = 0.7f),
+        targetValue = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = tween(durationMillis = 200),
         label = "TitleColor"
     )
@@ -104,7 +104,7 @@ fun TvMediaCard(
                     focusedBorder = Border(
                         border = androidx.compose.foundation.BorderStroke(
                             width = 2.dp,
-                            color = Color.White.copy(alpha = 0.8f)
+                            color = MaterialTheme.colorScheme.border.copy(alpha = 0.8f)
                         )
                     )
                 ),
@@ -194,7 +194,7 @@ private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifie
                     Text(
                         text = "✓",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }
@@ -211,7 +211,7 @@ private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifie
                     Text(
                         text = "▶",
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }

@@ -20,7 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -47,7 +47,7 @@ fun MusicScreen(
                 Text(
                     text = "Loading music...",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
             }
         }
@@ -62,7 +62,7 @@ fun MusicScreen(
                 Text(
                     text = "Music could not load",
                     style = MaterialTheme.typography.headlineLarge,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
                 Text(
                     text = state.message,
@@ -118,7 +118,7 @@ private fun MusicGridContent(
             Text(
                 text = "Music",
                 style = MaterialTheme.typography.displaySmall,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
             )
         }
 
@@ -195,7 +195,7 @@ private fun AlbumDetailContent(
                 Text(
                     text = albumTitle,
                     style = MaterialTheme.typography.displaySmall,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
                 if (!albumYear.isNullOrBlank()) {
                     Text(
@@ -278,7 +278,7 @@ private fun TrackRow(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.weight(1f),
             )
             if (!durationText.isNullOrBlank()) {

@@ -43,7 +43,7 @@ fun ServerConnectionScreen(
         Text(
             text = "Connect to Jellyfin",
             style = MaterialTheme.typography.headlineLarge,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Text(
             text = "Enter your server URL. Local IPs and reverse-proxy URLs are supported.",
@@ -95,7 +95,7 @@ internal fun AuthTextField(
         onValueChange = onValueChange,
         singleLine = true,
         textStyle = MaterialTheme.typography.bodyLarge.copy(
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
         ),
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(

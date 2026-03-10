@@ -34,7 +34,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import kotlinx.coroutines.launch
@@ -67,7 +67,7 @@ fun PersonScreen(
                 Text(
                     text = "Loading person details...",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
             }
         }
@@ -82,7 +82,7 @@ fun PersonScreen(
                 Text(
                     text = "Could not load person",
                     style = MaterialTheme.typography.headlineLarge,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
                 Text(
                     text = state.message,
@@ -176,7 +176,7 @@ fun PersonScreen(
                             Text(
                                 text = person.name,
                                 style = MaterialTheme.typography.displaySmall,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onBackground,
                                 fontWeight = FontWeight.Bold,
                             )
 
@@ -212,7 +212,7 @@ fun PersonScreen(
                                 Text(
                                     text = "Known For",
                                     style = MaterialTheme.typography.titleLarge,
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onBackground,
                                 )
                                 LazyRow(
                                     contentPadding = PaddingValues(horizontal = 32.dp),

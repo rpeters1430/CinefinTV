@@ -45,7 +45,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import kotlinx.coroutines.launch
@@ -90,7 +90,7 @@ fun DetailScreen(
                     Text(
                         text = "Loading details...",
                         style = MaterialTheme.typography.headlineMedium,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                     )
                 }
             }
@@ -105,7 +105,7 @@ fun DetailScreen(
                     Text(
                         text = "Detail could not load",
                         style = MaterialTheme.typography.headlineLarge,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                     )
                     Text(
                         text = state.message,
@@ -206,7 +206,7 @@ fun DetailScreen(
                                 Text(
                                     text = item.title,
                                     style = MaterialTheme.typography.displaySmall,
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onBackground,
                                     fontWeight = FontWeight.Bold,
                                 )
 
@@ -246,7 +246,7 @@ fun DetailScreen(
                                                 Text(
                                                     text = badge,
                                                     style = MaterialTheme.typography.labelMedium,
-                                                    color = Color.White,
+                                                    color = MaterialTheme.colorScheme.onBackground,
                                                     modifier = Modifier.padding(
                                                         horizontal = 12.dp,
                                                         vertical = 6.dp,
@@ -298,7 +298,7 @@ fun DetailScreen(
                                                         Text(
                                                             text = infoRow.value,
                                                             style = MaterialTheme.typography.titleSmall,
-                                                            color = Color.White,
+                                                            color = MaterialTheme.colorScheme.onBackground,
                                                             maxLines = 1,
                                                             overflow = TextOverflow.Ellipsis,
                                                         )
@@ -389,7 +389,7 @@ fun DetailScreen(
                                     Text(
                                         text = "Seasons",
                                         style = MaterialTheme.typography.titleLarge,
-                                        color = if (isFocused) Color.White else Color.White.copy(alpha = 0.5f),
+                                        color = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     LazyRow(
                                         contentPadding = PaddingValues(horizontal = 32.dp),
@@ -423,7 +423,7 @@ fun DetailScreen(
                                     Text(
                                         text = "Episodes",
                                         style = MaterialTheme.typography.titleLarge,
-                                        color = if (isFocused) Color.White else Color.White.copy(alpha = 0.5f),
+                                        color = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     LazyRow(
                                         contentPadding = PaddingValues(horizontal = 32.dp),
@@ -462,7 +462,7 @@ fun DetailScreen(
                                     Text(
                                         text = "Cast & Crew",
                                         style = MaterialTheme.typography.titleLarge,
-                                        color = if (isFocused) Color.White else Color.White.copy(alpha = 0.5f),
+                                        color = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     LazyRow(
                                         contentPadding = PaddingValues(horizontal = 32.dp),
@@ -496,7 +496,7 @@ fun DetailScreen(
                                     Text(
                                         text = "More Like This",
                                         style = MaterialTheme.typography.titleLarge,
-                                        color = if (isFocused) Color.White else Color.White.copy(alpha = 0.5f),
+                                        color = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     LazyRow(
                                         contentPadding = PaddingValues(horizontal = 32.dp),

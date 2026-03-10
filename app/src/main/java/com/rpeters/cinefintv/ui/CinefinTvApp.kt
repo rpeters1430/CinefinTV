@@ -188,14 +188,14 @@ fun CinefinTvApp(
                                     }
                                 },
                                 colors = TabDefaults.pillIndicatorTabColors(
-                                    contentColor = Color.White,
-                                    inactiveContentColor = Color.White.copy(alpha = 0.7f),
+                                    contentColor = MaterialTheme.colorScheme.onBackground,
+                                    inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     selectedContentColor = Color(0xFF0D1117),
                                     focusedContentColor = Color(0xFFE50914),
                                     focusedSelectedContentColor = Color(0xFF0D1117),
-                                    disabledContentColor = Color.White.copy(alpha = 0.4f),
-                                    disabledInactiveContentColor = Color.White.copy(alpha = 0.4f),
-                                    disabledSelectedContentColor = Color.White.copy(alpha = 0.4f),
+                                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    disabledInactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    disabledSelectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                                 ),
                             ) {
                                 Row(
@@ -250,7 +250,7 @@ private fun UpdateDialog(
                 Text(
                     text = "New Update Available",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = "Version ${info.versionName} is ready to install.",
