@@ -523,7 +523,6 @@ fun DetailScreen(
                                     LazyRow(
                                         contentPadding = PaddingValues(horizontal = 12.dp),
                                         horizontalArrangement = Arrangement.spacedBy(20.dp),
-                                        modifier = Modifier.padding(horizontal = (-12).dp)
                                     ) {
                                         items(
                                             state.seasons,
@@ -560,7 +559,6 @@ fun DetailScreen(
                                     LazyRow(
                                         contentPadding = PaddingValues(horizontal = 12.dp),
                                         horizontalArrangement = Arrangement.spacedBy(20.dp),
-                                        modifier = Modifier.padding(horizontal = (-12).dp)
                                     ) {
                                         items(
                                             episodes,
@@ -597,7 +595,6 @@ fun DetailScreen(
                                     LazyRow(
                                         contentPadding = PaddingValues(horizontal = 12.dp),
                                         horizontalArrangement = Arrangement.spacedBy(24.dp),
-                                        modifier = Modifier.padding(horizontal = (-12).dp)
                                     ) {
                                         items(
                                             state.cast,
@@ -632,7 +629,6 @@ fun DetailScreen(
                                     LazyRow(
                                         contentPadding = PaddingValues(horizontal = 12.dp),
                                         horizontalArrangement = Arrangement.spacedBy(20.dp),
-                                        modifier = Modifier.padding(horizontal = (-12).dp)
                                     ) {
                                         items(
                                             state.related,

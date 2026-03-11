@@ -178,7 +178,6 @@ fun StuffDetailScreen(
                                 LazyRow(
                                     contentPadding = PaddingValues(horizontal = 12.dp),
                                     horizontalArrangement = Arrangement.spacedBy(20.dp),
-                                    modifier = Modifier.padding(horizontal = (-12).dp)
                                 ) {
                                     items(state.moreFromStuff, key = { it.id }) { item ->
                                         TvMediaCard(

@@ -1,0 +1,542 @@
+2026-03-10 18:52:34.401  3469-3522  Finsky                  com.android.vending                  E  [66] VerifyApps: APK Analysis scan failed for com.rpeters.cinefintv (Fix with AI)
+                                                                                                    com.google.android.finsky.verifier.apkanalysis.client.ApkAnalysisException: DOWNLOAD_FILE_NOT_FOUND_EXCEPTION while analyzing APK
+                                                                                                    	at ijf.b(PG:571)
+                                                                                                    	at aqtc.u(PG:5)
+                                                                                                    	at aqzq.run(PG:109)
+                                                                                                    	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+                                                                                                    	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+                                                                                                    	at mfe.run(PG:278)
+                                                                                                    	at java.lang.Thread.run(Thread.java:1119)
+2026-03-10 18:52:35.435  4330-4330  eters.cinefintv         com.rpeters.cinefintv                I  Late-enabling -Xcheck:jni
+2026-03-10 18:52:35.475  4330-4330  eters.cinefintv         com.rpeters.cinefintv                I  Using CollectorTypeCMC GC.
+2026-03-10 18:52:35.476  4330-4330  eters.cinefintv         com.rpeters.cinefintv                W  Unexpected CPU variant for x86: x86.
+                                                                                                    Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, default
+2026-03-10 18:52:35.490  4330-4330  nativeloader            com.rpeters.cinefintv                D  Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+2026-03-10 18:52:36.476  4330-4330  nativeloader            com.rpeters.cinefintv                D  Configuring clns-7 for other apk /data/app/~~zSf3DVlT0OMhti6ua2j0ag==/com.rpeters.cinefintv-EIzUFu9rl3_iuXHNu7D8Tg==/base.apk. target_sdk_version=35, uses_libraries=, library_path=/data/app/~~zSf3DVlT0OMhti6ua2j0ag==/com.rpeters.cinefintv-EIzUFu9rl3_iuXHNu7D8Tg==/lib/x86:/data/app/~~zSf3DVlT0OMhti6ua2j0ag==/com.rpeters.cinefintv-EIzUFu9rl3_iuXHNu7D8Tg==/base.apk!/lib/x86, permitted_path=/data:/mnt/expand:/data/user/0/com.rpeters.cinefintv
+2026-03-10 18:52:36.478  4330-4330  CompatChangeReporter    com.rpeters.cinefintv                D  Compat change id reported: 202956589; UID 10093; state: ENABLED
+2026-03-10 18:52:36.479  4330-4330  eters.cinefintv         com.rpeters.cinefintv                I  AssetManager2(0xf44c4394) locale list changing from [] to [en-US]
+2026-03-10 18:52:36.483  4330-4330  GraphicsEnvironment     com.rpeters.cinefintv                V  Currently set values for:
+2026-03-10 18:52:36.483  4330-4330  GraphicsEnvironment     com.rpeters.cinefintv                V    angle_gl_driver_selection_pkgs=[]
+2026-03-10 18:52:36.483  4330-4330  GraphicsEnvironment     com.rpeters.cinefintv                V    angle_gl_driver_selection_values=[]
+2026-03-10 18:52:36.483  4330-4330  GraphicsEnvironment     com.rpeters.cinefintv                V  com.rpeters.cinefintv is not listed in per-application setting
+2026-03-10 18:52:36.483  4330-4330  GraphicsEnvironment     com.rpeters.cinefintv                V  ANGLE allowlist from config: 
+2026-03-10 18:52:36.483  4330-4330  GraphicsEnvironment     com.rpeters.cinefintv                V  com.rpeters.cinefintv is not listed in ANGLE allowlist or settings, returning default
+2026-03-10 18:52:36.483  4330-4330  GraphicsEnvironment     com.rpeters.cinefintv                V  Neither updatable production driver nor prerelease driver is supported.
+2026-03-10 18:52:36.501  4330-4330  CompatChangeReporter    com.rpeters.cinefintv                D  Compat change id reported: 279646685; UID 10093; state: ENABLED
+2026-03-10 18:52:36.525  4330-4371  DisplayManager          com.rpeters.cinefintv                I  Choreographer implicitly registered for the refresh rate.
+2026-03-10 18:52:36.527  4330-4330  eters.cinefintv         com.rpeters.cinefintv                I  AssetManager2(0xf44c5e94) locale list changing from [] to [en-US]
+2026-03-10 18:52:36.539  4330-4330  ashmem                  com.rpeters.cinefintv                E  Pinning is deprecated since Android Q. Please use trim or other methods.
+2026-03-10 18:52:36.549  4330-4371  EGL_emulation           com.rpeters.cinefintv                I  Opening libGLESv1_CM_emulation.so
+2026-03-10 18:52:36.549  4330-4371  EGL_emulation           com.rpeters.cinefintv                I  Opening libGLESv2_emulation.so
+2026-03-10 18:52:36.558  4330-4371  HWUI                    com.rpeters.cinefintv                W  Failed to choose config with EGL_SWAP_BEHAVIOR_PRESERVED, retrying without...
+2026-03-10 18:52:36.559  4330-4371  HWUI                    com.rpeters.cinefintv                W  Failed to initialize 101010-2 format, error = EGL_SUCCESS
+2026-03-10 18:52:36.643  3469-3508  Finsky                  com.android.vending                  E  [57] ItemStore: getItems RPC failed for item com.rpeters.cinefintv
+2026-03-10 18:52:36.652  3469-3521  Finsky                  com.android.vending                  E  [65] ItemStore: getItems RPC failed for item com.rpeters.cinefintv
+2026-03-10 18:52:36.777  4330-4330  CompatChangeReporter    com.rpeters.cinefintv                D  Compat change id reported: 309578419; UID 10093; state: ENABLED
+2026-03-10 18:52:36.778  4330-4330  DesktopModeFlags        com.rpeters.cinefintv                D  Toggle override initialized to: OVERRIDE_UNSET
+2026-03-10 18:52:36.794  4330-4330  CompatChangeReporter    com.rpeters.cinefintv                D  Compat change id reported: 352594277; UID 10093; state: ENABLED
+2026-03-10 18:52:36.798  4330-4330  CompatChangeReporter    com.rpeters.cinefintv                D  Compat change id reported: 349153669; UID 10093; state: ENABLED
+2026-03-10 18:52:36.799  4330-4330  HWUI                    com.rpeters.cinefintv                W  Unknown dataspace 0
+2026-03-10 18:52:36.969  4330-4330  eters.cinefintv         com.rpeters.cinefintv                I  hiddenapi: Accessing hidden method Landroid/os/SystemProperties;->addChangeCallback(Ljava/lang/Runnable;)V (runtime_flags=0, domain=platform, api=unsupported) from Landroidx/compose/ui/platform/AndroidComposeView$Companion; (domain=app) using reflection: allowed
+2026-03-10 18:52:37.032  4330-4376  CompatChangeReporter    com.rpeters.cinefintv                D  Compat change id reported: 312399441; UID 10093; state: ENABLED
+2026-03-10 18:52:37.197  4330-4330  Autofill Status         com.rpeters.cinefintv                D  Autofill popup isn't shown because autofill is not available.
+                                                                                                    
+                                                                                                    Did you set up autofill?
+                                                                                                    1. Go to Settings > System > Languages&input > Advanced > Autofill Service
+                                                                                                    2. Pick a service
+                                                                                                    
+                                                                                                    Did you add an account?
+                                                                                                    1. Go to Settings > System > Languages&input > Advanced
+                                                                                                    2. Click on the settings icon next to the Autofill Service
+                                                                                                    3. Add your account
+2026-03-10 18:52:37.272  4330-4330  eters.cinefintv         com.rpeters.cinefintv                I  hiddenapi: Accessing hidden method Landroid/view/ViewTreeObserver;->dispatchOnScrollChanged()V (runtime_flags=0, domain=platform, api=unsupported) from Landroidx/compose/ui/platform/AndroidComposeView$Companion; (domain=app) using reflection: allowed
+2026-03-10 18:52:37.281  4330-4330  InsetsController        com.rpeters.cinefintv                D  show(ime(), fromIme=false)
+2026-03-10 18:52:37.282  4330-4378  NetworkStateInterceptor com.rpeters.cinefintv                D  Request to raw.githubusercontent.com via ETHERNET
+2026-03-10 18:52:37.283  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:8a159909: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT_BY_INSETS_API fromUser false
+2026-03-10 18:52:37.284  4330-4330  InsetsController        com.rpeters.cinefintv                D  Setting requestedVisibleTypes to -1 (was -9)
+2026-03-10 18:52:37.284  4330-4378  OkHttp                  com.rpeters.cinefintv                I  --> GET https://raw.githubusercontent.com/rpeters1430/CinefinTV/main/updates/version.json
+2026-03-10 18:52:37.284  4330-4378  OkHttp                  com.rpeters.cinefintv                I  --> END GET
+2026-03-10 18:52:37.724  4330-4378  PinningTrustManager     com.rpeters.cinefintv                D  Validating certificate for hostname: raw.githubusercontent.com
+2026-03-10 18:52:37.724  4330-4378  eters.cinefintv         com.rpeters.cinefintv                I  hiddenapi: Accessing hidden method Landroid/security/net/config/RootTrustManager;->checkServerTrusted([Ljava/security/cert/X509Certificate;Ljava/lang/String;Ljava/lang/String;)Ljava/util/List; (runtime_flags=0, domain=platform, api=unsupported) from Lcom/rpeters/cinefintv/data/security/PinningTrustManager; (domain=app) using reflection: allowed
+2026-03-10 18:52:37.744  4330-4378  PinningTrustManager     com.rpeters.cinefintv                D  First connection to raw.githubusercontent.com - storing certificate pin
+2026-03-10 18:52:37.787  4330-4341  HWUI                    com.rpeters.cinefintv                I  Davey! duration=883ms; Flags=0, FrameTimelineVsyncId=19502, IntendedVsync=142099431440, Vsync=142482764758, InputEventId=0, HandleInputStart=142486762772, AnimationStart=142486763554, PerformTraversalsStart=142499917618, DrawStart=142499971689, FrameDeadline=142516098090, FrameStartTime=142486541187, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=142504482367, SyncStart=142504524225, IssueDrawCommandsStart=142504572005, SwapBuffers=142505122828, FrameCompleted=142983088122, DequeueBufferDuration=8947, QueueBufferDuration=523882, GpuCompleted=142983088122, SwapBuffersCompleted=142979598519, DisplayPresentTime=0, CommandSubmissionCompleted=142505122828, 
+2026-03-10 18:52:37.818  4330-4378  Certificat...ingManager com.rpeters.cinefintv                D  Stored certificate pin for raw.githubusercontent.com (backups=1, expires=1780969957744)
+2026-03-10 18:52:37.818  4330-4378  PinningTrustManager     com.rpeters.cinefintv                D  Trusted and stored pin for raw.githubusercontent.com
+2026-03-10 18:52:37.821  4330-4378  PinningHostnameVerifier com.rpeters.cinefintv                D  Hostname verification for raw.githubusercontent.com: true
+2026-03-10 18:52:37.829  4330-4330  InsetsController        com.rpeters.cinefintv                D  show(ime(), fromIme=false)
+2026-03-10 18:52:37.830  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:4c254a9e: onCancelled at PHASE_CLIENT_REPORT_REQUESTED_VISIBLE_TYPES
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  <-- 200 https://raw.githubusercontent.com/rpeters1430/CinefinTV/main/updates/version.json (688ms)
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  cache-control: max-age=300
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  content-security-policy: default-src 'none'; style-src 'unsafe-inline'; sandbox
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  content-type: text/plain; charset=utf-8
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  etag: W/"59f98142761f088523470a580b86331a8a0344410933545a4d9e4981d77cda1c"
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  strict-transport-security: max-age=31536000
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  x-content-type-options: nosniff
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  x-frame-options: deny
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  x-xss-protection: 1; mode=block
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  x-github-request-id: 9E82:20269:2AAFE5:31177B:69B0C8DB
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  accept-ranges: bytes
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  date: Wed, 11 Mar 2026 01:55:26 GMT
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  via: 1.1 varnish
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  x-served-by: cache-sjc10062-SJC
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  x-cache: HIT
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  x-cache-hits: 0
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  x-timer: S1773194127.618463,VS0,VE89
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  vary: Authorization,Accept-Encoding
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  access-control-allow-origin: *
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  cross-origin-resource-policy: cross-origin
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  x-fastly-request-id: f616504e6c1fae4f22814a24860d2e7f407fc535
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  expires: Wed, 11 Mar 2026 02:00:26 GMT
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  source-age: 0
+2026-03-10 18:52:37.973  4330-4378  OkHttp                  com.rpeters.cinefintv                I  <-- END HTTP
+2026-03-10 18:52:37.975  4330-4378  UpdateManager           com.rpeters.cinefintv                D  Received version JSON: {
+                                                                                                      "versionCode": 7,
+                                                                                                      "versionName": "1.0.6",
+                                                                                                      "updateUrl": "https://github.com/rpeters1430/CinefinTV/releases/latest/download/app-release.apk",
+                                                                                                      "releaseNotes": "Release v1.0.6\n",
+                                                                                                      "isCritical": false
+                                                                                                    }
+2026-03-10 18:52:37.980  4330-4378  UpdateManager           com.rpeters.cinefintv                D  Current versionCode: 7, Remote versionCode: 7
+2026-03-10 18:52:37.980  4330-4378  UpdateManager           com.rpeters.cinefintv                I  App is up to date
+2026-03-10 18:52:38.123  4330-4330  InteractionJankMonitor  com.rpeters.cinefintv                W  Initializing without READ_DEVICE_CONFIG permission. enabled=false, interval=1, missedFrameThreshold=3, frameTimeThreshold=64, package=com.rpeters.cinefintv
+2026-03-10 18:52:38.335  4330-4330  ImeTracker              com.rpeters.cinefintv                I  system_server:ca8c3f62: onShown
+2026-03-10 18:52:41.943  4330-4403  ProfileInstaller        com.rpeters.cinefintv                D  Installing profile for com.rpeters.cinefintv
+2026-03-10 18:52:49.017  4330-4330  InsetsController        com.rpeters.cinefintv                D  hide(ime(), fromIme=false)
+2026-03-10 18:52:49.018  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:96a6677: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_BY_INSETS_API fromUser false
+2026-03-10 18:52:49.018  4330-4330  WindowOnBackDispatcher  com.rpeters.cinefintv                W  sendCancelIfRunning: isInProgress=false callback=ImeCallback=ImeOnBackInvokedCallback@164351672 Callback=android.window.IOnBackInvokedCallback$Stub$Proxy@77d133f
+2026-03-10 18:52:49.019  4330-4330  InsetsController        com.rpeters.cinefintv                D  Setting requestedVisibleTypes to -9 (was -1)
+2026-03-10 18:52:51.074  4330-4330  InsetsController        com.rpeters.cinefintv                D  hide(ime(), fromIme=false)
+2026-03-10 18:52:51.075  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:f90f9779: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_BY_INSETS_API fromUser false
+2026-03-10 18:52:51.075  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:f90f9779: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+2026-03-10 18:52:51.515  4330-4330  JellyfinAuthRepository  com.rpeters.cinefintv                D  testServerConnection: Attempting to connect to server
+2026-03-10 18:52:51.527  4330-4378  OkHttpClient            com.rpeters.cinefintv                I  GET https://rpeters1428.huron.usbx.me/jellyfin/System/Info/Public
+2026-03-10 18:52:51.868  4330-4330  JellyfinAuthRepository  com.rpeters.cinefintv                D  testServerConnection: Successfully connected to server
+2026-03-10 18:52:51.870  4330-4378  OkHttpClient            com.rpeters.cinefintv                I  GET https://rpeters1428.huron.usbx.me/jellyfin/QuickConnect/Enabled
+2026-03-10 18:52:51.907  4330-4330  WindowOnBackDispatcher  com.rpeters.cinefintv                W  OnBackInvokedCallback is not enabled for the application.
+                                                                                                    Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+2026-03-10 18:52:52.151  4330-4330  Autofill Status         com.rpeters.cinefintv                D  Autofill popup isn't shown because autofill is not available.
+                                                                                                    
+                                                                                                    Did you set up autofill?
+                                                                                                    1. Go to Settings > System > Languages&input > Advanced > Autofill Service
+                                                                                                    2. Pick a service
+                                                                                                    
+                                                                                                    Did you add an account?
+                                                                                                    1. Go to Settings > System > Languages&input > Advanced
+                                                                                                    2. Click on the settings icon next to the Autofill Service
+                                                                                                    3. Add your account
+2026-03-10 18:52:52.179  4330-4330  InsetsController        com.rpeters.cinefintv                D  show(ime(), fromIme=false)
+2026-03-10 18:52:52.179  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:a328db80: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT_BY_INSETS_API fromUser false
+2026-03-10 18:52:52.179  4330-4330  InsetsController        com.rpeters.cinefintv                D  Setting requestedVisibleTypes to -1 (was -9)
+2026-03-10 18:52:52.188  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:fee8158d: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+2026-03-10 18:52:52.188  4330-4330  InsetsController        com.rpeters.cinefintv                D  show(ime(), fromIme=false)
+2026-03-10 18:52:52.188  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:fee8158d: onCancelled at PHASE_CLIENT_REPORT_REQUESTED_VISIBLE_TYPES
+2026-03-10 18:52:52.518  4330-4330  ImeTracker              com.rpeters.cinefintv                I  system_server:78126862: onShown
+2026-03-10 18:52:54.680  4330-4330  Autofill Status         com.rpeters.cinefintv                D  Autofill popup isn't shown because autofill is not available.
+                                                                                                    
+                                                                                                    Did you set up autofill?
+                                                                                                    1. Go to Settings > System > Languages&input > Advanced > Autofill Service
+                                                                                                    2. Pick a service
+                                                                                                    
+                                                                                                    Did you add an account?
+                                                                                                    1. Go to Settings > System > Languages&input > Advanced
+                                                                                                    2. Click on the settings icon next to the Autofill Service
+                                                                                                    3. Add your account
+2026-03-10 18:52:54.693  4330-4330  InsetsController        com.rpeters.cinefintv                D  show(ime(), fromIme=false)
+2026-03-10 18:52:54.694  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:2b3f2ffd: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT_BY_INSETS_API fromUser false
+2026-03-10 18:52:54.694  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:2b3f2ffd: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+2026-03-10 18:52:54.701  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:14dd7049: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+2026-03-10 18:52:54.701  4330-4330  InsetsController        com.rpeters.cinefintv                D  show(ime(), fromIme=false)
+2026-03-10 18:52:54.701  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:14dd7049: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+2026-03-10 18:53:00.498  4330-4330  InsetsController        com.rpeters.cinefintv                D  hide(ime(), fromIme=false)
+2026-03-10 18:53:00.498  4330-4330  WindowOnBackDispatcher  com.rpeters.cinefintv                W  sendCancelIfRunning: isInProgress=false callback=ImeCallback=ImeOnBackInvokedCallback@164351672 Callback=android.window.IOnBackInvokedCallback$Stub$Proxy@1a0fae9
+2026-03-10 18:53:00.499  4330-4330  InsetsController        com.rpeters.cinefintv                D  Setting requestedVisibleTypes to -9 (was -1)
+2026-03-10 18:53:00.499  4330-4330  InsetsController        com.rpeters.cinefintv                D  hide(ime(), fromIme=false)
+2026-03-10 18:53:00.499  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.google.android.inputmethod.latin:4bf534dd: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+2026-03-10 18:53:00.960  4330-4330  InsetsController        com.rpeters.cinefintv                D  hide(ime(), fromIme=false)
+2026-03-10 18:53:00.960  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:e1993e22: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_BY_INSETS_API fromUser false
+2026-03-10 18:53:00.960  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:e1993e22: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+2026-03-10 18:53:01.833  4330-4330  Autofill Status         com.rpeters.cinefintv                D  Autofill popup isn't shown because autofill is not available.
+                                                                                                    
+                                                                                                    Did you set up autofill?
+                                                                                                    1. Go to Settings > System > Languages&input > Advanced > Autofill Service
+                                                                                                    2. Pick a service
+                                                                                                    
+                                                                                                    Did you add an account?
+                                                                                                    1. Go to Settings > System > Languages&input > Advanced
+                                                                                                    2. Click on the settings icon next to the Autofill Service
+                                                                                                    3. Add your account
+2026-03-10 18:53:01.860  4330-4330  InsetsController        com.rpeters.cinefintv                D  show(ime(), fromIme=false)
+2026-03-10 18:53:01.861  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:4df1e066: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT_BY_INSETS_API fromUser false
+2026-03-10 18:53:01.861  4330-4330  InsetsController        com.rpeters.cinefintv                D  Setting requestedVisibleTypes to -1 (was -9)
+2026-03-10 18:53:01.872  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:7ee8f6e8: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+2026-03-10 18:53:01.872  4330-4330  InsetsController        com.rpeters.cinefintv                D  show(ime(), fromIme=false)
+2026-03-10 18:53:01.872  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:7ee8f6e8: onCancelled at PHASE_CLIENT_REPORT_REQUESTED_VISIBLE_TYPES
+2026-03-10 18:53:02.168  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:4df1e066: onShown
+2026-03-10 18:53:04.771  4330-4330  InsetsController        com.rpeters.cinefintv                D  hide(ime(), fromIme=false)
+2026-03-10 18:53:04.771  4330-4330  WindowOnBackDispatcher  com.rpeters.cinefintv                W  sendCancelIfRunning: isInProgress=false callback=ImeCallback=ImeOnBackInvokedCallback@164351672 Callback=android.window.IOnBackInvokedCallback$Stub$Proxy@dbc5e17
+2026-03-10 18:53:04.771  4330-4330  InsetsController        com.rpeters.cinefintv                D  Setting requestedVisibleTypes to -9 (was -1)
+2026-03-10 18:53:04.771  4330-4330  InsetsController        com.rpeters.cinefintv                D  hide(ime(), fromIme=false)
+2026-03-10 18:53:04.771  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.google.android.inputmethod.latin:857e16b2: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+2026-03-10 18:53:05.192  4330-4330  InsetsController        com.rpeters.cinefintv                D  hide(ime(), fromIme=false)
+2026-03-10 18:53:05.192  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:fc005d5b: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_BY_INSETS_API fromUser false
+2026-03-10 18:53:05.192  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:fc005d5b: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+2026-03-10 18:53:05.716  4330-4330  JellyfinAuthRepository  com.rpeters.cinefintv                D  testServerConnection: Attempting to connect to server
+2026-03-10 18:53:05.718  4330-4378  OkHttpClient            com.rpeters.cinefintv                I  GET https://rpeters1428.huron.usbx.me/jellyfin/System/Info/Public
+2026-03-10 18:53:05.940  4330-4330  JellyfinAuthRepository  com.rpeters.cinefintv                D  testServerConnection: Successfully connected to server
+2026-03-10 18:53:05.942  4330-4378  OkHttpClient            com.rpeters.cinefintv                I  GET https://rpeters1428.huron.usbx.me/jellyfin/QuickConnect/Enabled
+2026-03-10 18:53:05.971  4330-4330  WindowOnBackDispatcher  com.rpeters.cinefintv                W  OnBackInvokedCallback is not enabled for the application.
+                                                                                                    Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+2026-03-10 18:53:06.213  4330-4330  Autofill Status         com.rpeters.cinefintv                D  Autofill popup isn't shown because autofill is not available.
+                                                                                                    
+                                                                                                    Did you set up autofill?
+                                                                                                    1. Go to Settings > System > Languages&input > Advanced > Autofill Service
+                                                                                                    2. Pick a service
+                                                                                                    
+                                                                                                    Did you add an account?
+                                                                                                    1. Go to Settings > System > Languages&input > Advanced
+                                                                                                    2. Click on the settings icon next to the Autofill Service
+                                                                                                    3. Add your account
+2026-03-10 18:53:06.234  4330-4330  InsetsController        com.rpeters.cinefintv                D  show(ime(), fromIme=false)
+2026-03-10 18:53:06.234  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:1f6e554e: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT_BY_INSETS_API fromUser false
+2026-03-10 18:53:06.235  4330-4330  InsetsController        com.rpeters.cinefintv                D  Setting requestedVisibleTypes to -1 (was -9)
+2026-03-10 18:53:06.245  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:83308386: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+2026-03-10 18:53:06.245  4330-4330  InsetsController        com.rpeters.cinefintv                D  show(ime(), fromIme=false)
+2026-03-10 18:53:06.245  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:83308386: onCancelled at PHASE_CLIENT_REPORT_REQUESTED_VISIBLE_TYPES
+2026-03-10 18:53:06.534  4330-4330  ImeTracker              com.rpeters.cinefintv                I  system_server:8565f593: onShown
+2026-03-10 18:53:09.360  4330-4330  Autofill Status         com.rpeters.cinefintv                D  Autofill popup isn't shown because autofill is not available.
+                                                                                                    
+                                                                                                    Did you set up autofill?
+                                                                                                    1. Go to Settings > System > Languages&input > Advanced > Autofill Service
+                                                                                                    2. Pick a service
+                                                                                                    
+                                                                                                    Did you add an account?
+                                                                                                    1. Go to Settings > System > Languages&input > Advanced
+                                                                                                    2. Click on the settings icon next to the Autofill Service
+                                                                                                    3. Add your account
+2026-03-10 18:53:09.374  4330-4330  InsetsController        com.rpeters.cinefintv                D  show(ime(), fromIme=false)
+2026-03-10 18:53:09.374  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:8e34a8c0: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT_BY_INSETS_API fromUser false
+2026-03-10 18:53:09.374  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:8e34a8c0: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+2026-03-10 18:53:09.380  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:6afecc31: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+2026-03-10 18:53:09.380  4330-4330  InsetsController        com.rpeters.cinefintv                D  show(ime(), fromIme=false)
+2026-03-10 18:53:09.380  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:6afecc31: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+2026-03-10 18:53:14.044  4330-4330  InsetsController        com.rpeters.cinefintv                D  hide(ime(), fromIme=false)
+2026-03-10 18:53:14.044  4330-4330  WindowOnBackDispatcher  com.rpeters.cinefintv                W  sendCancelIfRunning: isInProgress=false callback=ImeCallback=ImeOnBackInvokedCallback@164351672 Callback=android.window.IOnBackInvokedCallback$Stub$Proxy@a647135
+2026-03-10 18:53:14.045  4330-4330  InsetsController        com.rpeters.cinefintv                D  Setting requestedVisibleTypes to -9 (was -1)
+2026-03-10 18:53:14.045  4330-4330  InsetsController        com.rpeters.cinefintv                D  hide(ime(), fromIme=false)
+2026-03-10 18:53:14.045  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.google.android.inputmethod.latin:d7979a1a: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+2026-03-10 18:53:14.608  4330-4330  InsetsController        com.rpeters.cinefintv                D  hide(ime(), fromIme=false)
+2026-03-10 18:53:14.608  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:dbc2cd86: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_BY_INSETS_API fromUser false
+2026-03-10 18:53:14.608  4330-4330  ImeTracker              com.rpeters.cinefintv                I  com.rpeters.cinefintv:dbc2cd86: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+2026-03-10 18:53:15.624  4330-4330  JellyfinAuthRepository  com.rpeters.cinefintv                D  authenticateUser: Attempting authentication
+2026-03-10 18:53:15.628  4330-4378  OkHttpClient            com.rpeters.cinefintv                I  POST https://rpeters1428.huron.usbx.me/jellyfin/Users/AuthenticateByName
+2026-03-10 18:53:15.957  4330-4330  JellyfinAuthRepository  com.rpeters.cinefintv                D  authenticateUser: Authentication successful
+2026-03-10 18:53:15.958  4330-4330  JellyfinAuthRepository  com.rpeters.cinefintv                D  Saving new token: [PRESENT]
+2026-03-10 18:53:15.964  4330-4330  SecureCredentialManager com.rpeters.cinefintv                D  generateKeys: newKey='pwd_632596fe655bf43ae2013d16873171ce'
+2026-03-10 18:53:15.964  4330-4330  SecureCredentialManager com.rpeters.cinefintv                D  generateKeys: legacyRawKey='pwd_632596fe655bf43ae2013d16873171ce'
+2026-03-10 18:53:15.965  4330-4330  SecureCredentialManager com.rpeters.cinefintv                D  generateKeys: legacyNormalizedKey='pwd_632596fe655bf43ae2013d16873171ce'
+2026-03-10 18:53:15.965  4330-4330  SecureCredentialManager com.rpeters.cinefintv                D  generateKeys: Are any keys identical? newKey==legacyRawKey:true, newKey==legacyNormalizedKey:true
+2026-03-10 18:53:15.967  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  No existing key found, generating new stable key: JellyfinCredentialKey_v1
+2026-03-10 18:53:15.973  4330-4330  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** password *** user='rpeters1428', serverUrl='https://rpeters1428.huron.usbx.me/jellyfin'
+2026-03-10 18:53:15.974  4330-4330  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** key='pwd_632596fe655bf43ae2013d16873171ce'
+2026-03-10 18:53:15.974  4330-4330  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** ENTERING NonCancellable block - password *** cannot be cancelled from here
+2026-03-10 18:53:15.974  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** before edit contains 1 entries
+2026-03-10 18:53:15.976  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** edit block, setting key='pwd_632596fe655bf43ae2013d16873171ce'
+2026-03-10 18:53:15.976  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** setting - prefs.asMap().size = 1
+2026-03-10 18:53:15.977  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** password *** key: pwd_632596fe655bf43ae2013d16873171ce
+2026-03-10 18:53:15.977  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** set, prefs.asMap().size = 2
+2026-03-10 18:53:15.977  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** password *** set: true
+2026-03-10 18:53:15.977  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** timestamp with key: pwd_632596fe655bf43ae2013d16873171ce_timestamp
+2026-03-10 18:53:15.977  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** set, prefs.asMap().size = 3
+2026-03-10 18:53:15.977  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** removal of legacyRawKey (same as newKey)
+2026-03-10 18:53:15.977  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** removal of legacyNormalizedKey (same as newKey)
+2026-03-10 18:53:15.977  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** block completed, prefs now contains 3 entries
+2026-03-10 18:53:15.978  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** in prefs: last_server_state, pwd_632596fe655bf43ae2013d16873171ce, pwd_632596fe655bf43ae2013d16873171ce_timestamp 
+2026-03-10 18:53:15.980  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** operation returned successfully
+2026-03-10 18:53:15.980  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** read returned 3 entries
+2026-03-10 18:53:15.981  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** Password *** successfully and verified in DataStore
+2026-03-10 18:53:15.981  4330-4378  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** now contains 3 entries
+2026-03-10 18:53:15.981  4330-4330  SecureCredentialManager com.rpeters.cinefintv                D  savePassword: *** EXITED NonCancellable block - password *** operation completed
+2026-03-10 18:53:16.095  4330-4378  JellyfinCache           com.rpeters.cinefintv                D  Cache cleanup completed. Removed 0 expired entries
+2026-03-10 18:53:16.097  4330-4378  OptimizedClientFactory  com.rpeters.cinefintv                D  Creating new optimized client for: https://rpeters1428.huron.usbx.me/jellyfin
+2026-03-10 18:53:16.098  4330-4378  RepositoryUtils         com.rpeters.cinefintv                D  [VERBOSE] validateServer: Server validation passed for user rpeters1428 on https://rpeters1428.huron.usbx.me/jellyfin
+2026-03-10 18:53:16.098  4330-4383  RepositoryUtils         com.rpeters.cinefintv                D  [VERBOSE] validateServer: Server validation passed for user rpeters1428 on https://rpeters1428.huron.usbx.me/jellyfin
+2026-03-10 18:53:16.098  4330-4376  RepositoryUtils         com.rpeters.cinefintv                D  [VERBOSE] validateServer: Server validation passed for user rpeters1428 on https://rpeters1428.huron.usbx.me/jellyfin
+2026-03-10 18:53:16.099  4330-4456  RepositoryUtils         com.rpeters.cinefintv                D  [VERBOSE] validateServer: Server validation passed for user rpeters1428 on https://rpeters1428.huron.usbx.me/jellyfin
+2026-03-10 18:53:16.099  4330-4377  RepositoryUtils         com.rpeters.cinefintv                D  [VERBOSE] validateServer: Server validation passed for user rpeters1428 on https://rpeters1428.huron.usbx.me/jellyfin
+2026-03-10 18:53:16.099  4330-4458  RepositoryUtils         com.rpeters.cinefintv                D  [VERBOSE] validateServer: Server validation passed for user rpeters1428 on https://rpeters1428.huron.usbx.me/jellyfin
+2026-03-10 18:53:16.103  4330-4456  OkHttpClient            com.rpeters.cinefintv                I  GET https://rpeters1428.huron.usbx.me/jellyfin/Items?userId=c1b3b2bb-8e62-45b6-a7c4-f6645be8423a&limit=12&recursive=true&sortOrder=Descending&includeItemTypes=Episode&sortBy=DateCreated&enableTotalRecordCount=true&enableImages=true
+2026-03-10 18:53:16.104  4330-4377  OkHttpClient            com.rpeters.cinefintv                I  GET https://rpeters1428.huron.usbx.me/jellyfin/Items?userId=c1b3b2bb-8e62-45b6-a7c4-f6645be8423a&limit=12&recursive=true&sortOrder=Descending&includeItemTypes=Video&sortBy=DateCreated&enableTotalRecordCount=true&enableImages=true
+2026-03-10 18:53:16.104  4330-4376  OkHttpClient            com.rpeters.cinefintv                I  GET https://rpeters1428.huron.usbx.me/jellyfin/Items?userId=c1b3b2bb-8e62-45b6-a7c4-f6645be8423a&limit=12&recursive=true&sortOrder=Descending&includeItemTypes=Movie&sortBy=DateCreated&enableTotalRecordCount=true&enableImages=true
+2026-03-10 18:53:16.108  4330-4383  OkHttpClient            com.rpeters.cinefintv                I  GET https://rpeters1428.huron.usbx.me/jellyfin/Items?userId=c1b3b2bb-8e62-45b6-a7c4-f6645be8423a&limit=12&recursive=true&sortOrder=Descending&includeItemTypes=Movie&includeItemTypes=Episode&includeItemTypes=Video&filters=IsResumable&sortBy=DatePlayed&enableTotalRecordCount=true&enableImages=true
+2026-03-10 18:53:16.109  4330-4458  OkHttpClient            com.rpeters.cinefintv                I  GET https://rpeters1428.huron.usbx.me/jellyfin/Items?userId=c1b3b2bb-8e62-45b6-a7c4-f6645be8423a&limit=12&recursive=true&sortOrder=Descending&includeItemTypes=Audio&sortBy=DateCreated&enableTotalRecordCount=true&enableImages=true
+2026-03-10 18:53:16.110  4330-4378  OkHttpClient            com.rpeters.cinefintv                I  GET https://rpeters1428.huron.usbx.me/jellyfin/Items?userId=c1b3b2bb-8e62-45b6-a7c4-f6645be8423a&includeItemTypes=CollectionFolder&enableTotalRecordCount=true&enableImages=true
+2026-03-10 18:53:16.494  4330-4370  eters.cinefintv         com.rpeters.cinefintv                I  Waiting for a blocking GC ProfileSaver
+2026-03-10 18:53:16.506  4330-4370  eters.cinefintv         com.rpeters.cinefintv                I  WaitForGcToComplete blocked ProfileSaver on Background for 11.902ms
+2026-03-10 18:53:16.624  4330-4330  ComposeInternal         com.rpeters.cinefintv                E  Error was captured in composition. (Fix with AI)
+                                                                                                    java.lang.IllegalArgumentException: Padding must be non-negative
+                                                                                                    	at androidx.compose.foundation.layout.internal.InlineClassHelperKt.throwIllegalArgumentException(InlineClassHelper.kt:34)
+                                                                                                    	at androidx.compose.foundation.layout.PaddingElement.<init>(Padding.kt:483)
+                                                                                                    	at androidx.compose.foundation.layout.PaddingElement.<init>(Unknown Source:0)
+                                                                                                    	at androidx.compose.foundation.layout.PaddingKt.padding-VpY3zN4(Padding.kt:85)
+                                                                                                    	at androidx.compose.foundation.layout.PaddingKt.padding-VpY3zN4$default(Padding.kt:83)
+                                                                                                    	at com.rpeters.cinefintv.ui.screens.home.HomeScreenKt$HomeScreen$lambda$3$0$0$$inlined$items$3.invoke(LazyDsl.kt:570)
+                                                                                                    	at com.rpeters.cinefintv.ui.screens.home.HomeScreenKt$HomeScreen$lambda$3$0$0$$inlined$items$3.invoke(LazyDsl.kt:178)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:143)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:52)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListItemProviderImpl.Item$lambda$0(LazyListItemProvider.kt:80)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListItemProviderImpl$$ExternalSyntheticLambda0.invoke(D8$$SyntheticClass:0)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:122)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:52)
+                                                                                                    	at androidx.compose.runtime.CompositionLocalKt.CompositionLocalProvider(CompositionLocal.kt:428)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutPinnableItemKt.LazyLayoutPinnableItem(LazyLayoutPinnableItem.kt:56)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListItemProviderImpl.Item(LazyListItemProvider.kt:78)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactoryKt.SkippableItem_JVlU9Rs$lambda$0(LazyLayoutItemContentFactory.kt:127)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactoryKt$$ExternalSyntheticLambda0.invoke(D8$$SyntheticClass:0)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:122)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:52)
+                                                                                                    	at androidx.compose.runtime.CompositionLocalKt.CompositionLocalProvider(CompositionLocal.kt:408)
+                                                                                                    	at androidx.compose.runtime.saveable.SaveableStateHolderImpl.SaveableStateProvider(SaveableStateHolder.kt:82)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazySaveableStateHolder.SaveableStateProvider(LazySaveableStateHolder.kt:76)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactoryKt.SkippableItem-JVlU9Rs(LazyLayoutItemContentFactory.kt:126)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactoryKt.access$SkippableItem-JVlU9Rs(LazyLayoutItemContentFactory.kt:1)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactory$CachedItemContent.createContentLambda$lambda$0(LazyLayoutItemContentFactory.kt:95)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactory$CachedItemContent$$ExternalSyntheticLambda0.invoke(D8$$SyntheticClass:0)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:122)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:52)
+                                                                                                    	at androidx.compose.runtime.internal.Expect_jvmKt.invokeComposable(Expect.jvmAndAndroid.kt:26)
+                                                                                                    	at androidx.compose.runtime.GapComposer.doCompose-aFTiNEg(GapComposer.kt:2637)
+                                                                                                    	at androidx.compose.runtime.GapComposer.composeContent--ZbOJvo$runtime(GapComposer.kt:2539)
+                                                                                                    	at androidx.compose.runtime.CompositionImpl.composeContent(Composition.kt:895)
+                                                                                                    	at androidx.compose.runtime.Recomposer.composeInitial$runtime(Recomposer.kt:1178)
+                                                                                                    	at androidx.compose.runtime.GapComposer$CompositionContextImpl.composeInitial$runtime(GapComposer.kt:2981)
+                                                                                                    	at androidx.compose.runtime.CompositionImpl.composeInitial(Composition.kt:732)
+                                                                                                    	at androidx.compose.runtime.CompositionImpl.setContent(Composition.kt:699)
+                                                                                                    	at androidx.compose.ui.layout.LayoutNodeSubcompositionsState.subcompose(SubcomposeLayout.kt:721)
+2026-03-10 18:53:16.624  4330-4330  ComposeInternal         com.rpeters.cinefintv                E  	at androidx.compose.ui.layout.LayoutNodeSubcompositionsState.subcompose(SubcomposeLayout.kt:658) (Fix with AI)
+                                                                                                    	at androidx.compose.ui.layout.LayoutNodeSubcompositionsState.subcompose(SubcomposeLayout.kt:624)
+                                                                                                    	at androidx.compose.ui.layout.LayoutNodeSubcompositionsState$Scope.subcompose(SubcomposeLayout.kt:1350)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutMeasureScopeImpl.compose(LazyLayoutMeasureScope.kt:94)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutMeasuredItemProvider.getPlaceables-3p2s80s(LazyLayoutMeasuredItem.kt:60)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListMeasuredItemProvider.getAndMeasure-0kLqBqw(LazyListMeasuredItemProvider.kt:53)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListMeasuredItemProvider.getAndMeasure-0kLqBqw$default(LazyListMeasuredItemProvider.kt:47)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListMeasureKt.measureLazyList-_s_dbAc(LazyListMeasure.kt:221)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListKt$rememberLazyListMeasurePolicy$1$1.measure-0kLqBqw(LazyList.kt:353)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutKt.LazyLayout$lambda$1$3$0(LazyLayout.kt:141)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutKt.$r8$lambda$rf3vllu87hDgmhs57JbwRZ1rpS4(Unknown Source:0)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutKt$$ExternalSyntheticLambda5.invoke(D8$$SyntheticClass:0)
+                                                                                                    	at androidx.compose.ui.layout.LayoutNodeSubcompositionsState$createMeasurePolicy$1.measure-3p2s80s(SubcomposeLayout.kt:955)
+                                                                                                    	at androidx.compose.ui.node.InnerNodeCoordinator.measure-BRTryo0(InnerNodeCoordinator.kt:128)
+                                                                                                    	at androidx.compose.ui.graphics.SimpleGraphicsLayerModifier.measure-3p2s80s(GraphicsLayerModifier.kt:843)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:190)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutBeyondBoundsProviderModifierNode.measure-3p2s80s(LazyLayoutBeyondBoundsModifierLocal.kt:122)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:190)
+                                                                                                    	at androidx.compose.foundation.layout.FillNode.measure-3p2s80s(Size.kt:721)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:190)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate$performMeasureBlock$1.invoke(MeasurePassDelegate.kt:173)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate$performMeasureBlock$1.invoke(MeasurePassDelegate.kt:172)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(SnapshotStateObserver.kt:729)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate.remeasure-BRTryo0(MeasurePassDelegate.kt:1077)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate.measure-BRTryo0(MeasurePassDelegate.kt:470)
+                                                                                                    	at androidx.compose.foundation.layout.BoxMeasurePolicy.measure-3p2s80s(Box.kt:145)
+                                                                                                    	at androidx.compose.ui.node.InnerNodeCoordinator.measure-BRTryo0(InnerNodeCoordinator.kt:128)
+                                                                                                    	at androidx.compose.foundation.layout.FillNode.measure-3p2s80s(Size.kt:721)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:190)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate$performMeasureBlock$1.invoke(MeasurePassDelegate.kt:173)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate$performMeasureBlock$1.invoke(MeasurePassDelegate.kt:172)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(SnapshotStateObserver.kt:729)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate.remeasure-BRTryo0(MeasurePassDelegate.kt:1077)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate.measure-BRTryo0(MeasurePassDelegate.kt:470)
+                                                                                                    	at androidx.compose.animation.AnimatedEnterExitMeasurePolicy.measure-3p2s80s(AnimatedVisibility.kt:791)
+                                                                                                    	at androidx.compose.ui.node.InnerNodeCoordinator.measure-BRTryo0(InnerNodeCoordinator.kt:128)
+                                                                                                    	at androidx.compose.animation.EnterExitTransitionModifierNode.measure-3p2s80s(EnterExitTransition.kt:1269)
+2026-03-10 18:53:16.625  4330-4330  ComposeInternal         com.rpeters.cinefintv                E  	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:190) (Fix with AI)
+                                                                                                    	at androidx.compose.ui.graphics.BlockGraphicsLayerModifier.measure-3p2s80s(GraphicsLayerModifier.kt:725)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:190)
+                                                                                                    	at androidx.compose.animation.AnimatedContentKt$AnimatedContent$6$1$1$1.invoke-3p2s80s(AnimatedContent.kt:842)
+                                                                                                    	at androidx.compose.animation.AnimatedContentKt$AnimatedContent$6$1$1$1.invoke(AnimatedContent.kt:841)
+                                                                                                    	at androidx.compose.ui.layout.LayoutModifierImpl.measure-3p2s80s(LayoutModifier.kt:278)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:190)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate$performMeasureBlock$1.invoke(MeasurePassDelegate.kt:173)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate$performMeasureBlock$1.invoke(MeasurePassDelegate.kt:172)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(SnapshotStateObserver.kt:758)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate.remeasure-BRTryo0(MeasurePassDelegate.kt:1077)
+                                                                                                    	at androidx.compose.ui.node.LayoutNode.remeasure-_Sx5XlM$ui(LayoutNode.kt:1287)
+                                                                                                    	at androidx.compose.ui.node.LayoutNode.remeasure-_Sx5XlM$ui$default(LayoutNode.kt:1280)
+                                                                                                    	at androidx.compose.ui.node.MeasureAndLayoutDelegate.doRemeasure-sdFAvZA(MeasureAndLayoutDelegate.kt:383)
+                                                                                                    	at androidx.compose.ui.node.MeasureAndLayoutDelegate.remeasureIfNeeded(MeasureAndLayoutDelegate.kt:672)
+                                                                                                    	at androidx.compose.ui.node.MeasureAndLayoutDelegate.access$remeasureIfNeeded(MeasureAndLayoutDelegate.kt:46)
+                                                                                                    	at androidx.compose.ui.node.MeasureAndLayoutDelegate.measureAndLayout(MeasureAndLayoutDelegate.kt:409)
+                                                                                                    	at androidx.compose.ui.platform.AndroidComposeView.measureAndLayout(AndroidComposeView.android.kt:1841)
+                                                                                                    	at androidx.compose.ui.node.Owner.measureAndLayout$default(Owner.kt:261)
+                                                                                                    	at androidx.compose.ui.platform.AndroidComposeView.dispatchDraw(AndroidComposeView.android.kt:2176)
+                                                                                                    	at android.view.View.draw(View.java:25097)
+                                                                                                    	at android.view.View.updateDisplayListIfDirty(View.java:23937)
+                                                                                                    	at android.view.ViewGroup.recreateChildDisplayList(ViewGroup.java:4554)
+                                                                                                    	at android.view.ViewGroup.dispatchGetDisplayList(ViewGroup.java:4527)
+                                                                                                    	at android.view.View.updateDisplayListIfDirty(View.java:23891)
+                                                                                                    	at android.view.ViewGroup.recreateChildDisplayList(ViewGroup.java:4554)
+                                                                                                    	at android.view.ViewGroup.dispatchGetDisplayList(ViewGroup.java:4527)
+                                                                                                    	at android.view.View.updateDisplayListIfDirty(View.java:23891)
+                                                                                                    	at android.view.ViewGroup.recreateChildDisplayList(ViewGroup.java:4554)
+                                                                                                    	at android.view.ViewGroup.dispatchGetDisplayList(ViewGroup.java:4527)
+                                                                                                    	at android.view.View.updateDisplayListIfDirty(View.java:23891)
+                                                                                                    	at android.view.ViewGroup.recreateChildDisplayList(ViewGroup.java:4554)
+                                                                                                    	at android.view.ViewGroup.dispatchGetDisplayList(ViewGroup.java:4527)
+                                                                                                    	at android.view.View.updateDisplayListIfDirty(View.java:23891)
+                                                                                                    	at android.view.ThreadedRenderer.updateViewTreeDisplayList(ThreadedRenderer.java:694)
+                                                                                                    	at android.view.ThreadedRenderer.updateRootDisplayList(ThreadedRenderer.java:700)
+                                                                                                    	at android.view.ThreadedRenderer.draw(ThreadedRenderer.java:798)
+                                                                                                    	at android.view.ViewRootImpl.draw(ViewRootImpl.java:5837)
+                                                                                                    	at android.view.ViewRootImpl.performDraw(ViewRootImpl.java:5488)
+                                                                                                    	at android.view.ViewRootImpl.performTraversals(ViewRootImpl.java:4482)
+                                                                                                    	at android.view.ViewRootImpl.doTraversal(ViewRootImpl.java:3076)
+                                                                                                    	at android.view.ViewRootImpl$TraversalRunnable.run(ViewRootImpl.java:10643)
+                                                                                                    	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1570)
+                                                                                                    	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1579)
+                                                                                                    	at android.view.Choreographer.doCallbacks(Choreographer.java:1179)
+                                                                                                    	at android.view.Choreographer.doFrame(Choreographer.java:1108)
+                                                                                                    	at android.view.Choreographer$FrameDisplayEventReceiver.run(Choreographer.java:1553)
+                                                                                                    	at android.os.Handler.handleCallback(Handler.java:995)
+2026-03-10 18:53:16.625  4330-4330  ComposeInternal         com.rpeters.cinefintv                E  	at android.os.Handler.dispatchMessage(Handler.java:103) (Fix with AI)
+                                                                                                    	at android.os.Looper.loopOnce(Looper.java:248)
+                                                                                                    	at android.os.Looper.loop(Looper.java:338)
+                                                                                                    	at android.app.ActivityThread.main(ActivityThread.java:9067)
+                                                                                                    	at java.lang.reflect.Method.invoke(Native Method)
+                                                                                                    	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:593)
+                                                                                                    	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:932)
+2026-03-10 18:53:16.625  4330-4330  AndroidRuntime          com.rpeters.cinefintv                D  Shutting down VM
+2026-03-10 18:53:16.625  4330-4330  AndroidRuntime          com.rpeters.cinefintv                E  FATAL EXCEPTION: main (Fix with AI)
+                                                                                                    Process: com.rpeters.cinefintv, PID: 4330
+                                                                                                    java.lang.IllegalArgumentException: Padding must be non-negative
+                                                                                                    	at androidx.compose.foundation.layout.internal.InlineClassHelperKt.throwIllegalArgumentException(InlineClassHelper.kt:34)
+                                                                                                    	at androidx.compose.foundation.layout.PaddingElement.<init>(Padding.kt:483)
+                                                                                                    	at androidx.compose.foundation.layout.PaddingElement.<init>(Unknown Source:0)
+                                                                                                    	at androidx.compose.foundation.layout.PaddingKt.padding-VpY3zN4(Padding.kt:85)
+                                                                                                    	at androidx.compose.foundation.layout.PaddingKt.padding-VpY3zN4$default(Padding.kt:83)
+                                                                                                    	at com.rpeters.cinefintv.ui.screens.home.HomeScreenKt$HomeScreen$lambda$3$0$0$$inlined$items$3.invoke(LazyDsl.kt:570)
+                                                                                                    	at com.rpeters.cinefintv.ui.screens.home.HomeScreenKt$HomeScreen$lambda$3$0$0$$inlined$items$3.invoke(LazyDsl.kt:178)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:143)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:52)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListItemProviderImpl.Item$lambda$0(LazyListItemProvider.kt:80)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListItemProviderImpl$$ExternalSyntheticLambda0.invoke(D8$$SyntheticClass:0)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:122)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:52)
+                                                                                                    	at androidx.compose.runtime.CompositionLocalKt.CompositionLocalProvider(CompositionLocal.kt:428)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutPinnableItemKt.LazyLayoutPinnableItem(LazyLayoutPinnableItem.kt:56)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListItemProviderImpl.Item(LazyListItemProvider.kt:78)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactoryKt.SkippableItem_JVlU9Rs$lambda$0(LazyLayoutItemContentFactory.kt:127)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactoryKt$$ExternalSyntheticLambda0.invoke(D8$$SyntheticClass:0)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:122)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:52)
+                                                                                                    	at androidx.compose.runtime.CompositionLocalKt.CompositionLocalProvider(CompositionLocal.kt:408)
+                                                                                                    	at androidx.compose.runtime.saveable.SaveableStateHolderImpl.SaveableStateProvider(SaveableStateHolder.kt:82)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazySaveableStateHolder.SaveableStateProvider(LazySaveableStateHolder.kt:76)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactoryKt.SkippableItem-JVlU9Rs(LazyLayoutItemContentFactory.kt:126)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactoryKt.access$SkippableItem-JVlU9Rs(LazyLayoutItemContentFactory.kt:1)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactory$CachedItemContent.createContentLambda$lambda$0(LazyLayoutItemContentFactory.kt:95)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactory$CachedItemContent$$ExternalSyntheticLambda0.invoke(D8$$SyntheticClass:0)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:122)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:52)
+                                                                                                    	at androidx.compose.runtime.internal.Expect_jvmKt.invokeComposable(Expect.jvmAndAndroid.kt:26)
+                                                                                                    	at androidx.compose.runtime.GapComposer.doCompose-aFTiNEg(GapComposer.kt:2637)
+                                                                                                    	at androidx.compose.runtime.GapComposer.composeContent--ZbOJvo$runtime(GapComposer.kt:2539)
+                                                                                                    	at androidx.compose.runtime.CompositionImpl.composeContent(Composition.kt:895)
+                                                                                                    	at androidx.compose.runtime.Recomposer.composeInitial$runtime(Recomposer.kt:1178)
+                                                                                                    	at androidx.compose.runtime.GapComposer$CompositionContextImpl.composeInitial$runtime(GapComposer.kt:2981)
+                                                                                                    	at androidx.compose.runtime.CompositionImpl.composeInitial(Composition.kt:732)
+                                                                                                    	at androidx.compose.runtime.CompositionImpl.setContent(Composition.kt:699)
+2026-03-10 18:53:16.625  4330-4330  AndroidRuntime          com.rpeters.cinefintv                E  	at androidx.compose.ui.layout.LayoutNodeSubcompositionsState.subcompose(SubcomposeLayout.kt:721) (Fix with AI)
+                                                                                                    	at androidx.compose.ui.layout.LayoutNodeSubcompositionsState.subcompose(SubcomposeLayout.kt:658)
+                                                                                                    	at androidx.compose.ui.layout.LayoutNodeSubcompositionsState.subcompose(SubcomposeLayout.kt:624)
+                                                                                                    	at androidx.compose.ui.layout.LayoutNodeSubcompositionsState$Scope.subcompose(SubcomposeLayout.kt:1350)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutMeasureScopeImpl.compose(LazyLayoutMeasureScope.kt:94)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutMeasuredItemProvider.getPlaceables-3p2s80s(LazyLayoutMeasuredItem.kt:60)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListMeasuredItemProvider.getAndMeasure-0kLqBqw(LazyListMeasuredItemProvider.kt:53)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListMeasuredItemProvider.getAndMeasure-0kLqBqw$default(LazyListMeasuredItemProvider.kt:47)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListMeasureKt.measureLazyList-_s_dbAc(LazyListMeasure.kt:221)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListKt$rememberLazyListMeasurePolicy$1$1.measure-0kLqBqw(LazyList.kt:353)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutKt.LazyLayout$lambda$1$3$0(LazyLayout.kt:141)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutKt.$r8$lambda$rf3vllu87hDgmhs57JbwRZ1rpS4(Unknown Source:0)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutKt$$ExternalSyntheticLambda5.invoke(D8$$SyntheticClass:0)
+                                                                                                    	at androidx.compose.ui.layout.LayoutNodeSubcompositionsState$createMeasurePolicy$1.measure-3p2s80s(SubcomposeLayout.kt:955)
+                                                                                                    	at androidx.compose.ui.node.InnerNodeCoordinator.measure-BRTryo0(InnerNodeCoordinator.kt:128)
+                                                                                                    	at androidx.compose.ui.graphics.SimpleGraphicsLayerModifier.measure-3p2s80s(GraphicsLayerModifier.kt:843)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:190)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutBeyondBoundsProviderModifierNode.measure-3p2s80s(LazyLayoutBeyondBoundsModifierLocal.kt:122)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:190)
+                                                                                                    	at androidx.compose.foundation.layout.FillNode.measure-3p2s80s(Size.kt:721)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:190)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate$performMeasureBlock$1.invoke(MeasurePassDelegate.kt:173)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate$performMeasureBlock$1.invoke(MeasurePassDelegate.kt:172)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(SnapshotStateObserver.kt:729)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate.remeasure-BRTryo0(MeasurePassDelegate.kt:1077)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate.measure-BRTryo0(MeasurePassDelegate.kt:470)
+                                                                                                    	at androidx.compose.foundation.layout.BoxMeasurePolicy.measure-3p2s80s(Box.kt:145)
+                                                                                                    	at androidx.compose.ui.node.InnerNodeCoordinator.measure-BRTryo0(InnerNodeCoordinator.kt:128)
+                                                                                                    	at androidx.compose.foundation.layout.FillNode.measure-3p2s80s(Size.kt:721)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:190)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate$performMeasureBlock$1.invoke(MeasurePassDelegate.kt:173)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate$performMeasureBlock$1.invoke(MeasurePassDelegate.kt:172)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(SnapshotStateObserver.kt:729)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate.remeasure-BRTryo0(MeasurePassDelegate.kt:1077)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate.measure-BRTryo0(MeasurePassDelegate.kt:470)
+                                                                                                    	at androidx.compose.animation.AnimatedEnterExitMeasurePolicy.measure-3p2s80s(AnimatedVisibility.kt:791)
+                                                                                                    	at androidx.compose.ui.node.InnerNodeCoordinator.measure-BRTryo0(InnerNodeCoordinator.kt:128)
+                                                                                                    	at androidx.compose.animation.EnterExitTransitionModifierNode.measure-3p2s80s(EnterExitTransition.kt:1269)
+2026-03-10 18:53:16.626  4330-4330  AndroidRuntime          com.rpeters.cinefintv                E  	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:190) (Fix with AI)
+                                                                                                    	at androidx.compose.ui.graphics.BlockGraphicsLayerModifier.measure-3p2s80s(GraphicsLayerModifier.kt:725)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:190)
+                                                                                                    	at androidx.compose.animation.AnimatedContentKt$AnimatedContent$6$1$1$1.invoke-3p2s80s(AnimatedContent.kt:842)
+                                                                                                    	at androidx.compose.animation.AnimatedContentKt$AnimatedContent$6$1$1$1.invoke(AnimatedContent.kt:841)
+                                                                                                    	at androidx.compose.ui.layout.LayoutModifierImpl.measure-3p2s80s(LayoutModifier.kt:278)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:190)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate$performMeasureBlock$1.invoke(MeasurePassDelegate.kt:173)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate$performMeasureBlock$1.invoke(MeasurePassDelegate.kt:172)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(SnapshotStateObserver.kt:758)
+                                                                                                    	at androidx.compose.ui.node.MeasurePassDelegate.remeasure-BRTryo0(MeasurePassDelegate.kt:1077)
+                                                                                                    	at androidx.compose.ui.node.LayoutNode.remeasure-_Sx5XlM$ui(LayoutNode.kt:1287)
+                                                                                                    	at androidx.compose.ui.node.LayoutNode.remeasure-_Sx5XlM$ui$default(LayoutNode.kt:1280)
+                                                                                                    	at androidx.compose.ui.node.MeasureAndLayoutDelegate.doRemeasure-sdFAvZA(MeasureAndLayoutDelegate.kt:383)
+                                                                                                    	at androidx.compose.ui.node.MeasureAndLayoutDelegate.remeasureIfNeeded(MeasureAndLayoutDelegate.kt:672)
+                                                                                                    	at androidx.compose.ui.node.MeasureAndLayoutDelegate.access$remeasureIfNeeded(MeasureAndLayoutDelegate.kt:46)
+                                                                                                    	at androidx.compose.ui.node.MeasureAndLayoutDelegate.measureAndLayout(MeasureAndLayoutDelegate.kt:409)
+                                                                                                    	at androidx.compose.ui.platform.AndroidComposeView.measureAndLayout(AndroidComposeView.android.kt:1841)
+                                                                                                    	at androidx.compose.ui.node.Owner.measureAndLayout$default(Owner.kt:261)
+                                                                                                    	at androidx.compose.ui.platform.AndroidComposeView.dispatchDraw(AndroidComposeView.android.kt:2176)
+                                                                                                    	at android.view.View.draw(View.java:25097)
+                                                                                                    	at android.view.View.updateDisplayListIfDirty(View.java:23937)
+                                                                                                    	at android.view.ViewGroup.recreateChildDisplayList(ViewGroup.java:4554)
+                                                                                                    	at android.view.ViewGroup.dispatchGetDisplayList(ViewGroup.java:4527)
+                                                                                                    	at android.view.View.updateDisplayListIfDirty(View.java:23891)
+                                                                                                    	at android.view.ViewGroup.recreateChildDisplayList(ViewGroup.java:4554)
+                                                                                                    	at android.view.ViewGroup.dispatchGetDisplayList(ViewGroup.java:4527)
+                                                                                                    	at android.view.View.updateDisplayListIfDirty(View.java:23891)
+                                                                                                    	at android.view.ViewGroup.recreateChildDisplayList(ViewGroup.java:4554)
+                                                                                                    	at android.view.ViewGroup.dispatchGetDisplayList(ViewGroup.java:4527)
+                                                                                                    	at android.view.View.updateDisplayListIfDirty(View.java:23891)
+                                                                                                    	at android.view.ViewGroup.recreateChildDisplayList(ViewGroup.java:4554)
+                                                                                                    	at android.view.ViewGroup.dispatchGetDisplayList(ViewGroup.java:4527)
+                                                                                                    	at android.view.View.updateDisplayListIfDirty(View.java:23891)
+                                                                                                    	at android.view.ThreadedRenderer.updateViewTreeDisplayList(ThreadedRenderer.java:694)
+                                                                                                    	at android.view.ThreadedRenderer.updateRootDisplayList(ThreadedRenderer.java:700)
+                                                                                                    	at android.view.ThreadedRenderer.draw(ThreadedRenderer.java:798)
+                                                                                                    	at android.view.ViewRootImpl.draw(ViewRootImpl.java:5837)
+                                                                                                    	at android.view.ViewRootImpl.performDraw(ViewRootImpl.java:5488)
+                                                                                                    	at android.view.ViewRootImpl.performTraversals(ViewRootImpl.java:4482)
+                                                                                                    	at android.view.ViewRootImpl.doTraversal(ViewRootImpl.java:3076)
+                                                                                                    	at android.view.ViewRootImpl$TraversalRunnable.run(ViewRootImpl.java:10643)
+                                                                                                    	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1570)
+                                                                                                    	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1579)
+                                                                                                    	at android.view.Choreographer.doCallbacks(Choreographer.java:1179)
+                                                                                                    	at android.view.Choreographer.doFrame(Choreographer.java:1108)
+                                                                                                    	at android.view.Choreographer$FrameDisplayEventReceiver.run(Choreographer.java:1553)
+                                                                                                    	at android.os.Handler.handleCallback(Handler.java:995)
+2026-03-10 18:53:16.626  4330-4330  AndroidRuntime          com.rpeters.cinefintv                E  	at android.os.Handler.dispatchMessage(Handler.java:103) (Fix with AI)
+                                                                                                    	at android.os.Looper.loopOnce(Looper.java:248)
+                                                                                                    	at android.os.Looper.loop(Looper.java:338)
+                                                                                                    	at android.app.ActivityThread.main(ActivityThread.java:9067)
+                                                                                                    	at java.lang.reflect.Method.invoke(Native Method)
+                                                                                                    	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:593)
+                                                                                                    	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:932)
+2026-03-10 18:53:16.637  4330-4330  Process                 com.rpeters.cinefintv                I  Sending signal. PID: 4330 SIG: 9
+2026-03-10 18:53:16.648   664-779   InputDispatcher         system_server                        E  channel '7dafd3f com.rpeters.cinefintv/com.rpeters.cinefintv.MainActivity' ~ Channel is unrecoverably broken and will be disposed!

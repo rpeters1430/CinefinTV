@@ -124,7 +124,6 @@ fun HomeScreen(
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 12.dp),
                                 horizontalArrangement = Arrangement.spacedBy(20.dp),
-                                modifier = Modifier.padding(horizontal = (-12).dp) // Offset content padding to align first item with header
                             ) {
                                 items(
                                     section.items,
