@@ -157,8 +157,8 @@ fun TvMediaCard(
                 }
             }
 
-            // Watch status overlay (top-right corner) - only for fully watched items
-            if (watchStatus == WatchStatus.WATCHED && !isFocused) {
+            // Keep the watched badge visible even while the card is focused.
+            if (watchStatus == WatchStatus.WATCHED) {
                 WatchStatusOverlay(
                     status = watchStatus,
                     modifier = Modifier.align(Alignment.TopEnd)

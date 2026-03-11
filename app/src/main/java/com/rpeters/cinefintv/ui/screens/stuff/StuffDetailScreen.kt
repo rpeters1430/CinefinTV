@@ -17,8 +17,10 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -35,7 +37,9 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -46,6 +50,8 @@ fun StuffDetailScreen(
     viewModel: StuffDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
 
     when (val state = uiState) {
         is StuffDetailUiState.Loading -> Box(
@@ -110,10 +116,20 @@ fun StuffDetailScreen(
                 )
 
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 48.dp, vertical = 32.dp),
                 ) {
+                    item {
+                        ScrollFocusAnchor(onFocused = {
+                            coroutineScope.launch {
+                                listState.animateScrollToItem(0)
+                            }
+                        })
+                    }
+
                     item { Spacer(Modifier.fillParentMaxHeight(0.35f)) }
+                    item { ScrollFocusAnchor() }
                     item {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
@@ -149,6 +165,9 @@ fun StuffDetailScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                                 )
                             }
+                            ScrollFocusAnchor(
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
                             Row(
                                 modifier = Modifier.padding(top = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)

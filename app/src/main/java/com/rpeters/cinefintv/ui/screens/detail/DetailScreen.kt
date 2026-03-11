@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,6 +63,7 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.TvPersonCard
 import com.rpeters.cinefintv.ui.components.WatchStatus
@@ -189,22 +189,16 @@ fun DetailScreen(
                     ) {
                         // Invisible focusable item to allow scrolling back to the very top
                         item {
-                            Box(
-                                modifier = Modifier
-                                    .height(1.dp)
-                                    .fillMaxWidth()
-                                    .onFocusChanged {
-                                        if (it.isFocused) {
-                                            coroutineScope.launch {
-                                                listState.animateScrollToItem(0)
-                                            }
-                                        }
-                                    }
-                                    .focusable()
-                            )
+                            ScrollFocusAnchor(onFocused = {
+                                coroutineScope.launch {
+                                    listState.animateScrollToItem(0)
+                                }
+                            })
                         }
 
                         item { Spacer(Modifier.fillParentMaxHeight(0.35f)) }
+
+                        item { ScrollFocusAnchor() }
 
                         item {
                             Column(
@@ -445,6 +439,10 @@ fun DetailScreen(
                                         color = MaterialTheme.colorScheme.error,
                                     )
                                 }
+
+                                ScrollFocusAnchor(
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
 
                                 Row(
                                     modifier = Modifier.padding(top = 8.dp),

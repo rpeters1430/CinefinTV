@@ -52,9 +52,9 @@ All repository methods return `ApiResult<T>` (sealed class: `Success`, `Error`, 
 - Logout clears both in-memory state and DataStore under `NonCancellable` to guarantee persistence
 
 ### Navigation
-- `CinefinTvApp` — root composable; wraps content in `CinefinTvTheme` with a `TabRow` nav bar (hidden for `auth/*` and `player/*` routes)
+- `CinefinTvApp` — root composable; wraps content in `CinefinTvTheme` with a `TabRow` nav bar (hidden for `auth/*`, `player/*`, and `audio-player/*` routes)
 - `CinefinTvNavGraph` — `NavHost` with all route definitions; holds the single `AuthViewModel`
-- Routes defined in `NavRoutes` / `AuthRoutes` objects; deep-link pattern: `detail/{itemId}`, `player/{itemId}`
+- Routes defined in `NavRoutes` / `AuthRoutes` objects. Key routes: `detail/{itemId}`, `detail/person/{personId}`, `stuff/detail/{itemId}`, `player/{itemId}`, `audio-player/{itemId}?queue={queue}`, `library/{movies|tvshows|stuff|music}`
 
 ### ViewModel Pattern
 Each screen has a co-located sealed `UiState` class plus a `@HiltViewModel`. Standard structure:
@@ -72,11 +72,16 @@ class XxxViewModel @Inject constructor(
 ```
 
 ### Player
-`PlayerScreen` creates ExoPlayer directly via `rememberExoPlayer()` composable (not in a ViewModel). Key decisions:
+**Video (`PlayerScreen`):** Creates ExoPlayer directly via `rememberExoPlayer()` composable (not in a ViewModel).
 - `PlayerView` with `useController = false`; custom Box-based overlay handles back/play-pause/seek
 - Playback state (position, duration, isPlaying) polled every 500 ms via `LaunchedEffect`
 - Controls auto-hide after 3 s using `LaunchedEffect(lastInteraction)`
 - `OkHttpDataSource` is used so auth headers are included in media requests
+
+**Audio (`AudioPlayerScreen`):** Uses a bound `MediaController` + `AudioService` (MediaSessionService). `AudioPlayerViewModel` connects to the service via `AudioControllerConnector` rather than holding ExoPlayer directly.
+
+### Other Repositories
+`JellyfinSystemRepository` (not in the coordinator) handles server info / system-level API calls and is injected independently where needed.
 
 ## TV-Specific Rules
 
