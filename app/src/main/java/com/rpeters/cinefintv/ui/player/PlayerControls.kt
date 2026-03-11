@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.ui.player
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,24 +23,29 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AudioFile
+import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Forward10
-import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -46,13 +53,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
-import androidx.tv.material3.Switch
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 
@@ -69,13 +78,19 @@ internal fun PlayerControls(
     onInteract: () -> Unit,
     onSettingsClick: (SettingsSection, Rect) -> Unit,
     onBack: () -> Unit,
-    onAutoPlayChange: (Boolean) -> Unit
 ) {
     val defaultBounds = Rect.Zero
     val (subtitleButtonBounds, setSubtitleButtonBounds) = remember { mutableStateOf(defaultBounds) }
     val (audioButtonBounds, setAudioButtonBounds) = remember { mutableStateOf(defaultBounds) }
     val (speedButtonBounds, setSpeedButtonBounds) = remember { mutableStateOf(defaultBounds) }
     val (moreButtonBounds, setMoreButtonBounds) = remember { mutableStateOf(defaultBounds) }
+    val backFocusRequester = remember { FocusRequester() }
+    val subtitleFocusRequester = remember { FocusRequester() }
+    val audioFocusRequester = remember { FocusRequester() }
+    val rewindFocusRequester = remember { FocusRequester() }
+    val forwardFocusRequester = remember { FocusRequester() }
+    val speedFocusRequester = remember { FocusRequester() }
+    val settingsFocusRequester = remember { FocusRequester() }
 
     AnimatedVisibility(
         visible = isVisible,
@@ -101,53 +116,112 @@ internal fun PlayerControls(
                     .fillMaxWidth()
                     .padding(32.dp)
                     .align(Alignment.TopStart),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Show/Movie logo or fallback
-                if (uiState.logoUrl != null) {
-                    AsyncImage(
-                        model = uiState.logoUrl,
-                        contentDescription = "Logo",
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = { onInteract(); onBack() },
                         modifier = Modifier
-                            .height(60.dp)
-                            .width(IntrinsicSize.Max),
-                        contentScale = ContentScale.Fit
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(MaterialTheme.colorScheme.primary, CircleShape),
-                        contentAlignment = Alignment.Center
+                            .focusRequester(backFocusRequester)
+                            .focusProperties {
+                                down = subtitleFocusRequester
+                            },
+                        colors = ButtonDefaults.colors(
+                            containerColor = Color.Black.copy(alpha = 0.24f),
+                            contentColor = MaterialTheme.colorScheme.onBackground,
+                            focusedContainerColor = MaterialTheme.colorScheme.primary,
+                            focusedContentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                        scale = ButtonDefaults.scale(focusedScale = 1.06f),
                     ) {
-                        Text(
-                            text = uiState.title.take(1).uppercase(),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    }
-                }
-                Spacer(Modifier.width(20.dp))
-                Column {
-                    Text(
-                        text = uiState.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    val episodeInfo = buildString {
-                        uiState.seasonNumber?.let { append("Season $it") }
-                        uiState.episodeNumber?.let {
-                            if (isNotEmpty()) append("  •  ")
-                            append("Episode $it")
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Exit player",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text("Back")
                         }
                     }
-                    if (episodeInfo.isNotEmpty()) {
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (uiState.logoUrl != null) {
+                            AsyncImage(
+                                model = uiState.logoUrl,
+                                contentDescription = "Logo",
+                                modifier = Modifier
+                                    .height(60.dp)
+                                    .width(IntrinsicSize.Max),
+                                contentScale = ContentScale.Fit
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .background(MaterialTheme.colorScheme.primary, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = uiState.title.take(1).uppercase(),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.width(20.dp))
+                        Column {
+                            Text(
+                                text = uiState.title,
+                                style = MaterialTheme.typography.headlineSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            val episodeInfo = buildString {
+                                uiState.seasonNumber?.let { append("Season $it") }
+                                uiState.episodeNumber?.let {
+                                    if (isNotEmpty()) append("  •  ")
+                                    append("Episode $it")
+                                }
+                            }
+                            if (episodeInfo.isNotEmpty()) {
+                                Text(
+                                    text = episodeInfo,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Surface(
+                    shape = CircleShape,
+                    colors = SurfaceDefaults.colors(
+                        containerColor = Color.Black.copy(alpha = 0.45f),
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.PlayArrow else Icons.Default.Pause,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
                         Text(
-                            text = episodeInfo,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = if (isPlaying) "Playing" else "Paused",
+                            style = MaterialTheme.typography.labelLarge,
                         )
                     }
                 }
@@ -173,6 +247,11 @@ internal fun PlayerControls(
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Text(
+                            text = "-${formatMs((duration - position).coerceAtLeast(0L))}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
                             text = formatMs(duration),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -194,35 +273,93 @@ internal fun PlayerControls(
                         )
                     }
 
-                    // Playback controls row - improved to prevent overlapping
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        // Left: Space to balance right side if needed, or just let Center occupy space
-                        Spacer(modifier = Modifier.width(48.dp))
-
-                        // Center: Rewind / Play-Pause / Forward
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.Start,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            OutlinedButton(
+                            TvActionButton(
+                                label = "Subtitles",
+                                icon = {
+                                    Icon(
+                                        Icons.Default.ClosedCaption,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                onClick = {
+                                    onInteract()
+                                    onSettingsClick(SettingsSection.SUBTITLES, subtitleButtonBounds)
+                                },
+                                modifier = Modifier
+                                    .focusRequester(subtitleFocusRequester)
+                                    .focusProperties {
+                                        right = audioFocusRequester
+                                        left = backFocusRequester
+                                        up = backFocusRequester
+                                        down = rewindFocusRequester
+                                    }
+                                    .onGloballyPositioned { coordinates ->
+                                        setSubtitleButtonBounds(coordinates.boundsInRoot())
+                                    },
+                            )
+
+                            Spacer(Modifier.width(10.dp))
+
+                            TvActionButton(
+                                label = "Audio",
+                                icon = {
+                                    Icon(
+                                        Icons.Default.GraphicEq,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                onClick = {
+                                    onInteract()
+                                    onSettingsClick(SettingsSection.AUDIO, audioButtonBounds)
+                                },
+                                modifier = Modifier
+                                    .focusRequester(audioFocusRequester)
+                                    .focusProperties {
+                                        left = subtitleFocusRequester
+                                        right = rewindFocusRequester
+                                        up = backFocusRequester
+                                        down = rewindFocusRequester
+                                    }
+                                    .onGloballyPositioned { coordinates ->
+                                        setAudioButtonBounds(coordinates.boundsInRoot())
+                                    },
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            TransportButton(
+                                label = "Back 10",
+                                icon = Icons.Default.Replay10,
+                                buttonSize = 58.dp,
+                                iconSize = 28.dp,
+                                focusRequester = rewindFocusRequester,
+                                left = audioFocusRequester,
+                                right = playPauseFocusRequester,
+                                up = subtitleFocusRequester,
+                                down = rewindFocusRequester,
                                 onClick = {
                                     onInteract()
                                     player.seekTo((position - 10_000).coerceAtLeast(0))
                                 },
-                                modifier = Modifier.size(48.dp),
-                                shape = ButtonDefaults.shape(CircleShape),
-                                contentPadding = PaddingValues(0.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Replay10,
-                                    contentDescription = "Rewind 10s",
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
+                            )
+
+                            Spacer(Modifier.width(16.dp))
 
                             Button(
                                 onClick = {
@@ -231,132 +368,116 @@ internal fun PlayerControls(
                                 },
                                 modifier = Modifier
                                     .size(64.dp)
-                                    .focusRequester(playPauseFocusRequester),
+                                    .focusRequester(playPauseFocusRequester)
+                                    .focusProperties {
+                                        left = rewindFocusRequester
+                                        right = forwardFocusRequester
+                                        up = backFocusRequester
+                                        down = playPauseFocusRequester
+                                    },
                                 shape = ButtonDefaults.shape(CircleShape),
-                                scale = ButtonDefaults.scale(focusedScale = 1.1f),
+                                colors = ButtonDefaults.colors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    focusedContainerColor = Color.White,
+                                    focusedContentColor = Color.Black,
+                                ),
+                                scale = ButtonDefaults.scale(focusedScale = 1.14f),
+                                border = ButtonDefaults.border(
+                                    focusedBorder = Border(
+                                        border = androidx.compose.foundation.BorderStroke(
+                                        width = 3.dp,
+                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f)
+                                        )
+                                    )
+                                ),
                                 contentPadding = PaddingValues(0.dp)
                             ) {
-                                Icon(
-                                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                    contentDescription = if (isPlaying) "Pause" else "Play",
-                                    modifier = Modifier.size(36.dp)
-                                )
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        contentDescription = if (isPlaying) "Pause" else "Play",
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
                             }
 
-                            OutlinedButton(
+                            Spacer(Modifier.width(16.dp))
+
+                            TransportButton(
+                                label = "Skip 10",
+                                icon = Icons.Default.Forward10,
+                                buttonSize = 58.dp,
+                                iconSize = 28.dp,
+                                focusRequester = forwardFocusRequester,
+                                left = playPauseFocusRequester,
+                                right = speedFocusRequester,
+                                up = speedFocusRequester,
+                                down = forwardFocusRequester,
                                 onClick = {
                                     onInteract()
                                     player.seekTo((position + 10_000).coerceAtMost(duration))
                                 },
-                                modifier = Modifier.size(48.dp),
-                                shape = ButtonDefaults.shape(CircleShape),
-                                contentPadding = PaddingValues(0.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Forward10,
-                                    contentDescription = "Forward 10s",
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
+                            )
                         }
 
-                        // Right side: settings buttons + back
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            if (uiState.isEpisodicContent) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        "Auto-play",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.padding(end = 8.dp)
+                            TvActionButton(
+                                label = if (uiState.playbackSpeed == 1.0f) "Speed 1x" else "Speed ${uiState.playbackSpeed}x",
+                                icon = {
+                                    Icon(
+                                        Icons.Default.Speed,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
                                     )
-                                    Switch(
-                                        checked = uiState.autoPlayNextEpisode,
-                                        onCheckedChange = {
-                                            onInteract()
-                                            onAutoPlayChange(it)
-                                        },
-                                    )
-                                }
-                                Spacer(Modifier.width(8.dp))
-                            }
-
-                            OutlinedButton(
-                                onClick = {
-                                    onInteract()
-                                    onSettingsClick(SettingsSection.SUBTITLES, subtitleButtonBounds)
                                 },
-                                modifier = Modifier.onGloballyPositioned { coordinates ->
-                                    setSubtitleButtonBounds(coordinates.boundsInRoot())
-                                },
-                            ) {
-                                Icon(
-                                    Icons.Default.Subtitles,
-                                    contentDescription = "Subtitles",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            OutlinedButton(
-                                onClick = {
-                                    onInteract()
-                                    onSettingsClick(SettingsSection.AUDIO, audioButtonBounds)
-                                },
-                                modifier = Modifier.onGloballyPositioned { coordinates ->
-                                    setAudioButtonBounds(coordinates.boundsInRoot())
-                                },
-                            ) {
-                                Icon(
-                                    Icons.Default.AudioFile,
-                                    contentDescription = "Audio",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            OutlinedButton(
                                 onClick = {
                                     onInteract()
                                     onSettingsClick(SettingsSection.SPEED, speedButtonBounds)
                                 },
-                                modifier = Modifier.onGloballyPositioned { coordinates ->
-                                    setSpeedButtonBounds(coordinates.boundsInRoot())
-                                },
-                            ) {
-                                Text(
-                                    if (uiState.playbackSpeed == 1.0f) "1×"
-                                    else "${uiState.playbackSpeed}×",
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            }
+                                modifier = Modifier
+                                    .focusRequester(speedFocusRequester)
+                                    .focusProperties {
+                                        left = forwardFocusRequester
+                                        right = settingsFocusRequester
+                                        up = backFocusRequester
+                                        down = speedFocusRequester
+                                    }
+                                    .onGloballyPositioned { coordinates ->
+                                        setSpeedButtonBounds(coordinates.boundsInRoot())
+                                    },
+                            )
 
-                            OutlinedButton(
+                            Spacer(Modifier.width(10.dp))
+
+                            TvActionButton(
+                                label = if (uiState.isEpisodicContent) "Playback" else "Settings",
+                                icon = {
+                                    Icon(
+                                        Icons.Default.Settings,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
                                 onClick = {
                                     onInteract()
                                     onSettingsClick(SettingsSection.ALL, moreButtonBounds)
                                 },
-                                modifier = Modifier.onGloballyPositioned { coordinates ->
-                                    setMoreButtonBounds(coordinates.boundsInRoot())
-                                },
-                            ) {
-                                Icon(
-                                    Icons.Default.MoreHoriz,
-                                    contentDescription = "More",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            OutlinedButton(
-                                onClick = { onInteract(); onBack() },
-                                modifier = Modifier.padding(start = 8.dp)
-                            ) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Exit player",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
+                                modifier = Modifier
+                                    .focusRequester(settingsFocusRequester)
+                                    .focusProperties {
+                                        left = speedFocusRequester
+                                        up = backFocusRequester
+                                        down = settingsFocusRequester
+                                    }
+                                    .onGloballyPositioned { coordinates ->
+                                        setMoreButtonBounds(coordinates.boundsInRoot())
+                                    },
+                            )
                         }
                     }
                 }
@@ -408,5 +529,112 @@ internal fun NextEpisodeCountdown(
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun TvActionButton(
+    label: String,
+    icon: @Composable () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.defaultMinSize(minWidth = 140.dp),
+        colors = ButtonDefaults.colors(
+            containerColor = Color.Black.copy(alpha = 0.24f),
+            contentColor = MaterialTheme.colorScheme.onBackground,
+            focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
+            focusedContentColor = MaterialTheme.colorScheme.onPrimary,
+        ),
+        scale = ButtonDefaults.scale(focusedScale = 1.08f),
+        border = ButtonDefaults.border(
+            focusedBorder = Border(
+                border = androidx.compose.foundation.BorderStroke(
+                    width = 2.dp,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+            )
+        ),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            icon()
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun TransportButton(
+    label: String,
+    icon: ImageVector,
+    buttonSize: androidx.compose.ui.unit.Dp,
+    iconSize: androidx.compose.ui.unit.Dp,
+    focusRequester: FocusRequester,
+    left: FocusRequester,
+    right: FocusRequester,
+    up: FocusRequester,
+    down: FocusRequester,
+    onClick: () -> Unit,
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val labelColor by animateColorAsState(
+        targetValue = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "TransportLabelColor",
+    )
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        OutlinedButton(
+            onClick = onClick,
+            modifier = Modifier
+                .size(buttonSize)
+                .focusRequester(focusRequester)
+                .focusProperties {
+                    this.left = left
+                    this.right = right
+                    this.up = up
+                    this.down = down
+                }
+                .onFocusChanged { isFocused = it.isFocused || it.hasFocus },
+            shape = ButtonDefaults.shape(CircleShape),
+            colors = ButtonDefaults.colors(
+                containerColor = Color.Black.copy(alpha = 0.22f),
+                contentColor = MaterialTheme.colorScheme.onBackground,
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedContentColor = MaterialTheme.colorScheme.onSurface,
+            ),
+            scale = ButtonDefaults.scale(focusedScale = 1.1f),
+            border = ButtonDefaults.border(
+                focusedBorder = Border(
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                )
+            ),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Icon(
+                icon,
+                contentDescription = label,
+                modifier = Modifier.size(iconSize)
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = labelColor,
+        )
     }
 }

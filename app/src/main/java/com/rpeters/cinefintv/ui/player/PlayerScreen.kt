@@ -259,7 +259,6 @@ fun PlayerScreen(
                         isTrackPanelVisible = true
                     },
                     onBack = onBack,
-                    onAutoPlayChange = { viewModel.setAutoPlayNextEpisode(it) }
                 )
 
                 Box(modifier = Modifier.align(Alignment.BottomEnd).padding(48.dp)) {
@@ -284,6 +283,7 @@ fun PlayerScreen(
                     onAudioTrackSelected = { viewModel.selectAudioTrack(it, position, isPlaying) },
                     onSubtitleTrackSelected = { viewModel.selectSubtitleTrack(it, position, isPlaying) },
                     onPlaybackSpeedSelected = { viewModel.setPlaybackSpeed(it) },
+                    onAutoPlayChange = { viewModel.setAutoPlayNextEpisode(it) },
                     onClose = {
                         isTrackPanelVisible = false
                         trackPanelAnchor = null

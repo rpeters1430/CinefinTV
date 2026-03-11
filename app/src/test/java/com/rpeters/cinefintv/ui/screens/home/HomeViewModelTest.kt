@@ -28,6 +28,7 @@ class HomeViewModelTest {
         val fakeRepositories = FakeHomeRepositories()
         val movie = mockBaseItemDto("Movie 1")
 
+        coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
         coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(listOf(movie))
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
@@ -58,6 +59,7 @@ class HomeViewModelTest {
     fun refresh_whenAllSectionsEmptyOrError_setsFallbackError() = runTest {
         val fakeRepositories = FakeHomeRepositories()
 
+        coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
         coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Error("backend unavailable")
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
@@ -86,6 +88,7 @@ class HomeViewModelTest {
         val movie1 = mockBaseItemDto("Featured Movie 1")
         val movie2 = mockBaseItemDto("Featured Movie 2")
 
+        coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
         coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(emptyList())
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
@@ -122,6 +125,7 @@ class HomeViewModelTest {
         every { item.overview } returns null
         every { item.communityRating } returns null
         every { item.officialRating } returns null
+        every { item.collectionType } returns null
         return item
     }
 }

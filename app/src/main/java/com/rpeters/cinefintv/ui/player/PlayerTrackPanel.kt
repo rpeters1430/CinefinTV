@@ -8,6 +8,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -16,18 +17,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
+import androidx.tv.material3.Switch
 import androidx.tv.material3.Text
 import kotlin.math.roundToInt
 
@@ -50,6 +56,7 @@ internal fun PlayerTrackPanel(
     onAudioTrackSelected: (TrackOption) -> Unit,
     onSubtitleTrackSelected: (TrackOption?) -> Unit,
     onPlaybackSpeedSelected: (Float) -> Unit,
+    onAutoPlayChange: (Boolean) -> Unit,
     onClose: () -> Unit,
     onInteract: () -> Unit
 ) {
@@ -193,6 +200,53 @@ internal fun PlayerTrackPanel(
                                 )
                             }
                         }
+
+                        if (section == SettingsSection.ALL && uiState.isEpisodicContent) {
+                            item {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "Playback",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                            item {
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(18.dp),
+                                    colors = SurfaceDefaults.colors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                                    ),
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                            Text(
+                                                text = "Auto-play next episode",
+                                                style = MaterialTheme.typography.titleSmall,
+                                            )
+                                            Text(
+                                                text = "Start the next episode automatically near the end.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                        Switch(
+                                            checked = uiState.autoPlayNextEpisode,
+                                            onCheckedChange = {
+                                                onInteract()
+                                                onAutoPlayChange(it)
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     OutlinedButton(
@@ -222,14 +276,31 @@ private fun TrackButton(
             onClick = onClick,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(label)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(label)
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                )
+            }
         }
     } else {
         OutlinedButton(
             onClick = onClick,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(label)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(label)
+                Spacer(Modifier.width(24.dp))
+            }
         }
     }
 }

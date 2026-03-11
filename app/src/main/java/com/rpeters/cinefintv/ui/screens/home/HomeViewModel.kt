@@ -9,6 +9,7 @@ import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getYear
+import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -176,7 +177,7 @@ class HomeViewModel @Inject constructor(
                 ?.takeIf { it > 0.0 }
                 ?.let { String.format(java.util.Locale.US, "%.1f", it) },
             officialRating = item.officialRating?.takeIf { it.isNotBlank() },
-            itemType = item.type?.toString(),
+            itemType = item.type.toString(),
             collectionType = item.collectionType?.toString(),
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,
