@@ -78,7 +78,7 @@ kotlinx-serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-seria
 kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 
 # Core
-core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.18.0-rc01" }
+core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.18.0" }
 slf4j-android = { group = "org.slf4j", name = "slf4j-android", version = "1.7.36" }
 
 # Testing
