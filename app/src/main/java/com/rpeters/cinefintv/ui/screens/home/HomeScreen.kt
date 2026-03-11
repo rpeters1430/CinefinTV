@@ -43,7 +43,7 @@ import com.rpeters.cinefintv.ui.components.TvMediaCard
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onOpenItem: (String) -> Unit,
+    onOpenItem: (HomeCardModel) -> Unit,
     onPlayItem: (String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -92,8 +92,8 @@ fun HomeScreen(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 32.dp),
-                    verticalArrangement = Arrangement.spacedBy(28.dp),
+                    contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(32.dp),
                 ) {
                     if (state.featuredItems.isNotEmpty()) {
                         item {
@@ -103,8 +103,7 @@ fun HomeScreen(
                                 onPlay = onPlayItem,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 48.dp)
-                                    .padding(top = 16.dp),
+                                    .padding(top = 8.dp),
                             )
                         }
                     }
@@ -115,9 +114,7 @@ fun HomeScreen(
                         contentType = { "Section" }
                     ) { section ->
                         Column(
-                            modifier = Modifier
-                                .padding(horizontal = 48.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             Text(
                                 text = section.title,
@@ -125,8 +122,9 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.onBackground,
                             )
                             LazyRow(
-                                contentPadding = PaddingValues(horizontal = 32.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                                modifier = Modifier.padding(horizontal = (-12).dp) // Offset content padding to align first item with header
                             ) {
                                 items(
                                     section.items,
@@ -137,7 +135,9 @@ fun HomeScreen(
                                         title = item.title,
                                         subtitle = item.subtitle,
                                         imageUrl = item.imageUrl,
-                                        onClick = { onOpenItem(item.id) },
+                                        onClick = { onOpenItem(item) },
+                                        watchStatus = item.watchStatus,
+                                        playbackProgress = item.playbackProgress,
                                     )
                                 }
                             }
@@ -153,7 +153,7 @@ fun HomeScreen(
 @Composable
 private fun FeaturedCarousel(
     items: List<HomeCardModel>,
-    onMoreInfo: (String) -> Unit,
+    onMoreInfo: (HomeCardModel) -> Unit,
     onPlay: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -235,7 +235,7 @@ private fun FeaturedCarousel(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("Play")
                     }
-                    OutlinedButton(onClick = { onMoreInfo(item.id) }) {
+                    OutlinedButton(onClick = { onMoreInfo(item) }) {
                         Text("More Info")
                     }
                 }

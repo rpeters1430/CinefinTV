@@ -184,8 +184,8 @@ fun DetailScreen(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 48.dp, vertical = 0.dp),
-                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                        contentPadding = PaddingValues(horizontal = 56.dp, vertical = 0.dp),
+                        verticalArrangement = Arrangement.spacedBy(32.dp),
                     ) {
                         // Invisible focusable item to allow scrolling back to the very top
                         item {
@@ -210,7 +210,7 @@ fun DetailScreen(
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalAlignment = Alignment.Start,
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(20.dp),
                             ) {
                                 Text(
                                     text = item.title,
@@ -513,7 +513,7 @@ fun DetailScreen(
                                 var isFocused by remember { mutableStateOf(false) }
                                 Column(
                                     modifier = Modifier.onFocusChanged { isFocused = it.hasFocus },
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
                                     Text(
                                         text = "Seasons",
@@ -521,8 +521,9 @@ fun DetailScreen(
                                         color = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     LazyRow(
-                                        contentPadding = PaddingValues(horizontal = 32.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                                        modifier = Modifier.padding(horizontal = (-12).dp)
                                     ) {
                                         items(
                                             state.seasons,
@@ -535,6 +536,8 @@ fun DetailScreen(
                                                 imageUrl = season.imageUrl,
                                                 onClick = { onOpenItem(season.id) },
                                                 onFocus = { focusedDescription = season.overview },
+                                                watchStatus = season.watchStatus,
+                                                playbackProgress = season.playbackProgress,
                                             )
                                         }
                                     }
@@ -547,7 +550,7 @@ fun DetailScreen(
                                 var isFocused by remember { mutableStateOf(false) }
                                 Column(
                                     modifier = Modifier.onFocusChanged { isFocused = it.hasFocus },
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
                                     Text(
                                         text = "Episodes",
@@ -555,8 +558,9 @@ fun DetailScreen(
                                         color = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     LazyRow(
-                                        contentPadding = PaddingValues(horizontal = 32.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                                        modifier = Modifier.padding(horizontal = (-12).dp)
                                     ) {
                                         items(
                                             episodes,
@@ -569,11 +573,8 @@ fun DetailScreen(
                                                 imageUrl = episode.imageUrl,
                                                 onClick = { onOpenItem(episode.id) },
                                                 onFocus = { focusedDescription = episode.overview },
-                                                watchStatus = when {
-                                                    episode.isWatched -> WatchStatus.WATCHED
-                                                    episode.canResume -> WatchStatus.IN_PROGRESS
-                                                    else -> WatchStatus.NONE
-                                                },
+                                                watchStatus = episode.watchStatus,
+                                                playbackProgress = episode.playbackProgress,
                                             )
                                         }
                                     }
@@ -586,7 +587,7 @@ fun DetailScreen(
                                 var isFocused by remember { mutableStateOf(false) }
                                 Column(
                                     modifier = Modifier.onFocusChanged { isFocused = it.hasFocus },
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
                                     Text(
                                         text = "Cast & Crew",
@@ -594,8 +595,9 @@ fun DetailScreen(
                                         color = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     LazyRow(
-                                        contentPadding = PaddingValues(horizontal = 32.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp),
                                         horizontalArrangement = Arrangement.spacedBy(24.dp),
+                                        modifier = Modifier.padding(horizontal = (-12).dp)
                                     ) {
                                         items(
                                             state.cast,
@@ -620,7 +622,7 @@ fun DetailScreen(
                                 var isFocused by remember { mutableStateOf(false) }
                                 Column(
                                     modifier = Modifier.onFocusChanged { isFocused = it.hasFocus },
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
                                     Text(
                                         text = "More Like This",
@@ -628,8 +630,9 @@ fun DetailScreen(
                                         color = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     LazyRow(
-                                        contentPadding = PaddingValues(horizontal = 32.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                                        modifier = Modifier.padding(horizontal = (-12).dp)
                                     ) {
                                         items(
                                             state.related,
@@ -642,6 +645,8 @@ fun DetailScreen(
                                                 imageUrl = related.imageUrl,
                                                 onClick = { onOpenItem(related.id) },
                                                 onFocus = { focusedDescription = related.overview },
+                                                watchStatus = related.watchStatus,
+                                                playbackProgress = related.playbackProgress,
                                             )
                                         }
                                     }

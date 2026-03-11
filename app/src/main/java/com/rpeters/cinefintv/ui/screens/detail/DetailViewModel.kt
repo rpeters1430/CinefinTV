@@ -15,6 +15,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
+import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
@@ -63,6 +64,8 @@ data class DetailHeroModel(
     val technicalDetails: DetailTechnicalDetails? = null,
     val subtitleOptions: List<String> = emptyList(),
     val cast: List<DetailPersonModel> = emptyList(),
+    val watchStatus: WatchStatus = WatchStatus.NONE,
+    val playbackProgress: Float? = null,
 )
 
 data class DetailTechnicalDetails(
@@ -79,6 +82,8 @@ data class DetailSeasonModel(
     val overview: String? = null,
     val imageUrl: String? = null,
     val episodeCount: Int = 0,
+    val watchStatus: WatchStatus = WatchStatus.NONE,
+    val playbackProgress: Float? = null,
 )
 
 data class DetailEpisodeModel(
@@ -89,6 +94,8 @@ data class DetailEpisodeModel(
     val imageUrl: String?,
     val canResume: Boolean = false,
     val isWatched: Boolean = false,
+    val watchStatus: WatchStatus = WatchStatus.NONE,
+    val playbackProgress: Float? = null,
 )
 
 sealed class DetailUiState {
@@ -172,7 +179,7 @@ class DetailViewModel @Inject constructor(
                         item = heroModel,
                         seasons = seasonsAndEpisodes.first,
                         episodesBySeasonId = seasonsAndEpisodes.second,
-                        related = relatedItems.map(this@DetailViewModel::toHeroModel),
+                        related = relatedItems.map { this@DetailViewModel.toHeroModel(it) },
                         cast = heroModel.cast,
                         playableItemId = playbackTarget?.id,
                         playButtonLabel = playbackTarget?.label ?: "Play",
@@ -259,6 +266,11 @@ class DetailViewModel @Inject constructor(
                         else -> emptyList()
                     }
                     allEpisodes += episodeModels
+                    val seasonWatchStatus = when {
+                        episodeModels.isNotEmpty() && episodeModels.all { it.isWatched } -> WatchStatus.WATCHED
+                        episodeModels.any { it.isWatched || it.canResume } -> WatchStatus.IN_PROGRESS
+                        else -> WatchStatus.NONE
+                    }
                     DetailSeasonModel(
                         id = season.id.toString(),
                         title = season.getDisplayTitle(),
@@ -266,6 +278,7 @@ class DetailViewModel @Inject constructor(
                         overview = season.overview?.takeIf { it.isNotBlank() },
                         imageUrl = repositories.stream.getWideCardImageUrl(season, parentItem = item),
                         episodeCount = episodeModels.size.takeIf { it > 0 } ?: (season.childCount ?: 0),
+                        watchStatus = seasonWatchStatus,
                     )
                 }
                 seasonModels to mapOf(item.id.toString() to allEpisodes)
@@ -393,7 +406,6 @@ class DetailViewModel @Inject constructor(
             .filter { it.type == MediaStreamType.SUBTITLE }
             .mapNotNull {
                 it.displayTitle
-                    ?: it.displayLanguage
                     ?: it.language
                     ?: it.title
             }
@@ -402,12 +414,21 @@ class DetailViewModel @Inject constructor(
 
         val technicalDetails = DetailTechnicalDetails(
             videoQuality = videoStream?.height.toVideoQualityLabel(),
-            audioCodec = videoStream?.audioCodec?.takeIf { it.isNotBlank() }
-                ?: audioStream?.codec?.takeIf { it.isNotBlank() }?.uppercase(),
+            audioCodec = audioStream?.codec?.takeIf { it.isNotBlank() }?.uppercase(),
             audioType = audioStream?.channels.toAudioTypeLabel(),
-            language = audioStream?.displayLanguage?.takeIf { it.isNotBlank() }
-                ?: audioStream?.language?.takeIf { it.isNotBlank() },
+            language = audioStream?.language?.takeIf { it.isNotBlank() },
         )
+
+        val isResumable = item.canResume()
+        val isWatched = item.isWatched()
+        val watchStatus = when {
+            isWatched -> WatchStatus.WATCHED
+            isResumable -> WatchStatus.IN_PROGRESS
+            else -> WatchStatus.NONE
+        }
+        val playbackProgress = if (isResumable) {
+            item.getWatchedPercentage().toFloat() / 100f
+        } else null
 
         return DetailHeroModel(
             id = item.id.toString(),
@@ -421,6 +442,8 @@ class DetailViewModel @Inject constructor(
             technicalDetails = technicalDetails,
             subtitleOptions = subtitleOptions,
             cast = cast,
+            watchStatus = watchStatus,
+            playbackProgress = playbackProgress,
         )
     }
 
@@ -434,14 +457,27 @@ class DetailViewModel @Inject constructor(
             .joinToString(" | ")
             .ifBlank { null }
 
+        val isResumable = item.canResume()
+        val isWatched = item.isWatched()
+        val watchStatus = when {
+            isWatched -> WatchStatus.WATCHED
+            isResumable -> WatchStatus.IN_PROGRESS
+            else -> WatchStatus.NONE
+        }
+        val playbackProgress = if (isResumable) {
+            item.getWatchedPercentage().toFloat() / 100f
+        } else null
+
         return DetailEpisodeModel(
             id = item.id.toString(),
             title = item.getDisplayTitle(),
             subtitle = episodeMetadata,
             overview = item.overview?.takeIf { it.isNotBlank() },
             imageUrl = repositories.stream.getLandscapeImageUrl(item),
-            canResume = item.canResume(),
-            isWatched = item.isWatched(),
+            canResume = isResumable,
+            isWatched = isWatched,
+            watchStatus = watchStatus,
+            playbackProgress = playbackProgress,
         )
     }
 

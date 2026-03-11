@@ -176,15 +176,18 @@ fun StuffDetailScreen(
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
                                 LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 32.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                                    modifier = Modifier.padding(horizontal = (-12).dp)
                                 ) {
-                                    items(state.moreFromStuff, key = { it.id }) { related ->
+                                    items(state.moreFromStuff, key = { it.id }) { item ->
                                         TvMediaCard(
-                                            title = related.title,
-                                            subtitle = related.subtitle,
-                                            imageUrl = related.imageUrl,
-                                            onClick = { onOpenItem(related.id) },
+                                            title = item.title,
+                                            subtitle = item.subtitle,
+                                            imageUrl = item.imageUrl,
+                                            onClick = { onOpenItem(item.id) },
+                                            watchStatus = item.watchStatus,
+                                            playbackProgress = item.playbackProgress,
                                         )
                                     }
                                 }

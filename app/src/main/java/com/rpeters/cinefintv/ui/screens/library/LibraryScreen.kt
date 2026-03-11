@@ -102,7 +102,7 @@ fun LibraryScreen(
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 260.dp),
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 32.dp, bottom = 48.dp),
+                    contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 32.dp, bottom = 56.dp),
                     horizontalArrangement = Arrangement.spacedBy(24.dp),
                     verticalArrangement = Arrangement.spacedBy(32.dp),
                 ) {
@@ -116,6 +116,8 @@ fun LibraryScreen(
                             subtitle = item.subtitle,
                             imageUrl = item.imageUrl,
                             onClick = { onOpenItem(item.id) },
+                            watchStatus = item.watchStatus,
+                            playbackProgress = item.playbackProgress,
                         )
                     }
                 }

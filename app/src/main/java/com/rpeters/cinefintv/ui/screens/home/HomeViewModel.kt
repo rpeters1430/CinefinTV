@@ -21,6 +21,8 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import javax.inject.Inject
 
+import com.rpeters.cinefintv.ui.components.WatchStatus
+
 data class HomeCardModel(
     val id: String,
     val title: String,
@@ -32,6 +34,10 @@ data class HomeCardModel(
     val runtime: String? = null,
     val rating: String? = null,
     val officialRating: String? = null,
+    val itemType: String? = null,
+    val collectionType: String? = null,
+    val watchStatus: WatchStatus = WatchStatus.NONE,
+    val playbackProgress: Float? = null,
 )
 
 data class HomeSectionModel(
@@ -63,13 +69,15 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = HomeUiState.Loading
 
+            val librariesDeferred = async { repositories.media.getUserLibraries() }
             val continueDeferred = async { repositories.media.getContinueWatching(limit = 12) }
             val moviesDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12) }
             val episodesDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12) }
             val videosDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12) }
             val musicDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12) }
 
-            val results: List<ApiResult<List<BaseItemDto>>> = awaitAll(
+            val results = awaitAll(
+                librariesDeferred,
                 continueDeferred,
                 moviesDeferred,
                 episodesDeferred,
@@ -78,14 +86,15 @@ class HomeViewModel @Inject constructor(
             )
 
             val sections = buildList {
-                addSection("Continue Watching", results[0])
-                addSection("Recently Added TV Episodes", results[2])
-                addSection("Recently Added Movies", results[1])
-                addSection("Recently Added Music", results[4])
-                addSection("Recently Added Videos", results[3])
+                addSection("My Libraries", results[0])
+                addSection("Continue Watching", results[1])
+                addSection("Recently Added TV Episodes", results[3])
+                addSection("Recently Added Movies", results[2])
+                addSection("Recently Added Music", results[5])
+                addSection("Recently Added Videos", results[4])
             }
 
-            val featuredItems = (results[1] as? ApiResult.Success<List<BaseItemDto>>)
+            val featuredItems = (results[2] as? ApiResult.Success<List<BaseItemDto>>)
                 ?.data?.take(6)?.mapNotNull { toCardModel(it) }
                 ?: emptyList()
 
@@ -120,9 +129,20 @@ class HomeViewModel @Inject constructor(
 
     private fun toCardModel(item: BaseItemDto): HomeCardModel? {
         val id = item.id.toString()
+        val watchedPercentage = item.getWatchedPercentage()
+        val isResumable = item.canResume()
+        val isWatched = item.isWatched()
+        
+        val watchStatus = when {
+            isWatched -> WatchStatus.WATCHED
+            isResumable -> WatchStatus.IN_PROGRESS
+            else -> WatchStatus.NONE
+        }
+        val playbackProgress = if (isResumable) watchedPercentage.toFloat() / 100f else null
+
         val subtitle = when {
-            item.canResume() -> {
-                val pct = item.getWatchedPercentage()
+            isResumable -> {
+                val pct = watchedPercentage
                 val ticks = item.runTimeTicks
                 if (ticks != null && ticks > 0) {
                     val remainingTicks = (ticks * (1.0 - pct / 100.0)).toLong()
@@ -156,6 +176,10 @@ class HomeViewModel @Inject constructor(
                 ?.takeIf { it > 0.0 }
                 ?.let { String.format(java.util.Locale.US, "%.1f", it) },
             officialRating = item.officialRating?.takeIf { it.isNotBlank() },
+            itemType = item.type?.toString(),
+            collectionType = item.collectionType?.toString(),
+            watchStatus = watchStatus,
+            playbackProgress = playbackProgress,
         )
     }
 }

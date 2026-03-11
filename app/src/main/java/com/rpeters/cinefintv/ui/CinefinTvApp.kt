@@ -169,7 +169,7 @@ fun CinefinTvApp(
                         selectedTabIndex = selectedTabIndex,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 48.dp, vertical = 24.dp),
+                            .padding(horizontal = 56.dp, vertical = 24.dp),
                     ) {
                         val activeRoute = currentRoute.orEmpty()
                         navTabItems.forEachIndexed { index, item ->

@@ -5,8 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
+import com.rpeters.cinefintv.ui.components.WatchStatus
+import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
+import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getYear
+import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +32,8 @@ data class PersonMediaModel(
     val subtitle: String?,
     val overview: String?,
     val imageUrl: String?,
+    val watchStatus: WatchStatus = WatchStatus.NONE,
+    val playbackProgress: Float? = null,
 )
 
 sealed class PersonUiState {
@@ -102,12 +108,25 @@ class PersonViewModel @Inject constructor(
         
         val subtitle = listOfNotNull(year?.toString(), typeLabel).joinToString(" | ")
 
+        val isResumable = canResume()
+        val isWatched = isWatched()
+        val watchStatus = when {
+            isWatched -> WatchStatus.WATCHED
+            isResumable -> WatchStatus.IN_PROGRESS
+            else -> WatchStatus.NONE
+        }
+        val playbackProgress = if (isResumable) {
+            getWatchedPercentage().toFloat() / 100f
+        } else null
+
         return PersonMediaModel(
             id = id.toString(),
             title = getDisplayTitle(),
             subtitle = subtitle.ifBlank { null },
             overview = overview,
-            imageUrl = repositories.stream.getLandscapeImageUrl(this)
+            imageUrl = repositories.stream.getLandscapeImageUrl(this),
+            watchStatus = watchStatus,
+            playbackProgress = playbackProgress,
         )
     }
 }

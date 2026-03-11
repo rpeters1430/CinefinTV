@@ -113,8 +113,9 @@ fun SearchScreen(
                         subtitle = item.subtitle,
                         imageUrl = item.imageUrl,
                         onClick = { onOpenItem(item.id) },
-                    )
-                }
+                        watchStatus = item.watchStatus,
+                        playbackProgress = item.playbackProgress,
+                    )                }
             }
         }
     }

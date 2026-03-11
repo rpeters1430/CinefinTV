@@ -55,6 +55,7 @@ fun TvMediaCard(
     onFocus: () -> Unit = {},
     modifier: Modifier = Modifier,
     watchStatus: WatchStatus = WatchStatus.NONE,
+    playbackProgress: Float? = null,
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
@@ -133,10 +134,28 @@ fun TvMediaCard(
                         )
                     }
                 }
+
+                // Progress bar for in-progress items
+                if (watchStatus == WatchStatus.IN_PROGRESS && playbackProgress != null && playbackProgress > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .background(Color.Black.copy(alpha = 0.5f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(playbackProgress.coerceIn(0f, 1f))
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+                    }
+                }
             }
 
-            // Watch status overlay (top-right corner)
-            if (watchStatus != WatchStatus.NONE && !isFocused) {
+            // Watch status overlay (top-right corner) - only for fully watched items
+            if (watchStatus == WatchStatus.WATCHED && !isFocused) {
                 WatchStatusOverlay(
                     status = watchStatus,
                     modifier = Modifier.align(Alignment.TopEnd)

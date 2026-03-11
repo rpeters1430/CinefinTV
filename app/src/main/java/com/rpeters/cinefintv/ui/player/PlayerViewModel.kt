@@ -258,6 +258,21 @@ class PlayerViewModel @Inject constructor(
         _player?.setPlaybackSpeed(speed)
     }
 
+    fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+        val message = when (error.errorCode) {
+            androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+            androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ->
+                "Network error. Please check your connection."
+            androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ->
+                "Codec error. This device may not support this media format."
+            else -> "Playback failed: ${error.localizedMessage}"
+        }
+        _uiState.value = _uiState.value.copy(
+            isLoading = false,
+            errorMessage = message,
+        )
+    }
+
     suspend fun getNextEpisodeId(): String? {
         if (!uiState.value.isEpisodicContent || !uiState.value.autoPlayNextEpisode) return null
         return when (val result = repositories.media.getNextEpisode(itemId)) {

@@ -123,8 +123,20 @@ fun CinefinTvNavGraph(
         }
         composable(NavRoutes.HOME) {
             HomeScreen(
-                onOpenItem = { itemId ->
-                    navController.navigate(NavRoutes.detail(itemId))
+                onOpenItem = { item ->
+                    if (item.itemType == "CollectionFolder") {
+                        // TODO: Navigate to generic library view if needed
+                        // For now, if it's a known collection type, use the existing routes
+                        when (item.collectionType?.lowercase()) {
+                            "movies" -> navController.navigate(NavRoutes.LIBRARY_MOVIES)
+                            "tvshows" -> navController.navigate(NavRoutes.LIBRARY_TVSHOWS)
+                            "music" -> navController.navigate(NavRoutes.LIBRARY_MUSIC)
+                            "homevideos" -> navController.navigate(NavRoutes.LIBRARY_STUFF)
+                            else -> navController.navigate(NavRoutes.detail(item.id))
+                        }
+                    } else {
+                        navController.navigate(NavRoutes.detail(item.id))
+                    }
                 },
                 onPlayItem = { itemId ->
                     navController.navigate(NavRoutes.player(itemId))

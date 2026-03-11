@@ -59,6 +59,9 @@ internal fun PlayerLifecycleManager(
                 }
             }
 
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                viewModel.onPlayerError(error)
+            }
         }
         player.addListener(listener)
 
