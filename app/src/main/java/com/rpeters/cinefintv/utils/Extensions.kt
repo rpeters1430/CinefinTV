@@ -154,6 +154,28 @@ fun BaseItemDto.getUnwatchedEpisodeCount(): Int {
     }
 }
 
+fun BaseItemDto.getUnwatchedEpisodeCardLabel(): String? {
+    if (!isSeries()) return null
+
+    val unwatchedCount = getUnwatchedEpisodeCount()
+    return when {
+        unwatchedCount <= 0 -> null
+        unwatchedCount == 1 -> "1 unwatched episode"
+        else -> "$unwatchedCount unwatched episodes"
+    }
+}
+
+fun BaseItemDto.getUnwatchedEpisodeDetailLabel(): String? {
+    if (!isSeries() && !isSeason()) return null
+
+    val unwatchedCount = userData?.unplayedItemCount ?: return null
+    return when {
+        unwatchedCount <= 0 -> null
+        unwatchedCount == 1 -> "1 episode unwatched"
+        else -> "$unwatchedCount episodes unwatched"
+    }
+}
+
 fun BaseItemDto.hasUnwatchedEpisodes(): Boolean {
     return when {
         type == org.jellyfin.sdk.model.api.BaseItemKind.SERIES -> getUnwatchedEpisodeCount() > 0

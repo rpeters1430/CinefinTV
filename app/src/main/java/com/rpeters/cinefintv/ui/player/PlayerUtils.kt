@@ -22,6 +22,6 @@ fun formatMs(ms: Long): String {
  */
 object PlayerConstants {
     const val POSITION_SAVE_INTERVAL_MS = 10_000L
-    const val CONTROLS_HIDE_DELAY_MS = 3_000L
+    const val CONTROLS_HIDE_DELAY_MS = 5_000L
     const val NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS = 15_000L
 }

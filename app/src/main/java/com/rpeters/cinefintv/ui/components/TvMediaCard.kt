@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -154,15 +155,16 @@ fun TvMediaCard(
                             )
                         }
                     }
-                }
-            }
 
-            // Keep the watched badge visible even while the card is focused.
-            if (watchStatus == WatchStatus.WATCHED) {
-                WatchStatusOverlay(
-                    status = watchStatus,
-                    modifier = Modifier.align(Alignment.TopEnd)
-                )
+                    if (watchStatus == WatchStatus.WATCHED) {
+                        WatchStatusOverlay(
+                            status = watchStatus,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .zIndex(1f)
+                        )
+                    }
+                }
             }
         }
 

@@ -9,9 +9,11 @@ import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
+import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCardLabel
 import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.isMovie
+import com.rpeters.cinefintv.utils.isSeries
 import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -87,14 +89,16 @@ class LibraryViewModel @Inject constructor(
             item.getWatchedPercentage().toFloat() / 100f
         } else null
 
-        val subtitle = if (item.isMovie()) {
-            listOfNotNull(
+        val subtitle = when {
+            item.isMovie() -> listOfNotNull(
                 item.getYear()?.toString(),
                 item.getFormattedDuration(),
                 item.communityRating?.let { "★ ${"%.1f".format(it)}" },
             ).joinToString(" · ").ifBlank { item.type.toString().replace('_', ' ') }
-        } else {
-            item.getYear()?.toString()
+            item.isSeries() -> item.getUnwatchedEpisodeCardLabel()
+                ?: item.getYear()?.toString()
+                ?: item.type.toString().replace('_', ' ')
+            else -> item.getYear()?.toString()
                 ?: item.getFormattedDuration()
                 ?: item.type.toString().replace('_', ' ')
         }

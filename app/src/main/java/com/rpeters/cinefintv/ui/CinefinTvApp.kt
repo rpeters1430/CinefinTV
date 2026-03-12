@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme as ComposeMaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -277,8 +278,8 @@ private fun UpdateDialog(
                         LinearProgressIndicator(
                             progress = { progress },
                             modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            color = ComposeMaterialTheme.colorScheme.primary,
+                            trackColor = ComposeMaterialTheme.colorScheme.surfaceContainerHigh
                         )
                         Text(
                             text = "Downloading... ${(progress * 100).toInt()}%",

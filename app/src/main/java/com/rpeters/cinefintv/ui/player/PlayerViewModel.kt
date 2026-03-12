@@ -11,6 +11,8 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.rpeters.cinefintv.data.PlaybackPositionStore
+import com.rpeters.cinefintv.data.playback.EnhancedPlaybackManager
+import com.rpeters.cinefintv.data.playback.PlaybackResult
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.repository.JellyfinRepository
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
@@ -24,10 +26,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.MediaSourceInfo
 import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamType
+import org.jellyfin.sdk.model.api.PlayMethod
 import java.util.UUID
 import javax.inject.Inject
 
@@ -65,6 +69,7 @@ class PlayerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repositories: JellyfinRepositoryCoordinator,
     private val jellyfinRepository: JellyfinRepository,
+    private val enhancedPlaybackManager: EnhancedPlaybackManager,
     private val playbackPreferencesRepository: PlaybackPreferencesRepository,
     @param:ApplicationContext private val appContext: Context,
     private val okHttpClient: OkHttpClient,
@@ -84,6 +89,9 @@ class PlayerViewModel @Inject constructor(
 
     private var activeMediaSourceId: String? = null
     private var activePlaySessionId: String? = null
+    private var activePlayMethod: PlayMethod = PlayMethod.DIRECT_PLAY
+    private var currentItem: BaseItemDto? = null
+    private var playbackStartReported = false
 
     init {
         viewModelScope.launch {
@@ -105,18 +113,15 @@ class PlayerViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            val savedPlaybackPositionMs = PlaybackPositionStore.getPlaybackPosition(appContext, itemId)
-            val streamUrl = repositories.stream.getStreamUrl(itemId)
-            if (streamUrl == null) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = "Unable to create a stream for this item.",
-                )
-                return@launch
-            }
-
+            val localPlaybackPositionMs = PlaybackPositionStore.getPlaybackPosition(appContext, itemId)
             val detailResult = repositories.media.getItemDetails(itemId)
             val item = (detailResult as? ApiResult.Success)?.data
+            currentItem = item
+            val serverPlaybackPositionMs = item?.userData?.playbackPositionTicks
+                ?.takeIf { it > 0L }
+                ?.div(TICKS_PER_MILLISECOND)
+                ?: 0L
+            val savedPlaybackPositionMs = maxOf(localPlaybackPositionMs, serverPlaybackPositionMs)
             val title = item?.getDisplayTitle() ?: "Now Playing"
             val playbackInfo = runCatching { jellyfinRepository.getPlaybackInfo(itemId) }.getOrNull()
             val mediaSource = playbackInfo?.mediaSources?.firstOrNull()
@@ -124,6 +129,20 @@ class PlayerViewModel @Inject constructor(
             val subtitleTracks = mediaSource.toSubtitleTrackOptions()
             activeMediaSourceId = mediaSource?.id
             activePlaySessionId = playbackInfo?.playSessionId
+
+            val streamUrl = resolvePlaybackUrl(
+                item = item,
+                audioStreamIndex = null,
+                subtitleStreamIndex = null,
+            ) ?: repositories.stream.getStreamUrl(itemId)
+
+            if (streamUrl == null) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = "Unable to create a stream for this item.",
+                )
+                return@launch
+            }
 
             // Prefer the parent series logo for episodes, otherwise use the item's own logo.
             val logoUrl = if (item != null) {
@@ -190,6 +209,7 @@ class PlayerViewModel @Inject constructor(
                     if (resumePositionMs > 0L) {
                         seekTo(resumePositionMs)
                     }
+                    reportPlaybackStart(resumePositionMs)
                     prepare()
                     playWhenReady = true
                 }
@@ -209,26 +229,33 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun reloadStream(positionMs: Long, playWhenReady: Boolean) {
-        val itemId = uiState.value.itemId
-        if (itemId.isBlank()) return
+        val currentItemId = uiState.value.itemId
+        if (currentItemId.isBlank()) return
 
-        val streamUrl = repositories.stream.getTranscodedStreamUrl(
-            itemId = itemId,
-            mediaSourceId = activeMediaSourceId,
-            playSessionId = activePlaySessionId,
-            audioStreamIndex = uiState.value.selectedAudioTrack?.streamIndex,
-            subtitleStreamIndex = uiState.value.selectedSubtitleTrack?.streamIndex,
-        ) ?: repositories.stream.getStreamUrl(itemId)
-            ?: return
+        viewModelScope.launch {
+            val streamUrl = resolvePlaybackUrl(
+                item = currentItem,
+                audioStreamIndex = uiState.value.selectedAudioTrack?.streamIndex,
+                subtitleStreamIndex = uiState.value.selectedSubtitleTrack?.streamIndex,
+            ) ?: repositories.stream.getTranscodedStreamUrl(
+                itemId = currentItemId,
+                mediaSourceId = activeMediaSourceId,
+                playSessionId = activePlaySessionId,
+                audioStreamIndex = uiState.value.selectedAudioTrack?.streamIndex,
+                subtitleStreamIndex = uiState.value.selectedSubtitleTrack?.streamIndex,
+            ) ?: repositories.stream.getStreamUrl(currentItemId)
+                ?: return@launch
 
-        _uiState.value = _uiState.value.copy(streamUrl = streamUrl)
-        _player?.apply {
-            setMediaItem(MediaItem.fromUri(streamUrl))
-            if (positionMs > 0L) {
-                seekTo(positionMs)
+            _uiState.value = _uiState.value.copy(streamUrl = streamUrl)
+            _player?.apply {
+                setMediaItem(MediaItem.fromUri(streamUrl))
+                if (positionMs > 0L) {
+                    seekTo(positionMs)
+                }
+                reportPlaybackStart(positionMs)
+                prepare()
+                this.playWhenReady = playWhenReady
             }
-            prepare()
-            this.playWhenReady = playWhenReady
         }
     }
 
@@ -296,21 +323,84 @@ class PlayerViewModel @Inject constructor(
 
             if (shouldSyncToServer) {
                 val positionTicks = if (persistedPosition <= 0L) null else persistedPosition * TICKS_PER_MILLISECOND
+                val sessionId = activePlaySessionId?.takeIf { it.isNotBlank() } ?: playbackSessionId
                 if (isCompleted) {
                     repositories.user.reportPlaybackStopped(
                         itemId = itemId,
-                        sessionId = playbackSessionId,
+                        sessionId = sessionId,
                         positionTicks = positionTicks,
+                        mediaSourceId = activeMediaSourceId,
                     )
                 } else {
                     repositories.user.reportPlaybackProgress(
                         itemId = itemId,
-                        sessionId = playbackSessionId,
+                        sessionId = sessionId,
                         positionTicks = positionTicks,
+                        mediaSourceId = activeMediaSourceId,
+                        playMethod = activePlayMethod,
                         isPaused = isPaused,
                     )
                 }
             }
+        }
+    }
+
+    private suspend fun resolvePlaybackUrl(
+        item: BaseItemDto?,
+        audioStreamIndex: Int?,
+        subtitleStreamIndex: Int?,
+    ): String? {
+        item ?: return null
+
+        return when (
+            val playbackResult = enhancedPlaybackManager.getOptimalPlaybackUrl(
+                item = item,
+                audioStreamIndex = audioStreamIndex,
+                subtitleStreamIndex = subtitleStreamIndex,
+            )
+        ) {
+            is PlaybackResult.DirectPlay -> {
+                activePlayMethod = PlayMethod.DIRECT_PLAY
+                val nextSessionId = playbackResult.playSessionId ?: activePlaySessionId ?: playbackSessionId
+                if (nextSessionId != activePlaySessionId) {
+                    playbackStartReported = false
+                }
+                activePlaySessionId = nextSessionId
+                playbackResult.url
+            }
+            is PlaybackResult.Transcoding -> {
+                activePlayMethod = if (playbackResult.isDirectStream) {
+                    PlayMethod.DIRECT_STREAM
+                } else {
+                    PlayMethod.TRANSCODE
+                }
+                val nextSessionId = playbackResult.playSessionId ?: activePlaySessionId ?: playbackSessionId
+                if (nextSessionId != activePlaySessionId) {
+                    playbackStartReported = false
+                }
+                activePlaySessionId = nextSessionId
+                playbackResult.url
+            }
+            is PlaybackResult.Error -> null
+        }
+    }
+
+    private fun reportPlaybackStart(positionMs: Long) {
+        if (playbackStartReported || itemId.isBlank()) return
+
+        playbackStartReported = true
+        val sessionId = activePlaySessionId?.takeIf { it.isNotBlank() } ?: playbackSessionId
+        val positionTicks = positionMs.takeIf { it > 0L }?.times(TICKS_PER_MILLISECOND)
+
+        viewModelScope.launch {
+            repositories.user.reportPlaybackStart(
+                itemId = itemId,
+                sessionId = sessionId,
+                positionTicks = positionTicks,
+                mediaSourceId = activeMediaSourceId,
+                playMethod = activePlayMethod,
+                isPaused = false,
+            )
         }
     }
 

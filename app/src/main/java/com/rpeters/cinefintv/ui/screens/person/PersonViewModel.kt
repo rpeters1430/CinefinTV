@@ -8,8 +8,10 @@ import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
+import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCardLabel
 import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getYear
+import com.rpeters.cinefintv.utils.isSeries
 import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -106,7 +108,12 @@ class PersonViewModel @Inject constructor(
             else -> null
         }
         
-        val subtitle = listOfNotNull(year?.toString(), typeLabel).joinToString(" | ")
+        val subtitle = if (isSeries()) {
+            getUnwatchedEpisodeCardLabel()
+                ?: listOfNotNull(year?.toString(), typeLabel).joinToString(" | ")
+        } else {
+            listOfNotNull(year?.toString(), typeLabel).joinToString(" | ")
+        }
 
         val isResumable = canResume()
         val isWatched = isWatched()

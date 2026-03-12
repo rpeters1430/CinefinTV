@@ -19,6 +19,7 @@ import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
+import com.rpeters.cinefintv.utils.getUnwatchedEpisodeDetailLabel
 import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
 import com.rpeters.cinefintv.utils.getYear
@@ -514,9 +515,7 @@ class DetailViewModel @Inject constructor(
         val episodeCount = (loadedEpisodeCount.takeIf { it > 0 } ?: (item.childCount ?: 0))
             .takeIf { it > 0 }
             ?.let { count -> if (count == 1) "1 episode" else "$count episodes" }
-        val unwatchedCount = item.userData?.unplayedItemCount
-            ?.takeIf { it > 0 }
-            ?.let { count -> if (count == 1) "1 left" else "$count left" }
+        val unwatchedCount = item.getUnwatchedEpisodeDetailLabel()
 
         return listOfNotNull(episodeCount, unwatchedCount)
             .joinToString(" | ")

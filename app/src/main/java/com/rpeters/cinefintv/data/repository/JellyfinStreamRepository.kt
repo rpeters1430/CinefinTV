@@ -25,7 +25,7 @@ class JellyfinStreamRepository @Inject constructor(
     companion object {
         // Stream quality constants
         private const val DEFAULT_MAX_BITRATE = 140_000_000
-        private const val DEFAULT_MAX_AUDIO_CHANNELS = 2
+        private const val DEFAULT_MAX_AUDIO_CHANNELS = 8
 
         // Image size constants
         private const val DEFAULT_IMAGE_MAX_HEIGHT = 800

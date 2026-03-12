@@ -9,8 +9,10 @@ import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
+import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCardLabel
 import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getYear
+import com.rpeters.cinefintv.utils.isSeries
 import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
@@ -112,9 +114,15 @@ class SearchViewModel @Inject constructor(
             item.getWatchedPercentage().toFloat() / 100f
         } else null
 
-        val subtitle = item.getYear()?.toString()
-            ?: item.getFormattedDuration()
-            ?: item.type.toString().replace('_', ' ')
+        val subtitle = if (item.isSeries()) {
+            item.getUnwatchedEpisodeCardLabel()
+                ?: item.getYear()?.toString()
+                ?: item.type.toString().replace('_', ' ')
+        } else {
+            item.getYear()?.toString()
+                ?: item.getFormattedDuration()
+                ?: item.type.toString().replace('_', ' ')
+        }
 
         return HomeCardModel(
             id = id,

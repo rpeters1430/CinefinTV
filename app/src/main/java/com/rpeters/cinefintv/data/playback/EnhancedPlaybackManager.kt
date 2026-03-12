@@ -38,6 +38,7 @@ class EnhancedPlaybackManager @Inject constructor(
 
     companion object {
         private const val TAG = "EnhancedPlaybackManager"
+        private const val DEFAULT_TV_MAX_AUDIO_CHANNELS = 8
 
         // Network quality thresholds (in Mbps)
         private const val HIGH_QUALITY_THRESHOLD = 25
@@ -440,11 +441,10 @@ class EnhancedPlaybackManager @Inject constructor(
      */
     private suspend fun isNetworkSuitableForDirectPlay(bitrate: Int): Boolean {
         val type = connectivityChecker.getNetworkType()
-        val prefs = playbackPreferencesRepository.preferences.first()
 
         return when (type) {
-            NetworkType.WIFI -> bitrate <= prefs.maxBitrateWifi
-            NetworkType.CELLULAR -> bitrate <= prefs.maxBitrateCellular
+            NetworkType.WIFI -> bitrate <= 80_000_000
+            NetworkType.CELLULAR -> bitrate <= 25_000_000
             NetworkType.ETHERNET -> bitrate <= DIRECT_PLAY_MAX_BITRATE
             else -> bitrate <= LOW_QUALITY_THRESHOLD * 1_000_000
         }
@@ -472,7 +472,7 @@ class EnhancedPlaybackManager @Inject constructor(
         val sourceVideoStream = mediaSource.findDefaultVideoStream()
         val sourceAudioStream = mediaSource.findDefaultAudioStream()
 
-        val maxAudioChannels = prefs.audioChannels.channels ?: 2
+        val maxAudioChannels = prefs.audioChannels.channels ?: DEFAULT_TV_MAX_AUDIO_CHANNELS
 
         // Build Direct Stream URL with audio transcoding parameters
         // VideoCodec=copy tells the server to NOT transcode video
@@ -594,7 +594,7 @@ class EnhancedPlaybackManager @Inject constructor(
             }
         }
 
-        val maxAudioChannels = prefs.audioChannels.channels ?: 2
+        val maxAudioChannels = prefs.audioChannels.channels ?: DEFAULT_TV_MAX_AUDIO_CHANNELS
 
         SecureLogger.d(
             TAG,
@@ -792,4 +792,3 @@ sealed class PlaybackResult {
 
     data class Error(val message: String) : PlaybackResult()
 }
-

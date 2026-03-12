@@ -38,6 +38,7 @@ import com.rpeters.cinefintv.ui.screens.person.PersonScreen
 import com.rpeters.cinefintv.ui.screens.stuff.StuffDetailScreen
 import com.rpeters.cinefintv.ui.screens.stuff.StuffLibraryScreen
 import com.rpeters.cinefintv.ui.screens.search.SearchScreen
+import com.rpeters.cinefintv.ui.screens.settings.SettingsScreen
 import com.rpeters.cinefintv.ui.player.PlayerScreen
 import com.rpeters.cinefintv.ui.player.audio.AudioPlayerScreen
 
@@ -181,7 +182,7 @@ fun CinefinTvNavGraph(
             )
         }
         composable(NavRoutes.SETTINGS) {
-            PlaceholderScreen("Settings", onBack = { navController.popBackStack() })
+            SettingsScreen()
         }
         composable(
             NavRoutes.DETAIL,

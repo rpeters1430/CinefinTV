@@ -5,6 +5,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,6 +34,7 @@ import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +49,11 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -87,6 +95,7 @@ internal fun PlayerControls(
     val backFocusRequester = remember { FocusRequester() }
     val subtitleFocusRequester = remember { FocusRequester() }
     val audioFocusRequester = remember { FocusRequester() }
+    val seekBarFocusRequester = remember { FocusRequester() }
     val rewindFocusRequester = remember { FocusRequester() }
     val forwardFocusRequester = remember { FocusRequester() }
     val speedFocusRequester = remember { FocusRequester() }
@@ -215,7 +224,7 @@ internal fun PlayerControls(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            imageVector = if (isPlaying) Icons.Default.PlayArrow else Icons.Default.Pause,
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
@@ -258,20 +267,14 @@ internal fun PlayerControls(
                         )
                     }
 
-                    // Seek bar
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(fraction = (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f))
-                                .background(MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small)
-                        )
-                    }
+                    SeekBarControl(
+                        position = position,
+                        duration = duration,
+                        player = player,
+                        focusRequester = seekBarFocusRequester,
+                        down = playPauseFocusRequester,
+                        onInteract = onInteract,
+                    )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -302,7 +305,7 @@ internal fun PlayerControls(
                                         right = audioFocusRequester
                                         left = backFocusRequester
                                         up = backFocusRequester
-                                        down = rewindFocusRequester
+                                        down = seekBarFocusRequester
                                     }
                                     .onGloballyPositioned { coordinates ->
                                         setSubtitleButtonBounds(coordinates.boundsInRoot())
@@ -330,7 +333,7 @@ internal fun PlayerControls(
                                         left = subtitleFocusRequester
                                         right = rewindFocusRequester
                                         up = backFocusRequester
-                                        down = rewindFocusRequester
+                                        down = seekBarFocusRequester
                                     }
                                     .onGloballyPositioned { coordinates ->
                                         setAudioButtonBounds(coordinates.boundsInRoot())
@@ -351,7 +354,7 @@ internal fun PlayerControls(
                                 focusRequester = rewindFocusRequester,
                                 left = audioFocusRequester,
                                 right = playPauseFocusRequester,
-                                up = subtitleFocusRequester,
+                                up = seekBarFocusRequester,
                                 down = rewindFocusRequester,
                                 onClick = {
                                     onInteract()
@@ -372,7 +375,7 @@ internal fun PlayerControls(
                                     .focusProperties {
                                         left = rewindFocusRequester
                                         right = forwardFocusRequester
-                                        up = backFocusRequester
+                                        up = seekBarFocusRequester
                                         down = playPauseFocusRequester
                                     },
                                 shape = ButtonDefaults.shape(CircleShape),
@@ -393,11 +396,16 @@ internal fun PlayerControls(
                                 ),
                                 contentPadding = PaddingValues(0.dp)
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
                                     Icon(
                                         if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                         contentDescription = if (isPlaying) "Pause" else "Play",
-                                        modifier = Modifier.size(36.dp)
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .offset(x = if (isPlaying) 0.dp else 1.dp)
                                     )
                                 }
                             }
@@ -412,7 +420,7 @@ internal fun PlayerControls(
                                 focusRequester = forwardFocusRequester,
                                 left = playPauseFocusRequester,
                                 right = speedFocusRequester,
-                                up = speedFocusRequester,
+                                up = seekBarFocusRequester,
                                 down = forwardFocusRequester,
                                 onClick = {
                                     onInteract()
@@ -445,7 +453,7 @@ internal fun PlayerControls(
                                         left = forwardFocusRequester
                                         right = settingsFocusRequester
                                         up = backFocusRequester
-                                        down = speedFocusRequester
+                                        down = seekBarFocusRequester
                                     }
                                     .onGloballyPositioned { coordinates ->
                                         setSpeedButtonBounds(coordinates.boundsInRoot())
@@ -472,7 +480,7 @@ internal fun PlayerControls(
                                     .focusProperties {
                                         left = speedFocusRequester
                                         up = backFocusRequester
-                                        down = settingsFocusRequester
+                                        down = seekBarFocusRequester
                                     }
                                     .onGloballyPositioned { coordinates ->
                                         setMoreButtonBounds(coordinates.boundsInRoot())
@@ -575,6 +583,112 @@ private fun TvActionButton(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+private fun SeekBarControl(
+    position: Long,
+    duration: Long,
+    player: ExoPlayer,
+    focusRequester: FocusRequester,
+    down: FocusRequester,
+    onInteract: () -> Unit,
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    var seekDirection by remember { mutableStateOf(0) }
+    val trackColor by animateColorAsState(
+        targetValue = if (isFocused) {
+            MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        },
+        label = "SeekBarTrackColor",
+    )
+
+    LaunchedEffect(seekDirection, duration) {
+        if (seekDirection == 0 || duration <= 0L) return@LaunchedEffect
+
+        while (seekDirection != 0) {
+            val targetPosition = (player.currentPosition + (seekDirection * SEEK_BAR_SCRUB_STEP_MS))
+                .coerceIn(0L, duration)
+            player.seekTo(targetPosition)
+            onInteract()
+            kotlinx.coroutines.delay(SEEK_BAR_REPEAT_INTERVAL_MS)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(16.dp)
+            .focusRequester(focusRequester)
+            .focusProperties {
+                this.down = down
+            }
+            .onFocusChanged {
+                isFocused = it.isFocused || it.hasFocus
+                if (!isFocused) {
+                    seekDirection = 0
+                }
+            }
+            .onPreviewKeyEvent { keyEvent ->
+                when {
+                    keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.DirectionLeft -> {
+                        seekDirection = -1
+                        true
+                    }
+                    keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.DirectionRight -> {
+                        seekDirection = 1
+                        true
+                    }
+                    keyEvent.type == KeyEventType.KeyUp &&
+                        (keyEvent.key == Key.DirectionLeft || keyEvent.key == Key.DirectionRight) -> {
+                        seekDirection = 0
+                        true
+                    }
+                    else -> false
+                }
+            }
+            .focusable()
+            .background(
+                color = if (isFocused) Color.White.copy(alpha = 0.08f) else Color.Transparent,
+                shape = MaterialTheme.shapes.small,
+            )
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .align(Alignment.Center)
+                .background(trackColor, MaterialTheme.shapes.small)
+        ) {
+            val progressFraction = (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(progressFraction)
+                    .background(MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small),
+            )
+
+            if (isFocused) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(progressFraction.coerceAtLeast(0.02f))
+                )
+                {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .size(16.dp)
+                            .background(MaterialTheme.colorScheme.onBackground, CircleShape)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
 private fun TransportButton(
     label: String,
     icon: ImageVector,
@@ -638,3 +752,6 @@ private fun TransportButton(
         )
     }
 }
+
+private const val SEEK_BAR_SCRUB_STEP_MS = 10_000L
+private const val SEEK_BAR_REPEAT_INTERVAL_MS = 140L
