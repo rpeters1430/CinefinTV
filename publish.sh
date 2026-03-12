@@ -4,6 +4,14 @@ set -euo pipefail
 
 BUILD_FILE="app/build.gradle.kts"
 WORKFLOW_FILE=".github/workflows/release.yml"
+BACKUP_FILE=""
+
+cleanup_build_file() {
+    if [[ -n "${BACKUP_FILE:-}" && -f "${BACKUP_FILE:-}" ]]; then
+        cp "$BACKUP_FILE" "$BUILD_FILE"
+        rm -f "$BACKUP_FILE"
+    fi
+}
 
 has_release_signing() {
     [[ -n "${CINEFIN_RELEASE_STORE_FILE:-}" ]] &&
@@ -76,10 +84,9 @@ main() {
         exit 1
     fi
 
-    local backup_file
-    backup_file="$(mktemp)"
-    cp "$BUILD_FILE" "$backup_file"
-    trap 'cp "$backup_file" "$BUILD_FILE"; rm -f "$backup_file"' EXIT
+    BACKUP_FILE="$(mktemp)"
+    cp "$BUILD_FILE" "$BACKUP_FILE"
+    trap cleanup_build_file EXIT
 
     echo "Bumping to: $new_version_name (code $new_version_code)"
     update_build_version "$old_version_code" "$new_version_code" "$old_version_name" "$new_version_name"
@@ -97,7 +104,8 @@ main() {
     git tag "$tag"
 
     trap - EXIT
-    rm -f "$backup_file"
+    rm -f "$BACKUP_FILE"
+    BACKUP_FILE=""
 
     echo "Pushing main and tag $tag"
     git push origin main
