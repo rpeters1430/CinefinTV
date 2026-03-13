@@ -10,6 +10,7 @@ import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCardLabel
+import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
 import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.isSeries
@@ -113,6 +114,9 @@ class SearchViewModel @Inject constructor(
         val playbackProgress = if (isResumable) {
             item.getWatchedPercentage().toFloat() / 100f
         } else null
+        val unwatchedCount = if (item.isSeries()) {
+            item.getUnwatchedEpisodeCount().takeIf { it > 0 }
+        } else null
 
         val subtitle = if (item.isSeries()) {
             item.getUnwatchedEpisodeCardLabel()
@@ -131,6 +135,7 @@ class SearchViewModel @Inject constructor(
             imageUrl = repositories.stream.getSearchCardImageUrl(item),
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,
+            unwatchedCount = unwatchedCount,
         )
     }
 }

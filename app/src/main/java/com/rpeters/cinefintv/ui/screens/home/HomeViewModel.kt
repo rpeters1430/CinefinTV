@@ -8,6 +8,7 @@ import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCardLabel
+import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
 import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.isSeries
@@ -41,6 +42,7 @@ data class HomeCardModel(
     val collectionType: String? = null,
     val watchStatus: WatchStatus = WatchStatus.NONE,
     val playbackProgress: Float? = null,
+    val unwatchedCount: Int? = null,
 )
 
 data class HomeSectionModel(
@@ -142,6 +144,7 @@ class HomeViewModel @Inject constructor(
             else -> WatchStatus.NONE
         }
         val playbackProgress = if (isResumable) watchedPercentage.toFloat() / 100f else null
+        val unwatchedCount = if (item.isSeries()) item.getUnwatchedEpisodeCount().takeIf { it > 0 } else null
 
         val subtitle = when {
             isResumable -> {
@@ -186,6 +189,7 @@ class HomeViewModel @Inject constructor(
             collectionType = item.collectionType?.toString(),
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,
+            unwatchedCount = unwatchedCount,
         )
     }
 }

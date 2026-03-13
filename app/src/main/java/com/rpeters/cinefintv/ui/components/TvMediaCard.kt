@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,6 +47,10 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 
+import com.rpeters.cinefintv.utils.DevicePerformanceProfile
+import com.rpeters.cinefintv.utils.LocalPerformanceProfile
+import coil3.size.Size
+
 enum class WatchStatus { NONE, WATCHED, IN_PROGRESS }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -59,15 +64,21 @@ fun TvMediaCard(
     modifier: Modifier = Modifier,
     watchStatus: WatchStatus = WatchStatus.NONE,
     playbackProgress: Float? = null,
+    unwatchedCount: Int? = null,
 ) {
+    val performanceProfile = LocalPerformanceProfile.current
     var isFocused by remember { mutableStateOf(false) }
 
     val scale by animateFloatAsState(
         targetValue = if (isFocused) 1.08f else 1.0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium,
-        ),
+        animationSpec = if (performanceProfile.tier == DevicePerformanceProfile.Tier.LOW) {
+            tween(durationMillis = 150)
+        } else {
+            spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMedium,
+            )
+        },
         label = "CardScale"
     )
     val titleColor by animateColorAsState(
@@ -92,7 +103,9 @@ fun TvMediaCard(
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
-                    shadowElevation = elevation.toPx()
+                    if (performanceProfile.tier != DevicePerformanceProfile.Tier.LOW) {
+                        shadowElevation = elevation.toPx()
+                    }
                 }
         ) {
             Card(
@@ -125,7 +138,9 @@ fun TvMediaCard(
                             AsyncImage(
                                 model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
                                     .data(imageUrl)
-                                    .crossfade(true)
+                                    .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
+                                    // Optimize for 10-foot experience: 260dp @ ~1.5-2.0x density
+                                    .size(520, 292)
                                     .build(),
                                 contentDescription = title,
                                 contentScale = ContentScale.Crop,
@@ -156,7 +171,14 @@ fun TvMediaCard(
                         }
                     }
 
-                    if (watchStatus == WatchStatus.WATCHED) {
+                    if (unwatchedCount != null && unwatchedCount > 0) {
+                        UnwatchedCountOverlay(
+                            count = unwatchedCount,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .zIndex(1f)
+                        )
+                    } else if (watchStatus == WatchStatus.WATCHED) {
                         WatchStatusOverlay(
                             status = watchStatus,
                             modifier = Modifier
@@ -240,6 +262,34 @@ private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifie
                 }
             }
             WatchStatus.NONE -> {}
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun UnwatchedCountOverlay(count: Int, modifier: Modifier = Modifier) {
+    Box(modifier = modifier.padding(6.dp)) {
+        Box(
+            modifier = Modifier
+                .defaultMinSize(minWidth = 24.dp)
+                .height(24.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                    shape = RoundedCornerShape(50)
+                )
+                .padding(horizontal = 6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = if (count > 99) "99+" else count.toString(),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp
+                ),
+                color = MaterialTheme.colorScheme.onPrimary,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

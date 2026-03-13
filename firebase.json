@@ -1,0 +1,11 @@
+{
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "CinefinTV",
+        "supportEmail": "rpeters1428@gmail.com"
+      }
+    }
+  }
+}

@@ -10,12 +10,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+
+/**
+ * ✅ CompositionLocal for the current device's performance profile
+ */
+val LocalPerformanceProfile = compositionLocalOf<DevicePerformanceProfile> {
+    error("No PerformanceProfile provided")
+}
 
 /**
  * ✅ PHASE 3: Advanced Performance Optimizations

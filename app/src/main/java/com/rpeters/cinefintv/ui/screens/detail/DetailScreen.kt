@@ -66,7 +66,9 @@ import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.TvPersonCard
-import com.rpeters.cinefintv.ui.components.WatchStatus
+import com.rpeters.cinefintv.utils.DevicePerformanceProfile
+import com.rpeters.cinefintv.utils.LocalPerformanceProfile
+import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -80,6 +82,7 @@ fun DetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var focusedDescription by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
+    val performanceProfile = LocalPerformanceProfile.current
 
     AnimatedContent(
         targetState = uiState,
@@ -152,7 +155,9 @@ fun DetailScreen(
                         AsyncImage(
                             model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
                                 .data(item.backdropUrl)
-                                .crossfade(true)
+                                .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
+                                // Full-screen backdrops: 1080p is enough for memory safety
+                                .size(1920, 1080)
                                 .build(),
                             contentDescription = item.title,
                             contentScale = ContentScale.Crop,
@@ -535,8 +540,8 @@ fun DetailScreen(
                                                 onFocus = { focusedDescription = season.overview },
                                                 watchStatus = season.watchStatus,
                                                 playbackProgress = season.playbackProgress,
-                                            )
-                                        }
+                                                unwatchedCount = season.unwatchedCount,
+                                                )                                        }
                                     }
                                 }
                             }
@@ -571,8 +576,8 @@ fun DetailScreen(
                                                 onFocus = { focusedDescription = episode.overview },
                                                 watchStatus = episode.watchStatus,
                                                 playbackProgress = episode.playbackProgress,
-                                            )
-                                        }
+                                                unwatchedCount = episode.unwatchedCount,
+                                                )                                        }
                                     }
                                 }
                             }
@@ -641,8 +646,8 @@ fun DetailScreen(
                                                 onFocus = { focusedDescription = related.overview },
                                                 watchStatus = related.watchStatus,
                                                 playbackProgress = related.playbackProgress,
-                                            )
-                                        }
+                                                unwatchedCount = related.unwatchedCount,
+                                                )                                        }
                                     }
                                 }
                             }

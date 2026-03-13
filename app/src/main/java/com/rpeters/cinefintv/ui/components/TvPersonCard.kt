@@ -26,6 +26,9 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 
+import com.rpeters.cinefintv.utils.DevicePerformanceProfile
+import com.rpeters.cinefintv.utils.LocalPerformanceProfile
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun TvPersonCard(
@@ -36,6 +39,8 @@ fun TvPersonCard(
     onFocus: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val performanceProfile = LocalPerformanceProfile.current
+
     Column(
         modifier = modifier
             .width(120.dp)
@@ -69,7 +74,9 @@ fun TvPersonCard(
                     AsyncImage(
                         model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
                             .data(imageUrl)
-                            .crossfade(true)
+                            .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
+                            // People thumbnails are small: 120dp @ ~2x density
+                            .size(240, 240)
                             .build(),
                         contentDescription = name,
                         contentScale = ContentScale.Crop,

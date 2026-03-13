@@ -1,6 +1,6 @@
 package com.rpeters.cinefintv.di
 
-import com.rpeters.cinefintv.data.repository.NoOpRemoteConfigRepository
+import com.rpeters.cinefintv.data.repository.FirebaseRemoteConfigRepository
 import com.rpeters.cinefintv.data.repository.RemoteConfigRepository
 import dagger.Binds
 import dagger.Module
@@ -20,6 +20,6 @@ abstract class RemoteConfigModule {
     @Binds
     @Singleton
     abstract fun bindRemoteConfigRepository(
-        impl: NoOpRemoteConfigRepository,
+        impl: FirebaseRemoteConfigRepository,
     ): RemoteConfigRepository
 }

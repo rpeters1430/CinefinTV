@@ -68,6 +68,7 @@ data class DetailHeroModel(
     val cast: List<DetailPersonModel> = emptyList(),
     val watchStatus: WatchStatus = WatchStatus.NONE,
     val playbackProgress: Float? = null,
+    val unwatchedCount: Int? = null,
 )
 
 data class DetailTechnicalDetails(
@@ -86,6 +87,7 @@ data class DetailSeasonModel(
     val episodeCount: Int = 0,
     val watchStatus: WatchStatus = WatchStatus.NONE,
     val playbackProgress: Float? = null,
+    val unwatchedCount: Int? = null,
 )
 
 data class DetailEpisodeModel(
@@ -98,6 +100,7 @@ data class DetailEpisodeModel(
     val isWatched: Boolean = false,
     val watchStatus: WatchStatus = WatchStatus.NONE,
     val playbackProgress: Float? = null,
+    val unwatchedCount: Int? = null,
 )
 
 sealed class DetailUiState {
@@ -281,8 +284,8 @@ class DetailViewModel @Inject constructor(
                         imageUrl = repositories.stream.getWideCardImageUrl(season, parentItem = item),
                         episodeCount = episodeModels.size.takeIf { it > 0 } ?: (season.childCount ?: 0),
                         watchStatus = seasonWatchStatus,
-                    )
-                }
+                        unwatchedCount = season.userData?.unplayedItemCount?.toInt() ?: episodeModels.count { !it.isWatched }.takeIf { it > 0 }
+                    )                }
                 seasonModels to mapOf(item.id.toString() to allEpisodes)
             }
             item.isSeason() -> {
@@ -431,6 +434,9 @@ class DetailViewModel @Inject constructor(
         val playbackProgress = if (isResumable) {
             item.getWatchedPercentage().toFloat() / 100f
         } else null
+        val unwatchedCount = if (item.isSeries()) {
+            item.getUnwatchedEpisodeCount().takeIf { it > 0 }
+        } else null
 
         return DetailHeroModel(
             id = item.id.toString(),
@@ -446,6 +452,7 @@ class DetailViewModel @Inject constructor(
             cast = cast,
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,
+            unwatchedCount = unwatchedCount,
         )
     }
 
@@ -480,6 +487,7 @@ class DetailViewModel @Inject constructor(
             isWatched = isWatched,
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,
+            unwatchedCount = if (isWatched) null else 1,
         )
     }
 

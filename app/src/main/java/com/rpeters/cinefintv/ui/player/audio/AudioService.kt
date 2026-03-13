@@ -24,7 +24,7 @@ class AudioService : MediaSessionService() {
         super.onCreate()
 
         val exoPlayer = ExoPlayer.Builder(this)
-            .setSeekBackIncrementMs(10_000L)
+            .setSeekBackIncrementMs(30_000L)
             .setSeekForwardIncrementMs(30_000L)
             .setAudioAttributes(
                 AudioAttributes.Builder()

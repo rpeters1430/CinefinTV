@@ -11,9 +11,16 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme as TvMaterialTheme
 import androidx.tv.material3.darkColorScheme as TvDarkColorScheme
 
+import com.rpeters.cinefintv.utils.DevicePerformanceProfile
+import com.rpeters.cinefintv.utils.LocalPerformanceProfile
+import androidx.compose.runtime.CompositionLocalProvider
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun CinefinTvTheme(content: @Composable () -> Unit) {
+fun CinefinTvTheme(
+    performanceProfile: DevicePerformanceProfile? = null,
+    content: @Composable () -> Unit
+) {
     val tvColorScheme = TvDarkColorScheme(
             primary          = CinefinRed,
             onPrimary        = OnBackground,
@@ -57,15 +64,19 @@ fun CinefinTvTheme(content: @Composable () -> Unit) {
         extraLarge = RoundedCornerShape(32.dp),
     )
 
-    TvMaterialTheme(
-        colorScheme = tvColorScheme,
-        typography = CinefinTvTypography,
-    ) {
-        ComposeMaterialTheme(
-            colorScheme = expressiveColorScheme,
-            shapes = composeShapes,
-            typography = CinefinComposeTypography,
-            content = content,
-        )
+    val profile = performanceProfile ?: DevicePerformanceProfile.detect(androidx.compose.ui.platform.LocalContext.current)
+
+    CompositionLocalProvider(LocalPerformanceProfile provides profile) {
+        TvMaterialTheme(
+            colorScheme = tvColorScheme,
+            typography = CinefinTvTypography,
+        ) {
+            ComposeMaterialTheme(
+                colorScheme = expressiveColorScheme,
+                shapes = composeShapes,
+                typography = CinefinComposeTypography,
+                content = content,
+            )
+        }
     }
 }

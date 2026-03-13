@@ -38,6 +38,10 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import com.rpeters.cinefintv.utils.DevicePerformanceProfile
+import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -49,6 +53,7 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val performanceProfile = LocalPerformanceProfile.current
 
     when (val state = uiState) {
         is HomeUiState.Loading -> {
@@ -137,6 +142,7 @@ fun HomeScreen(
                                         onClick = { onOpenItem(item) },
                                         watchStatus = item.watchStatus,
                                         playbackProgress = item.playbackProgress,
+                                        unwatchedCount = item.unwatchedCount,
                                     )
                                 }
                             }
@@ -156,6 +162,8 @@ private fun FeaturedCarousel(
     onPlay: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val performanceProfile = LocalPerformanceProfile.current
+    
     Carousel(
         itemCount = items.size,
         modifier = modifier
@@ -166,7 +174,12 @@ private fun FeaturedCarousel(
         val item = items[index]
         Box(modifier = Modifier.fillMaxSize()) {
             AsyncImage(
-                model = item.backdropUrl ?: item.imageUrl,
+                model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                    .data(item.backdropUrl ?: item.imageUrl)
+                    .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
+                    // High-quality backdrops for carousel, but capped for memory
+                    .size(1280, 720)
+                    .build(),
                 contentDescription = item.title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),

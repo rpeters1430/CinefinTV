@@ -57,8 +57,8 @@ object Constants {
 
     // Player settings
     const val PLAYER_CONTROLS_TIMEOUT_MS = 3000L
-    const val PLAYER_SEEK_INCREMENT_MS = 10_000L
-    const val PLAYER_REWIND_INCREMENT_MS = 10_000L
+    const val PLAYER_SEEK_INCREMENT_MS = 30_000L
+    const val PLAYER_REWIND_INCREMENT_MS = 30_000L
 
     // Cache settings
     const val DISK_CACHE_SIZE_MB = 100

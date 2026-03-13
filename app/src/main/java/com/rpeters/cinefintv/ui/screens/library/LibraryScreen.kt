@@ -118,8 +118,8 @@ fun LibraryScreen(
                             onClick = { onOpenItem(item.id) },
                             watchStatus = item.watchStatus,
                             playbackProgress = item.playbackProgress,
-                        )
-                    }
+                            unwatchedCount = item.unwatchedCount,
+                            )                    }
                 }
             }
         }

@@ -144,7 +144,7 @@ fun AudioPlayerScreen(
                 Text("Previous")
             }
             OutlinedButton(onClick = viewModel::seekBackward) {
-                Text("Back 10s")
+                Text("Back 30s")
             }
             Button(onClick = viewModel::togglePlayPause) {
                 Text(if (uiState.isPlaying) "Pause" else "Play")

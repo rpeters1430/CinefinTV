@@ -9,6 +9,10 @@ composeBom = "2026.03.00"
 tvMaterial = "1.1.0-beta01"
 tvFoundation = "1.0.0-beta01"
 hilt = "2.59.2"
+googleServices = "4.4.2"
+firebaseBom = "33.10.0"
+firebaseCrashlyticsPlugin = "3.0.3"
+firebasePerfPlugin = "2.0.2"
 media3 = "1.10.0-rc01"
 coil = "3.4.0"
 jellyfin = "1.8.6"
@@ -81,6 +85,14 @@ kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutin
 core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.18.0" }
 slf4j-android = { group = "org.slf4j", name = "slf4j-android", version = "1.7.36" }
 
+# Firebase
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
+firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
+firebase-perf = { group = "com.google.firebase", name = "firebase-perf" }
+firebase-config = { group = "com.google.firebase", name = "firebase-config" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
@@ -89,6 +101,9 @@ coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebaseCrashlyticsPlugin" }
+firebase-perf = { id = "com.google.firebase.firebase-perf", version.ref = "firebasePerfPlugin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 dagger-hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }

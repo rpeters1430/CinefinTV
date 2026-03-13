@@ -26,13 +26,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ClosedCaption
-import androidx.compose.material.icons.filled.Forward10
+import androidx.compose.material.icons.filled.Forward30
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.material.icons.filled.Replay30
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
+import com.rpeters.cinefintv.core.constants.Constants
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -347,8 +348,8 @@ internal fun PlayerControls(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             TransportButton(
-                                label = "Back 10",
-                                icon = Icons.Default.Replay10,
+                                label = "Back 30",
+                                icon = Icons.Default.Replay30,
                                 buttonSize = 58.dp,
                                 iconSize = 28.dp,
                                 focusRequester = rewindFocusRequester,
@@ -358,7 +359,7 @@ internal fun PlayerControls(
                                 down = rewindFocusRequester,
                                 onClick = {
                                     onInteract()
-                                    player.seekTo((position - 10_000).coerceAtLeast(0))
+                                    player.seekTo((position - Constants.PLAYER_REWIND_INCREMENT_MS).coerceAtLeast(0))
                                 },
                             )
 
@@ -413,8 +414,8 @@ internal fun PlayerControls(
                             Spacer(Modifier.width(16.dp))
 
                             TransportButton(
-                                label = "Skip 10",
-                                icon = Icons.Default.Forward10,
+                                label = "Skip 30",
+                                icon = Icons.Default.Forward30,
                                 buttonSize = 58.dp,
                                 iconSize = 28.dp,
                                 focusRequester = forwardFocusRequester,
@@ -424,7 +425,7 @@ internal fun PlayerControls(
                                 down = forwardFocusRequester,
                                 onClick = {
                                     onInteract()
-                                    player.seekTo((position + 10_000).coerceAtMost(duration))
+                                    player.seekTo((position + Constants.PLAYER_SEEK_INCREMENT_MS).coerceAtMost(duration))
                                 },
                             )
                         }
@@ -738,11 +739,16 @@ private fun TransportButton(
             ),
             contentPadding = PaddingValues(0.dp)
         ) {
-            Icon(
-                icon,
-                contentDescription = label,
-                modifier = Modifier.size(iconSize)
-            )
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = label,
+                    modifier = Modifier.size(iconSize)
+                )
+            }
         }
         Spacer(Modifier.height(6.dp))
         Text(
@@ -753,5 +759,5 @@ private fun TransportButton(
     }
 }
 
-private const val SEEK_BAR_SCRUB_STEP_MS = 10_000L
+private val SEEK_BAR_SCRUB_STEP_MS = Constants.PLAYER_SEEK_INCREMENT_MS
 private const val SEEK_BAR_REPEAT_INTERVAL_MS = 140L
