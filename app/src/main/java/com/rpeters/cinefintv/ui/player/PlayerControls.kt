@@ -192,6 +192,8 @@ internal fun PlayerControls(
                             Text(
                                 text = uiState.title,
                                 style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -206,36 +208,12 @@ internal fun PlayerControls(
                                 Text(
                                     text = episodeInfo,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
                                 )
                             }
                         }
                     }
                 }
-
-                Surface(
-                    shape = CircleShape,
-                    colors = SurfaceDefaults.colors(
-                        containerColor = Color.Black.copy(alpha = 0.45f),
-                    ),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            text = if (isPlaying) "Playing" else "Paused",
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
-                }
-            }
 
             // Bottom Controls
             Column(

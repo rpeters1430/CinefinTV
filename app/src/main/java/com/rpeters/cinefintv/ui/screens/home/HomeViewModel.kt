@@ -72,7 +72,10 @@ class HomeViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
-            _uiState.value = HomeUiState.Loading
+            // Only show loading if we don't have content yet
+            if (_uiState.value !is HomeUiState.Content) {
+                _uiState.value = HomeUiState.Loading
+            }
 
             val librariesDeferred = async { repositories.media.getUserLibraries() }
             val continueDeferred = async { repositories.media.getContinueWatching(limit = 12) }

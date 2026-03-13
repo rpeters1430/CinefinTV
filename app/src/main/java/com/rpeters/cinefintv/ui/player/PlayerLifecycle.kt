@@ -3,6 +3,7 @@ package com.rpeters.cinefintv.ui.player
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -22,6 +23,15 @@ internal fun PlayerLifecycleManager(
     onNextEpisodeRequest: (String) -> Unit
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
+    val view = LocalView.current
+
+    // Keep screen on while playing
+    DisposableEffect(isPlaying) {
+        view.keepScreenOn = isPlaying
+        onDispose {
+            view.keepScreenOn = false
+        }
+    }
 
     // Position saving interval
     LaunchedEffect(player, isPlaying) {

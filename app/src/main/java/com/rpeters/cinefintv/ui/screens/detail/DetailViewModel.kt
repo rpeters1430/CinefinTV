@@ -152,6 +152,60 @@ class DetailViewModel @Inject constructor(
         load()
     }
 
+    /**
+     * Refresh data silently without showing a loading screen if content already exists.
+     * Useful for updating watch status when returning from playback.
+     */
+    fun refresh() {
+        if (itemId.isBlank()) return
+        
+        viewModelScope.launch {
+            // Only show loading if we don't have content yet
+            if (_uiState.value !is DetailUiState.Content) {
+                _uiState.value = DetailUiState.Loading
+            }
+
+            when (val detailResult = repositories.media.getItemDetails(itemId)) {
+                is ApiResult.Success -> {
+                    val item = detailResult.data
+                    val seasonsAndEpisodes = loadSeasonsAndEpisodes(item)
+                    val relatedItems = loadRelated(item)
+                    val playbackTarget = resolvePlaybackTarget(item, seasonsAndEpisodes.second)
+                    
+                    val parentForBackdrop: BaseItemDto? = if (item.isSeason()) {
+                        item.seriesId?.toString()?.let { seriesId ->
+                            (repositories.media.getItemDetails(seriesId) as? ApiResult.Success)?.data
+                        }
+                    } else null
+
+                    val heroModel = toHeroModel(
+                        item = item,
+                        seasons = seasonsAndEpisodes.first,
+                        episodesBySeasonId = seasonsAndEpisodes.second,
+                        parentForBackdrop = parentForBackdrop,
+                    )
+
+                    _uiState.value = DetailUiState.Content(
+                        item = heroModel,
+                        seasons = seasonsAndEpisodes.first,
+                        episodesBySeasonId = seasonsAndEpisodes.second,
+                        related = relatedItems.map { this@DetailViewModel.toHeroModel(it) },
+                        cast = heroModel.cast,
+                        playableItemId = playbackTarget?.id,
+                        playButtonLabel = playbackTarget?.label ?: "Play",
+                    )
+                }
+                is ApiResult.Error -> {
+                    // Only show error if we don't have content, otherwise keep current content
+                    if (_uiState.value !is DetailUiState.Content) {
+                        _uiState.value = DetailUiState.Error(detailResult.message)
+                    }
+                }
+                is ApiResult.Loading -> Unit
+            }
+        }
+    }
+
     fun load() {
         if (itemId.isBlank()) {
             _uiState.value = DetailUiState.Error("No item ID was provided.")

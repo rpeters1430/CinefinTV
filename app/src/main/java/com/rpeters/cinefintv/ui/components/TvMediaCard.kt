@@ -69,27 +69,20 @@ fun TvMediaCard(
     val performanceProfile = LocalPerformanceProfile.current
     var isFocused by remember { mutableStateOf(false) }
 
-    val scale by animateFloatAsState(
-        targetValue = if (isFocused) 1.08f else 1.0f,
-        animationSpec = if (performanceProfile.tier == DevicePerformanceProfile.Tier.LOW) {
-            tween(durationMillis = 150)
-        } else {
-            spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMedium,
-            )
-        },
-        label = "CardScale"
+    val elevation by animateDpAsState(
+        targetValue = if (isFocused) 16.dp else 0.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "CardElevation"
+    )
+    val translationY by animateFloatAsState(
+        targetValue = if (isFocused) -8f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "CardHoverOffset"
     )
     val titleColor by animateColorAsState(
         targetValue = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = tween(durationMillis = 200),
         label = "TitleColor"
-    )
-    val elevation by animateDpAsState(
-        targetValue = if (isFocused) 12.dp else 0.dp,
-        animationSpec = tween(durationMillis = 200),
-        label = "CardElevation"
     )
 
     Column(
@@ -101,8 +94,7 @@ fun TvMediaCard(
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
                 .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
+                    this.translationY = translationY
                     if (performanceProfile.tier != DevicePerformanceProfile.Tier.LOW) {
                         shadowElevation = elevation.toPx()
                     }
@@ -117,15 +109,21 @@ fun TvMediaCard(
                         if (it.isFocused || it.hasFocus) onFocus()
                     },
                 scale = CardDefaults.scale(focusedScale = 1.0f),
+                glow = CardDefaults.glow(
+                    focusedGlow = androidx.tv.material3.Glow(
+                        elevation = elevation,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                    )
+                ),
                 border = CardDefaults.border(
                     focusedBorder = Border(
                         border = androidx.compose.foundation.BorderStroke(
-                            width = 2.dp,
-                            color = MaterialTheme.colorScheme.border.copy(alpha = 0.8f)
+                            width = 3.dp,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f)
                         )
                     )
                 ),
-                shape = CardDefaults.shape(MaterialTheme.shapes.extraSmall)
+                shape = CardDefaults.shape(MaterialTheme.shapes.small)
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Box(
@@ -193,7 +191,9 @@ fun TvMediaCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp),
+                .padding(horizontal = 4.dp)
+                // Use a default min height to prevent row height shifting if subtitles are missing
+                .defaultMinSize(minHeight = 84.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {

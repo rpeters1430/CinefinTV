@@ -51,6 +51,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.zIndex
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.tv.material3.Button
 import kotlinx.coroutines.launch
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -66,9 +70,9 @@ import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.TvPersonCard
+import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
-import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -83,6 +87,14 @@ fun DetailScreen(
     var focusedDescription by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val performanceProfile = LocalPerformanceProfile.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Refresh data when screen becomes active (e.g. returning from player)
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.refresh()
+        }
+    }
 
     AnimatedContent(
         targetState = uiState,
@@ -234,16 +246,27 @@ fun DetailScreen(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 4,
                                         overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.fillMaxWidth(0.7f)
+                                        modifier = Modifier
+                                            .fillMaxWidth(0.7f)
+                                            .heightIn(min = 100.dp) // Prevent layout jumping when overview length changes
                                     )
+                                } else {
+                                    // Reserve space even if empty to keep layout stable
+                                    Spacer(modifier = Modifier.height(100.dp))
                                 }
 
-                                if (item.metaBadges.isNotEmpty()) {
+                                if (item.metaBadges.isNotEmpty() || item.watchStatus != WatchStatus.NONE) {
                                     FlowRow(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                                         verticalArrangement = Arrangement.spacedBy(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
+                                        WatchStatusBadge(
+                                            status = item.watchStatus,
+                                            progress = item.playbackProgress
+                                        )
+
                                         item.metaBadges.forEach { badge ->
                                             Surface(
                                                 shape = RoundedCornerShape(8.dp),
@@ -657,6 +680,63 @@ fun DetailScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun WatchStatusBadge(
+    status: WatchStatus,
+    progress: Float?,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        colors = SurfaceDefaults.colors(
+            containerColor = when (status) {
+                WatchStatus.WATCHED -> Color(0xFF4CAF50).copy(alpha = 0.2f)
+                WatchStatus.IN_PROGRESS -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            }
+        ),
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val (icon, text, color) = when (status) {
+                WatchStatus.WATCHED -> Triple(
+                    androidx.compose.material.icons.filled.Check,
+                    "Watched",
+                    Color(0xFF4CAF50)
+                )
+                WatchStatus.IN_PROGRESS -> Triple(
+                    androidx.compose.material.icons.filled.PlayArrow,
+                    if (progress != null) "${(progress * 100).toInt()}%" else "In Progress",
+                    MaterialTheme.colorScheme.primary
+                )
+                else -> Triple(
+                    androidx.compose.material.icons.filled.VisibilityOff,
+                    "Unwatched",
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = color
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                color = color,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
