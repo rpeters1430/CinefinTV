@@ -304,14 +304,17 @@ private fun PlaybackSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    Surface(
+    OutlinedButton(
         onClick = { onCheckedChange(!checked) },
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = SurfaceDefaults.colors(
+        shape = ButtonDefaults.shape(RoundedCornerShape(20.dp)),
+        colors = ButtonDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+            contentColor = MaterialTheme.colorScheme.onSurface,
             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+            focusedContentColor = MaterialTheme.colorScheme.onSurface,
         ),
+        scale = ButtonDefaults.scale(focusedScale = 1.02f),
     ) {
         Row(
             modifier = Modifier
@@ -347,25 +350,33 @@ private fun TrackButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    Surface(
+    OutlinedButton(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = SurfaceDefaults.colors(
-            containerColor = if (selected) 
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f) 
-                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-            focusedContainerColor = if (selected)
-                MaterialTheme.colorScheme.primary 
-                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f),
-            contentColor = if (selected) 
-                MaterialTheme.colorScheme.onPrimaryContainer 
-                else MaterialTheme.colorScheme.onSurface,
-            focusedContentColor = if (selected) 
-                MaterialTheme.colorScheme.onPrimary 
-                else MaterialTheme.colorScheme.onSurface,
+        shape = ButtonDefaults.shape(RoundedCornerShape(20.dp)),
+        colors = ButtonDefaults.colors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            },
+            contentColor = if (selected) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
+            focusedContainerColor = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+            },
+            focusedContentColor = if (selected) {
+                MaterialTheme.colorScheme.onPrimary
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
         ),
-        scale = SurfaceDefaults.scale(focusedScale = 1.02f)
+        scale = ButtonDefaults.scale(focusedScale = 1.02f),
     ) {
         Row(
             modifier = Modifier

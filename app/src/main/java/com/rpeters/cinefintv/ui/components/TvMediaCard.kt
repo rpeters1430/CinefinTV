@@ -112,7 +112,7 @@ fun TvMediaCard(
                 glow = CardDefaults.glow(
                     focusedGlow = androidx.tv.material3.Glow(
                         elevation = elevation,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        elevationColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                     )
                 ),
                 border = CardDefaults.border(

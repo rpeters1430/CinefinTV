@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
@@ -36,7 +37,6 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 
@@ -65,8 +65,7 @@ fun TvPersonCard(
     )
 
     Column(
-        modifier = modifier
-            .width(120.dp),
+        modifier = modifier.width(120.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -94,7 +93,7 @@ fun TvPersonCard(
                 glow = CardDefaults.glow(
                     focusedGlow = androidx.tv.material3.Glow(
                         elevation = elevation,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                        elevationColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                     )
                 ),
                 border = CardDefaults.border(
@@ -106,37 +105,37 @@ fun TvPersonCard(
                     )
                 )
             ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                if (imageUrl != null) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                            .data(imageUrl)
-                            .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
-                            // People thumbnails are small: 120dp @ ~2x density
-                            .size(240, 240)
-                            .build(),
-                        contentDescription = name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Text(
-                        text = name.take(1).uppercase(),
-                        style = MaterialTheme.typography.headlineMedium
-                    )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (imageUrl != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                .data(imageUrl)
+                                .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
+                                .size(240, 240)
+                                .build(),
+                            contentDescription = name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Text(
+                            text = name.take(1).uppercase(),
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+                    }
                 }
             }
         }
 
         Column(
+            modifier = Modifier.defaultMinSize(minHeight = 56.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-            modifier = Modifier.defaultMinSize(minHeight = 56.dp)
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
                 text = name,

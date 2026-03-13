@@ -214,6 +214,7 @@ internal fun PlayerControls(
                         }
                     }
                 }
+            }
 
             // Bottom Controls
             Column(

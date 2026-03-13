@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,10 +29,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.ClosedCaption
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Speaker
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.runtime.Composable
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.LaunchedEffect
@@ -260,7 +264,7 @@ fun DetailScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                                         verticalArrangement = Arrangement.spacedBy(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                        itemVerticalAlignment = Alignment.CenterVertically
                                     ) {
                                         WatchStatusBadge(
                                             status = item.watchStatus,
@@ -708,18 +712,14 @@ private fun WatchStatusBadge(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             val (icon, text, color) = when (status) {
-                WatchStatus.WATCHED -> Triple(
-                    androidx.compose.material.icons.filled.Check,
-                    "Watched",
-                    Color(0xFF4CAF50)
-                )
+                WatchStatus.WATCHED -> Triple(Icons.Default.Check, "Watched", Color(0xFF4CAF50))
                 WatchStatus.IN_PROGRESS -> Triple(
-                    androidx.compose.material.icons.filled.PlayArrow,
+                    Icons.Default.PlayArrow,
                     if (progress != null) "${(progress * 100).toInt()}%" else "In Progress",
                     MaterialTheme.colorScheme.primary
                 )
                 else -> Triple(
-                    androidx.compose.material.icons.filled.VisibilityOff,
+                    Icons.Default.VisibilityOff,
                     "Unwatched",
                     MaterialTheme.colorScheme.onSurfaceVariant
                 )
