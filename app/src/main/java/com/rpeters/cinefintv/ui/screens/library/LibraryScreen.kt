@@ -15,9 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.foundation.lazy.grid.TvGridCells
-import androidx.tv.foundation.lazy.grid.TvLazyVerticalGrid
-import androidx.tv.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -98,8 +98,8 @@ fun LibraryScreen(
             }
 
             is LibraryUiState.Content -> {
-                TvLazyVerticalGrid(
-                    columns = TvGridCells.Adaptive(minSize = 260.dp),
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 260.dp),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 32.dp, bottom = 56.dp),
                     horizontalArrangement = Arrangement.spacedBy(24.dp),
