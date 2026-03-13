@@ -8,20 +8,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.tv.foundation.lazy.grid.TvGridCells
+import androidx.tv.foundation.lazy.grid.TvGridItemSpan
+import androidx.tv.foundation.lazy.grid.TvLazyVerticalGrid
+import androidx.tv.foundation.lazy.grid.items as gridItems
+import androidx.tv.foundation.lazy.list.TvLazyColumn
+import androidx.tv.foundation.lazy.list.items as listItems
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -107,14 +106,14 @@ private fun MusicGridContent(
     onOpenArtist: (BaseItemDto) -> Unit,
     imageUrl: (BaseItemDto) -> String?,
 ) {
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 260.dp),
+    TvLazyVerticalGrid(
+        columns = TvGridCells.Adaptive(minSize = 260.dp),
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
         horizontalArrangement = Arrangement.spacedBy(24.dp),
         verticalArrangement = Arrangement.spacedBy(32.dp),
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item(span = { TvGridItemSpan(maxLineSpan) }) {
             Text(
                 text = "Music",
                 style = MaterialTheme.typography.displaySmall,
@@ -122,7 +121,7 @@ private fun MusicGridContent(
             )
         }
 
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item(span = { TvGridItemSpan(maxLineSpan) }) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (state.viewType == MusicViewType.ALBUMS) {
                     Button(onClick = { onViewTypeChange(MusicViewType.ALBUMS) }) {
@@ -143,7 +142,7 @@ private fun MusicGridContent(
         }
 
         if (state.items.isEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
+            item(span = { TvGridItemSpan(maxLineSpan) }) {
                 Text(
                     text = "No ${state.viewType.name.lowercase()} found.",
                     style = MaterialTheme.typography.bodyLarge,
@@ -151,7 +150,7 @@ private fun MusicGridContent(
                 )
             }
         } else {
-            items(state.items, key = { it.id }) { item ->
+            gridItems(state.items, key = { it.id }) { item ->
                 val yearStr = item.productionYear?.toString()
                 if (state.viewType == MusicViewType.ALBUMS) {
                     TvMediaCard(
@@ -185,7 +184,7 @@ private fun AlbumDetailContent(
     val albumTitle = album.name ?: "Unknown Album"
     val albumYear = album.productionYear?.toString()
 
-    LazyColumn(
+    TvLazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -231,7 +230,7 @@ private fun AlbumDetailContent(
                 )
             }
         } else {
-            items(state.tracks, key = { it.id }) { track ->
+            listItems(state.tracks, key = { it.id }) { track ->
                 TrackRow(
                     track = track,
                     onPlay = { onPlayTrack(track) },
