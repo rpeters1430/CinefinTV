@@ -284,8 +284,10 @@ class DetailViewModel @Inject constructor(
                         imageUrl = repositories.stream.getWideCardImageUrl(season, parentItem = item),
                         episodeCount = episodeModels.size.takeIf { it > 0 } ?: (season.childCount ?: 0),
                         watchStatus = seasonWatchStatus,
-                        unwatchedCount = season.userData?.unplayedItemCount?.toInt() ?: episodeModels.count { !it.isWatched }.takeIf { it > 0 }
-                    )                }
+                        unwatchedCount = season.userData?.unplayedItemCount
+                            ?: episodeModels.count { !it.isWatched }.takeIf { it > 0 },
+                    )
+                }
                 seasonModels to mapOf(item.id.toString() to allEpisodes)
             }
             item.isSeason() -> {

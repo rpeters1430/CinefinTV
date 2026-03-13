@@ -10,6 +10,12 @@ import javax.inject.Inject
 @HiltAndroidApp
 class CinefinTvApplication : Application() {
 
+    private companion object {
+        // Mirrors Android trim levels without referencing deprecated framework constants.
+        const val TRIM_MEMORY_RUNNING_LOW_LEVEL = 10
+        const val TRIM_MEMORY_UI_HIDDEN_LEVEL = 20
+    }
+
     @Inject
     lateinit var remoteConfigRepository: RemoteConfigRepository
 
@@ -25,7 +31,9 @@ class CinefinTvApplication : Application() {
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         // Clear Coil memory cache on critical memory pressure
-        if (level >= TRIM_MEMORY_MODERATE) {
+        if (
+            level in TRIM_MEMORY_RUNNING_LOW_LEVEL until TRIM_MEMORY_UI_HIDDEN_LEVEL
+        ) {
             coil3.SingletonImageLoader.get(this).memoryCache?.clear()
         }
     }
