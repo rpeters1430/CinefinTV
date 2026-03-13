@@ -30,6 +30,9 @@ jobs:
       - name: Decode signing keystore
         run: echo "${{ secrets.CINEFIN_RELEASE_KEYSTORE_B64 }}" | base64 --decode > "$RUNNER_TEMP/cinefintv-release.keystore"
 
+      - name: Decode Google services config
+        run: echo "${{ secrets.CINEFIN_GOOGLE_SERVICES_JSON_B64 }}" | base64 --decode > app/google-services.json
+
       - name: Build Release APK
         run: ./gradlew :app:assembleRelease
         env:
