@@ -76,7 +76,7 @@ class EnhancedPlaybackManager @Inject constructor(
     ): PlaybackResult {
         return withContext(Dispatchers.IO) {
             try {
-                val itemId = item.id?.toString() ?: return@withContext PlaybackResult.Error("Item ID is null")
+                val itemId = item.id.toString()
                 if (BuildConfig.DEBUG) {
                     SecureLogger.v(TAG, "Getting optimal playback URL for: ${item.name} (${item.type}) [Audio: $audioStreamIndex, Sub: $subtitleStreamIndex]")
                 }
@@ -123,7 +123,7 @@ class EnhancedPlaybackManager @Inject constructor(
         audioStreamIndex: Int? = null,
         subtitleStreamIndex: Int? = null,
     ): PlaybackResult {
-        val itemId = item.id?.toString() ?: ""
+        val itemId = item.id.toString()
         val itemName = item.name ?: "Unknown"
         return withContext(Dispatchers.IO) {
             try {
@@ -169,14 +169,14 @@ class EnhancedPlaybackManager @Inject constructor(
         audioStreamIndex: Int? = null,
         subtitleStreamIndex: Int? = null,
     ): PlaybackResult {
-        val itemId = item.id?.toString() ?: ""
+        val itemId = item.id.toString()
         val serverUrl = repository.getCurrentServer()?.url
         val mediaSources = playbackInfo.mediaSources
         val playSessionId = playbackInfo.playSessionId
         val sessionId = java.util.UUID.randomUUID().toString()
         val deviceCaps = deviceCapabilities.getDirectPlayCapabilities()
         val networkType = connectivityChecker.getNetworkType()
-        val networkClass = networkType?.name ?: "UNKNOWN"
+        val networkClass = networkType.name
 
         if (mediaSources.isNullOrEmpty()) {
             return PlaybackResult.Error("No media sources available")
@@ -296,7 +296,7 @@ class EnhancedPlaybackManager @Inject constructor(
         val videoStream = source.findDefaultVideoStream()
         val audioStream = source.findDefaultAudioStream()
         
-        val deviceTierName = caps.deviceTier?.name ?: "UNKNOWN"
+        val deviceTierName = caps.deviceTier.name
         return PlaybackDecisionTrace(
             sessionId = sessionId,
             decision = decision,
@@ -633,7 +633,7 @@ class EnhancedPlaybackManager @Inject constructor(
             return PlaybackResult.Error("Unable to generate playback URL. Please check server connection.")
         }
 
-        val qualityName = effectiveQuality?.name ?: "AUTO"
+        val qualityName = effectiveQuality.name
         return PlaybackResult.Transcoding(
             url = transcodingUrl,
             targetBitrate = transcodingParams.maxBitrate,
