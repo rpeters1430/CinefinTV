@@ -37,3 +37,4 @@ google-services.json
 
 .gemini/
 gha-creds-*.json
+.superpowers/
