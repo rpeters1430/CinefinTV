@@ -16,6 +16,7 @@ import com.rpeters.cinefintv.data.playback.EnhancedPlaybackManager
 import com.rpeters.cinefintv.data.playback.PlaybackResult
 import com.rpeters.cinefintv.data.playback.RecommendationSeverity
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
+import com.rpeters.cinefintv.data.preferences.ResumePlaybackMode
 import com.rpeters.cinefintv.data.repository.JellyfinRepository
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
@@ -57,6 +58,7 @@ data class PlayerUiState(
     val episodeNumber: Int? = null,
     val streamUrl: String? = null,
     val savedPlaybackPositionMs: Long = 0L,
+    val shouldShowResumeDialog: Boolean = false,
     val isEpisodicContent: Boolean = false,
     val autoPlayNextEpisode: Boolean = true,
     val nextEpisodeId: String? = null,
@@ -161,7 +163,24 @@ class PlayerViewModel @Inject constructor(
                 ?.takeIf { it > 0L }
                 ?.div(TICKS_PER_MILLISECOND)
                 ?: 0L
-            val savedPlaybackPositionMs = maxOf(localPlaybackPositionMs, serverPlaybackPositionMs)
+
+            val playbackPrefs = playbackPreferencesRepository.preferences.first()
+            val resumeMode = playbackPrefs.resumePlaybackMode
+            
+            val potentialResumePositionMs = maxOf(localPlaybackPositionMs, serverPlaybackPositionMs)
+            
+            val (savedPlaybackPositionMs, shouldShowResumeDialog) = when (resumeMode) {
+                ResumePlaybackMode.NEVER -> 0L to false
+                ResumePlaybackMode.ASK -> {
+                    if (potentialResumePositionMs > 0L) {
+                        potentialResumePositionMs to true
+                    } else {
+                        0L to false
+                    }
+                }
+                ResumePlaybackMode.ALWAYS -> potentialResumePositionMs to false
+            }
+
             val title = item?.getDisplayTitle() ?: "Now Playing"
             val playbackInfo = runCatching { jellyfinRepository.getPlaybackInfo(itemId) }.getOrNull()
             val mediaSource = playbackInfo?.mediaSources?.firstOrNull()
@@ -174,7 +193,7 @@ class PlayerViewModel @Inject constructor(
                 item = item,
                 audioStreamIndex = null,
                 subtitleStreamIndex = null,
-                startPositionMs = savedPlaybackPositionMs,
+                startPositionMs = if (shouldShowResumeDialog) 0L else savedPlaybackPositionMs,
             ) ?: repositories.stream.getStreamUrl(itemId)
 
             if (streamUrl == null) {
@@ -225,6 +244,7 @@ class PlayerViewModel @Inject constructor(
                 episodeNumber = episodeNumber,
                 streamUrl = streamUrl,
                 savedPlaybackPositionMs = savedPlaybackPositionMs,
+                shouldShowResumeDialog = shouldShowResumeDialog,
                 isEpisodicContent = isEpisodicContent,
                 nextEpisodeId = nextEpisodeId,
                 nextEpisodeTitle = nextEpisodeTitle,
@@ -249,13 +269,16 @@ class PlayerViewModel @Inject constructor(
                 val streamUrl = uiState.value.streamUrl
                 if (streamUrl != null) {
                     setMediaItem(MediaItem.fromUri(streamUrl))
-                    val resumePositionMs = uiState.value.savedPlaybackPositionMs.coerceAtLeast(0L)
-                    if (resumePositionMs > 0L) {
-                        seekTo(resumePositionMs)
+                    val shouldAsk = uiState.value.shouldShowResumeDialog
+                    if (!shouldAsk) {
+                        val resumePositionMs = uiState.value.savedPlaybackPositionMs.coerceAtLeast(0L)
+                        if (resumePositionMs > 0L) {
+                            seekTo(resumePositionMs)
+                        }
+                        reportPlaybackStart(resumePositionMs)
+                        prepare()
+                        playWhenReady = true
                     }
-                    reportPlaybackStart(resumePositionMs)
-                    prepare()
-                    playWhenReady = true
                 }
             }
         _player = newPlayer
@@ -269,6 +292,20 @@ class PlayerViewModel @Inject constructor(
             )
         }
         return newPlayer
+    }
+
+    fun onResumePlayback(resume: Boolean) {
+        val position = if (resume) uiState.value.savedPlaybackPositionMs else 0L
+        _uiState.value = _uiState.value.copy(shouldShowResumeDialog = false)
+        
+        _player?.apply {
+            if (position > 0L) {
+                seekTo(position)
+            }
+            reportPlaybackStart(position)
+            prepare()
+            playWhenReady = true
+        }
     }
 
     fun selectAudioTrack(track: TrackOption, positionMs: Long, playWhenReady: Boolean) {

@@ -38,6 +38,10 @@ class PlayerViewModelTest {
         every { preferences } returns flowOf(PlaybackPreferences.DEFAULT)
     }
     private val jellyfinRepository: JellyfinRepository = mockk(relaxed = true)
+    private val enhancedPlaybackManager: com.rpeters.cinefintv.data.playback.EnhancedPlaybackManager = mockk {
+        coEvery { getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.Error("mock error")
+    }
+    private val adaptiveBitrateMonitor: com.rpeters.cinefintv.data.playback.AdaptiveBitrateMonitor = mockk(relaxed = true)
 
     init {
         mockkObject(PlaybackPositionStore)
@@ -49,6 +53,8 @@ class PlayerViewModelTest {
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "")),
             repositories = FakePlayerRepositories().coordinator,
             jellyfinRepository = jellyfinRepository,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
@@ -63,14 +69,18 @@ class PlayerViewModelTest {
     @Test
     fun load_whenStreamUrlMissing_setsStreamError() = runTest {
         val fakeRepositories = FakePlayerRepositories()
+        coEvery { fakeRepositories.media.getItemDetails("item-1") } returns ApiResult.Error("not found")
         every { fakeRepositories.stream.getStreamUrl("item-1") } returns null
         every { fakeRepositories.stream.getLogoUrl(any()) } returns null
         coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "item-1") } returns 0L
+        coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.Error("error")
 
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
             jellyfinRepository = jellyfinRepository,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
@@ -89,11 +99,14 @@ class PlayerViewModelTest {
         every { fakeRepositories.stream.getLogoUrl(any()) } returns null
         coEvery { fakeRepositories.media.getItemDetails("item-1") } returns ApiResult.Error("not found")
         coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "item-1") } returns 0L
+        coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.Error("error")
 
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
             jellyfinRepository = jellyfinRepository,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
@@ -110,6 +123,14 @@ class PlayerViewModelTest {
         val fakeRepositories = FakePlayerRepositories()
         every { fakeRepositories.stream.getStreamUrl("ep-1") } returns "https://stream/ep-1"
         every { fakeRepositories.stream.getLogoUrl(any()) } returns null
+        coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.DirectPlay(
+            url = "https://stream/ep-1",
+            container = "mkv",
+            videoCodec = "h264",
+            audioCodec = "aac",
+            bitrate = 1000,
+            reason = "test"
+        )
 
         val episodeItem: BaseItemDto = mockk()
         every { episodeItem.id } returns UUID.fromString("00000000-0000-0000-0000-000000000001")
@@ -118,6 +139,8 @@ class PlayerViewModelTest {
         every { episodeItem.parentIndexNumber } returns 2
         every { episodeItem.indexNumber } returns 5
         every { episodeItem.seriesId } returns null
+        every { episodeItem.userData } returns null
+        every { episodeItem.chapters } returns null
 
         coEvery { fakeRepositories.media.getItemDetails("ep-1") } returns ApiResult.Success(episodeItem)
         coEvery { fakeRepositories.media.getNextEpisode("ep-1") } returns ApiResult.Error("none")
@@ -127,6 +150,8 @@ class PlayerViewModelTest {
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "ep-1")),
             repositories = fakeRepositories.coordinator,
             jellyfinRepository = jellyfinRepository,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
@@ -144,12 +169,22 @@ class PlayerViewModelTest {
         val fakeRepositories = FakePlayerRepositories()
         every { fakeRepositories.stream.getStreamUrl("movie-1") } returns "https://stream/movie-1"
         every { fakeRepositories.stream.getLogoUrl(any()) } returns null
+        coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.DirectPlay(
+            url = "https://stream/movie-1",
+            container = "mkv",
+            videoCodec = "h264",
+            audioCodec = "aac",
+            bitrate = 1000,
+            reason = "test"
+        )
 
         val movieItem: BaseItemDto = mockk()
         every { movieItem.id } returns UUID.fromString("00000000-0000-0000-0000-000000000002")
         every { movieItem.name } returns "Test Movie"
         every { movieItem.type } returns BaseItemKind.MOVIE
         every { movieItem.seriesId } returns null
+        every { movieItem.userData } returns null
+        every { movieItem.chapters } returns null
 
         coEvery { fakeRepositories.media.getItemDetails("movie-1") } returns ApiResult.Success(movieItem)
         coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "movie-1") } returns 0L
@@ -158,6 +193,8 @@ class PlayerViewModelTest {
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "movie-1")),
             repositories = fakeRepositories.coordinator,
             jellyfinRepository = jellyfinRepository,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
@@ -170,17 +207,110 @@ class PlayerViewModelTest {
     }
 
     @Test
+    fun load_whenResumeModeIsNever_startsFromBeginning() = runTest {
+        val fakeRepositories = FakePlayerRepositories()
+        every { fakeRepositories.stream.getStreamUrl("item-1") } returns "https://stream/item-1"
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
+        coEvery { fakeRepositories.media.getItemDetails("item-1") } returns ApiResult.Error("not found")
+        coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "item-1") } returns 5000L
+        coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.Error("error")
+        
+        every { playbackPreferencesRepository.preferences } returns flowOf(
+            PlaybackPreferences.DEFAULT.copy(resumePlaybackMode = com.rpeters.cinefintv.data.preferences.ResumePlaybackMode.NEVER)
+        )
+
+        val viewModel = PlayerViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
+            repositories = fakeRepositories.coordinator,
+            jellyfinRepository = jellyfinRepository,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
+            playbackPreferencesRepository = playbackPreferencesRepository,
+            appContext = appContext,
+            okHttpClient = OkHttpClient(),
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(0L, state.savedPlaybackPositionMs)
+        assertEquals(false, state.shouldShowResumeDialog)
+    }
+
+    @Test
+    fun load_whenResumeModeIsAsk_showsResumeDialog() = runTest {
+        val fakeRepositories = FakePlayerRepositories()
+        every { fakeRepositories.stream.getStreamUrl("item-1") } returns "https://stream/item-1"
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
+        coEvery { fakeRepositories.media.getItemDetails("item-1") } returns ApiResult.Error("not found")
+        coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "item-1") } returns 5000L
+        coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.Error("error")
+        
+        every { playbackPreferencesRepository.preferences } returns flowOf(
+            PlaybackPreferences.DEFAULT.copy(resumePlaybackMode = com.rpeters.cinefintv.data.preferences.ResumePlaybackMode.ASK)
+        )
+
+        val viewModel = PlayerViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
+            repositories = fakeRepositories.coordinator,
+            jellyfinRepository = jellyfinRepository,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
+            playbackPreferencesRepository = playbackPreferencesRepository,
+            appContext = appContext,
+            okHttpClient = OkHttpClient(),
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(5000L, state.savedPlaybackPositionMs)
+        assertEquals(true, state.shouldShowResumeDialog)
+    }
+
+    @Test
+    fun load_whenResumeModeIsAlways_resumesFromSavedPosition() = runTest {
+        val fakeRepositories = FakePlayerRepositories()
+        every { fakeRepositories.stream.getStreamUrl("item-1") } returns "https://stream/item-1"
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
+        coEvery { fakeRepositories.media.getItemDetails("item-1") } returns ApiResult.Error("not found")
+        coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "item-1") } returns 5000L
+        coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.Error("error")
+        
+        every { playbackPreferencesRepository.preferences } returns flowOf(
+            PlaybackPreferences.DEFAULT.copy(resumePlaybackMode = com.rpeters.cinefintv.data.preferences.ResumePlaybackMode.ALWAYS)
+        )
+
+        val viewModel = PlayerViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
+            repositories = fakeRepositories.coordinator,
+            jellyfinRepository = jellyfinRepository,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
+            playbackPreferencesRepository = playbackPreferencesRepository,
+            appContext = appContext,
+            okHttpClient = OkHttpClient(),
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(5000L, state.savedPlaybackPositionMs)
+        assertEquals(false, state.shouldShowResumeDialog)
+    }
+
+    @Test
     fun setPlaybackSpeed_updatesPlaybackSpeedInState() = runTest {
         val fakeRepositories = FakePlayerRepositories()
         every { fakeRepositories.stream.getStreamUrl("item-1") } returns "https://stream/item-1"
         every { fakeRepositories.stream.getLogoUrl(any()) } returns null
         coEvery { fakeRepositories.media.getItemDetails("item-1") } returns ApiResult.Error("not found")
         coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "item-1") } returns 0L
+        coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.Error("error")
 
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
             jellyfinRepository = jellyfinRepository,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),

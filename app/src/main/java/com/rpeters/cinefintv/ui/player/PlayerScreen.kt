@@ -375,6 +375,14 @@ fun PlayerScreen(
                     )
                 }
 
+                if (uiState.shouldShowResumeDialog) {
+                    ResumeDialog(
+                        positionMs = uiState.savedPlaybackPositionMs,
+                        onResume = { viewModel.onResumePlayback(resume = true) },
+                        onStartOver = { viewModel.onResumePlayback(resume = false) }
+                    )
+                }
+
                 PlayerTrackPanel(
                     isVisible = controlsVisible && isTrackPanelVisible,
                     section = trackPanelSection,
@@ -392,6 +400,75 @@ fun PlayerScreen(
                     },
                     onInteract = ::onInteract
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun ResumeDialog(
+    positionMs: Long,
+    onResume: () -> Unit,
+    onStartOver: () -> Unit,
+) {
+    val focusRequester = remember { FocusRequester() }
+    
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.85f))
+            .onKeyEvent { 
+                // Consuming all keys to prevent interaction with underlying player controls
+                true 
+            }
+            .focusable(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
+                .padding(40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            Text(
+                text = "Resume Playback?",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            
+            val totalSeconds = positionMs / 1000
+            val hours = totalSeconds / 3600
+            val minutes = (totalSeconds % 3600) / 60
+            val seconds = totalSeconds % 60
+            val timeStr = if (hours > 0) {
+                String.format("%d:%02d:%02d", hours, minutes, seconds)
+            } else {
+                String.format("%02d:%02d", minutes, seconds)
+            }
+            
+            Text(
+                text = "Would you like to continue from $timeStr or start from the beginning?",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Button(
+                    onClick = onResume,
+                    modifier = Modifier.focusRequester(focusRequester)
+                ) {
+                    Text("Resume")
+                }
+                OutlinedButton(onClick = onStartOver) {
+                    Text("Start from beginning")
+                }
             }
         }
     }
