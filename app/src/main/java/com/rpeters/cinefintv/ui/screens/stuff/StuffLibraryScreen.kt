@@ -1,24 +1,32 @@
 package com.rpeters.cinefintv.ui.screens.stuff
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.screens.library.LibraryHeader
+import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -27,6 +35,9 @@ fun StuffLibraryScreen(
     viewModel: StuffLibraryViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val gridState = rememberLazyGridState()
+    val coroutineScope = rememberCoroutineScope()
+    val expressiveColors = LocalCinefinExpressiveColors.current
 
     LaunchedEffect(Unit) {
         viewModel.load()
@@ -66,22 +77,69 @@ fun StuffLibraryScreen(
         }
 
         is StuffLibraryUiState.Content -> {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 260.dp),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
-                verticalArrangement = Arrangement.spacedBy(32.dp),
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                expressiveColors.backgroundTop,
+                                expressiveColors.backgroundBottom,
+                            ),
+                        ),
+                    ),
             ) {
-                items(state.items, key = { it.id }) { item ->
-                    TvMediaCard(
-                        title = item.title,
-                        subtitle = item.subtitle,
-                        imageUrl = item.imageUrl,
-                        onClick = { onOpenItem(item.id) },
-                        watchStatus = item.watchStatus,
-                        playbackProgress = item.playbackProgress,
-                    )                }
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 260.dp),
+                    state = gridState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(32.dp),
+                ) {
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                        LibraryHeader(
+                            title = "Stuff",
+                            description = "Home videos and personal media with a gallery-style browsing surface.",
+                            count = state.items.size,
+                        )
+                    }
+
+                    itemsIndexed(state.items, key = { _, item -> item.id }) { index, item ->
+                        TvMediaCard(
+                            title = item.title,
+                            subtitle = item.subtitle,
+                            imageUrl = item.imageUrl,
+                            onClick = { onOpenItem(item.id) },
+                            onFocus = {
+                                val visibleItems = gridState.layoutInfo.visibleItemsInfo
+                                if (visibleItems.isEmpty()) return@TvMediaCard
+
+                                val rowsInView = visibleItems
+                                    .map { it.row }
+                                    .distinct()
+                                    .size
+                                    .coerceAtLeast(1)
+                                val estimatedColumns =
+                                    (visibleItems.size / rowsInView).coerceAtLeast(1)
+                                val firstVisible = visibleItems.first().index
+                                val lastVisible = visibleItems.last().index
+                                val shouldNudgeScroll =
+                                    index >= lastVisible - estimatedColumns ||
+                                        index <= firstVisible + estimatedColumns
+                                val targetIndex = (index - estimatedColumns).coerceAtLeast(0)
+
+                                if (shouldNudgeScroll && gridState.firstVisibleItemIndex != targetIndex) {
+                                    coroutineScope.launch {
+                                        gridState.animateScrollToItem(targetIndex)
+                                    }
+                                }
+                            },
+                            watchStatus = item.watchStatus,
+                            playbackProgress = item.playbackProgress,
+                        )
+                    }
+                }
             }
         }
     }

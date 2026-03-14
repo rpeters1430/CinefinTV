@@ -1,6 +1,8 @@
 package com.rpeters.cinefintv.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +32,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -50,6 +54,7 @@ import com.rpeters.cinefintv.ui.navigation.AuthRoutes
 import com.rpeters.cinefintv.ui.navigation.CinefinTvNavGraph
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
+import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.update.UpdateInfo
 import com.rpeters.cinefintv.update.UpdateInstallResult
 import com.rpeters.cinefintv.update.UpdateManager
@@ -80,6 +85,7 @@ fun CinefinTvApp(
     updateManager: UpdateManager? = null
 ) {
     CinefinTvTheme {
+        val expressiveColors = LocalCinefinExpressiveColors.current
         val navController = rememberNavController()
         val currentBackStack by navController.currentBackStackEntryAsState()
         val currentRoute = currentBackStack?.destination?.route
@@ -162,57 +168,89 @@ fun CinefinTvApp(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            expressiveColors.backgroundTop,
+                            expressiveColors.backgroundBottom,
+                        ),
+                    ),
+                )
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 if (showNav) {
-                    TabRow(
-                        selectedTabIndex = selectedTabIndex,
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 56.dp, vertical = 24.dp),
+                            .padding(horizontal = 32.dp, vertical = 20.dp)
                     ) {
-                        val activeRoute = currentRoute.orEmpty()
-                        navTabItems.forEachIndexed { index, item ->
-                            Tab(
-                                selected = index == selectedTabIndex,
-                                onFocus = {},
-                                onClick = {
-                                    if (currentRoute != item.route) {
-                                        navController.navigate(item.route) {
-                                            popUpTo(navController.graph.startDestinationId) {
-                                                saveState = true
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(28.dp))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        colors = listOf(
+                                            expressiveColors.chromeSurface,
+                                            expressiveColors.accentSurface.copy(alpha = 0.92f),
+                                        ),
+                                    ),
+                                )
+                                .border(
+                                    border = BorderStroke(
+                                        width = 1.dp,
+                                        color = expressiveColors.borderSubtle.copy(alpha = 0.75f),
+                                    ),
+                                    shape = RoundedCornerShape(28.dp),
+                                )
+                                .padding(horizontal = 12.dp, vertical = 12.dp)
+                        ) {
+                            TabRow(
+                                selectedTabIndex = selectedTabIndex,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                navTabItems.forEachIndexed { index, item ->
+                                    Tab(
+                                        selected = index == selectedTabIndex,
+                                        onFocus = {},
+                                        onClick = {
+                                            if (currentRoute != item.route) {
+                                                navController.navigate(item.route) {
+                                                    popUpTo(navController.graph.startDestinationId) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = true
+                                                }
                                             }
-                                            launchSingleTop = true
-                                            restoreState = true
+                                        },
+                                        colors = TabDefaults.pillIndicatorTabColors(
+                                            contentColor = MaterialTheme.colorScheme.onBackground,
+                                            inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            selectedContentColor = Color(0xFF0D1117),
+                                            focusedContentColor = expressiveColors.focusRing,
+                                            focusedSelectedContentColor = Color(0xFF0D1117),
+                                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                            disabledInactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                            disabledSelectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                        ),
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = item.icon,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Text(
+                                                text = item.label,
+                                                style = MaterialTheme.typography.labelMedium
+                                            )
                                         }
                                     }
-                                },
-                                colors = TabDefaults.pillIndicatorTabColors(
-                                    contentColor = MaterialTheme.colorScheme.onBackground,
-                                    inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    selectedContentColor = Color(0xFF0D1117),
-                                    focusedContentColor = Color(0xFFE50914),
-                                    focusedSelectedContentColor = Color(0xFF0D1117),
-                                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                    disabledInactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                    disabledSelectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                ),
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = item.icon,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        text = item.label,
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
                                 }
                             }
                         }

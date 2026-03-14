@@ -1,5 +1,8 @@
 package com.rpeters.cinefintv.ui.screens.music
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,11 +11,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -27,6 +36,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import org.jellyfin.sdk.model.api.BaseItemDto
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -36,11 +46,21 @@ fun MusicScreen(
     viewModel: MusicViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val expressiveColors = LocalCinefinExpressiveColors.current
 
     when (val state = uiState) {
         is MusicUiState.Loading -> {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                expressiveColors.backgroundTop,
+                                expressiveColors.backgroundBottom,
+                            ),
+                        ),
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -55,6 +75,14 @@ fun MusicScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                expressiveColors.backgroundTop,
+                                expressiveColors.backgroundBottom,
+                            ),
+                        ),
+                    )
                     .padding(48.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
@@ -106,18 +134,27 @@ private fun MusicGridContent(
     onOpenArtist: (BaseItemDto) -> Unit,
     imageUrl: (BaseItemDto) -> String?,
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 260.dp),
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        expressiveColors.backgroundTop,
+                        expressiveColors.backgroundBottom,
+                    ),
+                ),
+            ),
         contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
         horizontalArrangement = Arrangement.spacedBy(24.dp),
         verticalArrangement = Arrangement.spacedBy(32.dp),
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
-            Text(
-                text = "Music",
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onBackground,
+            MusicHero(
+                viewType = state.viewType,
+                count = state.items.size,
             )
         }
 
@@ -183,14 +220,42 @@ private fun AlbumDetailContent(
     val album = state.album
     val albumTitle = album.name ?: "Unknown Album"
     val albumYear = album.productionYear?.toString()
+    val expressiveColors = LocalCinefinExpressiveColors.current
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        expressiveColors.backgroundTop,
+                        expressiveColors.backgroundBottom,
+                    ),
+                ),
+            ),
         contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                expressiveColors.chromeSurface,
+                                expressiveColors.accentSurface.copy(alpha = 0.94f),
+                            ),
+                        ),
+                    )
+                    .border(
+                        BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.75f)),
+                        RoundedCornerShape(28.dp),
+                    )
+                    .padding(28.dp)
+            ) {
                 Text(
                     text = albumTitle,
                     style = MaterialTheme.typography.displaySmall,
@@ -246,6 +311,7 @@ private fun TrackRow(
     track: BaseItemDto,
     onPlay: () -> Unit,
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     val trackNumber = track.indexNumber
     val title = track.name ?: "Unknown Track"
     val durationTicks = track.runTimeTicks
@@ -260,7 +326,12 @@ private fun TrackRow(
 
     Button(
         onClick = onPlay,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.3f)),
+                RoundedCornerShape(18.dp),
+            ),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -287,6 +358,58 @@ private fun TrackRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun MusicHero(
+    viewType: MusicViewType,
+    count: Int,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    val icon = if (viewType == MusicViewType.ALBUMS) Icons.Default.Album else Icons.Default.GraphicEq
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        expressiveColors.heroStart.copy(alpha = 0.92f),
+                        expressiveColors.heroEnd.copy(alpha = 0.95f),
+                    ),
+                ),
+            )
+            .border(
+                BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.75f)),
+                RoundedCornerShape(28.dp),
+            )
+            .padding(28.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            androidx.tv.material3.Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = expressiveColors.titleAccent,
+            )
+            Text(
+                text = "Music",
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                text = if (viewType == MusicViewType.ALBUMS) "Browse albums with cover-forward focus states." else "Browse artists with a richer catalog view.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "$count ${viewType.name.lowercase()} loaded",
+                style = MaterialTheme.typography.labelLarge,
+                color = expressiveColors.titleAccent,
+            )
         }
     }
 }

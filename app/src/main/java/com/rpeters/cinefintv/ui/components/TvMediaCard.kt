@@ -27,7 +27,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
@@ -49,6 +51,7 @@ import coil3.request.crossfade
 
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
+import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import coil3.size.Size
 
 enum class WatchStatus { NONE, WATCHED, IN_PROGRESS }
@@ -67,6 +70,7 @@ fun TvMediaCard(
     unwatchedCount: Int? = null,
 ) {
     val performanceProfile = LocalPerformanceProfile.current
+    val expressiveColors = LocalCinefinExpressiveColors.current
     var isFocused by remember { mutableStateOf(false) }
 
     val elevation by animateDpAsState(
@@ -100,6 +104,21 @@ fun TvMediaCard(
                     }
                 }
         ) {
+            if (isFocused) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    expressiveColors.focusGlow,
+                                    Color.Transparent,
+                                ),
+                            ),
+                        )
+                )
+            }
             Card(
                 onClick = onClick,
                 modifier = Modifier
@@ -112,14 +131,14 @@ fun TvMediaCard(
                 glow = CardDefaults.glow(
                     focusedGlow = androidx.tv.material3.Glow(
                         elevation = elevation,
-                        elevationColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        elevationColor = expressiveColors.focusGlow
                     )
                 ),
                 border = CardDefaults.border(
                     focusedBorder = Border(
                         border = androidx.compose.foundation.BorderStroke(
                             width = 3.dp,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f)
+                            color = expressiveColors.focusRing
                         )
                     )
                 ),

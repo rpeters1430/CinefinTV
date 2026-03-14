@@ -543,7 +543,7 @@ class DetailViewModel @Inject constructor(
             isWatched = isWatched,
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,
-            unwatchedCount = if (isWatched) null else 1,
+            unwatchedCount = null,
         )
     }
 

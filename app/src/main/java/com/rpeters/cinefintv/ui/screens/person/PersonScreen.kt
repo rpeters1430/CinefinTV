@@ -2,6 +2,7 @@ package com.rpeters.cinefintv.ui.screens.person
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,6 +29,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -46,6 +49,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -57,6 +61,7 @@ fun PersonScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var focusedDescription by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
+    val expressiveColors = LocalCinefinExpressiveColors.current
 
     when (val state = uiState) {
         is PersonUiState.Loading -> {
@@ -193,7 +198,12 @@ fun PersonScreen(
                             }
 
                             Row(
-                                modifier = Modifier.padding(top = 8.dp),
+                                modifier = Modifier
+                                    .padding(top = 8.dp)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(expressiveColors.chromeSurface)
+                                    .border(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
+                                    .padding(10.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 OutlinedButton(
@@ -212,7 +222,7 @@ fun PersonScreen(
                                 Text(
                                     text = "Known For",
                                     style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.onBackground,
+                                    color = expressiveColors.titleAccent,
                                 )
                                 LazyRow(
                                     contentPadding = PaddingValues(horizontal = 32.dp),

@@ -20,8 +20,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -91,6 +96,13 @@ fun StuffDetailScreen(
 
         is StuffDetailUiState.Content -> {
             val item = state.item
+            val playButtonRequester = remember { FocusRequester() }
+            val moreShelfRequester = remember { FocusRequester() }
+            LaunchedEffect(state.isDeleted) {
+                if (state.isDeleted) {
+                    onBack()
+                }
+            }
             Box(modifier = Modifier.fillMaxSize()) {
                 if (item.backdropUrl != null) {
                     AsyncImage(
@@ -128,7 +140,7 @@ fun StuffDetailScreen(
                         })
                     }
 
-                    item { Spacer(Modifier.fillParentMaxHeight(0.35f)) }
+                    item { Spacer(Modifier.fillParentMaxHeight(0.22f)) }
                     item { ScrollFocusAnchor() }
                     item {
                         Column(
@@ -172,7 +184,16 @@ fun StuffDetailScreen(
                                 modifier = Modifier.padding(top = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                Button(onClick = { onPlay(item.id) }) {
+                                Button(
+                                    onClick = { onPlay(item.id) },
+                                    modifier = Modifier
+                                        .focusRequester(playButtonRequester)
+                                        .focusProperties {
+                                            if (state.moreFromStuff.isNotEmpty()) {
+                                                down = moreShelfRequester
+                                            }
+                                        }
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.PlayArrow,
                                         contentDescription = null,
@@ -180,7 +201,55 @@ fun StuffDetailScreen(
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text("Play")
                                 }
-                                OutlinedButton(onClick = onBack) { Text("Back") }
+                                if (state.isDeleting) {
+                                    Text(
+                                        text = "Deleting...",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+                                    )
+                                } else if (state.isDeleteConfirmationVisible) {
+                                    Button(
+                                        onClick = viewModel::confirmDelete,
+                                        modifier = Modifier.focusProperties {
+                                            if (state.moreFromStuff.isNotEmpty()) {
+                                                down = moreShelfRequester
+                                            }
+                                        }
+                                    ) { Text("Confirm Delete") }
+                                    OutlinedButton(
+                                        onClick = viewModel::cancelDelete,
+                                        modifier = Modifier.focusProperties {
+                                            if (state.moreFromStuff.isNotEmpty()) {
+                                                down = moreShelfRequester
+                                            }
+                                        }
+                                    ) { Text("Cancel") }
+                                } else {
+                                    OutlinedButton(
+                                        onClick = viewModel::requestDelete,
+                                        modifier = Modifier.focusProperties {
+                                            if (state.moreFromStuff.isNotEmpty()) {
+                                                down = moreShelfRequester
+                                            }
+                                        }
+                                    ) { Text("Delete") }
+                                }
+                                OutlinedButton(
+                                    onClick = onBack,
+                                    modifier = Modifier.focusProperties {
+                                        if (state.moreFromStuff.isNotEmpty()) {
+                                            down = moreShelfRequester
+                                        }
+                                    }
+                                ) { Text("Back") }
+                            }
+                            state.actionErrorMessage?.let {
+                                Text(
+                                    text = it,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
                             }
                         }
                     }
@@ -206,6 +275,17 @@ fun StuffDetailScreen(
                                             onClick = { onOpenItem(item.id) },
                                             watchStatus = item.watchStatus,
                                             playbackProgress = item.playbackProgress,
+                                            modifier = Modifier
+                                                .then(
+                                                    if (item == state.moreFromStuff.first()) {
+                                                        Modifier.focusRequester(moreShelfRequester)
+                                                    } else {
+                                                        Modifier
+                                                    }
+                                                )
+                                                .focusProperties {
+                                                    up = playButtonRequester
+                                                },
                                         )
                                     }
                                 }

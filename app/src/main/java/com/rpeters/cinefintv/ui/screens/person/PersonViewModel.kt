@@ -53,13 +53,17 @@ class PersonViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val personId: String = checkNotNull(savedStateHandle["personId"])
+    private val personId: String = savedStateHandle.get<String>("personId").orEmpty()
 
     private val _uiState = MutableStateFlow<PersonUiState>(PersonUiState.Loading)
     val uiState: StateFlow<PersonUiState> = _uiState.asStateFlow()
 
     init {
-        load()
+        if (personId.isBlank()) {
+            _uiState.value = PersonUiState.Error("Invalid person ID")
+        } else {
+            load()
+        }
     }
 
     fun load() {

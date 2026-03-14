@@ -26,6 +26,10 @@ sealed class StuffDetailUiState {
     data class Content(
         val item: StuffDetailModel,
         val moreFromStuff: List<StuffItemCardModel>,
+        val isDeleteConfirmationVisible: Boolean = false,
+        val isDeleting: Boolean = false,
+        val isDeleted: Boolean = false,
+        val actionErrorMessage: String? = null,
     ) : StuffDetailUiState()
 }
 
@@ -167,6 +171,50 @@ class StuffDetailViewModel @Inject constructor(
                 ),
                 moreFromStuff = moreItems,
             )
+        }
+    }
+
+    fun requestDelete() {
+        val state = _uiState.value as? StuffDetailUiState.Content ?: return
+        _uiState.value = state.copy(
+            isDeleteConfirmationVisible = true,
+            actionErrorMessage = null,
+        )
+    }
+
+    fun cancelDelete() {
+        val state = _uiState.value as? StuffDetailUiState.Content ?: return
+        _uiState.value = state.copy(
+            isDeleteConfirmationVisible = false,
+            actionErrorMessage = null,
+        )
+    }
+
+    fun confirmDelete() {
+        val state = _uiState.value as? StuffDetailUiState.Content ?: return
+
+        viewModelScope.launch {
+            _uiState.value = state.copy(
+                isDeleting = true,
+                actionErrorMessage = null,
+            )
+
+            when (val result = repositories.user.deleteItem(state.item.id)) {
+                is ApiResult.Success -> {
+                    _uiState.value = state.copy(
+                        isDeleting = false,
+                        isDeleteConfirmationVisible = false,
+                        isDeleted = true,
+                    )
+                }
+                is ApiResult.Error -> {
+                    _uiState.value = state.copy(
+                        isDeleting = false,
+                        actionErrorMessage = result.message,
+                    )
+                }
+                is ApiResult.Loading -> Unit
+            }
         }
     }
 }

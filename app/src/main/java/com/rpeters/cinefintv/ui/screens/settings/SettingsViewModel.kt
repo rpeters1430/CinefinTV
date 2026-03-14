@@ -3,8 +3,10 @@ package com.rpeters.cinefintv.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.preferences.AudioChannelPreference
+import com.rpeters.cinefintv.data.preferences.AccentColor
 import com.rpeters.cinefintv.data.preferences.CastPreferences
 import com.rpeters.cinefintv.data.preferences.CastPreferencesRepository
+import com.rpeters.cinefintv.data.preferences.ContrastLevel
 import com.rpeters.cinefintv.data.preferences.CredentialSecurityPreferences
 import com.rpeters.cinefintv.data.preferences.CredentialSecurityPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.LibraryActionsPreferences
@@ -16,6 +18,9 @@ import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferencesRepository
 import com.rpeters.cinefintv.data.preferences.SubtitleBackground
 import com.rpeters.cinefintv.data.preferences.SubtitleTextSize
+import com.rpeters.cinefintv.data.preferences.ThemeMode
+import com.rpeters.cinefintv.data.preferences.ThemePreferences
+import com.rpeters.cinefintv.data.preferences.ThemePreferencesRepository
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -28,6 +33,7 @@ import kotlinx.coroutines.launch
 
 data class SettingsUiState(
     val isLoading: Boolean = true,
+    val appearance: ThemePreferences = ThemePreferences.DEFAULT,
     val playback: PlaybackPreferences = PlaybackPreferences.DEFAULT,
     val subtitles: SubtitleAppearancePreferences = SubtitleAppearancePreferences.DEFAULT,
     val libraryActions: LibraryActionsPreferences = LibraryActionsPreferences.DEFAULT,
@@ -37,6 +43,7 @@ data class SettingsUiState(
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    private val themePreferencesRepository: ThemePreferencesRepository,
     private val playbackPreferencesRepository: PlaybackPreferencesRepository,
     private val subtitleAppearancePreferencesRepository: SubtitleAppearancePreferencesRepository,
     private val libraryActionsPreferencesRepository: LibraryActionsPreferencesRepository,
@@ -49,14 +56,22 @@ class SettingsViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             combine(
+                themePreferencesRepository.themePreferencesFlow,
                 playbackPreferencesRepository.preferences,
                 subtitleAppearancePreferencesRepository.preferencesFlow,
                 libraryActionsPreferencesRepository.preferences,
                 castPreferencesRepository.castPreferencesFlow,
                 credentialSecurityPreferencesRepository.preferences,
-            ) { playback, subtitles, libraryActions, cast, credentialSecurity ->
+            ) { values: Array<Any> ->
+                val appearance = values[0] as ThemePreferences
+                val playback = values[1] as PlaybackPreferences
+                val subtitles = values[2] as SubtitleAppearancePreferences
+                val libraryActions = values[3] as LibraryActionsPreferences
+                val cast = values[4] as CastPreferences
+                val credentialSecurity = values[5] as CredentialSecurityPreferences
                 SettingsUiState(
                     isLoading = false,
+                    appearance = appearance,
                     playback = playback,
                     subtitles = subtitles,
                     libraryActions = libraryActions,
@@ -67,6 +82,41 @@ class SettingsViewModel @Inject constructor(
                 _uiState.value = state
             }
         }
+    }
+
+    fun setThemeMode(themeMode: ThemeMode) {
+        updatePreference { themePreferencesRepository.setThemeMode(themeMode) }
+        _uiState.update { it.copy(appearance = it.appearance.copy(themeMode = themeMode)) }
+    }
+
+    fun setUseDynamicColors(enabled: Boolean) {
+        updatePreference { themePreferencesRepository.setUseDynamicColors(enabled) }
+        _uiState.update { it.copy(appearance = it.appearance.copy(useDynamicColors = enabled)) }
+    }
+
+    fun setAccentColor(accentColor: AccentColor) {
+        updatePreference { themePreferencesRepository.setAccentColor(accentColor) }
+        _uiState.update { it.copy(appearance = it.appearance.copy(accentColor = accentColor)) }
+    }
+
+    fun setContrastLevel(contrastLevel: ContrastLevel) {
+        updatePreference { themePreferencesRepository.setContrastLevel(contrastLevel) }
+        _uiState.update { it.copy(appearance = it.appearance.copy(contrastLevel = contrastLevel)) }
+    }
+
+    fun setUseThemedIcon(enabled: Boolean) {
+        updatePreference { themePreferencesRepository.setUseThemedIcon(enabled) }
+        _uiState.update { it.copy(appearance = it.appearance.copy(useThemedIcon = enabled)) }
+    }
+
+    fun setEnableEdgeToEdge(enabled: Boolean) {
+        updatePreference { themePreferencesRepository.setEnableEdgeToEdge(enabled) }
+        _uiState.update { it.copy(appearance = it.appearance.copy(enableEdgeToEdge = enabled)) }
+    }
+
+    fun setRespectReduceMotion(enabled: Boolean) {
+        updatePreference { themePreferencesRepository.setRespectReduceMotion(enabled) }
+        _uiState.update { it.copy(appearance = it.appearance.copy(respectReduceMotion = enabled)) }
     }
 
     fun setAutoPlayNextEpisode(enabled: Boolean) {

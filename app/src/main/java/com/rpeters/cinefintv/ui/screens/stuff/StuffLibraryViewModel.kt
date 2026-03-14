@@ -45,7 +45,7 @@ class StuffLibraryViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.value = StuffLibraryUiState.Loading
-            when (val result = repositories.media.getLibraryItems(collectionType = "homevideos", limit = 500)) {
+            when (val result = repositories.media.getAllLibraryItems(collectionType = "homevideos")) {
                 is ApiResult.Success -> {
                     val cards = result.data.map {
                         val isResumable = it.canResume()

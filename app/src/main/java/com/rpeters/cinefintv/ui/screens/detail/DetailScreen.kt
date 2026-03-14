@@ -46,6 +46,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -75,6 +79,7 @@ import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.TvPersonCard
 import com.rpeters.cinefintv.ui.components.WatchStatus
+import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 
@@ -92,6 +97,7 @@ fun DetailScreen(
     val coroutineScope = rememberCoroutineScope()
     val performanceProfile = LocalPerformanceProfile.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val expressiveColors = LocalCinefinExpressiveColors.current
 
     // Refresh data when screen becomes active (e.g. returning from player)
     LaunchedEffect(lifecycleOwner) {
@@ -154,6 +160,16 @@ fun DetailScreen(
                 var subtitlesExpanded by remember { mutableStateOf(false) }
                 var selectedSubtitle by remember(item.subtitleOptions) {
                     mutableStateOf(item.subtitleOptions.firstOrNull())
+                }
+                val playButtonRequester = remember { FocusRequester() }
+                val primaryShelfRequester = remember { FocusRequester() }
+                val castShelfRequester = remember { FocusRequester() }
+                val relatedShelfRequester = remember { FocusRequester() }
+                val firstShelfRequester = when {
+                    state.seasons.isNotEmpty() || episodes.isNotEmpty() -> primaryShelfRequester
+                    state.cast.isNotEmpty() -> castShelfRequester
+                    state.related.isNotEmpty() -> relatedShelfRequester
+                    else -> null
                 }
 
                 LaunchedEffect(state.isDeleted) {
@@ -272,22 +288,7 @@ fun DetailScreen(
                                         )
 
                                         item.metaBadges.forEach { badge ->
-                                            Surface(
-                                                shape = RoundedCornerShape(8.dp),
-                                                colors = SurfaceDefaults.colors(
-                                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                                )
-                                            ) {
-                                                Text(
-                                                    text = badge,
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    color = MaterialTheme.colorScheme.onBackground,
-                                                    modifier = Modifier.padding(
-                                                        horizontal = 12.dp,
-                                                        vertical = 6.dp,
-                                                    ),
-                                                )
-                                            }
+                                            DetailChip(label = badge)
                                         }
                                     }
                                 }
@@ -299,47 +300,7 @@ fun DetailScreen(
                                         verticalArrangement = Arrangement.spacedBy(12.dp),
                                     ) {
                                         item.infoRows.forEach { infoRow ->
-                                            Surface(
-                                                shape = RoundedCornerShape(12.dp),
-                                                colors = SurfaceDefaults.colors(
-                                                    containerColor = Color.Black.copy(alpha = 0.4f)
-                                                ),
-                                                modifier = Modifier.border(
-                                                    width = 1.dp,
-                                                    color = MaterialTheme.colorScheme.border.copy(alpha = 0.3f),
-                                                    shape = RoundedCornerShape(12.dp)
-                                                )
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                                ) {
-                                                    if (infoRow.icon != null) {
-                                                        Icon(
-                                                            imageVector = infoRow.icon,
-                                                            contentDescription = null,
-                                                            modifier = Modifier.size(20.dp),
-                                                            tint = MaterialTheme.colorScheme.primary
-                                                        )
-                                                    }
-                                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                        Text(
-                                                            text = infoRow.label.uppercase(),
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                            fontWeight = FontWeight.Bold
-                                                        )
-                                                        Text(
-                                                            text = infoRow.value,
-                                                            style = MaterialTheme.typography.titleSmall,
-                                                            color = MaterialTheme.colorScheme.onBackground,
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis,
-                                                        )
-                                                    }
-                                                }
-                                            }
+                                            DetailInfoChip(infoRow = infoRow)
                                         }
                                     }
                                 }
@@ -363,49 +324,11 @@ fun DetailScreen(
                                     if (technicalRows.isNotEmpty()) {
                                         FlowRow(
                                             modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                                        ) {
-                                            technicalRows.forEach { infoRow ->
-                                                Surface(
-                                                    shape = RoundedCornerShape(12.dp),
-                                                    colors = SurfaceDefaults.colors(
-                                                        containerColor = Color.Black.copy(alpha = 0.4f)
-                                                    ),
-                                                    modifier = Modifier.border(
-                                                        width = 1.dp,
-                                                        color = MaterialTheme.colorScheme.border.copy(alpha = 0.3f),
-                                                        shape = RoundedCornerShape(12.dp)
-                                                    )
-                                                ) {
-                                                    Row(
-                                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                                    ) {
-                                                        infoRow.icon?.let {
-                                                            Icon(
-                                                                imageVector = it,
-                                                                contentDescription = null,
-                                                                modifier = Modifier.size(20.dp),
-                                                                tint = MaterialTheme.colorScheme.primary
-                                                            )
-                                                        }
-                                                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                            Text(
-                                                                text = infoRow.label.uppercase(),
-                                                                style = MaterialTheme.typography.labelSmall,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                                fontWeight = FontWeight.Bold
-                                                            )
-                                                            Text(
-                                                                text = infoRow.value,
-                                                                style = MaterialTheme.typography.titleSmall,
-                                                                color = MaterialTheme.colorScheme.onBackground,
-                                                            )
-                                                        }
-                                                    }
-                                                }
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    ) {
+                                        technicalRows.forEach { infoRow ->
+                                                DetailInfoChip(infoRow = infoRow)
                                             }
                                         }
                                     }
@@ -421,7 +344,11 @@ fun DetailScreen(
                                         )
                                         Button(
                                             onClick = { subtitlesExpanded = !subtitlesExpanded },
-                                            modifier = Modifier.onFocusChanged { if (it.isFocused) focusedDescription = null }
+                                            modifier = Modifier
+                                                .onFocusChanged { if (it.isFocused) focusedDescription = null }
+                                                .focusProperties {
+                                                    firstShelfRequester?.let { down = it }
+                                                }
                                         ) {
                                             Icon(Icons.Default.ClosedCaption, contentDescription = null)
                                             Spacer(Modifier.width(8.dp))
@@ -477,13 +404,34 @@ fun DetailScreen(
                                 )
 
                                 Row(
-                                    modifier = Modifier.padding(top = 8.dp),
+                                    modifier = Modifier
+                                        .padding(top = 8.dp)
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(
+                                            Brush.horizontalGradient(
+                                                colors = listOf(
+                                                    expressiveColors.chromeSurface,
+                                                    expressiveColors.accentSurface.copy(alpha = 0.88f),
+                                                ),
+                                            ),
+                                        )
+                                        .border(
+                                            width = 1.dp,
+                                            color = expressiveColors.borderSubtle.copy(alpha = 0.7f),
+                                            shape = RoundedCornerShape(20.dp),
+                                        )
+                                        .padding(12.dp),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
                                     state.playableItemId?.let { playableItemId ->
                                         Button(
                                             onClick = { onPlay(playableItemId) },
-                                            modifier = Modifier.onFocusChanged { if (it.isFocused) focusedDescription = null }
+                                            modifier = Modifier
+                                                .focusRequester(playButtonRequester)
+                                                .onFocusChanged { if (it.isFocused) focusedDescription = null }
+                                                .focusProperties {
+                                                    firstShelfRequester?.let { down = it }
+                                                }
                                         ) {
                                             Text(state.playButtonLabel)
                                         }
@@ -516,7 +464,11 @@ fun DetailScreen(
                                         } else {
                                             OutlinedButton(
                                                 onClick = viewModel::requestDelete,
-                                                modifier = Modifier.onFocusChanged { if (it.isFocused) focusedDescription = null }
+                                                modifier = Modifier
+                                                    .onFocusChanged { if (it.isFocused) focusedDescription = null }
+                                                    .focusProperties {
+                                                        firstShelfRequester?.let { down = it }
+                                                    }
                                             ) {
                                                 Text("Delete")
                                             }
@@ -529,7 +481,11 @@ fun DetailScreen(
                                                 viewModel.dismissActionError()
                                                 onBack()
                                             },
-                                            modifier = Modifier.onFocusChanged { if (it.isFocused) focusedDescription = null }
+                                            modifier = Modifier
+                                                .onFocusChanged { if (it.isFocused) focusedDescription = null }
+                                                .focusProperties {
+                                                    firstShelfRequester?.let { down = it }
+                                                }
                                         ) {
                                             Text("Back")
                                         }
@@ -568,7 +524,18 @@ fun DetailScreen(
                                                 watchStatus = season.watchStatus,
                                                 playbackProgress = season.playbackProgress,
                                                 unwatchedCount = season.unwatchedCount,
-                                                )                                        }
+                                                modifier = Modifier
+                                                    .then(if (season == state.seasons.first()) Modifier.focusRequester(primaryShelfRequester) else Modifier)
+                                                    .focusProperties {
+                                                        up = playButtonRequester
+                                                        if (state.cast.isNotEmpty()) {
+                                                            down = castShelfRequester
+                                                        } else if (state.related.isNotEmpty()) {
+                                                            down = relatedShelfRequester
+                                                        }
+                                                    },
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -604,7 +571,18 @@ fun DetailScreen(
                                                 watchStatus = episode.watchStatus,
                                                 playbackProgress = episode.playbackProgress,
                                                 unwatchedCount = episode.unwatchedCount,
-                                                )                                        }
+                                                modifier = Modifier
+                                                    .then(if (episode == episodes.first()) Modifier.focusRequester(primaryShelfRequester) else Modifier)
+                                                    .focusProperties {
+                                                        up = playButtonRequester
+                                                        if (state.cast.isNotEmpty()) {
+                                                            down = castShelfRequester
+                                                        } else if (state.related.isNotEmpty()) {
+                                                            down = relatedShelfRequester
+                                                        }
+                                                    },
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -637,6 +615,18 @@ fun DetailScreen(
                                                 imageUrl = person.imageUrl,
                                                 onClick = { onOpenPerson(person.id) },
                                                 onFocus = { focusedDescription = null },
+                                                modifier = Modifier
+                                                    .then(if (person == state.cast.first()) Modifier.focusRequester(castShelfRequester) else Modifier)
+                                                    .focusProperties {
+                                                        up = if (state.seasons.isNotEmpty() || episodes.isNotEmpty()) {
+                                                            primaryShelfRequester
+                                                        } else {
+                                                            playButtonRequester
+                                                        }
+                                                        if (state.related.isNotEmpty()) {
+                                                            down = relatedShelfRequester
+                                                        }
+                                                    },
                                             )
                                         }
                                     }
@@ -674,7 +664,17 @@ fun DetailScreen(
                                                 watchStatus = related.watchStatus,
                                                 playbackProgress = related.playbackProgress,
                                                 unwatchedCount = related.unwatchedCount,
-                                                )                                        }
+                                                modifier = Modifier
+                                                    .then(if (related == state.related.first()) Modifier.focusRequester(relatedShelfRequester) else Modifier)
+                                                    .focusProperties {
+                                                        up = when {
+                                                            state.cast.isNotEmpty() -> castShelfRequester
+                                                            state.seasons.isNotEmpty() || episodes.isNotEmpty() -> primaryShelfRequester
+                                                            else -> playButtonRequester
+                                                        }
+                                                    },
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -737,6 +737,83 @@ private fun WatchStatusBadge(
                 color = color,
                 fontWeight = FontWeight.Bold
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun DetailChip(
+    label: String,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        colors = SurfaceDefaults.colors(
+            containerColor = expressiveColors.pillMuted,
+        ),
+        modifier = Modifier.border(
+            width = 1.dp,
+            color = expressiveColors.borderSubtle.copy(alpha = 0.65f),
+            shape = RoundedCornerShape(999.dp),
+        )
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+        )
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun DetailInfoChip(
+    infoRow: DetailInfoRowModel,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        colors = SurfaceDefaults.colors(
+            containerColor = expressiveColors.chromeSurface,
+        ),
+        modifier = Modifier.border(
+            width = 1.dp,
+            color = expressiveColors.borderSubtle.copy(alpha = 0.55f),
+            shape = RoundedCornerShape(16.dp)
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            infoRow.icon?.let {
+                Icon(
+                    imageVector = it,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = expressiveColors.titleAccent
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = infoRow.label.uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = infoRow.value,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }

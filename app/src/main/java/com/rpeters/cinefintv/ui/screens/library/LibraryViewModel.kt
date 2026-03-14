@@ -52,22 +52,16 @@ class LibraryViewModel @Inject constructor(
             _uiState.value = LibraryUiState.Loading
 
             when (
-                val result = repositories.media.getLibraryItems(
+                val result = repositories.media.getAllLibraryItems(
                     itemTypes = category.itemTypes,
-                    limit = 10_000,
                     collectionType = category.collectionType,
                 )
             ) {
                 is ApiResult.Success -> {
-                    val items = result.data.mapNotNull(::toCardModel)
-                    _uiState.value = if (items.isEmpty()) {
-                        LibraryUiState.Error("No ${category.title.lowercase()} were found.")
-                    } else {
-                        LibraryUiState.Content(
-                            title = category.title,
-                            items = items,
-                        )
-                    }
+                    _uiState.value = LibraryUiState.Content(
+                        title = category.title,
+                        items = result.data.mapNotNull(::toCardModel),
+                    )
                 }
                 is ApiResult.Error -> {
                     _uiState.value = LibraryUiState.Error(result.message)

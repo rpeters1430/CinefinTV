@@ -50,6 +50,8 @@ class SearchViewModel @Inject constructor(
             it.copy(
                 query = value,
                 errorMessage = null,
+                results = if (value.isBlank()) emptyList() else it.results,
+                isLoading = if (value.isBlank()) false else it.isLoading,
             )
         }
     }

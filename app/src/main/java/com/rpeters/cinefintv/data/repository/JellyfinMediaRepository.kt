@@ -299,6 +299,50 @@ class JellyfinMediaRepository @Inject constructor(
         }
     }
 
+    suspend fun getAllLibraryItems(
+        parentId: String? = null,
+        itemTypes: String? = null,
+        collectionType: String? = null,
+        pageSize: Int = 250,
+        maxItems: Int = 10_000,
+    ): ApiResult<List<BaseItemDto>> {
+        val allItems = mutableListOf<BaseItemDto>()
+        var startIndex = 0
+
+        while (allItems.size < maxItems) {
+            val remaining = maxItems - allItems.size
+            val requestLimit = minOf(pageSize, remaining)
+            when (
+                val result = getLibraryItems(
+                    parentId = parentId,
+                    itemTypes = itemTypes,
+                    startIndex = startIndex,
+                    limit = requestLimit,
+                    collectionType = collectionType,
+                )
+            ) {
+                is ApiResult.Success -> {
+                    val pageItems = result.data
+                    if (pageItems.isEmpty()) {
+                        break
+                    }
+
+                    allItems += pageItems
+
+                    if (pageItems.size < requestLimit) {
+                        break
+                    }
+
+                    startIndex += pageItems.size
+                }
+                is ApiResult.Error -> return result
+                is ApiResult.Loading -> Unit
+            }
+        }
+
+        return ApiResult.Success(allItems)
+    }
+
     suspend fun getRecentlyAdded(limit: Int = 50, forceRefresh: Boolean = false): ApiResult<List<BaseItemDto>> {
         // ✅ FIX: Use withServerClient helper to ensure fresh server/client on token refresh
         return withServerClient("getRecentlyAdded") { server, client ->

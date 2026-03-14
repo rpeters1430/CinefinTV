@@ -2,8 +2,10 @@ package com.rpeters.cinefintv.ui.screens.search
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,16 +24,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -40,84 +48,150 @@ fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val expressiveColors = LocalCinefinExpressiveColors.current
 
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 260.dp),
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 32.dp, bottom = 48.dp),
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
-        verticalArrangement = Arrangement.spacedBy(32.dp),
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        expressiveColors.backgroundTop,
+                        expressiveColors.backgroundBottom,
+                    ),
+                ),
+            ),
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 260.dp),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 32.dp, bottom = 48.dp),
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            verticalArrangement = Arrangement.spacedBy(32.dp),
+        ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                SearchHero(
+                    query = uiState.query,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+            }
+
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                SearchField(
+                    value = uiState.query,
+                    onValueChange = viewModel::updateQuery,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            when {
+                uiState.query.isBlank() -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            text = "Browse with intent: search movies, TV, music, and library content from one surface.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                uiState.isLoading -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            text = "Searching for \"${uiState.query}\"...",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                }
+
+                uiState.errorMessage != null -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            text = uiState.errorMessage.orEmpty(),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+
+                uiState.results.isEmpty() && !uiState.isLoading -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            text = "No results found for \"${uiState.query}\"",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                else -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            text = "${uiState.results.size} results",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = expressiveColors.titleAccent,
+                        )
+                    }
+                    items(uiState.results, key = { it.id }) { item ->
+                        TvMediaCard(
+                            title = item.title,
+                            subtitle = item.subtitle,
+                            imageUrl = item.imageUrl,
+                            onClick = { onOpenItem(item.id) },
+                            watchStatus = item.watchStatus,
+                            playbackProgress = item.playbackProgress,
+                            unwatchedCount = item.unwatchedCount,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun SearchHero(
+    query: String,
+    modifier: Modifier = Modifier,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .background(
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        expressiveColors.heroStart.copy(alpha = 0.9f),
+                        expressiveColors.heroEnd.copy(alpha = 0.95f),
+                    ),
+                ),
+            )
+            .border(
+                border = BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.8f)),
+                shape = MaterialTheme.shapes.large,
+            )
+            .padding(horizontal = 28.dp, vertical = 24.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = expressiveColors.titleAccent,
+            )
             Text(
-                text = "Search",
+                text = if (query.isBlank()) "Search" else "Searching \"$query\"",
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(bottom = 16.dp)
             )
-        }
-
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            SearchField(
-                value = uiState.query,
-                onValueChange = viewModel::updateQuery,
-                modifier = Modifier.padding(bottom = 24.dp)
+            Text(
+                text = "Fast, full-library discovery with a TV-first focus flow.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-
-        when {
-            uiState.query.isBlank() -> {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text(
-                        text = "Type to search movies, shows, music, and more.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            uiState.isLoading -> {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text(
-                        text = "Searching for \"${uiState.query}\"...",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-            }
-
-            uiState.errorMessage != null -> {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text(
-                        text = uiState.errorMessage.orEmpty(),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-
-            uiState.results.isEmpty() && !uiState.isLoading -> {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text(
-                        text = "No results found for \"${uiState.query}\"",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            else -> {
-                items(uiState.results, key = { it.id }) { item ->
-                    TvMediaCard(
-                        title = item.title,
-                        subtitle = item.subtitle,
-                        imageUrl = item.imageUrl,
-                        onClick = { onOpenItem(item.id) },
-                        watchStatus = item.watchStatus,
-                        playbackProgress = item.playbackProgress,
-                        unwatchedCount = item.unwatchedCount,
-                        )                }
-            }
         }
     }
 }
@@ -131,6 +205,7 @@ private fun SearchField(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(12.dp)
+    val expressiveColors = LocalCinefinExpressiveColors.current
     
     val borderColor by animateColorAsState(
         targetValue = if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.border,
@@ -155,7 +230,12 @@ private fun SearchField(
                 shape = shape,
             )
             .background(
-                color = if (isFocused) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        if (isFocused) expressiveColors.accentSurface else MaterialTheme.colorScheme.surface,
+                        expressiveColors.elevatedSurface,
+                    ),
+                ),
                 shape = shape
             )
             .padding(horizontal = 20.dp, vertical = 16.dp),
