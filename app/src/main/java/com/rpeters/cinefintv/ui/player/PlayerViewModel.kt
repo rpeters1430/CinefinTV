@@ -192,6 +192,7 @@ class PlayerViewModel @Inject constructor(
 
             var nextEpisodeId: String? = null
             var nextEpisodeTitle: String? = null
+            var nextEpisodeThumbnailUrl: String? = null
 
             if (isEpisodicContent) {
                 val nextResult = repositories.media.getNextEpisode(itemId)
@@ -200,6 +201,7 @@ class PlayerViewModel @Inject constructor(
                     if (nextEpisode != null) {
                         nextEpisodeId = nextEpisode.id.toString()
                         nextEpisodeTitle = nextEpisode.getDisplayTitle()
+                        nextEpisodeThumbnailUrl = repositories.stream.getImageUrl(nextEpisode.id.toString())
                     }
                 }
             }
@@ -215,6 +217,7 @@ class PlayerViewModel @Inject constructor(
                 isEpisodicContent = isEpisodicContent,
                 nextEpisodeId = nextEpisodeId,
                 nextEpisodeTitle = nextEpisodeTitle,
+                nextEpisodeThumbnailUrl = nextEpisodeThumbnailUrl,
                 audioTracks = audioTracks,
                 subtitleTracks = subtitleTracks,
                 chapters = chapters,
@@ -308,6 +311,29 @@ class PlayerViewModel @Inject constructor(
         reloadStream(positionMs = positionMs, playWhenReady = playWhenReady)
     }
 
+    private fun applyTrackSelection(audioTrack: TrackOption?, subtitleTrack: TrackOption?) {
+        val player = _player ?: return
+        
+        val builder = player.trackSelectionParameters.buildUpon()
+        
+        // Audio selection
+        if (audioTrack != null) {
+            builder.setPreferredAudioLanguage(audioTrack.language)
+        }
+        
+        // Subtitle selection
+        if (subtitleTrack != null) {
+            builder.setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, false)
+            builder.setPreferredTextLanguage(subtitleTrack.language)
+            builder.setSelectUndeterminedTextLanguage(true)
+        } else {
+            builder.setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, true)
+            builder.setPreferredTextLanguage(null)
+        }
+        
+        player.trackSelectionParameters = builder.build()
+    }
+
     private fun reloadStream(positionMs: Long, playWhenReady: Boolean) {
         val currentItemId = uiState.value.itemId
         if (currentItemId.isBlank()) return
@@ -335,6 +361,7 @@ class PlayerViewModel @Inject constructor(
                 }
                 reportPlaybackStart(positionMs)
                 prepare()
+                applyTrackSelection(uiState.value.selectedAudioTrack, uiState.value.selectedSubtitleTrack)
                 this.playWhenReady = playWhenReady
             }
         }
