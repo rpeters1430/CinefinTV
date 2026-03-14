@@ -5,9 +5,11 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,17 +25,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ClosedCaption
-import androidx.compose.material.icons.filled.Forward30
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Replay30
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
-import com.rpeters.cinefintv.core.constants.Constants
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,7 +49,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -69,10 +68,9 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
-import androidx.tv.material3.Surface
-import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -84,10 +82,12 @@ internal fun PlayerControls(
     uiState: PlayerUiState,
     player: ExoPlayer,
     playPauseFocusRequester: FocusRequester,
+    seekBarFocusRequester: FocusRequester,
     onInteract: () -> Unit,
     onSettingsClick: (SettingsSection, Rect) -> Unit,
     onBack: () -> Unit,
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     val defaultBounds = Rect.Zero
     val (subtitleButtonBounds, setSubtitleButtonBounds) = remember { mutableStateOf(defaultBounds) }
     val (audioButtonBounds, setAudioButtonBounds) = remember { mutableStateOf(defaultBounds) }
@@ -96,9 +96,6 @@ internal fun PlayerControls(
     val backFocusRequester = remember { FocusRequester() }
     val subtitleFocusRequester = remember { FocusRequester() }
     val audioFocusRequester = remember { FocusRequester() }
-    val seekBarFocusRequester = remember { FocusRequester() }
-    val rewindFocusRequester = remember { FocusRequester() }
-    val forwardFocusRequester = remember { FocusRequester() }
     val speedFocusRequester = remember { FocusRequester() }
     val settingsFocusRequester = remember { FocusRequester() }
 
@@ -113,9 +110,9 @@ internal fun PlayerControls(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color.Black.copy(alpha = 0.7f),
+                            expressiveColors.heroStart.copy(alpha = 0.58f),
                             Color.Transparent,
-                            Color.Black.copy(alpha = 0.7f)
+                            Color.Black.copy(alpha = 0.82f)
                         )
                     )
                 )
@@ -221,7 +218,22 @@ internal fun PlayerControls(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
-                    .padding(horizontal = 48.dp, vertical = 32.dp),
+                    .padding(horizontal = 48.dp, vertical = 32.dp)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                expressiveColors.chromeSurface.copy(alpha = 0.86f),
+                                expressiveColors.accentSurface.copy(alpha = 0.94f),
+                            ),
+                        ),
+                        shape = RoundedCornerShape(28.dp),
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = expressiveColors.borderSubtle.copy(alpha = 0.7f),
+                        shape = RoundedCornerShape(28.dp),
+                    )
+                    .padding(horizontal = 28.dp, vertical = 22.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Progress Bar
@@ -250,6 +262,7 @@ internal fun PlayerControls(
                     SeekBarControl(
                         position = position,
                         duration = duration,
+                        chapters = uiState.chapters,
                         player = player,
                         focusRequester = seekBarFocusRequester,
                         down = playPauseFocusRequester,
@@ -311,7 +324,7 @@ internal fun PlayerControls(
                                     .focusRequester(audioFocusRequester)
                                     .focusProperties {
                                         left = subtitleFocusRequester
-                                        right = rewindFocusRequester
+                                        right = playPauseFocusRequester
                                         up = backFocusRequester
                                         down = seekBarFocusRequester
                                     }
@@ -326,24 +339,6 @@ internal fun PlayerControls(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            TransportButton(
-                                label = "Back 30",
-                                icon = Icons.Default.Replay30,
-                                buttonSize = 58.dp,
-                                iconSize = 28.dp,
-                                focusRequester = rewindFocusRequester,
-                                left = audioFocusRequester,
-                                right = playPauseFocusRequester,
-                                up = seekBarFocusRequester,
-                                down = rewindFocusRequester,
-                                onClick = {
-                                    onInteract()
-                                    player.seekTo((position - Constants.PLAYER_REWIND_INCREMENT_MS).coerceAtLeast(0))
-                                },
-                            )
-
-                            Spacer(Modifier.width(16.dp))
-
                             Button(
                                 onClick = {
                                     onInteract()
@@ -353,8 +348,8 @@ internal fun PlayerControls(
                                     .size(64.dp)
                                     .focusRequester(playPauseFocusRequester)
                                     .focusProperties {
-                                        left = rewindFocusRequester
-                                        right = forwardFocusRequester
+                                        left = audioFocusRequester
+                                        right = speedFocusRequester
                                         up = seekBarFocusRequester
                                         down = playPauseFocusRequester
                                     },
@@ -389,24 +384,6 @@ internal fun PlayerControls(
                                     )
                                 }
                             }
-
-                            Spacer(Modifier.width(16.dp))
-
-                            TransportButton(
-                                label = "Skip 30",
-                                icon = Icons.Default.Forward30,
-                                buttonSize = 58.dp,
-                                iconSize = 28.dp,
-                                focusRequester = forwardFocusRequester,
-                                left = playPauseFocusRequester,
-                                right = speedFocusRequester,
-                                up = seekBarFocusRequester,
-                                down = forwardFocusRequester,
-                                onClick = {
-                                    onInteract()
-                                    player.seekTo((position + Constants.PLAYER_SEEK_INCREMENT_MS).coerceAtMost(duration))
-                                },
-                            )
                         }
 
                         Row(
@@ -430,7 +407,7 @@ internal fun PlayerControls(
                                 modifier = Modifier
                                     .focusRequester(speedFocusRequester)
                                     .focusProperties {
-                                        left = forwardFocusRequester
+                                        left = playPauseFocusRequester
                                         right = settingsFocusRequester
                                         up = backFocusRequester
                                         down = seekBarFocusRequester
@@ -481,6 +458,7 @@ internal fun NextEpisodeCountdown(
     nextEpisodeTitle: String?,
     onPlayNext: () -> Unit
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     AnimatedVisibility(
         visible = countdownRemaining > 0,
         enter = fadeIn(),
@@ -494,10 +472,10 @@ internal fun NextEpisodeCountdown(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "Next Episode",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    Text(
+                        text = "Next Episode",
+                        style = MaterialTheme.typography.labelMedium,
+                    color = expressiveColors.titleAccent
                 )
                 Text(
                     text = nextEpisodeTitle ?: "Coming up next",
@@ -528,13 +506,14 @@ private fun TvActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     OutlinedButton(
         onClick = onClick,
         modifier = modifier.defaultMinSize(minWidth = 140.dp),
         colors = ButtonDefaults.colors(
-            containerColor = Color.Black.copy(alpha = 0.24f),
+            containerColor = expressiveColors.chromeSurface.copy(alpha = 0.82f),
             contentColor = MaterialTheme.colorScheme.onBackground,
-            focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
+            focusedContainerColor = expressiveColors.focusRing.copy(alpha = 0.92f),
             focusedContentColor = MaterialTheme.colorScheme.onPrimary,
         ),
         scale = ButtonDefaults.scale(focusedScale = 1.08f),
@@ -566,18 +545,20 @@ private fun TvActionButton(
 private fun SeekBarControl(
     position: Long,
     duration: Long,
+    chapters: List<ChapterMarker>,
     player: ExoPlayer,
     focusRequester: FocusRequester,
     down: FocusRequester,
     onInteract: () -> Unit,
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     var isFocused by remember { mutableStateOf(false) }
     var seekDirection by remember { mutableStateOf(0) }
     val trackColor by animateColorAsState(
         targetValue = if (isFocused) {
             MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
         } else {
-            MaterialTheme.colorScheme.surfaceVariant
+            expressiveColors.borderSubtle
         },
         label = "SeekBarTrackColor",
     )
@@ -633,7 +614,7 @@ private fun SeekBarControl(
             )
             .padding(horizontal = 4.dp, vertical = 4.dp),
     ) {
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(8.dp)
@@ -647,6 +628,22 @@ private fun SeekBarControl(
                     .fillMaxWidth(progressFraction)
                     .background(MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small),
             )
+
+            if (duration > 0 && chapters.isNotEmpty()) {
+                val trackWidth = maxWidth
+                chapters.forEach { chapter ->
+                    val fraction = (chapter.positionMs.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                    if (fraction > 0.01f) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = trackWidth * fraction - 1.dp)
+                                .width(2.dp)
+                                .fillMaxHeight()
+                                .background(Color.White.copy(alpha = 0.55f))
+                        )
+                    }
+                }
+            }
 
             if (isFocused) {
                 Box(
@@ -667,76 +664,5 @@ private fun SeekBarControl(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun TransportButton(
-    label: String,
-    icon: ImageVector,
-    buttonSize: androidx.compose.ui.unit.Dp,
-    iconSize: androidx.compose.ui.unit.Dp,
-    focusRequester: FocusRequester,
-    left: FocusRequester,
-    right: FocusRequester,
-    up: FocusRequester,
-    down: FocusRequester,
-    onClick: () -> Unit,
-) {
-    var isFocused by remember { mutableStateOf(false) }
-    val labelColor by animateColorAsState(
-        targetValue = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
-        label = "TransportLabelColor",
-    )
-
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        OutlinedButton(
-            onClick = onClick,
-            modifier = Modifier
-                .size(buttonSize)
-                .focusRequester(focusRequester)
-                .focusProperties {
-                    this.left = left
-                    this.right = right
-                    this.up = up
-                    this.down = down
-                }
-                .onFocusChanged { isFocused = it.isFocused || it.hasFocus },
-            shape = ButtonDefaults.shape(CircleShape),
-            colors = ButtonDefaults.colors(
-                containerColor = Color.Black.copy(alpha = 0.22f),
-                contentColor = MaterialTheme.colorScheme.onBackground,
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                focusedContentColor = MaterialTheme.colorScheme.onSurface,
-            ),
-            scale = ButtonDefaults.scale(focusedScale = 1.1f),
-            border = ButtonDefaults.border(
-                focusedBorder = Border(
-                    border = androidx.compose.foundation.BorderStroke(
-                        width = 2.dp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                )
-            ),
-            contentPadding = PaddingValues(0.dp)
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    icon,
-                    contentDescription = label,
-                    modifier = Modifier.size(iconSize)
-                )
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = labelColor,
-        )
-    }
-}
-
-private val SEEK_BAR_SCRUB_STEP_MS = Constants.PLAYER_SEEK_INCREMENT_MS
+private val SEEK_BAR_SCRUB_STEP_MS = com.rpeters.cinefintv.core.constants.Constants.PLAYER_SEEK_INCREMENT_MS
 private const val SEEK_BAR_REPEAT_INTERVAL_MS = 140L

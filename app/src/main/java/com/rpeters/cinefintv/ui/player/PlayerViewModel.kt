@@ -11,8 +11,10 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.rpeters.cinefintv.data.PlaybackPositionStore
+import com.rpeters.cinefintv.data.playback.AdaptiveBitrateMonitor
 import com.rpeters.cinefintv.data.playback.EnhancedPlaybackManager
 import com.rpeters.cinefintv.data.playback.PlaybackResult
+import com.rpeters.cinefintv.data.playback.RecommendationSeverity
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.repository.JellyfinRepository
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
@@ -24,6 +26,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -42,6 +45,10 @@ data class TrackOption(
     val streamIndex: Int?,
 )
 
+data class ChapterMarker(val positionMs: Long, val name: String?)
+
+data class SkipRange(val startMs: Long, val endMs: Long?)
+
 data class PlayerUiState(
     val itemId: String = "",
     val title: String = "Player",
@@ -59,6 +66,9 @@ data class PlayerUiState(
     val selectedAudioTrack: TrackOption? = null,
     val selectedSubtitleTrack: TrackOption? = null,
     val playbackSpeed: Float = 1.0f,
+    val chapters: List<ChapterMarker> = emptyList(),
+    val introSkipRange: SkipRange? = null,
+    val creditsSkipRange: SkipRange? = null,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
 )
@@ -70,6 +80,7 @@ class PlayerViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
     private val jellyfinRepository: JellyfinRepository,
     private val enhancedPlaybackManager: EnhancedPlaybackManager,
+    private val adaptiveBitrateMonitor: AdaptiveBitrateMonitor,
     private val playbackPreferencesRepository: PlaybackPreferencesRepository,
     @param:ApplicationContext private val appContext: Context,
     private val okHttpClient: OkHttpClient,
@@ -99,6 +110,20 @@ class PlayerViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(autoPlayNextEpisode = prefs.autoPlayNextEpisode)
             }
         }
+        viewModelScope.launch {
+            adaptiveBitrateMonitor.qualityRecommendation.collectLatest { recommendation ->
+                if (recommendation != null && recommendation.severity == RecommendationSeverity.HIGH) {
+                    playbackPreferencesRepository.setTranscodingQuality(recommendation.recommendedQuality)
+                    adaptiveBitrateMonitor.clearRecommendation()
+                    adaptiveBitrateMonitor.resetBufferingTracking()
+                    val player = _player ?: return@collectLatest
+                    reloadStream(
+                        positionMs = player.currentPosition.coerceAtLeast(0L),
+                        playWhenReady = player.isPlaying,
+                    )
+                }
+            }
+        }
         load()
     }
 
@@ -117,6 +142,21 @@ class PlayerViewModel @Inject constructor(
             val detailResult = repositories.media.getItemDetails(itemId)
             val item = (detailResult as? ApiResult.Success)?.data
             currentItem = item
+            val chapters = item?.chapters.orEmpty().map { chapter ->
+                ChapterMarker(positionMs = chapter.startPositionTicks / TICKS_PER_MILLISECOND, name = chapter.name)
+            }
+            var introSkipRange: SkipRange? = null
+            var creditsSkipRange: SkipRange? = null
+            chapters.forEachIndexed { i, chapter ->
+                val name = chapter.name?.lowercase() ?: return@forEachIndexed
+                val nextStart = chapters.getOrNull(i + 1)?.positionMs
+                when {
+                    name.contains("intro") || name.contains("opening") ->
+                        introSkipRange = SkipRange(startMs = chapter.positionMs, endMs = nextStart)
+                    name.contains("credit") || name.contains("outro") ->
+                        creditsSkipRange = SkipRange(startMs = chapter.positionMs, endMs = nextStart)
+                }
+            }
             val serverPlaybackPositionMs = item?.userData?.playbackPositionTicks
                 ?.takeIf { it > 0L }
                 ?.div(TICKS_PER_MILLISECOND)
@@ -134,6 +174,7 @@ class PlayerViewModel @Inject constructor(
                 item = item,
                 audioStreamIndex = null,
                 subtitleStreamIndex = null,
+                startPositionMs = savedPlaybackPositionMs,
             ) ?: repositories.stream.getStreamUrl(itemId)
 
             if (streamUrl == null) {
@@ -189,6 +230,9 @@ class PlayerViewModel @Inject constructor(
                 nextEpisodeTitle = nextEpisodeTitle,
                 audioTracks = audioTracks,
                 subtitleTracks = subtitleTracks,
+                chapters = chapters,
+                introSkipRange = introSkipRange,
+                creditsSkipRange = creditsSkipRange,
                 isLoading = false,
             )
         }
@@ -215,6 +259,15 @@ class PlayerViewModel @Inject constructor(
                 }
             }
         _player = newPlayer
+        viewModelScope.launch {
+            val prefs = playbackPreferencesRepository.preferences.first()
+            adaptiveBitrateMonitor.startMonitoring(
+                exoPlayer = newPlayer,
+                scope = viewModelScope,
+                currentQuality = prefs.transcodingQuality,
+                isTranscoding = activePlayMethod != PlayMethod.DIRECT_PLAY,
+            )
+        }
         return newPlayer
     }
 
@@ -247,6 +300,7 @@ class PlayerViewModel @Inject constructor(
                 ?: return@launch
 
             _uiState.value = _uiState.value.copy(streamUrl = streamUrl)
+            playbackStartReported = false
             _player?.apply {
                 setMediaItem(MediaItem.fromUri(streamUrl))
                 if (positionMs > 0L) {
@@ -261,6 +315,7 @@ class PlayerViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        adaptiveBitrateMonitor.stopMonitoring()
         _player?.release()
         _player = null
     }
@@ -349,6 +404,7 @@ class PlayerViewModel @Inject constructor(
         item: BaseItemDto?,
         audioStreamIndex: Int?,
         subtitleStreamIndex: Int?,
+        startPositionMs: Long = 0L,
     ): String? {
         item ?: return null
 
@@ -357,6 +413,7 @@ class PlayerViewModel @Inject constructor(
                 item = item,
                 audioStreamIndex = audioStreamIndex,
                 subtitleStreamIndex = subtitleStreamIndex,
+                startPositionMs = startPositionMs,
             )
         ) {
             is PlaybackResult.DirectPlay -> {

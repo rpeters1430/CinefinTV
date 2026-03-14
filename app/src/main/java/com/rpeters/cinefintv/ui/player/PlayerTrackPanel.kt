@@ -52,6 +52,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Switch
 import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
 internal enum class SettingsSection { AUDIO, SUBTITLES, SPEED, ALL }
 
@@ -74,6 +75,7 @@ internal fun PlayerTrackPanel(
     onClose: () -> Unit,
     onInteract: () -> Unit
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     // We use a full-screen Popup to capture focus and allow expressive animations
     if (isVisible) {
         Popup(
@@ -101,7 +103,7 @@ internal fun PlayerTrackPanel(
                             .height(PanelHeight),
                         shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
                         colors = SurfaceDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
+                            containerColor = expressiveColors.elevatedSurface.copy(alpha = 0.98f),
                         ),
                         tonalElevation = 16.dp,
                     ) {

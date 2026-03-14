@@ -72,6 +72,7 @@ class EnhancedPlaybackManager @Inject constructor(
         item: BaseItemDto,
         audioStreamIndex: Int? = null,
         subtitleStreamIndex: Int? = null,
+        startPositionMs: Long = 0L,
     ): PlaybackResult {
         return withContext(Dispatchers.IO) {
             try {
@@ -82,7 +83,7 @@ class EnhancedPlaybackManager @Inject constructor(
                 }
 
                 // Get detailed playback info from server
-                val playbackInfo = getPlaybackInfo(itemId, audioStreamIndex, subtitleStreamIndex)
+                val playbackInfo = getPlaybackInfo(itemId, audioStreamIndex, subtitleStreamIndex, startPositionMs)
                 if (playbackInfo == null) {
                     return@withContext PlaybackResult.Error("Failed to get playback info")
                 }
@@ -272,6 +273,8 @@ class EnhancedPlaybackManager @Inject constructor(
             append(container)
             append("?static=true&mediaSourceId=")
             append(sourceId)
+            append("&DeviceId=")
+            append(deviceCapabilities.getDeviceId())
             if (!playSessionId.isNullOrBlank()) {
                 append("&PlaySessionId=")
                 append(playSessionId)
@@ -474,14 +477,16 @@ class EnhancedPlaybackManager @Inject constructor(
 
         val maxAudioChannels = prefs.audioChannels.channels ?: DEFAULT_TV_MAX_AUDIO_CHANNELS
 
-        // Build Direct Stream URL with audio transcoding parameters
-        // VideoCodec=copy tells the server to NOT transcode video
+        // Build Direct Stream URL with audio transcoding parameters.
+        // Pass the actual source video codec + AllowVideoStreamCopy=true (default) so Jellyfin
+        // copies the video bitstream instead of re-encoding it. Using "copy" as the codec name
+        // is invalid — Jellyfin expects a real codec identifier here.
         val directStreamUrl = streamRepository.getTranscodedStreamUrl(
             itemId = itemId,
             maxBitrate = mediaSource.bitrate ?: 20_000_000, // Use source bitrate
             maxWidth = sourceVideoStream?.width ?: 1920,
             maxHeight = sourceVideoStream?.height ?: 1080,
-            videoCodec = "copy", // CRITICAL: This tells server to copy video stream without transcoding
+            videoCodec = sourceVideoStream?.codec ?: "h264",
             audioCodec = "aac", // Transcode audio to AAC (universally supported)
             container = "ts", // Use TS container for better streaming compatibility
             mediaSourceId = mediaSourceId,
@@ -645,9 +650,10 @@ class EnhancedPlaybackManager @Inject constructor(
         itemId: String,
         audioStreamIndex: Int? = null,
         subtitleStreamIndex: Int? = null,
+        startPositionMs: Long = 0L,
     ): PlaybackInfoResponse? {
         return try {
-            repository.getPlaybackInfo(itemId, audioStreamIndex, subtitleStreamIndex)
+            repository.getPlaybackInfo(itemId, audioStreamIndex, subtitleStreamIndex, startPositionMs)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             SecureLogger.e(TAG, "Failed to get playback info for item $itemId", e)

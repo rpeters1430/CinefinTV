@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme as ComposeMaterialTheme
 import androidx.compose.material3.Shapes as ComposeShapes
 import androidx.compose.material3.darkColorScheme as ComposeDarkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -13,7 +14,6 @@ import androidx.tv.material3.darkColorScheme as TvDarkColorScheme
 
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
-import androidx.compose.runtime.CompositionLocalProvider
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -24,11 +24,11 @@ fun CinefinTvTheme(
     val tvColorScheme = TvDarkColorScheme(
             primary          = CinefinRed,
             onPrimary        = OnBackground,
-            background       = BackgroundDark,
+            background       = BackgroundBottom,
             onBackground     = OnBackground,
-            surface          = SurfaceDark,
+            surface          = SurfaceElevated,
             onSurface        = OnBackground,
-            surfaceVariant   = SurfaceVariant,
+            surfaceVariant   = SurfaceAccent,
             onSurfaceVariant = OnSurfaceMuted,
     )
     val expressiveColorScheme = ComposeDarkColorScheme(
@@ -44,17 +44,32 @@ fun CinefinTvTheme(
         onTertiary = BackgroundDark,
         tertiaryContainer = Color(0xFF12324C),
         onTertiaryContainer = Color(0xFFD1E4FF),
-        background = BackgroundDark,
+        background = BackgroundBottom,
         onBackground = OnBackground,
-        surface = SurfaceDark,
+        surface = SurfaceElevated,
         onSurface = OnBackground,
-        surfaceVariant = SurfaceVariant,
+        surfaceVariant = SurfaceAccent,
         onSurfaceVariant = OnSurfaceMuted,
-        surfaceContainer = Color(0xFF1B2129),
-        surfaceContainerHigh = Color(0xFF222A33),
-        outline = Color(0xFF5B6573),
+        surfaceContainer = SurfaceDark,
+        surfaceContainerHigh = SurfaceAccent,
+        outline = BorderSubtle,
         error = Color(0xFFFFB4AB),
         onError = BackgroundDark,
+    )
+    val expressiveColors = CinefinExpressiveColors(
+        backgroundTop = BackgroundTop,
+        backgroundBottom = BackgroundBottom,
+        heroStart = Color(0xFF2A1016),
+        heroEnd = Color(0xFF101722),
+        elevatedSurface = SurfaceElevated,
+        accentSurface = SurfaceAccent,
+        chromeSurface = Color(0xCC121A24),
+        borderSubtle = BorderSubtle,
+        focusRing = CinefinCoral,
+        focusGlow = CinefinRed.copy(alpha = 0.28f),
+        pillMuted = Color(0x66303A4B),
+        pillStrong = Color(0x99E50914),
+        titleAccent = CinefinGold,
     )
     val composeShapes = ComposeShapes(
         extraSmall = RoundedCornerShape(8.dp),
@@ -66,7 +81,10 @@ fun CinefinTvTheme(
 
     val profile = performanceProfile ?: DevicePerformanceProfile.detect(androidx.compose.ui.platform.LocalContext.current)
 
-    CompositionLocalProvider(LocalPerformanceProfile provides profile) {
+    CompositionLocalProvider(
+        LocalPerformanceProfile provides profile,
+        LocalCinefinExpressiveColors provides expressiveColors,
+    ) {
         TvMaterialTheme(
             colorScheme = tvColorScheme,
             typography = CinefinTvTypography,

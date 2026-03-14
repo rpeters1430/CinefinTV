@@ -71,6 +71,9 @@ class JellyfinRepository @Inject constructor(
         private const val DEFAULT_MAX_RETRIES = Constants.MAX_RETRY_ATTEMPTS - 1 // Convert to retry count
         private const val RE_AUTH_DELAY_MS = Constants.RE_AUTH_DELAY_MS
 
+        private const val TICKS_PER_MILLISECOND = 10_000L
+        private const val DEFAULT_TV_MAX_AUDIO_CHANNELS = 8
+
         // Stream quality constants
         private const val DEFAULT_MAX_BITRATE = 140_000_000
         private const val DEFAULT_MAX_AUDIO_CHANNELS = 8
@@ -1059,6 +1062,7 @@ class JellyfinRepository @Inject constructor(
         itemId: String,
         audioStreamIndex: Int? = null,
         subtitleStreamIndex: Int? = null,
+        startPositionMs: Long = 0L,
     ): PlaybackInfoResponse {
         val server = validateServer()
         val client = sessionManager.getClientForUrl(server.url)
@@ -1090,10 +1094,10 @@ class JellyfinRepository @Inject constructor(
         val playbackInfoDto = PlaybackInfoDto(
             userId = userUuid,
             maxStreamingBitrate = maxBitrate,
-            startTimeTicks = null,
+            startTimeTicks = if (startPositionMs > 0L) startPositionMs * TICKS_PER_MILLISECOND else null,
             audioStreamIndex = audioStreamIndex,
             subtitleStreamIndex = subtitleStreamIndex,
-            maxAudioChannels = null,
+            maxAudioChannels = DEFAULT_TV_MAX_AUDIO_CHANNELS,
             mediaSourceId = null,
             liveStreamId = null,
             deviceProfile = deviceProfile,
