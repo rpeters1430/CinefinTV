@@ -37,18 +37,18 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -79,6 +79,7 @@ import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
@@ -211,12 +212,13 @@ internal fun PlayerControls(
                     SeekBarControl(
                         position = position,
                         duration = duration,
+                        bufferedFraction = 0f, // placeholder until Task 4 adds this to PlayerControls signature
                         chapters = uiState.chapters,
-                        player = player,
+                        onSeek = { player.seekTo(it) },
+                        onInteract = onInteract,
                         focusRequester = seekBarFocusRequester,
                         up = backFocusRequester,
                         down = playPauseFocusRequester,
-                        onInteract = onInteract,
                     )
                     
                     Row(
@@ -420,32 +422,36 @@ private fun ActionIconButton(
 private fun SeekBarControl(
     position: Long,
     duration: Long,
+    bufferedFraction: Float,
     chapters: List<ChapterMarker>,
-    player: ExoPlayer,
+    onSeek: (Long) -> Unit,
+    onInteract: () -> Unit,
     focusRequester: FocusRequester,
     up: FocusRequester,
     down: FocusRequester,
-    onInteract: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
     var seekDirection by remember { mutableStateOf(0) }
-    
-    val barHeight by animateDpAsState(if (isFocused) 12.dp else 6.dp, label = "BarHeight")
-    val thumbSize by animateDpAsState(if (isFocused) 20.dp else 0.dp, label = "ThumbSize")
+    // Tracks the live seek position during a hold-seek; resyncs when polled position updates
+    var seekPosition by remember(position) { mutableLongStateOf(position) }
+
+    val barHeight by animateDpAsState(if (isFocused) 8.dp else 3.dp, label = "BarHeight")
+    val thumbScale by animateFloatAsState(if (isFocused) 1f else 0f, label = "ThumbScale")
 
     LaunchedEffect(seekDirection, duration) {
         if (seekDirection == 0 || duration <= 0L) return@LaunchedEffect
         while (seekDirection != 0) {
-            val targetPosition = (player.currentPosition + (seekDirection * com.rpeters.cinefintv.core.constants.Constants.PLAYER_SEEK_INCREMENT_MS))
+            seekPosition = (seekPosition + seekDirection * com.rpeters.cinefintv.core.constants.Constants.PLAYER_SEEK_INCREMENT_MS)
                 .coerceIn(0L, duration)
-            player.seekTo(targetPosition)
+            onSeek(seekPosition)
             onInteract()
             kotlinx.coroutines.delay(100L)
         }
     }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(32.dp)
             .focusRequester(focusRequester)
@@ -460,52 +466,119 @@ private fun SeekBarControl(
             .onPreviewKeyEvent { keyEvent ->
                 when {
                     keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.DirectionLeft -> {
-                        seekDirection = -1
-                        true
+                        seekDirection = -1; true
                     }
                     keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.DirectionRight -> {
-                        seekDirection = 1
-                        true
+                        seekDirection = 1; true
                     }
                     keyEvent.type == KeyEventType.KeyUp &&
                         (keyEvent.key == Key.DirectionLeft || keyEvent.key == Key.DirectionRight) -> {
-                        seekDirection = 0
-                        true
+                        seekDirection = 0; true
                     }
                     else -> false
                 }
             }
             .focusable(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(barHeight)
-                .background(Color.White.copy(alpha = 0.2f), CircleShape)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.2f))
         ) {
-            val progressFraction = if (duration > 0) (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
-            
-            // Progress
+            val progressFraction =
+                if (duration > 0L) (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                else 0f
+            val bufferedClamped = bufferedFraction.coerceIn(0f, 1f)
+
+            // Buffered section — lighter grey between progress end and buffered position
+            if (bufferedClamped > progressFraction) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(bufferedClamped)
+                        .background(Color.White.copy(alpha = 0.35f))
+                )
+            }
+
+            // Progress fill — CinefinRed
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .fillMaxWidth(progressFraction)
-                    .background(
-                        if (isFocused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.8f),
-                        CircleShape
-                    )
+                    .background(MaterialTheme.colorScheme.primary)
             )
 
-            // Thumb
-            if (isFocused) {
+            // Chapter marker ticks
+            chapters.forEach { chapter ->
+                val chapterFraction =
+                    if (duration > 0L) (chapter.positionMs.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                    else 0f
                 Box(
                     modifier = Modifier
-                        .offset(x = maxWidth * progressFraction - (thumbSize / 2))
-                        .size(thumbSize)
-                        .background(Color.White, CircleShape)
                         .align(Alignment.CenterStart)
+                        .offset(x = maxWidth * chapterFraction - 1.dp)
+                        .width(2.dp)
+                        .height(barHeight)
+                        .background(Color.Black.copy(alpha = 0.5f))
                 )
+            }
+
+            // Thumb — only visible when focused
+            if (thumbScale > 0f) {
+                val thumbDp = 20.dp * thumbScale
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .offset(x = maxWidth * progressFraction - thumbDp / 2)
+                        .size(thumbDp)
+                        .shadow(
+                            elevation = 8.dp,
+                            shape = CircleShape,
+                            ambientColor = MaterialTheme.colorScheme.primary,
+                            spotColor = MaterialTheme.colorScheme.primary,
+                        )
+                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                        .border(width = 3.dp, color = Color.White, shape = CircleShape)
+                )
+            }
+        }
+
+        // Timestamp bubble — floats above the thumb when focused
+        if (isFocused) {
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+            ) {
+                val progressFraction =
+                    if (duration > 0L) (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                    else 0f
+                val bubbleWidth = 56.dp
+                val thumbX = maxWidth * progressFraction
+                val clampedX = thumbX.coerceIn(0.dp, maxWidth - bubbleWidth)
+
+                Surface(
+                    modifier = Modifier
+                        .offset(x = clampedX, y = (-30).dp)
+                        .width(bubbleWidth),
+                    shape = RoundedCornerShape(4.dp),
+                    colors = SurfaceDefaults.colors(
+                        containerColor = Color.Black.copy(alpha = 0.85f)
+                    )
+                ) {
+                    Text(
+                        text = formatMs(position),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontSize = 18.sp,
+                        color = Color.White,
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }
