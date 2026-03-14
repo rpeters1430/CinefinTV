@@ -76,8 +76,7 @@ class EnhancedPlaybackManager @Inject constructor(
     ): PlaybackResult {
         return withContext(Dispatchers.IO) {
             try {
-                val itemId = item.id.toString()
-
+                val itemId = item.id?.toString() ?: return@withContext PlaybackResult.Error("Item ID is null")
                 if (BuildConfig.DEBUG) {
                     SecureLogger.v(TAG, "Getting optimal playback URL for: ${item.name} (${item.type}) [Audio: $audioStreamIndex, Sub: $subtitleStreamIndex]")
                 }
@@ -124,10 +123,11 @@ class EnhancedPlaybackManager @Inject constructor(
         audioStreamIndex: Int? = null,
         subtitleStreamIndex: Int? = null,
     ): PlaybackResult {
+        val itemId = item.id?.toString() ?: ""
+        val itemName = item.name ?: "Unknown"
         return withContext(Dispatchers.IO) {
             try {
-                val itemId = item.id.toString()
-                SecureLogger.d(TAG, "Getting fallback URL for: ${item.name} (Direct Play failed)")
+                SecureLogger.d(TAG, "Getting fallback URL for: $itemName (Direct Play failed)")
 
                 val playbackInfo = getPlaybackInfo(itemId, audioStreamIndex, subtitleStreamIndex)
                 if (playbackInfo == null) {
@@ -151,7 +151,7 @@ class EnhancedPlaybackManager @Inject constructor(
                 }
 
                 // Full transcoding fallback
-                SecureLogger.d(TAG, "Using full transcoding fallback for: ${item.name}")
+                SecureLogger.d(TAG, "Using full transcoding fallback for: $itemName")
                 getOptimalTranscodingUrl(item, playbackInfo, audioStreamIndex, subtitleStreamIndex)
             } catch (e: CancellationException) {
                 throw e
@@ -169,13 +169,14 @@ class EnhancedPlaybackManager @Inject constructor(
         audioStreamIndex: Int? = null,
         subtitleStreamIndex: Int? = null,
     ): PlaybackResult {
-        val itemId = item.id.toString()
+        val itemId = item.id?.toString() ?: ""
         val serverUrl = repository.getCurrentServer()?.url
         val mediaSources = playbackInfo.mediaSources
         val playSessionId = playbackInfo.playSessionId
         val sessionId = java.util.UUID.randomUUID().toString()
         val deviceCaps = deviceCapabilities.getDirectPlayCapabilities()
-        val networkClass = connectivityChecker.getNetworkType().name
+        val networkType = connectivityChecker.getNetworkType()
+        val networkClass = networkType?.name ?: "UNKNOWN"
 
         if (mediaSources.isNullOrEmpty()) {
             return PlaybackResult.Error("No media sources available")
@@ -295,12 +296,13 @@ class EnhancedPlaybackManager @Inject constructor(
         val videoStream = source.findDefaultVideoStream()
         val audioStream = source.findDefaultAudioStream()
         
+        val deviceTierName = caps.deviceTier?.name ?: "UNKNOWN"
         return PlaybackDecisionTrace(
             sessionId = sessionId,
             decision = decision,
             ruleId = ruleId,
             reasonCodes = reasons,
-            deviceClass = caps.deviceTier.name,
+            deviceClass = deviceTierName,
             networkClass = network,
             video = VideoDecision(
                 sourceCodec = videoStream?.codec,
@@ -631,6 +633,7 @@ class EnhancedPlaybackManager @Inject constructor(
             return PlaybackResult.Error("Unable to generate playback URL. Please check server connection.")
         }
 
+        val qualityName = effectiveQuality?.name ?: "AUTO"
         return PlaybackResult.Transcoding(
             url = transcodingUrl,
             targetBitrate = transcodingParams.maxBitrate,
@@ -638,7 +641,7 @@ class EnhancedPlaybackManager @Inject constructor(
             targetVideoCodec = transcodingParams.videoCodec,
             targetAudioCodec = transcodingParams.audioCodec,
             targetContainer = transcodingParams.container,
-            reason = "Optimized for $effectiveQuality quality",
+            reason = "Optimized for $qualityName quality",
             playSessionId = playSessionId,
         )
     }
@@ -709,15 +712,17 @@ class EnhancedPlaybackManager @Inject constructor(
         return normalizedServer + normalizedPath
     }
 
-    private fun MediaSourceInfo.findDefaultVideoStream() =
-        mediaStreams
-            ?.firstOrNull { it.type == MediaStreamType.VIDEO && it.isDefault == true }
-            ?: mediaStreams?.firstOrNull { it.type == MediaStreamType.VIDEO }
+    private fun MediaSourceInfo.findDefaultVideoStream(): org.jellyfin.sdk.model.api.MediaStream? {
+        val streams = mediaStreams ?: return null
+        return streams.firstOrNull { it.type == MediaStreamType.VIDEO && it.isDefault == true }
+            ?: streams.firstOrNull { it.type == MediaStreamType.VIDEO }
+    }
 
-    private fun MediaSourceInfo.findDefaultAudioStream() =
-        mediaStreams
-            ?.firstOrNull { it.type == MediaStreamType.AUDIO && it.isDefault == true }
-            ?: mediaStreams?.firstOrNull { it.type == MediaStreamType.AUDIO }
+    private fun MediaSourceInfo.findDefaultAudioStream(): org.jellyfin.sdk.model.api.MediaStream? {
+        val streams = mediaStreams ?: return null
+        return streams.firstOrNull { it.type == MediaStreamType.AUDIO && it.isDefault == true }
+            ?: streams.firstOrNull { it.type == MediaStreamType.AUDIO }
+    }
 }
 
 /**
