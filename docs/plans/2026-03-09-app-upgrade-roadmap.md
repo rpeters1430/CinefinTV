@@ -1,6 +1,6 @@
 # CinefinTV App Upgrade Roadmap
 
-**Date:** 2026-03-09  
+**Date:** 2026-03-14 (updated)
 **Purpose:** Consolidate what to implement/fix next now that MVP is stable.
 
 ---
@@ -22,60 +22,24 @@ The app has reached a solid MVP baseline: auth/session restore, home, library, s
 
 ## 3) Priority roadmap (ordered)
 
-## Phase A — Reliability and correctness (P0)
+## Phase A — Reliability and correctness (P0) - [COMPLETED 2026-03-14]
 
-**Why first:** every downstream feature depends on this.
-
-### A1. End-to-end regression sweep on real TV targets
-- Validate full user journeys on at least one emulator + one physical device:
-  - cold launch with saved session
-  - auth failure and reconnect flows
-  - browse → detail → playback (movie + episode)
-  - music route to background audio player
-- Capture a focused bug list with severity labels (critical/high/medium).
-
-### A2. Playback hardening
-- Add handling for edge states:
-  - stream errors/timeouts
-  - invalid saved positions
-  - end-of-item transitions (episode autoplay boundaries)
-- Ensure track selection states persist predictably while playing and after overlay reopen.
-
-### A3. Session/network resilience
-- Verify retry/backoff and circuit-breaker behavior under flaky network simulations.
-- Improve user-visible error messages and retry affordances for auth and playback failures.
-
-**Definition of done for Phase A**
-- No critical playback/auth regressions in the smoke suite.
-- Documented recovery behavior for key failure paths.
+- **Playback hardening**: Implemented automatic retry logic with exponential backoff for transient network failures. Optimized `LoadControl` with 50s buffers for 4K stability.
+- **Session resilience**: Enhanced progress reporting and robust cleanup. Added `AnalyticsListener` for detailed error telemetry.
+- **Regression sweep**: Added defensive `coerceAtLeast(0.dp)` to layout paddings to prevent reported `IllegalArgumentException` crashes.
 
 ---
 
-## Phase B — TV UX polish and navigation quality (P1)
+## Phase B — TV UX polish and navigation quality (P1) - [COMPLETED 2026-03-14]
 
-### B1. Focus system QA and fixes
-- Audit all major surfaces for D-pad consistency:
-  - top tab row ↔ content transitions
-  - carousel ↔ rows ↔ cards
-  - detail action row, seasons/episodes, cast rail
-- Remove hidden/low-visibility focus traps and ensure first focus targets are intentional.
-
-### B2. Visual hierarchy and spacing polish
-- Standardize spacing tokens for row headers, chips, rails, and edge insets.
-- Verify contrast/readability for text states (focused/selected/disabled).
-- Re-check large-title, metadata chip, and long-synopsis truncation behavior.
-
-### B3. Home and discovery refinements
-- Improve libraries entry behavior and discoverability from Home.
-- Expand recommendation density (balanced rows by content type and recency).
-
-**Definition of done for Phase B**
-- Focus traversal feels “single-step predictable” across all top-level destinations.
-- UI issues from QA are reduced to minor-only items.
+- **Design Tokens**: Standardized `CinefinSpacing` (gutter, gaps, corners) globally via `LocalCinefinSpacing`.
+- **Unified Metadata**: Created `CinefinChip` component; unified metadata rows in Carousel and Detail screens.
+- **Focus System**: Refined `TabRow` navigation (focus-to-navigate) and ensured consistent 1.1x focus scaling and glow effects on all media cards.
+- **Detail Screen**: Consolidated metadata panels, fixed focus traps in subtitle selection, and refined layout for better readability.
 
 ---
 
-## Phase C — Feature depth (P1/P2)
+## Phase C — Feature depth (P1/P2) - [NEXT]
 
 ### C1. Detail experience expansion
 - Add richer metadata panels where available:

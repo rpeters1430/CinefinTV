@@ -1,6 +1,5 @@
 package com.rpeters.cinefintv.ui.screens.home
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -15,52 +14,47 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.repeatOnLifecycle
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.tv.material3.Button
 import androidx.tv.material3.Carousel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
+import androidx.tv.material3.rememberCarouselState
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.rpeters.cinefintv.utils.DevicePerformanceProfile
-import com.rpeters.cinefintv.utils.LocalPerformanceProfile
+import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
-import kotlinx.coroutines.launch
+import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import com.rpeters.cinefintv.utils.DevicePerformanceProfile
+import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -71,27 +65,17 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val coroutineScope = rememberCoroutineScope()
-    val expressiveColors = LocalCinefinExpressiveColors.current
-
-    // Refresh data when screen becomes active (e.g. returning from player)
-    LaunchedEffect(lifecycleOwner) {
-        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            viewModel.refresh()
-        }
-    }
+    val spacing = LocalCinefinSpacing.current
+    
+    // Key focus anchors for logical navigation
+    val carouselFocusRequester = remember { FocusRequester() }
+    val firstRowFocusRequester = remember { FocusRequester() }
 
     when (val state = uiState) {
-        is HomeUiState.Loading -> {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(48.dp),
-                verticalArrangement = Arrangement.Center,
-            ) {
+        HomeUiState.Loading -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "Loading home...",
+                    text = "Loading Home...",
                     style = MaterialTheme.typography.headlineMedium,
                 )
             }
@@ -101,8 +85,8 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(48.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(spacing.gutter),
+                verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
             ) {
                 Text(
                     text = "Home could not load",
@@ -123,12 +107,22 @@ fun HomeScreen(
             val sectionFocusRequesters = remember(state.sections.size) {
                 List(state.sections.size) { FocusRequester() }
             }
+
+            // Ensure first load focus is intentional
+            LaunchedEffect(state) {
+                if (state.featuredItems.isNotEmpty()) {
+                    carouselFocusRequester.requestFocus()
+                } else if (state.sections.isNotEmpty()) {
+                    firstRowFocusRequester.requestFocus()
+                }
+            }
+
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
-                    verticalArrangement = Arrangement.spacedBy(32.dp),
+                    contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = spacing.rowGap),
+                    verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
                 ) {
                     if (state.featuredItems.isNotEmpty()) {
                         item {
@@ -139,90 +133,33 @@ fun HomeScreen(
                                 sectionCount = state.sections.size,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 8.dp),
+                                    .padding(top = 8.dp)
+                                    .focusRequester(carouselFocusRequester)
+                                    .focusProperties {
+                                        down = firstRowFocusRequester
+                                    },
                             )
                         }
                     }
 
                     itemsIndexed(
                         state.sections,
-                        key = { _, section -> section.title },
-                        contentType = { _, _ -> "Section" }
-                    ) { sectionIndex, section ->
-                        val lazyColumnIndex = sectionIndex + if (state.featuredItems.isNotEmpty()) 1 else 0
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                        ) {
-                            HomeSectionHeader(
-                                title = section.title,
-                                itemCount = section.items.size,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 12.dp),
-                                horizontalArrangement = Arrangement.spacedBy(20.dp),
-                            ) {
-                                itemsIndexed(
-                                    section.items,
-                                    key = { _, item -> item.id },
-                                    contentType = { _, _ -> "MediaCard" }
-                                ) { itemIndex, item ->
-                                    val sectionRequester = sectionFocusRequesters[sectionIndex]
-                                    val upRequester = sectionFocusRequesters.getOrNull(sectionIndex - 1)
-                                    val downRequester = sectionFocusRequesters.getOrNull(sectionIndex + 1)
-                                    TvMediaCard(
-                                        title = item.title,
-                                        subtitle = item.subtitle,
-                                        imageUrl = item.imageUrl,
-                                        onClick = { onOpenItem(item) },
-                                        onFocus = {
-                                            val visibleItems = listState.layoutInfo.visibleItemsInfo
-                                            if (visibleItems.isEmpty()) return@TvMediaCard
-
-                                            val firstVisible = visibleItems.first().index
-                                            val lastVisible = visibleItems.last().index
-                                            val shouldNudgeDown = lazyColumnIndex >= lastVisible - 1
-                                            val shouldNudgeUp = lazyColumnIndex < firstVisible
-                                            val targetIndex = when {
-                                                shouldNudgeDown -> lazyColumnIndex
-                                                shouldNudgeUp -> lazyColumnIndex.coerceAtLeast(0)
-                                                else -> -1
-                                            }
-
-                                            if (targetIndex >= 0 &&
-                                                listState.firstVisibleItemIndex != targetIndex
-                                            ) {
-                                                coroutineScope.launch {
-                                                    listState.animateScrollToItem(targetIndex)
-                                                }
-                                            }
-                                        },
-                                        watchStatus = item.watchStatus,
-                                        playbackProgress = item.playbackProgress,
-                                        unwatchedCount = item.unwatchedCount,
-                                        modifier = Modifier
-                                            .then(
-                                                if (itemIndex == 0) {
-                                                    Modifier.focusRequester(sectionRequester)
-                                                } else {
-                                                    Modifier
-                                                }
-                                            )
-                                            .focusProperties {
-                                                upRequester?.let { up = it }
-                                                downRequester?.let { down = it }
-                                            }
-                                            .border(
-                                                border = BorderStroke(
-                                                    width = 1.dp,
-                                                    color = expressiveColors.borderSubtle.copy(alpha = 0.35f),
-                                                ),
-                                                shape = RoundedCornerShape(18.dp),
-                                            ),
-                                    )
-                                }
-                            }
-                        }
+                        key = { _, section -> section.title }
+                    ) { index, section ->
+                        val rowRequester = if (index == 0) firstRowFocusRequester else sectionFocusRequesters[index]
+                        
+                        HomeSection(
+                            title = section.title,
+                            items = section.items,
+                            onOpenItem = onOpenItem,
+                            modifier = Modifier
+                                .focusRequester(rowRequester)
+                                .focusProperties {
+                                    if (index == 0) up = carouselFocusRequester
+                                    if (index > 0) up = sectionFocusRequesters[index - 1]
+                                    if (index < state.sections.size - 1) down = sectionFocusRequesters[index + 1]
+                                },
+                        )
                     }
                 }
             }
@@ -239,218 +176,173 @@ private fun FeaturedCarousel(
     sectionCount: Int,
     modifier: Modifier = Modifier,
 ) {
-    val performanceProfile = LocalPerformanceProfile.current
-    val expressiveColors = LocalCinefinExpressiveColors.current
-
+    val carouselState = rememberCarouselState()
+    
     Carousel(
         itemCount = items.size,
+        carouselState = carouselState,
         modifier = modifier
-            .height(430.dp)
-            .clip(RoundedCornerShape(28.dp))
-            .border(
-                border = BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.8f)),
-                shape = RoundedCornerShape(28.dp),
-            ),
-        autoScrollDurationMillis = 6000L,
+            .fillMaxWidth()
+            .height(420.dp),
     ) { index ->
         val item = items[index]
-        Box(modifier = Modifier.fillMaxSize()) {
-            AsyncImage(
-                model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                    .data(item.backdropUrl ?: item.imageUrl)
-                    .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
-                    // High-quality backdrops for carousel, but capped for memory
-                    .size(1280, 720)
-                    .build(),
-                contentDescription = item.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.horizontalGradient(
-                            colorStops = arrayOf(
-                                0.0f to expressiveColors.heroStart.copy(alpha = 0.96f),
-                                0.38f to Color.Black.copy(alpha = 0.76f),
-                                0.68f to expressiveColors.heroEnd.copy(alpha = 0.35f),
-                                1.0f to Color.Transparent,
-                            ),
-                        ),
-                    ),
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.0f to Color.Transparent,
-                                0.75f to Color.Black.copy(alpha = 0.18f),
-                                1.0f to Color.Black.copy(alpha = 0.62f),
-                            ),
-                        ),
-                    ),
-            )
-            Column(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .fillMaxWidth(0.56f)
-                    .padding(horizontal = 44.dp, vertical = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    HeroChip(label = "Featured")
-                    HeroChip(label = "$sectionCount Collections", strong = false)
-                    item.officialRating?.let { HeroChip(label = it, strong = false) }
-                }
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.displayMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontWeight = FontWeight.Bold,
-                )
-                val carouselMeta = listOfNotNull(
-                    item.year?.toString(),
-                    item.runtime,
-                    item.officialRating,
-                    item.rating?.let { "★ $it" },
-                ).joinToString("  ·  ")
-                if (carouselMeta.isNotBlank()) {
-                    Text(
-                        text = carouselMeta,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-                item.subtitle?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = expressiveColors.titleAccent,
-                    )
-                }
-                item.description?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3,
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Button(onClick = { onPlay(item.id) }) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = null,
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Play")
-                    }
-                    OutlinedButton(onClick = { onMoreInfo(item) }) {
-                        Text("More Info")
-                    }
-                }
-            }
-        }
+        HeroItem(
+            item = item,
+            sectionCount = sectionCount,
+            onMoreInfo = { onMoreInfo(item) },
+            onPlay = { onPlay(item.id) },
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun HomeSectionHeader(
-    title: String,
-    itemCount: Int,
+private fun HeroItem(
+    item: HomeCardModel,
+    sectionCount: Int,
+    onMoreInfo: () -> Unit,
+    onPlay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val expressiveColors = LocalCinefinExpressiveColors.current
+    val performanceProfile = LocalPerformanceProfile.current
+    val spacing = LocalCinefinSpacing.current
+    val playButtonRequester = remember { FocusRequester() }
 
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                expressiveColors.focusRing,
-                                expressiveColors.titleAccent,
-                            ),
+    Box(modifier = modifier.clip(RoundedCornerShape(spacing.cornerContainer))) {
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(item.backdropUrl ?: item.imageUrl)
+                .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
+                .size(1280, 720)
+                .build(),
+            contentDescription = item.title,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.horizontalGradient(
+                        colorStops = arrayOf(
+                            0.0f to expressiveColors.heroStart.copy(alpha = 0.96f),
+                            0.38f to Color.Black.copy(alpha = 0.76f),
+                            0.68f to expressiveColors.heroEnd.copy(alpha = 0.35f),
+                            1.0f to Color.Transparent,
                         ),
                     ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    tint = Color.Black,
-                )
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-                Text(
-                    text = "$itemCount titles",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ),
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.0f to Color.Transparent,
+                            0.75f to Color.Black.copy(alpha = 0.18f),
+                            1.0f to Color.Black.copy(alpha = 0.62f),
+                        ),
+                    ),
+                ),
+        )
+        Column(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .fillMaxWidth(0.56f)
+                .padding(horizontal = 44.dp, vertical = 36.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.chipGap)) {
+                CinefinChip(label = "Featured", strong = true)
+                CinefinChip(label = "$sectionCount Collections")
+                item.officialRating?.let { CinefinChip(label = it) }
+            }
             Text(
-                text = "Explore",
-                style = MaterialTheme.typography.labelLarge,
-                color = expressiveColors.titleAccent,
+                text = item.title,
+                style = MaterialTheme.typography.displayMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
             )
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = expressiveColors.titleAccent,
-            )
+            val carouselMeta = listOfNotNull(
+                item.year?.toString(),
+                item.runtime,
+                item.officialRating,
+                item.rating?.let { "★ $it" },
+            ).joinToString("  ·  ")
+            if (carouselMeta.isNotBlank()) {
+                Text(
+                    text = carouselMeta,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            item.subtitle?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = expressiveColors.titleAccent,
+                )
+            }
+            item.description?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.elementGap)) {
+                Button(
+                    onClick = onPlay,
+                    modifier = Modifier.focusRequester(playButtonRequester)
+                ) {
+                    Text("Play Now")
+                }
+                Button(onClick = onMoreInfo) {
+                    Text("More Info")
+                }
+            }
         }
     }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun HeroChip(
-    label: String,
-    strong: Boolean = true,
+private fun HomeSection(
+    title: String,
+    items: List<HomeCardModel>,
+    onOpenItem: (HomeCardModel) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val expressiveColors = LocalCinefinExpressiveColors.current
-    val backgroundColor = if (strong) expressiveColors.pillStrong else expressiveColors.pillMuted
-    val contentColor = if (strong) Color.White else MaterialTheme.colorScheme.onSurface
-
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
-            .background(backgroundColor)
-            .border(
-                border = BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.7f)),
-                shape = RoundedCornerShape(999.dp),
-            )
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-    ) {
+    val spacing = LocalCinefinSpacing.current
+    val firstItemRequester = remember { FocusRequester() }
+    
+    Column(modifier = modifier) {
         Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = contentColor,
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(bottom = spacing.elementGap),
         )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+            contentPadding = PaddingValues(horizontal = 4.dp),
+        ) {
+            itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
+                TvMediaCard(
+                    title = item.title,
+                    subtitle = item.subtitle ?: item.year?.toString(),
+                    imageUrl = item.imageUrl,
+                    onClick = { onOpenItem(item) },
+                    watchStatus = item.watchStatus,
+                    unwatchedCount = item.unwatchedCount,
+                    playbackProgress = item.playbackProgress,
+                    modifier = if (index == 0) Modifier.focusRequester(firstItemRequester) else Modifier
+                )
+            }
+        }
     }
 }

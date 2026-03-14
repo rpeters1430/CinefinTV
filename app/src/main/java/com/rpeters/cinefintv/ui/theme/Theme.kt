@@ -6,7 +6,10 @@ import androidx.compose.material3.Shapes as ComposeShapes
 import androidx.compose.material3.darkColorScheme as ComposeDarkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme as TvMaterialTheme
@@ -15,12 +18,27 @@ import androidx.tv.material3.darkColorScheme as TvDarkColorScheme
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 
+@Immutable
+data class CinefinSpacing(
+    val gutter: Dp = 56.dp,
+    val rowGap: Dp = 32.dp,
+    val cardGap: Dp = 20.dp,
+    val elementGap: Dp = 12.dp,
+    val chipGap: Dp = 10.dp,
+    val cornerCard: Dp = 18.dp,
+    val cornerContainer: Dp = 28.dp,
+    val cornerPill: Dp = 999.dp,
+)
+
+val LocalCinefinSpacing = staticCompositionLocalOf { CinefinSpacing() }
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun CinefinTvTheme(
     performanceProfile: DevicePerformanceProfile? = null,
     content: @Composable () -> Unit
 ) {
+    val spacing = CinefinSpacing()
     val tvColorScheme = TvDarkColorScheme(
             primary          = CinefinRed,
             onPrimary        = OnBackground,
@@ -73,9 +91,9 @@ fun CinefinTvTheme(
     )
     val composeShapes = ComposeShapes(
         extraSmall = RoundedCornerShape(8.dp),
-        small = RoundedCornerShape(12.dp),
-        medium = RoundedCornerShape(18.dp),
-        large = RoundedCornerShape(24.dp),
+        small = RoundedCornerShape(spacing.elementGap),
+        medium = RoundedCornerShape(spacing.cornerCard),
+        large = RoundedCornerShape(spacing.cornerContainer),
         extraLarge = RoundedCornerShape(32.dp),
     )
 
@@ -84,6 +102,7 @@ fun CinefinTvTheme(
     CompositionLocalProvider(
         LocalPerformanceProfile provides profile,
         LocalCinefinExpressiveColors provides expressiveColors,
+        LocalCinefinSpacing provides spacing,
     ) {
         TvMaterialTheme(
             colorScheme = tvColorScheme,

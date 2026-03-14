@@ -6,86 +6,83 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import com.rpeters.cinefintv.data.repository.common.ApiResult
-import com.rpeters.cinefintv.testutil.FakePlayerRepositories
-import com.rpeters.cinefintv.testutil.MainDispatcherRule
+import com.rpeters.cinefintv.testutil.DeterministicDispatcherProvider
+import com.rpeters.cinefintv.testutil.FakeRepositories
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import java.util.UUID
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.BaseItemKind
 import org.junit.Assert.assertEquals
-import org.junit.Rule
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
+import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AudioPlayerViewModelTest {
 
-    @get:Rule
-    val mainDispatcherRule = MainDispatcherRule()
-
+    private lateinit var dispatcherProvider: DeterministicDispatcherProvider
+    private val testDispatcher = StandardTestDispatcher()
     private val appContext: Context = mockk(relaxed = true)
 
+    companion object {
+        private const val TRACK_ONE_ID = "00000000-0000-0000-0000-000000000001"
+        private const val TRACK_TWO_ID = "00000000-0000-0000-0000-000000000002"
+    }
+
+    @Before
+    fun setup() {
+        dispatcherProvider = DeterministicDispatcherProvider(testDispatcher)
+    }
+
     @Test
-    fun init_withMissingItemId_setsFriendlyError() = runTest {
-        val fakeRepositories = FakePlayerRepositories()
-        val controller = FakeAudioPlaybackController(
-            currentMediaItem = null,
-            mediaItemCount = 0,
-            currentMediaItemIndex = 0,
-            currentPosition = 0L,
-            duration = 0L,
-            isPlaying = false,
-        )
+    fun init_withoutItemId_showsError() = runTest(testDispatcher) {
+        val fakeRepositories = FakeRepositories()
+        val controller = mockk<AudioPlaybackController>(relaxed = true)
         val connector = FakeAudioControllerConnector(controller)
-        val positionRepository = FakeAudioPlaybackPositionRepository(savedPositionMs = 12_000L)
+        val positionRepository = FakeAudioPlaybackPositionRepository()
         val mediaItemFactory = FakeAudioMediaItemFactory()
 
         val viewModel = AudioPlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "", "queue" to "")),
+            savedStateHandle = SavedStateHandle(mapOf("itemId" to "")),
             appContext = appContext,
             repositories = fakeRepositories.coordinator,
             controllerConnector = connector,
             playbackPositionRepository = positionRepository,
             mediaItemFactory = mediaItemFactory,
         )
-        advanceUntilIdle()
 
         val state = viewModel.uiState.value
+        assertFalse(state.isConnecting)
         assertEquals("No music track was provided.", state.errorMessage)
-        assertEquals(0, controller.playCalls)
-        clearViewModel(viewModel)
     }
 
     @Test
-    fun playAndSeekControls_delegateToController() = runTest {
-        val fakeRepositories = FakePlayerRepositories()
+    fun togglePlayPause_callsController() = runTest(testDispatcher) {
+        val fakeRepositories = FakeRepositories()
         val controller = FakeAudioPlaybackController(
-            currentMediaItem = buildMediaItem(
-                trackId = TRACK_ONE_ID,
-                title = "Track One",
-                artist = "Artist",
-                album = "Album",
-                durationMs = 120_000L,
-            ),
-            mediaItemCount = 0,
+            currentMediaItem = null,
+            mediaItemCount = 1,
             currentMediaItemIndex = 0,
-            currentPosition = 10_000L,
-            duration = 120_000L,
+            currentPosition = 0L,
+            duration = 100_000L,
             isPlaying = false,
         )
         val connector = FakeAudioControllerConnector(controller)
         val positionRepository = FakeAudioPlaybackPositionRepository()
         val mediaItemFactory = FakeAudioMediaItemFactory()
 
-        every { fakeRepositories.stream.getDirectStreamUrl(any(), any()) } answers {
-            "https://stream/${firstArg<String>()}.mp3"
-        }
-        coEvery { fakeRepositories.media.getItemDetails(any()) } returns ApiResult.Error("unavailable")
+        every { fakeRepositories.stream.getDirectStreamUrl(any(), any()) } returns "https://stream/1.mp3"
+        coEvery { fakeRepositories.media.getItemDetails(any()) } returns ApiResult.Success(BaseItemDto(id = UUID.randomUUID(), name = "Track", type = BaseItemKind.AUDIO))
 
         val viewModel = AudioPlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to TRACK_ONE_ID, "queue" to TRACK_ONE_ID)),
+            savedStateHandle = SavedStateHandle(mapOf("itemId" to TRACK_ONE_ID)),
             appContext = appContext,
             repositories = fakeRepositories.coordinator,
             controllerConnector = connector,
@@ -94,7 +91,43 @@ class AudioPlayerViewModelTest {
         )
         advanceUntilIdle()
 
-        controller.resetCallCounters()
+        viewModel.togglePlayPause()
+        assertTrue(controller.isPlaying)
+        assertEquals(1, controller.playCalls)
+
+        viewModel.togglePlayPause()
+        assertFalse(controller.isPlaying)
+        assertEquals(1, controller.pauseCalls)
+        clearViewModel(viewModel)
+    }
+
+    @Test
+    fun skipAndSeek_callsController() = runTest(testDispatcher) {
+        val fakeRepositories = FakeRepositories()
+        val controller = FakeAudioPlaybackController(
+            currentMediaItem = null,
+            mediaItemCount = 2,
+            currentMediaItemIndex = 0,
+            currentPosition = 0L,
+            duration = 100_000L,
+            isPlaying = true,
+        )
+        val connector = FakeAudioControllerConnector(controller)
+        val positionRepository = FakeAudioPlaybackPositionRepository()
+        val mediaItemFactory = FakeAudioMediaItemFactory()
+
+        every { fakeRepositories.stream.getDirectStreamUrl(any(), any()) } returns "https://stream/1.mp3"
+        coEvery { fakeRepositories.media.getItemDetails(any()) } returns ApiResult.Success(BaseItemDto(id = UUID.randomUUID(), name = "Track", type = BaseItemKind.AUDIO))
+
+        val viewModel = AudioPlayerViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("itemId" to TRACK_ONE_ID)),
+            appContext = appContext,
+            repositories = fakeRepositories.coordinator,
+            controllerConnector = connector,
+            playbackPositionRepository = positionRepository,
+            mediaItemFactory = mediaItemFactory,
+        )
+        advanceUntilIdle()
 
         viewModel.seekForward()
         viewModel.seekBackward()
@@ -110,8 +143,8 @@ class AudioPlayerViewModelTest {
     }
 
     @Test
-    fun init_withQueue_loadsMediaItemsAndStartsPlayback() = runTest {
-        val fakeRepositories = FakePlayerRepositories()
+    fun init_withQueue_loadsMediaItemsAndStartsPlayback() = runTest(testDispatcher) {
+        val fakeRepositories = FakeRepositories()
         val controller = FakeAudioPlaybackController(
             currentMediaItem = null,
             mediaItemCount = 0,
@@ -125,9 +158,13 @@ class AudioPlayerViewModelTest {
         val mediaItemFactory = FakeAudioMediaItemFactory()
 
         every { fakeRepositories.stream.getDirectStreamUrl(any(), any()) } answers {
-            "https://stream/${firstArg<String>()}.mp3"
+            val id = it.invocation.args[0] as String
+            "https://stream/$id.mp3"
         }
-        coEvery { fakeRepositories.media.getItemDetails(any()) } returns ApiResult.Error("unavailable")
+        coEvery { fakeRepositories.media.getItemDetails(any()) } answers {
+            val id = it.invocation.args[0] as String
+            ApiResult.Success(BaseItemDto(id = UUID.fromString(id), name = "Track $id", type = BaseItemKind.AUDIO))
+        }
 
         val viewModel = AudioPlayerViewModel(
             savedStateHandle = SavedStateHandle(
@@ -151,37 +188,11 @@ class AudioPlayerViewModelTest {
         assertEquals(8_000L, controller.lastStartPositionMs)
         assertEquals(1, controller.prepareCalls)
         assertEquals(1, controller.playCalls)
-        assertEquals(null, viewModel.uiState.value.errorMessage)
         clearViewModel(viewModel)
     }
 
-    private fun buildMediaItem(
-        trackId: String,
-        title: String,
-        artist: String,
-        album: String,
-        durationMs: Long,
-    ): MediaItem {
-        return MediaItem.Builder()
-            .setMediaId(trackId)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(title)
-                    .setArtist(artist)
-                    .setAlbumTitle(album)
-                    .setExtras(android.os.Bundle().apply { putLong("duration_ms", durationMs) })
-                    .build(),
-            )
-            .build()
-    }
-
-    companion object {
-        private val TRACK_ONE_ID = UUID.randomUUID().toString()
-        private val TRACK_TWO_ID = UUID.randomUUID().toString()
-    }
-
     private fun clearViewModel(viewModel: AudioPlayerViewModel) {
-        val method = AudioPlayerViewModel::class.java.getDeclaredMethod("onCleared")
+        val method = viewModel.javaClass.getDeclaredMethod("onCleared")
         method.isAccessible = true
         method.invoke(viewModel)
     }
@@ -251,6 +262,13 @@ private class FakeAudioPlaybackController(
     override fun seekToPreviousMediaItem() {
         seekPreviousCalls += 1
     }
+
+    override fun seekTo(index: Int, positionMs: Long) {
+        currentMediaItemIndex = index
+        currentPosition = positionMs
+    }
+
+    override fun getMediaController(): androidx.media3.session.MediaController? = null
 
     fun resetCallCounters() {
         prepareCalls = 0

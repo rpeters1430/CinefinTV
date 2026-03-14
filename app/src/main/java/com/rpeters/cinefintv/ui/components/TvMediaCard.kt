@@ -52,6 +52,7 @@ import coil3.request.crossfade
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import coil3.size.Size
 
 enum class WatchStatus { NONE, WATCHED, IN_PROGRESS }
@@ -71,17 +72,13 @@ fun TvMediaCard(
 ) {
     val performanceProfile = LocalPerformanceProfile.current
     val expressiveColors = LocalCinefinExpressiveColors.current
+    val spacing = LocalCinefinSpacing.current
     var isFocused by remember { mutableStateOf(false) }
 
     val elevation by animateDpAsState(
         targetValue = if (isFocused) 16.dp else 0.dp,
         animationSpec = tween(durationMillis = 200),
         label = "CardElevation"
-    )
-    val translationY by animateFloatAsState(
-        targetValue = if (isFocused) -8f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "CardHoverOffset"
     )
     val titleColor by animateColorAsState(
         targetValue = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -91,24 +88,18 @@ fun TvMediaCard(
 
     Column(
         modifier = modifier.width(260.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(spacing.elementGap)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
-                .graphicsLayer {
-                    this.translationY = translationY
-                    if (performanceProfile.tier != DevicePerformanceProfile.Tier.LOW) {
-                        shadowElevation = elevation.toPx()
-                    }
-                }
         ) {
             if (isFocused) {
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .clip(RoundedCornerShape(18.dp))
+                        .clip(RoundedCornerShape(spacing.cornerCard))
                         .background(
                             Brush.radialGradient(
                                 colors = listOf(
@@ -127,7 +118,7 @@ fun TvMediaCard(
                         isFocused = it.isFocused || it.hasFocus
                         if (it.isFocused || it.hasFocus) onFocus()
                     },
-                scale = CardDefaults.scale(focusedScale = 1.0f),
+                scale = CardDefaults.scale(focusedScale = 1.1f),
                 glow = CardDefaults.glow(
                     focusedGlow = androidx.tv.material3.Glow(
                         elevation = elevation,
@@ -142,7 +133,7 @@ fun TvMediaCard(
                         )
                     )
                 ),
-                shape = CardDefaults.shape(MaterialTheme.shapes.small)
+                shape = CardDefaults.shape(RoundedCornerShape(spacing.cornerCard))
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Box(
@@ -156,7 +147,6 @@ fun TvMediaCard(
                                 model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
                                     .data(imageUrl)
                                     .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
-                                    // Optimize for 10-foot experience: 260dp @ ~1.5-2.0x density
                                     .size(520, 292)
                                     .build(),
                                 contentDescription = title,
@@ -211,7 +201,6 @@ fun TvMediaCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp)
-                // Use a default min height to prevent row height shifting if subtitles are missing
                 .defaultMinSize(minHeight = 84.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -244,7 +233,8 @@ fun TvMediaCard(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifier) {
-    Box(modifier = modifier.padding(6.dp)) {
+    val spacing = LocalCinefinSpacing.current
+    Box(modifier = modifier.padding(spacing.chipGap.coerceAtLeast(0.dp).div(1.5f))) {
         when (status) {
             WatchStatus.WATCHED -> {
                 Box(
@@ -288,7 +278,8 @@ private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifie
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun UnwatchedCountOverlay(count: Int, modifier: Modifier = Modifier) {
-    Box(modifier = modifier.padding(6.dp)) {
+    val spacing = LocalCinefinSpacing.current
+    Box(modifier = modifier.padding(spacing.chipGap.coerceAtLeast(0.dp).div(1.5f))) {
         Box(
             modifier = Modifier
                 .defaultMinSize(minWidth = 24.dp)
@@ -297,7 +288,7 @@ private fun UnwatchedCountOverlay(count: Int, modifier: Modifier = Modifier) {
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
                     shape = RoundedCornerShape(50)
                 )
-                .padding(horizontal = 6.dp),
+                .padding(horizontal = 6.dp.coerceAtLeast(0.dp)),
             contentAlignment = Alignment.Center
         ) {
             Text(

@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,13 +27,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
@@ -40,6 +43,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -49,6 +53,13 @@ fun SearchScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val expressiveColors = LocalCinefinExpressiveColors.current
+    val spacing = LocalCinefinSpacing.current
+    
+    val searchFieldRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        searchFieldRequester.requestFocus()
+    }
 
     Box(
         modifier = Modifier
@@ -65,14 +76,14 @@ fun SearchScreen(
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 260.dp),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 32.dp, bottom = 48.dp),
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
-            verticalArrangement = Arrangement.spacedBy(32.dp),
+            contentPadding = PaddingValues(start = spacing.gutter, end = spacing.gutter, top = spacing.rowGap, bottom = spacing.gutter),
+            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+            verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 SearchHero(
                     query = uiState.query,
-                    modifier = Modifier.padding(bottom = 8.dp),
+                    modifier = Modifier.padding(bottom = spacing.elementGap),
                 )
             }
 
@@ -80,7 +91,9 @@ fun SearchScreen(
                 SearchField(
                     value = uiState.query,
                     onValueChange = viewModel::updateQuery,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier
+                        .padding(bottom = spacing.elementGap)
+                        .focusRequester(searchFieldRequester)
                 )
             }
 
@@ -157,11 +170,12 @@ private fun SearchHero(
     modifier: Modifier = Modifier,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
+    val spacing = LocalCinefinSpacing.current
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.large)
+            .clip(RoundedCornerShape(spacing.cornerContainer))
             .background(
                 Brush.horizontalGradient(
                     colors = listOf(
@@ -172,7 +186,7 @@ private fun SearchHero(
             )
             .border(
                 border = BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.8f)),
-                shape = MaterialTheme.shapes.large,
+                shape = RoundedCornerShape(spacing.cornerContainer),
             )
             .padding(horizontal = 28.dp, vertical = 24.dp),
     ) {
@@ -204,7 +218,8 @@ private fun SearchField(
     modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(12.dp)
+    val spacing = LocalCinefinSpacing.current
+    val shape = RoundedCornerShape(spacing.elementGap)
     val expressiveColors = LocalCinefinExpressiveColors.current
     
     val borderColor by animateColorAsState(

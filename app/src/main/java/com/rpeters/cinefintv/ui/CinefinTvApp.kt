@@ -13,14 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme as ComposeMaterialTheme
 import androidx.compose.runtime.Composable
@@ -35,12 +27,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.media3.common.util.UnstableApi
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
@@ -53,29 +44,16 @@ import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.navigation.AuthRoutes
 import com.rpeters.cinefintv.ui.navigation.CinefinTvNavGraph
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
+import com.rpeters.cinefintv.ui.navigation.navTabItems
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.update.UpdateInfo
 import com.rpeters.cinefintv.update.UpdateInstallResult
 import com.rpeters.cinefintv.update.UpdateManager
 import com.rpeters.cinefintv.update.UpdateStatus
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-private data class NavTabItem(
-    val label: String,
-    val route: String,
-    val icon: ImageVector,
-)
-
-private val navTabItems = listOf(
-    NavTabItem("Home", NavRoutes.HOME, Icons.Default.Home),
-    NavTabItem("TV Shows", NavRoutes.LIBRARY_TVSHOWS, Icons.Default.Tv),
-    NavTabItem("Movies", NavRoutes.LIBRARY_MOVIES, Icons.Default.Movie),
-    NavTabItem("Music", NavRoutes.LIBRARY_MUSIC, Icons.Default.MusicNote),
-    NavTabItem("Stuff", NavRoutes.LIBRARY_STUFF, Icons.Default.VideoLibrary),
-    NavTabItem("Search", NavRoutes.SEARCH, Icons.Default.Search),
-    NavTabItem("Settings", NavRoutes.SETTINGS, Icons.Default.Settings),
-)
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @UnstableApi
@@ -85,10 +63,11 @@ fun CinefinTvApp(
     updateManager: UpdateManager? = null
 ) {
     CinefinTvTheme {
-        val expressiveColors = LocalCinefinExpressiveColors.current
         val navController = rememberNavController()
-        val currentBackStack by navController.currentBackStackEntryAsState()
-        val currentRoute = currentBackStack?.destination?.route
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route
+        val expressiveColors = LocalCinefinExpressiveColors.current
+        val spacing = LocalCinefinSpacing.current
         val coroutineScope = rememberCoroutineScope()
 
         var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
@@ -165,6 +144,23 @@ fun CinefinTvApp(
         }.let { if (it == -1) navTabItems.indexOfFirst { it.route == NavRoutes.HOME } else it }
         .coerceAtLeast(0)
 
+        // Focus delay management to prevent jarring navigation while scrolling tabs
+        var focusedTabRoute by remember { mutableStateOf<String?>(null) }
+        LaunchedEffect(focusedTabRoute) {
+            val route = focusedTabRoute ?: return@LaunchedEffect
+            if (currentRoute == route) return@LaunchedEffect
+            
+            delay(250) // Wait for user to settle on the tab
+            
+            navController.navigate(route) {
+                popUpTo(navController.graph.startDestinationId) {
+                    saveState = true
+                }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -182,12 +178,12 @@ fun CinefinTvApp(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 32.dp, vertical = 20.dp)
+                            .padding(horizontal = spacing.gutter, vertical = 20.dp)
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(28.dp))
+                                .clip(RoundedCornerShape(spacing.cornerContainer))
                                 .background(
                                     Brush.horizontalGradient(
                                         colors = listOf(
@@ -201,7 +197,7 @@ fun CinefinTvApp(
                                         width = 1.dp,
                                         color = expressiveColors.borderSubtle.copy(alpha = 0.75f),
                                     ),
-                                    shape = RoundedCornerShape(28.dp),
+                                    shape = RoundedCornerShape(spacing.cornerContainer),
                                 )
                                 .padding(horizontal = 12.dp, vertical = 12.dp)
                         ) {
@@ -212,7 +208,9 @@ fun CinefinTvApp(
                                 navTabItems.forEachIndexed { index, item ->
                                     Tab(
                                         selected = index == selectedTabIndex,
-                                        onFocus = {},
+                                        onFocus = {
+                                            focusedTabRoute = item.route
+                                        },
                                         onClick = {
                                             if (currentRoute != item.route) {
                                                 navController.navigate(item.route) {
@@ -277,9 +275,10 @@ private fun UpdateDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val spacing = LocalCinefinSpacing.current
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(spacing.cornerCard),
             modifier = Modifier.width(450.dp)
         ) {
             Column(

@@ -66,11 +66,19 @@ fun PlayerScreen(
     val context = LocalContext.current
 
     when {
-        uiState.isLoading -> {
+        uiState.isLoading || uiState.isRetrying -> {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
                     Text(
-                        text = "Preparing player...",
+                        text = if (uiState.isRetrying) {
+                            "Connection lost. Retrying (Attempt ${uiState.retryCount})..."
+                        } else {
+                            "Preparing player..."
+                        },
                         style = MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.onBackground
                     )

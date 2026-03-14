@@ -14,24 +14,28 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
@@ -39,6 +43,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import kotlinx.coroutines.launch
 
 enum class LibraryCategory(
@@ -73,6 +78,10 @@ fun LibraryScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
+    val spacing = LocalCinefinSpacing.current
+    
+    // First focus anchor
+    val firstItemRequester = remember { FocusRequester() }
 
     LaunchedEffect(category) {
         viewModel.load(category)
@@ -85,20 +94,21 @@ fun LibraryScreen(
     ) { state ->
         when (state) {
             is LibraryUiState.Loading -> {
-                Text(
-                    text = "Loading ${category.title}...",
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.padding(48.dp),
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
+                Box(modifier = Modifier.fillMaxSize().padding(spacing.gutter)) {
+                    Text(
+                        text = "Loading ${category.title}...",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
             }
 
             is LibraryUiState.Error -> {
-                androidx.compose.foundation.layout.Column(
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(48.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                        .padding(spacing.gutter),
+                    verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
                 ) {
                     Text(
                         text = "${category.title} could not load",
@@ -117,14 +127,21 @@ fun LibraryScreen(
             }
 
             is LibraryUiState.Content -> {
+                // Initial focus
+                LaunchedEffect(state) {
+                    if (state.items.isNotEmpty()) {
+                        firstItemRequester.requestFocus()
+                    }
+                }
+
                 Box(modifier = Modifier.fillMaxSize()) {
                     LazyVerticalGrid(
                         columns = GridCells.Adaptive(minSize = 260.dp),
                         state = gridState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 32.dp, bottom = 56.dp),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(32.dp),
+                        contentPadding = PaddingValues(start = spacing.gutter, end = spacing.gutter, top = spacing.rowGap, bottom = spacing.gutter),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                        verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
                     ) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
                             LibraryHeader(
@@ -155,33 +172,10 @@ fun LibraryScreen(
                                 subtitle = item.subtitle,
                                 imageUrl = item.imageUrl,
                                 onClick = { onOpenItem(item.id) },
-                                onFocus = {
-                                    val visibleItems = gridState.layoutInfo.visibleItemsInfo
-                                    if (visibleItems.isEmpty()) return@TvMediaCard
-
-                                    val firstVisible = visibleItems.first().index
-                                    val lastVisible = visibleItems.last().index
-                                    val rowsInView = visibleItems
-                                        .map { it.row }
-                                        .distinct()
-                                        .size
-                                        .coerceAtLeast(1)
-                                    val estimatedColumns =
-                                        (visibleItems.size / rowsInView).coerceAtLeast(1)
-                                    val shouldNudgeScroll =
-                                        index >= lastVisible - estimatedColumns ||
-                                            index <= firstVisible + estimatedColumns
-                                    val targetIndex = (index - estimatedColumns).coerceAtLeast(0)
-
-                                    if (shouldNudgeScroll && gridState.firstVisibleItemIndex != targetIndex) {
-                                        coroutineScope.launch {
-                                            gridState.animateScrollToItem(targetIndex)
-                                        }
-                                    }
-                                },
                                 watchStatus = item.watchStatus,
                                 playbackProgress = item.playbackProgress,
                                 unwatchedCount = item.unwatchedCount,
+                                modifier = if (index == 0) Modifier.focusRequester(firstItemRequester) else Modifier
                             )
                         }
                     }
@@ -199,11 +193,12 @@ fun LibraryHeader(
     count: Int,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
+    val spacing = LocalCinefinSpacing.current
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.large)
+            .clip(RoundedCornerShape(spacing.cornerContainer))
             .background(
                 Brush.horizontalGradient(
                     colors = listOf(
@@ -214,14 +209,14 @@ fun LibraryHeader(
             )
             .border(
                 border = BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.8f)),
-                shape = MaterialTheme.shapes.large,
+                shape = RoundedCornerShape(spacing.cornerContainer),
             )
             .padding(horizontal = 28.dp, vertical = 24.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(
                 modifier = Modifier
-                    .clip(MaterialTheme.shapes.small)
+                    .clip(RoundedCornerShape(spacing.elementGap))
                     .background(expressiveColors.pillMuted)
                     .padding(horizontal = 12.dp, vertical = 8.dp),
             ) {

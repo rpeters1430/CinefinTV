@@ -23,6 +23,8 @@ interface AudioPlaybackController {
     fun seekBack()
     fun seekToNextMediaItem()
     fun seekToPreviousMediaItem()
+    fun seekTo(index: Int, positionMs: Long)
+    fun getMediaController(): MediaController?
 }
 
 class Media3AudioPlaybackController(
@@ -54,4 +56,6 @@ class Media3AudioPlaybackController(
     override fun seekBack() = mediaController.seekBack()
     override fun seekToNextMediaItem() = mediaController.seekToNextMediaItem()
     override fun seekToPreviousMediaItem() = mediaController.seekToPreviousMediaItem()
+    override fun seekTo(index: Int, positionMs: Long) = mediaController.seekTo(index, positionMs)
+    override fun getMediaController(): MediaController = mediaController
 }

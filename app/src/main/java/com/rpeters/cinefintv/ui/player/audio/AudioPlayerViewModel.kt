@@ -13,6 +13,9 @@ import com.rpeters.cinefintv.data.repository.common.ApiResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,19 +25,33 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import java.net.URLDecoder
 import javax.inject.Inject
 
+data class AudioQueueItem(
+    val id: String,
+    val title: String,
+    val artist: String?,
+    val imageUrl: String?,
+    val durationMs: Long,
+)
+
 data class AudioPlayerUiState(
     val isConnecting: Boolean = true,
     val isLoadingQueue: Boolean = false,
     val isPlaying: Boolean = false,
     val currentTrackId: String? = null,
+    val currentTrackImageUrl: String? = null,
     val title: String = "Audio Player",
     val subtitle: String? = null,
+    val artistName: String? = null,
+    val albumName: String? = null,
+    val year: Int? = null,
+    val genre: String? = null,
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
     val queueSize: Int = 0,
     val currentIndex: Int = 0,
     val canSkipNext: Boolean = false,
     val canSkipPrevious: Boolean = false,
+    val queueItems: List<AudioQueueItem> = emptyList(),
     val errorMessage: String? = null,
 )
 
@@ -112,6 +129,11 @@ class AudioPlayerViewModel @Inject constructor(
         refreshFromController()
     }
 
+    fun skipToItem(index: Int) {
+        controller?.seekTo(index, 0L)
+        refreshFromController()
+    }
+
     fun retry() {
         _uiState.value = _uiState.value.copy(
             isConnecting = true,
@@ -181,8 +203,46 @@ class AudioPlayerViewModel @Inject constructor(
         )
 
         val mediaItems = mutableListOf<MediaItem>()
-        for (trackId in queueIds) {
-            buildMediaItem(trackId)?.let(mediaItems::add)
+        val uiQueueItems = mutableListOf<AudioQueueItem>()
+
+        // Load track metadata and URLs in parallel for better performance
+        coroutineScope {
+            val deferredTracks = queueIds.map { trackId ->
+                async {
+                    val detailResult = repositories.media.getItemDetails(trackId)
+                    val track = (detailResult as? ApiResult.Success)?.data
+                    val streamUrl = repositories.stream.getDirectStreamUrl(trackId, "mp3")
+                        ?: repositories.stream.getStreamUrl(trackId)
+                    Triple(trackId, track, streamUrl)
+                }
+            }
+
+            val results = deferredTracks.awaitAll()
+            results.forEach { (trackId, track, streamUrl) ->
+                if (streamUrl != null) {
+                    val metadata = track.toMediaMetadata()
+                    val imageUrl = repositories.stream.getImageUrl(trackId)
+                    val durationMs = track?.runTimeTicks?.div(TICKS_PER_MILLISECOND) ?: 0L
+
+                    mediaItems.add(
+                        mediaItemFactory.create(
+                            trackId = trackId,
+                            streamUrl = streamUrl,
+                            metadata = metadata,
+                        )
+                    )
+
+                    uiQueueItems.add(
+                        AudioQueueItem(
+                            id = trackId,
+                            title = track?.name ?: "Unknown Track",
+                            artist = track?.albumArtist ?: track?.artists?.firstOrNull(),
+                            imageUrl = imageUrl,
+                            durationMs = durationMs,
+                        )
+                    )
+                }
+            }
         }
 
         if (mediaItems.isEmpty()) {
@@ -193,6 +253,8 @@ class AudioPlayerViewModel @Inject constructor(
             return
         }
 
+        _uiState.value = _uiState.value.copy(queueItems = uiQueueItems)
+
         val startIndex = mediaItems.indexOfFirst { it.mediaId == itemId }.let { if (it == -1) 0 else it }
         val startPositionMs = playbackPositionRepository.getPlaybackPosition(mediaItems[startIndex].mediaId)
 
@@ -200,21 +262,6 @@ class AudioPlayerViewModel @Inject constructor(
         mediaController.prepare()
         mediaController.play()
         refreshFromPlayer(mediaController)
-    }
-
-    private suspend fun buildMediaItem(trackId: String): MediaItem? {
-        val streamUrl = repositories.stream.getDirectStreamUrl(trackId, "mp3")
-            ?: repositories.stream.getStreamUrl(trackId)
-            ?: return null
-
-        val detailResult = repositories.media.getItemDetails(trackId)
-        val track = (detailResult as? ApiResult.Success)?.data
-
-        return mediaItemFactory.create(
-            trackId = trackId,
-            streamUrl = streamUrl,
-            metadata = track.toMediaMetadata(),
-        )
     }
 
     private fun refreshFromController() {
@@ -230,14 +277,22 @@ class AudioPlayerViewModel @Inject constructor(
             ?: 0L
         val mediaItemCount = player.mediaItemCount
         val currentIndex = player.currentMediaItemIndex.takeIf { it >= 0 } ?: 0
+        
+        // Find image for current track from our pre-loaded queue items
+        val currentTrackImageUrl = _uiState.value.queueItems.find { it.id == currentTrackId }?.imageUrl
 
         _uiState.value = _uiState.value.copy(
             isConnecting = false,
             isLoadingQueue = false,
             isPlaying = player.isPlaying,
             currentTrackId = currentTrackId,
+            currentTrackImageUrl = currentTrackImageUrl,
             title = metadata?.title?.toString().takeUnless { it.isNullOrBlank() } ?: "Audio Player",
             subtitle = buildSubtitle(metadata),
+            artistName = metadata?.artist?.toString(),
+            albumName = metadata?.albumTitle?.toString(),
+            year = metadata?.extras?.getInt(YEAR_EXTRA)?.takeIf { it > 0 },
+            genre = metadata?.genre?.toString(),
             positionMs = player.currentPosition.coerceAtLeast(0L),
             durationMs = durationMs.coerceAtLeast(0L),
             queueSize = mediaItemCount,
@@ -273,14 +328,18 @@ class AudioPlayerViewModel @Inject constructor(
         val artist = this?.albumArtist ?: this?.artists?.firstOrNull()
         val albumTitle = this?.album ?: this?.albumId?.toString()
         val durationMs = this?.runTimeTicks?.div(TICKS_PER_MILLISECOND)
+        val year = this?.productionYear
+        val genre = this?.genres?.firstOrNull()
 
         return MediaMetadata.Builder()
             .setTitle(title)
             .setArtist(artist)
             .setAlbumTitle(albumTitle)
+            .setGenre(genre)
             .setExtras(
                 Bundle().apply {
                     putLong(DURATION_EXTRA_MS, durationMs ?: 0L)
+                    putInt(YEAR_EXTRA, year ?: 0)
                 },
             )
             .build()
@@ -300,5 +359,6 @@ class AudioPlayerViewModel @Inject constructor(
         private const val POLL_INTERVAL_MS = 1_000L
         private const val TICKS_PER_MILLISECOND = 10_000L
         private const val DURATION_EXTRA_MS = "duration_ms"
+        private const val YEAR_EXTRA = "production_year"
     }
 }

@@ -1,15 +1,20 @@
 package com.rpeters.cinefintv.ui.player
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.data.PlaybackPositionStore
 import com.rpeters.cinefintv.data.playback.AdaptiveBitrateMonitor
 import com.rpeters.cinefintv.data.playback.EnhancedPlaybackManager
@@ -23,6 +28,7 @@ import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,48 +38,10 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
-import org.jellyfin.sdk.model.api.MediaSourceInfo
-import org.jellyfin.sdk.model.api.MediaStream
-import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.PlayMethod
 import java.util.UUID
 import javax.inject.Inject
-
-data class TrackOption(
-    val id: String,
-    val label: String,
-    val language: String?,
-    val streamIndex: Int?,
-)
-
-data class ChapterMarker(val positionMs: Long, val name: String?)
-
-data class SkipRange(val startMs: Long, val endMs: Long?)
-
-data class PlayerUiState(
-    val itemId: String = "",
-    val title: String = "Player",
-    val logoUrl: String? = null,
-    val seasonNumber: Int? = null,
-    val episodeNumber: Int? = null,
-    val streamUrl: String? = null,
-    val savedPlaybackPositionMs: Long = 0L,
-    val shouldShowResumeDialog: Boolean = false,
-    val isEpisodicContent: Boolean = false,
-    val autoPlayNextEpisode: Boolean = true,
-    val nextEpisodeId: String? = null,
-    val nextEpisodeTitle: String? = null,
-    val audioTracks: List<TrackOption> = emptyList(),
-    val subtitleTracks: List<TrackOption> = emptyList(),
-    val selectedAudioTrack: TrackOption? = null,
-    val selectedSubtitleTrack: TrackOption? = null,
-    val playbackSpeed: Float = 1.0f,
-    val chapters: List<ChapterMarker> = emptyList(),
-    val introSkipRange: SkipRange? = null,
-    val creditsSkipRange: SkipRange? = null,
-    val isLoading: Boolean = true,
-    val errorMessage: String? = null,
-)
+import kotlin.math.pow
 
 @UnstableApi
 @HiltViewModel
@@ -184,8 +152,8 @@ class PlayerViewModel @Inject constructor(
             val title = item?.getDisplayTitle() ?: "Now Playing"
             val playbackInfo = runCatching { jellyfinRepository.getPlaybackInfo(itemId) }.getOrNull()
             val mediaSource = playbackInfo?.mediaSources?.firstOrNull()
-            val audioTracks = mediaSource.toAudioTrackOptions()
-            val subtitleTracks = mediaSource.toSubtitleTrackOptions()
+            val audioTracks = PlayerMappers.toAudioTrackOptions(mediaSource)
+            val subtitleTracks = PlayerMappers.toSubtitleTrackOptions(mediaSource)
             activeMediaSourceId = mediaSource?.id
             activePlaySessionId = playbackInfo?.playSessionId
 
@@ -204,7 +172,6 @@ class PlayerViewModel @Inject constructor(
                 return@launch
             }
 
-            // Prefer the parent series logo for episodes, otherwise use the item's own logo.
             val logoUrl = if (item != null) {
                 item.seriesId?.let { seriesId ->
                     val seriesResult = repositories.media.getSeriesDetails(seriesId.toString())
@@ -260,10 +227,20 @@ class PlayerViewModel @Inject constructor(
 
     fun setupPlayer(context: Context): ExoPlayer {
         _player?.let { return it }
+
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                50_000, // minBufferMs
+                120_000, // maxBufferMs (up to 2 minutes)
+                5_000,  // bufferForPlaybackMs (fast start)
+                10_000  // bufferForPlaybackAfterRebufferMs (harden against micro-stutter)
+            )
+            .build()
         
         val factory = DefaultMediaSourceFactory(OkHttpDataSource.Factory(okHttpClient))
         val newPlayer = ExoPlayer.Builder(context)
             .setMediaSourceFactory(factory)
+            .setLoadControl(loadControl)
             .build()
             .apply {
                 val streamUrl = uiState.value.streamUrl
@@ -281,6 +258,19 @@ class PlayerViewModel @Inject constructor(
                     }
                 }
             }
+        
+        newPlayer.addAnalyticsListener(object : AnalyticsListener {
+            override fun onPlayerError(eventTime: AnalyticsListener.EventTime, error: PlaybackException) {
+                Log.e("PlayerViewModel", "Analytics: Playback Error [Code: ${error.errorCode}]", error)
+            }
+
+            override fun onDroppedVideoFrames(eventTime: AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) {
+                if (droppedFrames > 10) {
+                    Log.w("PlayerViewModel", "Analytics: Dropped $droppedFrames frames in ${elapsedMs}ms")
+                }
+            }
+        })
+
         _player = newPlayer
         viewModelScope.launch {
             val prefs = playbackPreferencesRepository.preferences.first()
@@ -377,19 +367,58 @@ class PlayerViewModel @Inject constructor(
         _player?.setPlaybackSpeed(speed)
     }
 
-    fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+    fun onPlayerError(error: PlaybackException) {
+        val canRetry = when (error.errorCode) {
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+            PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
+            PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> true
+            else -> false
+        }
+
+        if (canRetry && uiState.value.retryCount < MAX_RETRIES) {
+            attemptRetry(error)
+            return
+        }
+
         val message = when (error.errorCode) {
-            androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-            androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ->
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ->
                 "Network error. Please check your connection."
-            androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ->
+            PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ->
                 "Codec error. This device may not support this media format."
             else -> "Playback failed: ${error.localizedMessage}"
         }
         _uiState.value = _uiState.value.copy(
             isLoading = false,
+            isRetrying = false,
             errorMessage = message,
         )
+    }
+
+    private fun attemptRetry(error: PlaybackException) {
+        val nextRetryCount = uiState.value.retryCount + 1
+        Log.w("PlayerViewModel", "Playback error (code ${error.errorCode}). Attempting retry $nextRetryCount/$MAX_RETRIES...")
+        
+        _uiState.value = _uiState.value.copy(
+            isRetrying = true,
+            retryCount = nextRetryCount,
+            errorMessage = null
+        )
+
+        viewModelScope.launch {
+            val delayMs = (2.0.pow(nextRetryCount - 1).toLong() * 1000L)
+            delay(delayMs)
+            
+            val player = _player ?: return@launch
+            val currentPos = player.currentPosition
+            
+            load()
+            
+            reloadStream(positionMs = currentPos, playWhenReady = true)
+            
+            _uiState.value = _uiState.value.copy(isRetrying = false)
+        }
     }
 
     suspend fun getNextEpisodeId(): String? {
@@ -501,46 +530,6 @@ class PlayerViewModel @Inject constructor(
     companion object {
         private const val COMPLETION_THRESHOLD_PERCENT = 0.95
         private const val TICKS_PER_MILLISECOND = 10_000L
-    }
-}
-
-private fun MediaSourceInfo?.toAudioTrackOptions(): List<TrackOption> =
-    this?.mediaStreams
-        .orEmpty()
-        .filter { it.type == MediaStreamType.AUDIO }
-        .mapIndexed { index, stream ->
-            TrackOption(
-                id = "audio-${stream.index}",
-                label = stream.toTrackLabel("Audio", index + 1),
-                language = stream.language,
-                streamIndex = stream.index,
-            )
-        }
-
-private fun MediaSourceInfo?.toSubtitleTrackOptions(): List<TrackOption> =
-    this?.mediaStreams
-        .orEmpty()
-        .filter { it.type == MediaStreamType.SUBTITLE }
-        .mapIndexed { index, stream ->
-            TrackOption(
-                id = "sub-${stream.index}",
-                label = stream.toTrackLabel("Subtitle", index + 1),
-                language = stream.language,
-                streamIndex = stream.index,
-            )
-        }
-
-private fun MediaStream.toTrackLabel(prefix: String, fallbackNumber: Int): String {
-    val parts = listOfNotNull(
-        title?.takeIf { it.isNotBlank() },
-        displayTitle?.takeIf { it.isNotBlank() },
-        language?.takeIf { it.isNotBlank() },
-        codec?.takeIf { it.isNotBlank() }?.uppercase(),
-    ).distinct()
-
-    return if (parts.isNotEmpty()) {
-        parts.joinToString(" • ")
-    } else {
-        "$prefix $fallbackNumber"
+        private const val MAX_RETRIES = 3
     }
 }
