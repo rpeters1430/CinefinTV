@@ -63,7 +63,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
@@ -72,7 +74,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
-import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import coil3.compose.AsyncImage
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -333,45 +335,91 @@ internal fun PlayerControls(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-internal fun NextEpisodeCountdown(
-    countdownRemaining: Long,
-    nextEpisodeTitle: String?,
-    onPlayNext: () -> Unit
+internal fun NextEpisodeCard(
+    title: String,
+    thumbnailUrl: String?,
+    remainingMs: Long,
+    onPlayNow: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val expressiveColors = LocalCinefinExpressiveColors.current
-    AnimatedVisibility(
-        visible = countdownRemaining > 0,
-        enter = fadeIn(),
-        exit = fadeOut()
+    val progressFraction = ((15_000L - remainingMs) / 15_000f).coerceIn(0f, 1f)
+
+    Surface(
+        modifier = modifier.width(180.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = SurfaceDefaults.colors(
+            containerColor = com.rpeters.cinefintv.ui.theme.SurfaceDark,
+        ),
     ) {
-        androidx.tv.material3.Card(
-            onClick = onPlayNext,
-            modifier = Modifier.width(300.dp)
-        ) {
+        Column {
+            AsyncImage(
+                model = thumbnailUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(90.dp)
+                    .background(com.rpeters.cinefintv.ui.theme.SurfaceDark),
+            )
+
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                    Text(
-                        text = "Next Episode",
-                        style = MaterialTheme.typography.labelMedium,
-                    color = expressiveColors.titleAccent
+                Text(
+                    text = "UP NEXT",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontSize = 18.sp,
+                    color = Color.White.copy(alpha = 0.5f),
                 )
                 Text(
-                    text = nextEpisodeTitle ?: "Coming up next",
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "Starting in $countdownRemaining seconds...",
-                    style = MaterialTheme.typography.bodySmall
+                    text = "Starting in ${remainingMs / 1000}s\u2026",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontSize = 18.sp,
+                    color = Color.White.copy(alpha = 0.5f),
                 )
-                Button(
-                    onClick = onPlayNext,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+
+                // Draining red progress bar
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .background(Color.White.copy(alpha = 0.15f))
                 ) {
-                    Text("Play Now")
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(progressFraction)
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                }
+
+                Button(
+                    onClick = onPlayNow,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    colors = ButtonDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White,
+                        focusedContainerColor = Color.White,
+                        focusedContentColor = MaterialTheme.colorScheme.primary,
+                    ),
+                ) {
+                    Text(
+                        text = "▶  Play Now",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
             }
         }

@@ -191,18 +191,18 @@ fun PlayerScreen(
                 }
             }
 
-            var countdownRemaining by remember { mutableLongStateOf(-1L) }
+            var countdownRemainingMs by remember { mutableLongStateOf(-1L) }
 
             LaunchedEffect(position, duration) {
                 if (duration > 0 && uiState.isEpisodicContent && uiState.autoPlayNextEpisode && uiState.nextEpisodeId != null) {
                     val remaining = duration - position
                     if (remaining in 1L..NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS) {
-                        countdownRemaining = remaining / 1000
+                        countdownRemainingMs = remaining
                     } else {
-                        countdownRemaining = -1L
+                        countdownRemainingMs = -1L
                     }
                 } else {
-                    countdownRemaining = -1L
+                    countdownRemainingMs = -1L
                 }
             }
 
@@ -375,16 +375,20 @@ fun PlayerScreen(
                     }
                 }
 
-                Box(modifier = Modifier.align(Alignment.BottomEnd).padding(48.dp)) {
-                    NextEpisodeCountdown(
-                        countdownRemaining = countdownRemaining,
-                        nextEpisodeTitle = uiState.nextEpisodeTitle,
-                        onPlayNext = {
-                            coroutineScope.launch {
-                                viewModel.getNextEpisodeId()?.let { onOpenItem(it) }
+                val nextTitle = uiState.nextEpisodeTitle
+                if (countdownRemainingMs > 0 && nextTitle != null) {
+                    Box(modifier = Modifier.align(Alignment.BottomEnd).padding(48.dp)) {
+                        NextEpisodeCard(
+                            title = nextTitle,
+                            thumbnailUrl = uiState.nextEpisodeThumbnailUrl,
+                            remainingMs = countdownRemainingMs,
+                            onPlayNow = {
+                                coroutineScope.launch {
+                                    viewModel.getNextEpisodeId()?.let { onOpenItem(it) }
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
 
                 if (uiState.shouldShowResumeDialog) {
