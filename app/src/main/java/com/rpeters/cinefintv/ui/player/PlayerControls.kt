@@ -522,7 +522,7 @@ private fun SeekBarControl(
                         .offset(x = maxWidth * chapterFraction - 1.dp)
                         .width(2.dp)
                         .height(barHeight)
-                        .background(Color.Black.copy(alpha = 0.5f))
+                        .background(Color.White.copy(alpha = 0.6f))
                 )
             }
 
@@ -537,6 +537,7 @@ private fun SeekBarControl(
                         .shadow(
                             elevation = 8.dp,
                             shape = CircleShape,
+                            clip = false,
                             ambientColor = MaterialTheme.colorScheme.primary,
                             spotColor = MaterialTheme.colorScheme.primary,
                         )
