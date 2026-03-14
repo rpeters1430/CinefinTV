@@ -76,6 +76,7 @@ import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import com.rpeters.cinefintv.ui.theme.SurfaceDark
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -97,13 +98,11 @@ internal fun PlayerControls(
     val defaultBounds = Rect.Zero
     val (subtitleButtonBounds, setSubtitleButtonBounds) = remember { mutableStateOf(defaultBounds) }
     val (audioButtonBounds, setAudioButtonBounds) = remember { mutableStateOf(defaultBounds) }
-    val (speedButtonBounds, setSpeedButtonBounds) = remember { mutableStateOf(defaultBounds) }
     val (moreButtonBounds, setMoreButtonBounds) = remember { mutableStateOf(defaultBounds) }
-    
+
     val backFocusRequester = remember { FocusRequester() }
     val subtitleFocusRequester = remember { FocusRequester() }
     val audioFocusRequester = remember { FocusRequester() }
-    val speedFocusRequester = remember { FocusRequester() }
     val settingsFocusRequester = remember { FocusRequester() }
     val skipBackFocusRequester = remember { FocusRequester() }
     val skipForwardFocusRequester = remember { FocusRequester() }
@@ -343,12 +342,17 @@ internal fun NextEpisodeCard(
     modifier: Modifier = Modifier,
 ) {
     val progressFraction = ((15_000L - remainingMs) / 15_000f).coerceIn(0f, 1f)
+    val playNowFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        runCatching { playNowFocusRequester.requestFocus() }
+    }
 
     Surface(
         modifier = modifier.width(180.dp),
         shape = RoundedCornerShape(8.dp),
         colors = SurfaceDefaults.colors(
-            containerColor = com.rpeters.cinefintv.ui.theme.SurfaceDark,
+            containerColor = SurfaceDark,
         ),
     ) {
         Column {
@@ -359,7 +363,7 @@ internal fun NextEpisodeCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(90.dp)
-                    .background(com.rpeters.cinefintv.ui.theme.SurfaceDark),
+                    .background(SurfaceDark),
             )
 
             Column(
@@ -407,7 +411,8 @@ internal fun NextEpisodeCard(
                     onClick = onPlayNow,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 4.dp),
+                        .padding(top = 4.dp)
+                        .focusRequester(playNowFocusRequester),
                     colors = ButtonDefaults.colors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = Color.White,
@@ -546,7 +551,7 @@ private fun SeekBarControl(
                 .background(Color.White.copy(alpha = 0.2f))
         ) {
             val progressFraction =
-                if (duration > 0L) (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                if (duration > 0L) (seekPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
                 else 0f
             val bufferedClamped = bufferedFraction.coerceIn(0f, 1f)
 
@@ -612,7 +617,7 @@ private fun SeekBarControl(
                     .align(Alignment.TopCenter)
             ) {
                 val progressFraction =
-                    if (duration > 0L) (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                    if (duration > 0L) (seekPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
                     else 0f
                 val bubbleWidth = 56.dp
                 val thumbX = maxWidth * progressFraction
@@ -628,7 +633,7 @@ private fun SeekBarControl(
                     )
                 ) {
                     Text(
-                        text = formatMs(position),
+                        text = formatMs(seekPosition),
                         style = MaterialTheme.typography.labelMedium,
                         fontSize = 18.sp,
                         color = Color.White,

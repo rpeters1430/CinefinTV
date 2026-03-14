@@ -398,9 +398,7 @@ fun PlayerScreen(
                             thumbnailUrl = uiState.nextEpisodeThumbnailUrl,
                             remainingMs = remaining.coerceAtLeast(0L),
                             onPlayNow = {
-                                coroutineScope.launch {
-                                    viewModel.getNextEpisodeId()?.let { onOpenItem(it) }
-                                }
+                                uiState.nextEpisodeId?.let { onOpenItem(it) }
                             },
                         )
                     }
