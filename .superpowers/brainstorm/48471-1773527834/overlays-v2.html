@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d1117; color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 32px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .sub { color: #8b949e; font-size: 14px; margin-bottom: 28px; }
+  h2 { font-size: 16px; font-weight: 600; margin: 32px 0 6px; color: #e6edf3; }
+  .sub2 { color: #8b949e; font-size: 13px; margin-bottom: 16px; }
+
+  /* Grid of player previews */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+
+  /* Selectable option */
+  .opt {
+    border: 2px solid #30363d;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .opt:hover { border-color: #58a6ff; }
+  .opt.selected { border-color: #e50914; box-shadow: 0 0 0 3px rgba(229,9,20,0.25); }
+  .opt-label { padding: 12px 14px; background: #161b22; border-top: 1px solid #30363d; }
+  .opt-label h3 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .opt-label p { font-size: 12px; color: #8b949e; line-height: 1.4; }
+
+  /* Player canvas */
+  .player {
+    background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+    width: 100%;
+    aspect-ratio: 16/9;
+    position: relative;
+    overflow: hidden;
+    font-family: sans-serif;
+  }
+  .grad {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 55%;
+    background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 60%, transparent 100%);
+  }
+  /* Controls bar */
+  .ctrl {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 8px 14px 10px;
+  }
+  .seek-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+  }
+  .t { color: #fff; font-size: 9px; white-space: nowrap; }
+  .t.dim { color: #888; }
+  .track {
+    flex: 1; height: 3px; background: rgba(255,255,255,0.25); border-radius: 2px; position: relative;
+  }
+  .fill { height: 100%; width: 78%; background: #e50914; border-radius: 2px; }
+  .btn-row { display: flex; align-items: center; }
+  .pp {
+    width: 28px; height: 28px; border-radius: 50%; background: #e50914;
+    display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px;
+  }
+  .sp { flex: 1; }
+  .ic { color: #ccc; font-size: 10px; padding: 0 5px; }
+  .ic-sm { color: #999; font-size: 9px; padding: 0 4px; }
+</style>
+</head>
+<body>
+
+<h1>Overlay Elements</h1>
+<p class="sub">Click an option in each section to select it. Pick one skip chip style and one Next Up card style.</p>
+
+<!-- ── SKIP INTRO ── -->
+<h2>Part 1 — Skip Intro Chip</h2>
+<p class="sub2">Appears bottom-right when inside an intro or credits sequence.</p>
+
+<div class="grid">
+
+  <!-- Skip A: YouTube TV outlined -->
+  <div class="opt" id="skip-a" onclick="pick('skip',this)">
+    <div class="player">
+      <div class="grad"></div>
+      <!-- Skip chip -->
+      <div style="position:absolute;bottom:50px;right:14px;border:2px solid rgba(255,255,255,0.85);border-radius:3px;padding:6px 14px;color:#fff;font-size:10px;font-weight:700;letter-spacing:0.05em;">Skip Intro →</div>
+      <div class="ctrl">
+        <div class="seek-row">
+          <span class="t">0:48:22</span>
+          <div class="track"><div class="fill"></div></div>
+          <span class="t dim">2:15:00</span>
+        </div>
+        <div class="btn-row">
+          <span class="ic">⏮</span><span class="ic">−10</span>
+          <div class="sp"></div>
+          <div class="pp">▶</div>
+          <div class="sp"></div>
+          <span class="ic">+10</span><span class="ic">⏭</span>
+          <span class="ic-sm" style="margin-left:8px;">CC</span>
+          <span class="ic-sm">⚙</span>
+        </div>
+      </div>
+    </div>
+    <div class="opt-label">
+      <h3>A — YouTube TV Outlined</h3>
+      <p>White border rectangle, transparent fill. Exactly how YouTube TV renders it.</p>
+    </div>
+  </div>
+
+  <!-- Skip B: Red pill -->
+  <div class="opt" id="skip-b" onclick="pick('skip',this)">
+    <div class="player">
+      <div class="grad"></div>
+      <div style="position:absolute;bottom:50px;right:14px;background:#e50914;border-radius:20px;padding:6px 16px;color:#fff;font-size:10px;font-weight:700;">Skip Intro →</div>
+      <div class="ctrl">
+        <div class="seek-row">
+          <span class="t">0:48:22</span>
+          <div class="track"><div class="fill"></div></div>
+          <span class="t dim">2:15:00</span>
+        </div>
+        <div class="btn-row">
+          <span class="ic">⏮</span><span class="ic">−10</span>
+          <div class="sp"></div><div class="pp">▶</div><div class="sp"></div>
+          <span class="ic">+10</span><span class="ic">⏭</span>
+          <span class="ic-sm" style="margin-left:8px;">CC</span><span class="ic-sm">⚙</span>
+        </div>
+      </div>
+    </div>
+    <div class="opt-label">
+      <h3>B — Red Pill</h3>
+      <p>Solid CinefinRed capsule. Strong contrast, matches the app's accent color.</p>
+    </div>
+  </div>
+
+  <!-- Skip C: Glass -->
+  <div class="opt" id="skip-c" onclick="pick('skip',this)">
+    <div class="player">
+      <div class="grad"></div>
+      <div style="position:absolute;bottom:50px;right:14px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);border-radius:6px;padding:6px 16px;color:#fff;font-size:10px;font-weight:700;">Skip Intro →</div>
+      <div class="ctrl">
+        <div class="seek-row">
+          <span class="t">0:48:22</span>
+          <div class="track"><div class="fill"></div></div>
+          <span class="t dim">2:15:00</span>
+        </div>
+        <div class="btn-row">
+          <span class="ic">⏮</span><span class="ic">−10</span>
+          <div class="sp"></div><div class="pp">▶</div><div class="sp"></div>
+          <span class="ic">+10</span><span class="ic">⏭</span>
+          <span class="ic-sm" style="margin-left:8px;">CC</span><span class="ic-sm">⚙</span>
+        </div>
+      </div>
+    </div>
+    <div class="opt-label">
+      <h3>C — Frosted Glass</h3>
+      <p>White at 12% opacity with subtle border. Matches the app's glassmorphism style.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── NEXT UP ── -->
+<h2>Part 2 — "Next Up" Card</h2>
+<p class="sub2">Appears in the last ~15 seconds of an episode. Shows the next episode title and a countdown.</p>
+
+<div class="grid-2">
+
+  <!-- Next A: Text card -->
+  <div class="opt" id="next-a" onclick="pick('next',this)">
+    <div class="player">
+      <div class="grad"></div>
+      <!-- Next up card -->
+      <div style="position:absolute;bottom:54px;right:14px;background:rgba(22,22,22,0.96);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px 14px;width:190px;">
+        <div style="color:#aaa;font-size:8px;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px;">Next Episode</div>
+        <div style="color:#fff;font-size:11px;font-weight:700;margin-bottom:2px;">S2 E5 · Episode Title</div>
+        <div style="color:#aaa;font-size:9px;margin-bottom:8px;">Starting in 8 seconds...</div>
+        <div style="height:2px;background:rgba(255,255,255,0.15);border-radius:1px;">
+          <div style="height:100%;width:55%;background:#e50914;border-radius:1px;"></div>
+        </div>
+      </div>
+      <div class="ctrl">
+        <div class="seek-row">
+          <span class="t">2:14:46</span>
+          <div class="track"><div class="fill" style="width:99%;"></div></div>
+          <span class="t dim">2:15:00</span>
+        </div>
+        <div class="btn-row">
+          <span class="ic">⏮</span><span class="ic">−10</span>
+          <div class="sp"></div><div class="pp">▶</div><div class="sp"></div>
+          <span class="ic">+10</span><span class="ic">⏭</span>
+          <span class="ic-sm" style="margin-left:8px;">CC</span><span class="ic-sm">⚙</span>
+        </div>
+      </div>
+    </div>
+    <div class="opt-label">
+      <h3>A — Text Card (YouTube TV style)</h3>
+      <p>Dark card with episode title, countdown text, and a thin red progress bar draining down. Minimal.</p>
+    </div>
+  </div>
+
+  <!-- Next B: Thumbnail card -->
+  <div class="opt" id="next-b" onclick="pick('next',this)">
+    <div class="player">
+      <div class="grad"></div>
+      <div style="position:absolute;bottom:54px;right:14px;background:rgba(22,22,22,0.96);border:1px solid rgba(255,255,255,0.1);border-radius:6px;overflow:hidden;width:190px;">
+        <div style="height:80px;background:linear-gradient(135deg,#1a237e,#283593);display:flex;align-items:center;justify-content:center;color:#445;font-size:9px;">thumbnail</div>
+        <div style="padding:8px 12px 10px;">
+          <div style="color:#aaa;font-size:8px;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px;">Up Next</div>
+          <div style="color:#fff;font-size:11px;font-weight:700;margin-bottom:6px;">S2 E5 · Episode Title</div>
+          <div style="display:inline-block;background:#e50914;color:#fff;font-size:8px;font-weight:700;padding:3px 12px;border-radius:3px;">▶ Play Now</div>
+        </div>
+      </div>
+      <div class="ctrl">
+        <div class="seek-row">
+          <span class="t">2:14:46</span>
+          <div class="track"><div class="fill" style="width:99%;"></div></div>
+          <span class="t dim">2:15:00</span>
+        </div>
+        <div class="btn-row">
+          <span class="ic">⏮</span><span class="ic">−10</span>
+          <div class="sp"></div><div class="pp">▶</div><div class="sp"></div>
+          <span class="ic">+10</span><span class="ic">⏭</span>
+          <span class="ic-sm" style="margin-left:8px;">CC</span><span class="ic-sm">⚙</span>
+        </div>
+      </div>
+    </div>
+    <div class="opt-label">
+      <h3>B — Thumbnail Card</h3>
+      <p>Card with episode thumbnail, title, and a "Play Now" button. Richer, more Netflix-style end card.</p>
+    </div>
+  </div>
+
+</div>
+
+<div id="summary" style="margin-top:28px;padding:16px;background:#161b22;border:1px solid #30363d;border-radius:8px;font-size:13px;color:#8b949e;display:none;">
+  <strong style="color:#e6edf3;">Selected:</strong> <span id="summary-text"></span>
+</div>
+
+<script>
+  const selections = {};
+  function pick(group, el) {
+    // Deselect others in group
+    document.querySelectorAll('[id^="'+group+'-"]').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    selections[group] = el.id;
+    updateSummary();
+    // Fire event for parent frame if available
+    if (window.parent && window.parent !== window) {
+      try { window.parent.postMessage({type:'pick',group,id:el.id},'*'); } catch(e) {}
+    }
+  }
+  function updateSummary() {
+    const parts = Object.entries(selections).map(([g,id]) => id.toUpperCase().replace('-',' → '));
+    if (parts.length) {
+      document.getElementById('summary').style.display = 'block';
+      document.getElementById('summary-text').textContent = parts.join('   |   ');
+    }
+  }
+</script>
+
+</body>
+</html>

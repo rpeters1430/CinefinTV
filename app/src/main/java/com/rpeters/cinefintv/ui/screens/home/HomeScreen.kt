@@ -121,7 +121,7 @@ fun HomeScreen(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = spacing.rowGap),
+                    contentPadding = PaddingValues(top = spacing.rowGap, bottom = spacing.rowGap),
                     verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
                 ) {
                     if (state.featuredItems.isNotEmpty()) {
@@ -133,7 +133,7 @@ fun HomeScreen(
                                 sectionCount = state.sections.size,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 8.dp)
+                                    .padding(top = 8.dp, start = spacing.gutter, end = spacing.gutter)
                                     .focusRequester(carouselFocusRequester)
                                     .focusProperties {
                                         down = firstRowFocusRequester
@@ -181,9 +181,10 @@ private fun FeaturedCarousel(
     Carousel(
         itemCount = items.size,
         carouselState = carouselState,
+        autoScrollDurationMillis = 12000L,
         modifier = modifier
             .fillMaxWidth()
-            .height(420.dp),
+            .height(300.dp),
     ) { index ->
         val item = items[index]
         HeroItem(
@@ -258,7 +259,6 @@ private fun HeroItem(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(spacing.chipGap)) {
                 CinefinChip(label = "Featured", strong = true)
-                CinefinChip(label = "$sectionCount Collections")
                 item.officialRating?.let { CinefinChip(label = it) }
             }
             Text(
@@ -325,11 +325,12 @@ private fun HomeSection(
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = spacing.elementGap),
+            color = com.rpeters.cinefintv.ui.theme.OnBackground,
+            modifier = Modifier.padding(bottom = spacing.elementGap, start = spacing.gutter, end = spacing.gutter),
         )
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
-            contentPadding = PaddingValues(horizontal = 4.dp),
+            contentPadding = PaddingValues(horizontal = spacing.gutter),
         ) {
             itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
                 TvMediaCard(

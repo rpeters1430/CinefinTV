@@ -55,6 +55,9 @@ object DetailMappers {
                 add(getMediaTypeLabel(item))
             }
             item.officialRating?.takeIf { it.isNotBlank() }?.let(::add)
+            if (item.isSeries() && item.status?.equals("Ended", ignoreCase = true) == true) {
+                add("Ended")
+            }
         }
 
         val infoRows = buildInfoRows(item, seasons, totalEpisodeCount)
@@ -87,6 +90,8 @@ object DetailMappers {
             audioCodec = audioStream?.codec?.takeIf { it.isNotBlank() }?.uppercase(),
             audioType = toAudioTypeLabel(audioStream?.channels),
             language = audioStream?.language?.takeIf { it.isNotBlank() },
+            bitrate = item.mediaSources?.firstOrNull()?.bitrate?.let { "${it / 1_000_000} Mbps" },
+            framerate = videoStream?.averageFrameRate?.let { "${it.toInt()} fps" } ?: videoStream?.realFrameRate?.let { "${it.toInt()} fps" },
         )
 
         val isResumable = item.canResume()

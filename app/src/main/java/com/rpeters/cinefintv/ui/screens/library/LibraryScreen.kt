@@ -41,6 +41,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
@@ -81,7 +82,7 @@ fun LibraryScreen(
     val spacing = LocalCinefinSpacing.current
     
     // First focus anchor
-    val firstItemRequester = remember { FocusRequester() }
+    val topAnchorRequester = remember { FocusRequester() }
 
     LaunchedEffect(category) {
         viewModel.load(category)
@@ -129,9 +130,7 @@ fun LibraryScreen(
             is LibraryUiState.Content -> {
                 // Initial focus
                 LaunchedEffect(state) {
-                    if (state.items.isNotEmpty()) {
-                        firstItemRequester.requestFocus()
-                    }
+                    topAnchorRequester.requestFocus()
                 }
 
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -143,6 +142,17 @@ fun LibraryScreen(
                         horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
                         verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
                     ) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            ScrollFocusAnchor(
+                                modifier = Modifier.focusRequester(topAnchorRequester),
+                                onFocused = {
+                                    coroutineScope.launch {
+                                        gridState.animateScrollToItem(0)
+                                    }
+                                }
+                            )
+                        }
+
                         item(span = { GridItemSpan(maxLineSpan) }) {
                             LibraryHeader(
                                 title = category.title,
@@ -175,7 +185,6 @@ fun LibraryScreen(
                                 watchStatus = item.watchStatus,
                                 playbackProgress = item.playbackProgress,
                                 unwatchedCount = item.unwatchedCount,
-                                modifier = if (index == 0) Modifier.focusRequester(firstItemRequester) else Modifier
                             )
                         }
                     }
@@ -229,12 +238,12 @@ fun LibraryHeader(
             Text(
                 text = title,
                 style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onBackground,
+                color = com.rpeters.cinefintv.ui.theme.OnBackground,
             )
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = com.rpeters.cinefintv.ui.theme.OnSurfaceMuted,
             )
             Text(
                 text = "$count titles available",

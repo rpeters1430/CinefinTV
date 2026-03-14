@@ -21,6 +21,14 @@ import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Speaker
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Timer
+
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun DetailHeroSection(
@@ -85,10 +93,12 @@ fun DetailHeroSection(
             }
 
             item.technicalDetails?.let { details ->
-                details.videoQuality?.let { CinefinChip(label = it, strong = true) }
-                details.audioCodec?.let { CinefinChip(label = it) }
-                details.audioType?.let { CinefinChip(label = it) }
-                details.language?.let { CinefinChip(label = it) }
+                details.videoQuality?.let { CinefinChip(label = it, strong = true, icon = Icons.Default.HighQuality) }
+                details.bitrate?.let { CinefinChip(label = it, icon = Icons.Default.Speed) }
+                details.framerate?.let { CinefinChip(label = it, icon = Icons.Default.Timer) }
+                details.audioCodec?.let { CinefinChip(label = it, icon = Icons.Default.GraphicEq) }
+                details.audioType?.let { CinefinChip(label = it, icon = Icons.Default.Speaker) }
+                details.language?.let { CinefinChip(label = it, icon = Icons.Default.Language) }
             }
         }
     }

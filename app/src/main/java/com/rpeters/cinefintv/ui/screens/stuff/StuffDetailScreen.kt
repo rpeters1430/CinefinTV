@@ -97,7 +97,13 @@ fun StuffDetailScreen(
         is StuffDetailUiState.Content -> {
             val item = state.item
             val playButtonRequester = remember { FocusRequester() }
+            val topAnchorRequester = remember { FocusRequester() }
             val moreShelfRequester = remember { FocusRequester() }
+
+            LaunchedEffect(state.item.id) {
+                topAnchorRequester.requestFocus()
+            }
+
             LaunchedEffect(state.isDeleted) {
                 if (state.isDeleted) {
                     onBack()
@@ -133,15 +139,17 @@ fun StuffDetailScreen(
                     contentPadding = PaddingValues(horizontal = 48.dp, vertical = 32.dp),
                 ) {
                     item {
-                        ScrollFocusAnchor(onFocused = {
-                            coroutineScope.launch {
-                                listState.animateScrollToItem(0)
+                        ScrollFocusAnchor(
+                            modifier = Modifier.focusRequester(topAnchorRequester),
+                            onFocused = {
+                                coroutineScope.launch {
+                                    listState.animateScrollToItem(0)
+                                }
                             }
-                        })
+                        )
                     }
 
                     item { Spacer(Modifier.fillParentMaxHeight(0.22f)) }
-                    item { ScrollFocusAnchor() }
                     item {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
@@ -177,9 +185,6 @@ fun StuffDetailScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                                 )
                             }
-                            ScrollFocusAnchor(
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
                             Row(
                                 modifier = Modifier.padding(top = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)

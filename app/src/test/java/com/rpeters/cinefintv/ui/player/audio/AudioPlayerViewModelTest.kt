@@ -7,7 +7,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.testutil.DeterministicDispatcherProvider
-import com.rpeters.cinefintv.testutil.FakeRepositories
+import com.rpeters.cinefintv.testutil.FakeMusicRepositories
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -43,7 +43,7 @@ class AudioPlayerViewModelTest {
 
     @Test
     fun init_withoutItemId_showsError() = runTest(testDispatcher) {
-        val fakeRepositories = FakeRepositories()
+        val fakeRepositories = FakeMusicRepositories()
         val controller = mockk<AudioPlaybackController>(relaxed = true)
         val connector = FakeAudioControllerConnector(controller)
         val positionRepository = FakeAudioPlaybackPositionRepository()
@@ -65,7 +65,7 @@ class AudioPlayerViewModelTest {
 
     @Test
     fun togglePlayPause_callsController() = runTest(testDispatcher) {
-        val fakeRepositories = FakeRepositories()
+        val fakeRepositories = FakeMusicRepositories()
         val controller = FakeAudioPlaybackController(
             currentMediaItem = null,
             mediaItemCount = 1,
@@ -103,7 +103,7 @@ class AudioPlayerViewModelTest {
 
     @Test
     fun skipAndSeek_callsController() = runTest(testDispatcher) {
-        val fakeRepositories = FakeRepositories()
+        val fakeRepositories = FakeMusicRepositories()
         val controller = FakeAudioPlaybackController(
             currentMediaItem = null,
             mediaItemCount = 2,
@@ -144,7 +144,7 @@ class AudioPlayerViewModelTest {
 
     @Test
     fun init_withQueue_loadsMediaItemsAndStartsPlayback() = runTest(testDispatcher) {
-        val fakeRepositories = FakeRepositories()
+        val fakeRepositories = FakeMusicRepositories()
         val controller = FakeAudioPlaybackController(
             currentMediaItem = null,
             mediaItemCount = 0,

@@ -4,8 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,7 +57,6 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 internal enum class SettingsSection { AUDIO, SUBTITLES, SPEED, ALL }
 
 private val PLAYBACK_SPEEDS = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
-private val PanelHeight = 460.dp
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -76,7 +75,6 @@ internal fun PlayerTrackPanel(
     onInteract: () -> Unit
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
-    // We use a full-screen Popup to capture focus and allow expressive animations
     if (isVisible) {
         Popup(
             onDismissRequest = onClose,
@@ -93,15 +91,15 @@ internal fun PlayerTrackPanel(
             ) {
                 AnimatedVisibility(
                     visible = isVisible,
-                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-                    modifier = Modifier.align(Alignment.BottomCenter)
+                    enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+                    exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
+                    modifier = Modifier.align(Alignment.CenterEnd)
                 ) {
                     Surface(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(PanelHeight),
-                        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                            .width(280.dp)
+                            .fillMaxHeight(),
+                        shape = RoundedCornerShape(topStart = 32.dp, bottomStart = 32.dp),
                         colors = SurfaceDefaults.colors(
                             containerColor = expressiveColors.elevatedSurface.copy(alpha = 0.98f),
                         ),
@@ -110,7 +108,7 @@ internal fun PlayerTrackPanel(
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 48.dp, vertical = 32.dp)
+                                .padding(horizontal = 24.dp, vertical = 24.dp)
                         ) {
                             val panelTitle = when (section) {
                                 SettingsSection.AUDIO -> "Audio Tracks"

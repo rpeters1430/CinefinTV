@@ -19,7 +19,7 @@ object DetailPlaybackResolver {
         episodesBySeasonId: Map<String, List<DetailEpisodeModel>>,
     ): PlaybackTarget? {
         return when {
-            item.isMovie() || item.isEpisode() -> PlaybackTarget(
+            item.isMovie() || item.isEpisode() || item.type == org.jellyfin.sdk.model.api.BaseItemKind.VIDEO -> PlaybackTarget(
                 id = item.id.toString(),
                 label = if (item.canResume()) "Resume" else "Play",
             )

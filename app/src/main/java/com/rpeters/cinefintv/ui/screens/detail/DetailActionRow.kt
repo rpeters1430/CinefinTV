@@ -40,6 +40,13 @@ import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun DetailActionRow(
@@ -59,10 +66,68 @@ fun DetailActionRow(
     val expressiveColors = LocalCinefinExpressiveColors.current
     val item = state.item
     val isSeriesDetail = state.seasons.isNotEmpty()
+    val hideSecondaryActions = isSeriesDetail || state.episodesBySeasonId.isNotEmpty()
     
-    var subtitlesExpanded by remember { mutableStateOf(false) }
+    var showSubtitleDialog by remember { mutableStateOf(false) }
     var selectedSubtitle by remember(item.subtitleOptions) {
         mutableStateOf(item.subtitleOptions.firstOrNull())
+    }
+
+    if (showSubtitleDialog) {
+        val firstOptionRequester = remember { FocusRequester() }
+        LaunchedEffect(Unit) { firstOptionRequester.requestFocus() }
+        Popup(
+            onDismissRequest = { showSubtitleDialog = false },
+            properties = PopupProperties(
+                focusable = true,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true,
+            )
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.6f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(spacing.cornerCard),
+                    modifier = Modifier.width(400.dp),
+                    colors = SurfaceDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "Select Subtitle",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(item.subtitleOptions) { option ->
+                                val isSelected = selectedSubtitle == option
+                                val isFirst = item.subtitleOptions.firstOrNull() == option
+                                val optionModifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(if (isFirst) Modifier.focusRequester(firstOptionRequester) else Modifier)
+                                if (isSelected) {
+                                    Button(
+                                        onClick = { selectedSubtitle = option; showSubtitleDialog = false },
+                                        modifier = optionModifier
+                                    ) { Text(option) }
+                                } else {
+                                    OutlinedButton(
+                                        onClick = { selectedSubtitle = option; showSubtitleDialog = false },
+                                        modifier = optionModifier
+                                    ) { Text(option) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     Column(
@@ -78,7 +143,7 @@ fun DetailActionRow(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Button(
-                    onClick = { subtitlesExpanded = !subtitlesExpanded },
+                    onClick = { showSubtitleDialog = true },
                     modifier = Modifier
                         .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
                         .focusProperties {
@@ -88,40 +153,6 @@ fun DetailActionRow(
                     Icon(Icons.Default.ClosedCaption, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text(selectedSubtitle ?: "Choose subtitle")
-                }
-
-                if (subtitlesExpanded) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = SurfaceDefaults.colors(
-                            containerColor = Color.Black.copy(alpha = 0.7f)
-                        ),
-                        modifier = Modifier.fillMaxWidth(0.45f)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            item.subtitleOptions.forEach { option ->
-                                val isSelected = selectedSubtitle == option
-                                if (isSelected) {
-                                    Button(onClick = {
-                                        selectedSubtitle = option
-                                        subtitlesExpanded = false
-                                    }) {
-                                        Text(option)
-                                    }
-                                } else {
-                                    OutlinedButton(onClick = {
-                                        selectedSubtitle = option
-                                        subtitlesExpanded = false
-                                    }) {
-                                        Text(option)
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -167,7 +198,7 @@ fun DetailActionRow(
                 }
             }
 
-            if (!isSeriesDetail) {
+            if (!hideSecondaryActions && state.playableItemId != null) {
                 if (state.isDeleting) {
                     Surface(shape = RoundedCornerShape(12.dp)) {
                         Text(
@@ -205,7 +236,7 @@ fun DetailActionRow(
                 }
             }
 
-            if (!isSeriesDetail) {
+            if (!hideSecondaryActions && state.playableItemId != null) {
                 OutlinedButton(
                     onClick = {
                         onDismissActionError()

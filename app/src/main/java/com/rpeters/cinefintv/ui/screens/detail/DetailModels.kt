@@ -39,6 +39,8 @@ data class DetailTechnicalDetails(
     val audioCodec: String?,
     val audioType: String?,
     val language: String?,
+    val bitrate: String? = null,
+    val framerate: String? = null,
 )
 
 data class DetailSeasonModel(

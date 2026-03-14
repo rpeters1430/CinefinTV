@@ -144,23 +144,6 @@ fun CinefinTvApp(
         }.let { if (it == -1) navTabItems.indexOfFirst { it.route == NavRoutes.HOME } else it }
         .coerceAtLeast(0)
 
-        // Focus delay management to prevent jarring navigation while scrolling tabs
-        var focusedTabRoute by remember { mutableStateOf<String?>(null) }
-        LaunchedEffect(focusedTabRoute) {
-            val route = focusedTabRoute ?: return@LaunchedEffect
-            if (currentRoute == route) return@LaunchedEffect
-            
-            delay(250) // Wait for user to settle on the tab
-            
-            navController.navigate(route) {
-                popUpTo(navController.graph.startDestinationId) {
-                    saveState = true
-                }
-                launchSingleTop = true
-                restoreState = true
-            }
-        }
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -206,11 +189,10 @@ fun CinefinTvApp(
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 navTabItems.forEachIndexed { index, item ->
+                                    val isSelected = index == selectedTabIndex
                                     Tab(
-                                        selected = index == selectedTabIndex,
-                                        onFocus = {
-                                            focusedTabRoute = item.route
-                                        },
+                                        selected = isSelected,
+                                        onFocus = {},
                                         onClick = {
                                             if (currentRoute != item.route) {
                                                 navController.navigate(item.route) {
@@ -223,8 +205,8 @@ fun CinefinTvApp(
                                             }
                                         },
                                         colors = TabDefaults.pillIndicatorTabColors(
-                                            contentColor = MaterialTheme.colorScheme.onBackground,
-                                            inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            contentColor = Color.White.copy(alpha = 0.8f),
+                                            inactiveContentColor = Color.White.copy(alpha = 0.5f),
                                             selectedContentColor = Color(0xFF0D1117),
                                             focusedContentColor = expressiveColors.focusRing,
                                             focusedSelectedContentColor = Color(0xFF0D1117),

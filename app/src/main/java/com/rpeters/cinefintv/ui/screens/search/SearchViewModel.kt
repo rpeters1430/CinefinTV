@@ -138,6 +138,8 @@ class SearchViewModel @Inject constructor(
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,
             unwatchedCount = unwatchedCount,
+            itemType = item.type.toString(),
+            collectionType = item.collectionType?.toString(),
         )
     }
 }

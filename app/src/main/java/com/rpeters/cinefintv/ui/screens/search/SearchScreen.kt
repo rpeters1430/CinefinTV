@@ -48,7 +48,7 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun SearchScreen(
-    onOpenItem: (String) -> Unit,
+    onOpenItem: (com.rpeters.cinefintv.ui.screens.home.HomeCardModel) -> Unit,
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -151,12 +151,11 @@ fun SearchScreen(
                             title = item.title,
                             subtitle = item.subtitle,
                             imageUrl = item.imageUrl,
-                            onClick = { onOpenItem(item.id) },
+                            onClick = { onOpenItem(item) },
                             watchStatus = item.watchStatus,
                             playbackProgress = item.playbackProgress,
                             unwatchedCount = item.unwatchedCount,
-                        )
-                    }
+                        )                    }
                 }
             }
         }

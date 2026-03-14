@@ -1,0 +1,50 @@
+Bugs 3/14/26
+
+Homescreen
+
+-- Carousel shows "5 Collections" we can remove that on the carousel
+-- Carousel is too tall and goes off the screen when the app first loads up
+-- Slow down the time between movies on the carousel a little
+-- The title text for "My Libraries" etc all the way down the homescreen is black lettering - cannot see it
+-- Media cards - on the far left media card it clips the left side of the area and gets cuttoff
+-- Tabs (for all screens) when you scroll left/right on a new screen don't auto move to that screen until the user clicks to move to that screen - also move Search to between Music and Settings - Tabs are a mess once again. Scrolling up from below the tabs to the tab row it auto moves the screens to the homescreen or moves it right/left and then changes the screens automatically
+
+Library Screens
+
+-- When screen first loads it doesn't start at the top of the screen (also happens with TV Show Library and stuff library screens)
+
+TV Show Detail Screen
+
+-- Doesn't start at the top of the screen defaults to selecting the Play Show button
+-- Check to see if the TV show is ended or still running - if still running then the years (2021-2025) should show (2021-Present) and if ended a card or something showing the show ended
+
+TV Show Season Detail Screen
+
+-- Doesn't start at the top of the screen
+-- When scrolling down the first button that is selected is Back - should be Play Season
+
+TV Show Episode Detail Screen
+
+-- Doesn't start at the top of the screen
+-- Add more details about the video itself and add Material symbols for said details
+-- The Subtitles selection once the popup comes up it is difficult to even select the subtitle you want to use
+
+Movie Detail Screen
+
+-- Doesn't start at the top of the screen
+-- Add more details about the video itself and add Material symbols for said details
+
+stuff Library Screen
+
+-- Looks good overall
+
+stuff Detail Screen
+
+-- It takes 3 d-pad presses down from the top of the screen to get to the play button
+-- Add more details about the video itself and add Material symbols for said details
+-- From the Continue section on the home screen if it is a stuff library item when that detail screen shows up the Play button is missing completely
+
+Video Playback Screen
+
+-- Selecting subtitles the subtitles do not show up on the screen
+-- The popup system for selecting things in that screen is way too large and needs to be improved and needs an overhaul

@@ -18,12 +18,21 @@ import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.tv.material3.Icon
+
 /**
  * A unified, TV-optimized chip component for metadata and status badges.
  * Replaces HeroChip, DetailChip, and DetailInfoChip.
  *
  * @param label The text to display in the chip.
  * @param strong Whether to use a more prominent "strong" background (e.g., for 'Featured' or 'HD').
+ * @param icon An optional Material icon to display before the label.
  * @param modifier The modifier to be applied to the chip.
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -31,6 +40,7 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 fun CinefinChip(
     label: String,
     strong: Boolean = false,
+    icon: ImageVector? = null,
     modifier: Modifier = Modifier,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
@@ -53,11 +63,22 @@ fun CinefinChip(
             .padding(horizontal = 14.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = contentColor,
-            maxLines = 1,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = contentColor,
+                maxLines = 1,
+            )
+        }
     }
 }

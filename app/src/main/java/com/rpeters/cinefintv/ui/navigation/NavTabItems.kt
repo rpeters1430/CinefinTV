@@ -18,10 +18,10 @@ data class NavTabItem(
 
 val navTabItems = listOf(
     NavTabItem(NavRoutes.HOME, "Home", Icons.Default.Home),
-    NavTabItem(NavRoutes.SEARCH, "Search", Icons.Default.Search),
     NavTabItem(NavRoutes.LIBRARY_MOVIES, "Movies", Icons.Default.Movie),
     NavTabItem(NavRoutes.LIBRARY_TVSHOWS, "TV Shows", Icons.Default.Tv),
     NavTabItem(NavRoutes.LIBRARY_STUFF, "Stuff", Icons.Default.Folder),
     NavTabItem(NavRoutes.LIBRARY_MUSIC, "Music", Icons.Default.MusicNote),
+    NavTabItem(NavRoutes.SEARCH, "Search", Icons.Default.Search),
     NavTabItem(NavRoutes.SETTINGS, "Settings", Icons.Default.Settings),
 )

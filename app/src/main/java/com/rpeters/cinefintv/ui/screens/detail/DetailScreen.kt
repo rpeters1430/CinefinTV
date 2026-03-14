@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -110,6 +111,7 @@ fun DetailScreen(
                 val primaryShelfRequester = remember { FocusRequester() }
                 val castShelfRequester = remember { FocusRequester() }
                 val relatedShelfRequester = remember { FocusRequester() }
+                val topAnchorRequester = remember { FocusRequester() }
                 
                 val firstShelfRequester = when {
                     state.seasons.isNotEmpty() || state.episodesBySeasonId.isNotEmpty() -> primaryShelfRequester
@@ -118,10 +120,9 @@ fun DetailScreen(
                     else -> null
                 }
 
-                LaunchedEffect(state.playableItemId) {
-                    if (state.playableItemId != null) {
-                        playButtonRequester.requestFocus()
-                    }
+                // Focus top anchor on initial load to ensure we start at the top
+                LaunchedEffect(state.item.id) {
+                    topAnchorRequester.requestFocus()
                 }
 
                 LaunchedEffect(state.isDeleted) {
@@ -167,9 +168,12 @@ fun DetailScreen(
                         verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
                     ) {
                         item {
-                            ScrollFocusAnchor(onFocused = {
-                                coroutineScope.launch { listState.animateScrollToItem(0) }
-                            })
+                            ScrollFocusAnchor(
+                                modifier = Modifier.focusRequester(topAnchorRequester),
+                                onFocused = {
+                                    coroutineScope.launch { listState.animateScrollToItem(0) }
+                                }
+                            )
                         }
 
                         item { Spacer(Modifier.fillParentMaxHeight(0.35f)) }

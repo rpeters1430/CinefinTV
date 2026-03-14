@@ -173,6 +173,8 @@ class HomeViewModel @Inject constructor(
             item.getYear() != null -> item.getYear().toString()
             item.getFormattedDuration() != null -> item.getFormattedDuration()
             else -> item.type.toString().replace('_', ' ')
+        }.let { subtitle ->
+            if (subtitle?.contains("Collections", ignoreCase = true) == true) null else subtitle
         }
 
         return HomeCardModel(
