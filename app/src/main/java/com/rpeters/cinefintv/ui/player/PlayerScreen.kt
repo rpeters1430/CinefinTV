@@ -18,6 +18,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -132,6 +133,7 @@ fun PlayerScreen(
             var isBuffering by remember { mutableStateOf(false) }
             var position by remember { mutableLongStateOf(0L) }
             var duration by remember { mutableLongStateOf(0L) }
+            var bufferedFraction by remember { mutableFloatStateOf(0f) }
 
             LaunchedEffect(player) {
                 while (true) {
@@ -139,6 +141,7 @@ fun PlayerScreen(
                     isBuffering = player.playbackState == Player.STATE_BUFFERING
                     position = player.currentPosition.coerceAtLeast(0L)
                     duration = player.duration.coerceAtLeast(0L)
+                    bufferedFraction = player.bufferedPercentage / 100f
                     delay(500L)
                 }
             }
@@ -270,6 +273,7 @@ fun PlayerScreen(
                     isPlaying = isPlaying,
                     position = position,
                     duration = duration,
+                    bufferedFraction = bufferedFraction,
                     uiState = uiState,
                     player = player,
                     playPauseFocusRequester = playPauseFocusRequester,
