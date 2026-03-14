@@ -24,6 +24,7 @@ data class PlayerUiState(
     val autoPlayNextEpisode: Boolean = true,
     val nextEpisodeId: String? = null,
     val nextEpisodeTitle: String? = null,
+    val nextEpisodeThumbnailUrl: String? = null,
     val audioTracks: List<TrackOption> = emptyList(),
     val subtitleTracks: List<TrackOption> = emptyList(),
     val selectedAudioTrack: TrackOption? = null,
