@@ -32,9 +32,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items as listItems
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -256,26 +258,17 @@ private fun AlbumDetailContent(
                     )
                     .padding(28.dp)
             ) {
-                Text(
-                    text = albumTitle,
-                    style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.onBackground,
+                CinefinShelfTitle(
+                    title = albumTitle,
+                    eyebrow = album.albumArtist ?: album.artists?.firstOrNull() ?: "Album Detail",
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                if (!albumYear.isNullOrBlank()) {
-                    Text(
-                        text = albumYear,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                val artistName = album.albumArtist ?: album.artists?.firstOrNull()
-                if (!artistName.isNullOrBlank()) {
-                    Text(
-                        text = artistName,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(
+                    text = listOfNotNull(albumYear, album.albumArtist ?: album.artists?.firstOrNull())
+                        .joinToString("  •  "),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 OutlinedButton(
                     onClick = onBack,
                     modifier = Modifier.padding(top = 8.dp),
@@ -311,7 +304,6 @@ private fun TrackRow(
     track: BaseItemDto,
     onPlay: () -> Unit,
 ) {
-    val expressiveColors = LocalCinefinExpressiveColors.current
     val trackNumber = track.indexNumber
     val title = track.name ?: "Unknown Track"
     val durationTicks = track.runTimeTicks
@@ -324,20 +316,11 @@ private fun TrackRow(
         null
     }
 
-    Button(
+    ListItem(
+        selected = false,
         onClick = onPlay,
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(
-                BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.3f)),
-                RoundedCornerShape(18.dp),
-            ),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        modifier = Modifier.fillMaxWidth(),
+        leadingContent = {
             if (trackNumber != null) {
                 Text(
                     text = trackNumber.toString(),
@@ -345,12 +328,15 @@ private fun TrackRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        },
+        headlineContent = {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.weight(1f),
             )
+        },
+        trailingContent = {
             if (!durationText.isNullOrBlank()) {
                 Text(
                     text = durationText,
@@ -358,8 +344,8 @@ private fun TrackRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        }
-    }
+        },
+    )
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)

@@ -1,23 +1,17 @@
 package com.rpeters.cinefintv.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -27,14 +21,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,17 +34,18 @@ import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-
-import com.rpeters.cinefintv.utils.DevicePerformanceProfile
-import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
-import coil3.size.Size
+import com.rpeters.cinefintv.utils.DevicePerformanceProfile
+import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 
 enum class WatchStatus { NONE, WATCHED, IN_PROGRESS }
 
@@ -75,156 +67,162 @@ fun TvMediaCard(
     val spacing = LocalCinefinSpacing.current
     var isFocused by remember { mutableStateOf(false) }
 
-    val elevation by animateDpAsState(
-        targetValue = if (isFocused) 16.dp else 0.dp,
-        animationSpec = tween(durationMillis = 200),
-        label = "CardElevation"
-    )
     val titleColor by animateColorAsState(
-        targetValue = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(durationMillis = 200),
-        label = "TitleColor"
+        targetValue = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface,
+        animationSpec = tween(durationMillis = 180),
+        label = "MediaCardTitleColor",
+    )
+    val subtitleColor by animateColorAsState(
+        targetValue = if (isFocused) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(durationMillis = 180),
+        label = "MediaCardSubtitleColor",
+    )
+    val metaContainerColor by animateColorAsState(
+        targetValue = if (isFocused) {
+            expressiveColors.elevatedSurface.copy(alpha = 0.98f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.46f)
+        },
+        animationSpec = tween(durationMillis = 180),
+        label = "MediaCardMetaSurface",
     )
 
     Column(
-        modifier = modifier.width(260.dp),
-        verticalArrangement = Arrangement.spacedBy(spacing.elementGap)
+        modifier = modifier.width(280.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Box(
+        Card(
+            onClick = onClick,
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(16f / 9f)
+                .height(158.dp)
+                .onFocusChanged {
+                    val focused = it.isFocused || it.hasFocus
+                    isFocused = focused
+                    if (focused) onFocus()
+                },
+            scale = CardDefaults.scale(focusedScale = 1.08f),
+            glow = CardDefaults.glow(
+                focusedGlow = Glow(
+                    elevation = 18.dp,
+                    elevationColor = expressiveColors.focusGlow,
+                ),
+            ),
+            border = CardDefaults.border(
+                focusedBorder = Border(
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = 2.dp,
+                        color = expressiveColors.focusRing,
+                    ),
+                ),
+            ),
+            shape = CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),
         ) {
-            if (isFocused) {
+            Box(modifier = Modifier.fillMaxSize()) {
                 Box(
                     modifier = Modifier
-                        .matchParentSize()
-                        .clip(RoundedCornerShape(spacing.cornerCard))
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (imageUrl != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                .data(imageUrl)
+                                .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
+                                .size(560, 316)
+                                .build(),
+                            contentDescription = title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        Text(
+                            text = title.take(1).uppercase(),
+                            style = MaterialTheme.typography.headlineMedium,
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
                         .background(
-                            Brush.radialGradient(
+                            Brush.verticalGradient(
                                 colors = listOf(
-                                    expressiveColors.focusGlow,
                                     Color.Transparent,
+                                    Color.Black.copy(alpha = 0.14f),
+                                    Color.Black.copy(alpha = 0.62f),
                                 ),
                             ),
-                        )
+                        ),
                 )
-            }
-            Card(
-                onClick = onClick,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .onFocusChanged {
-                        isFocused = it.isFocused || it.hasFocus
-                        if (it.isFocused || it.hasFocus) onFocus()
-                    },
-                scale = CardDefaults.scale(focusedScale = 1.1f),
-                glow = CardDefaults.glow(
-                    focusedGlow = androidx.tv.material3.Glow(
-                        elevation = elevation,
-                        elevationColor = expressiveColors.focusGlow
-                    )
-                ),
-                border = CardDefaults.border(
-                    focusedBorder = Border(
-                        border = androidx.compose.foundation.BorderStroke(
-                            width = 3.dp,
-                            color = expressiveColors.focusRing
-                        )
-                    )
-                ),
-                shape = CardDefaults.shape(RoundedCornerShape(spacing.cornerCard))
-            ) {
-                Box(modifier = Modifier.fillMaxSize()) {
+
+                if (watchStatus == WatchStatus.IN_PROGRESS && playbackProgress != null && playbackProgress > 0f) {
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
+                            .align(Alignment.BottomStart)
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .background(Color.Black.copy(alpha = 0.5f))
                     ) {
-                        if (imageUrl != null) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                                    .data(imageUrl)
-                                    .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
-                                    .size(520, 292)
-                                    .build(),
-                                contentDescription = title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else {
-                            Text(
-                                text = title.take(1).uppercase(),
-                                style = MaterialTheme.typography.headlineMedium
-                            )
-                        }
-                    }
-
-                    if (watchStatus == WatchStatus.IN_PROGRESS && playbackProgress != null && playbackProgress > 0f) {
                         Box(
                             modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .fillMaxWidth()
-                                .height(4.dp)
-                                .background(Color.Black.copy(alpha = 0.5f))
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .fillMaxWidth(playbackProgress.coerceIn(0f, 1f))
-                                    .background(MaterialTheme.colorScheme.primary)
-                            )
-                        }
+                                .fillMaxHeight()
+                                .fillMaxWidth(playbackProgress.coerceIn(0f, 1f))
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
                     }
+                }
 
-                    if (unwatchedCount != null && unwatchedCount > 0) {
-                        UnwatchedCountOverlay(
-                            count = unwatchedCount,
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .zIndex(1f)
-                        )
-                    } else if (watchStatus == WatchStatus.WATCHED) {
-                        WatchStatusOverlay(
-                            status = watchStatus,
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .zIndex(1f)
-                        )
-                    }
+                if (unwatchedCount != null && unwatchedCount > 0) {
+                    UnwatchedCountOverlay(
+                        count = unwatchedCount,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .zIndex(1f)
+                    )
+                } else if (watchStatus == WatchStatus.WATCHED) {
+                    WatchStatusOverlay(
+                        status = watchStatus,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .zIndex(1f)
+                    )
                 }
             }
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp)
-                .defaultMinSize(minHeight = 84.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = SurfaceDefaults.colors(containerColor = metaContainerColor),
+            tonalElevation = if (isFocused) 8.dp else 0.dp,
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = if (isFocused) FontWeight.Bold else FontWeight.Normal,
-                color = titleColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-            if (!subtitle.isNullOrBlank()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+                    .defaultMinSize(minHeight = 84.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isFocused) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
+                    color = titleColor,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
                 )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = subtitleColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
@@ -239,38 +237,40 @@ private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifie
             WatchStatus.WATCHED -> {
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
+                        .height(28.dp)
                         .background(
-                            color = Color(0xFF4CAF50).copy(alpha = 0.9f),
-                            shape = RoundedCornerShape(50)
-                        ),
-                    contentAlignment = Alignment.Center
+                            color = Color(0xFF2E7D32).copy(alpha = 0.95f),
+                            shape = RoundedCornerShape(999.dp),
+                        )
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "✓",
+                        text = "Watched",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
             }
             WatchStatus.IN_PROGRESS -> {
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
+                        .height(28.dp)
                         .background(
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                            shape = RoundedCornerShape(50)
-                        ),
-                    contentAlignment = Alignment.Center
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f),
+                            shape = RoundedCornerShape(999.dp),
+                        )
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "▶",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
-                        color = MaterialTheme.colorScheme.onPrimary
+                        text = "Resume",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        color = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
             }
-            WatchStatus.NONE -> {}
+            WatchStatus.NONE -> Unit
         }
     }
 }
@@ -282,24 +282,22 @@ private fun UnwatchedCountOverlay(count: Int, modifier: Modifier = Modifier) {
     Box(modifier = modifier.padding(spacing.chipGap.coerceAtLeast(0.dp).div(1.5f))) {
         Box(
             modifier = Modifier
-                .defaultMinSize(minWidth = 24.dp)
-                .height(24.dp)
+                .height(28.dp)
                 .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                    shape = RoundedCornerShape(50)
+                    color = expressiveBadgeColor(),
+                    shape = RoundedCornerShape(999.dp),
                 )
-                .padding(horizontal = 6.dp.coerceAtLeast(0.dp)),
-            contentAlignment = Alignment.Center
+                .padding(horizontal = 10.dp),
+            contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = if (count > 99) "99+" else count.toString(),
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 10.sp
-                ),
+                text = if (count > 99) "99+ new" else "$count new",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onPrimary,
-                textAlign = TextAlign.Center
             )
         }
     }
 }
+
+@Composable
+private fun expressiveBadgeColor(): Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f)

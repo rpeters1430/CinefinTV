@@ -41,6 +41,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import coil3.compose.AsyncImage
 import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
@@ -263,10 +264,9 @@ fun StuffDetailScreen(
                         item { Spacer(Modifier.height(32.dp)) }
                         item {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text(
-                                    text = "More Stuff", 
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.onBackground
+                                CinefinShelfTitle(
+                                    title = "More Stuff",
+                                    eyebrow = item.title,
                                 )
                                 LazyRow(
                                     contentPadding = PaddingValues(horizontal = 12.dp),

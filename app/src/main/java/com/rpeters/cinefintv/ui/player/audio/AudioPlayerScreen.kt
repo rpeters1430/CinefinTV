@@ -52,7 +52,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
-import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.DenseListItem
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
@@ -64,6 +64,7 @@ import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.rpeters.cinefintv.ui.components.CinefinChip
+import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 
@@ -272,16 +273,19 @@ fun AudioPlayerScreen(
             Column(
                 modifier = Modifier.width(320.dp).fillMaxHeight()
             ) {
-                Text(
-                    text = "Next Up",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                CinefinShelfTitle(
+                    title = "Next Up",
+                    eyebrow = "Queue",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
                 )
                 
                 Surface(
                     shape = RoundedCornerShape(spacing.cornerCard),
-                    colors = SurfaceDefaults.colors(containerColor = Color.White.copy(alpha = 0.05f)),
+                    colors = SurfaceDefaults.colors(
+                        containerColor = expressiveColors.chromeSurface.copy(alpha = 0.74f)
+                    ),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     val queueListState = rememberLazyListState()
@@ -312,48 +316,48 @@ private fun QueueItem(
     isCurrent: Boolean,
     onClick: () -> Unit
 ) {
-    Surface(
+    DenseListItem(
+        selected = isCurrent,
         onClick = onClick,
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent,
-            contentColor = if (isCurrent) MaterialTheme.colorScheme.primary else Color.White,
-            focusedContainerColor = Color.White.copy(alpha = 0.15f),
-            focusedContentColor = Color.White
-        ),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        modifier = Modifier.fillMaxWidth(),
+        leadingContent = {
             AsyncImage(
                 model = track.imageUrl,
                 contentDescription = null,
                 modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)),
                 contentScale = ContentScale.Crop
             )
-            Column(modifier = Modifier.weight(1f)) {
+        },
+        headlineContent = {
+            Text(
+                text = track.title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        supportingContent = {
+            track.artist?.let {
                 Text(
-                    text = track.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                    text = it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else Color.Gray,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                track.artist?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else Color.Gray,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
             }
-        }
-    }
+        },
+        trailingContent = {
+            if (isCurrent) {
+                Text(
+                    text = "Now",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        },
+    )
 }
 
 @Composable

@@ -63,6 +63,7 @@ fun DetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var focusedDescription by remember { mutableStateOf<String?>(null) }
+    var focusedBackdropUrl by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val performanceProfile = LocalPerformanceProfile.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -123,6 +124,7 @@ fun DetailScreen(
                 // Focus top anchor on initial load to ensure we start at the top
                 LaunchedEffect(state.item.id) {
                     topAnchorRequester.requestFocus()
+                    focusedBackdropUrl = null
                 }
 
                 LaunchedEffect(state.isDeleted) {
@@ -135,10 +137,11 @@ fun DetailScreen(
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     // Backdrop
-                    if (item.backdropUrl != null) {
+                    val activeBackdropUrl = focusedBackdropUrl ?: item.backdropUrl
+                    if (activeBackdropUrl != null) {
                         AsyncImage(
                             model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                                .data(item.backdropUrl)
+                                .data(activeBackdropUrl)
                                 .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
                                 .size(1920, 1080)
                                 .build(),
@@ -196,7 +199,10 @@ fun DetailScreen(
                                 onDismissActionError = viewModel::dismissActionError,
                                 playButtonRequester = playButtonRequester,
                                 firstShelfRequester = firstShelfRequester,
-                                onFocusedDescriptionChange = { focusedDescription = it }
+                                onFocusedDescriptionChange = {
+                                    focusedDescription = it
+                                    focusedBackdropUrl = null
+                                }
                             )
                         }
 
@@ -206,6 +212,7 @@ fun DetailScreen(
                                 onOpenItem = onOpenItem,
                                 onOpenPerson = onOpenPerson,
                                 onFocusedDescriptionChange = { focusedDescription = it },
+                                onFocusedPreviewImageChange = { focusedBackdropUrl = it },
                                 playButtonRequester = playButtonRequester,
                                 primaryShelfRequester = primaryShelfRequester,
                                 castShelfRequester = castShelfRequester,

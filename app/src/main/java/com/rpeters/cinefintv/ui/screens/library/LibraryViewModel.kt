@@ -9,8 +9,8 @@ import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
-import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCardLabel
 import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
+import com.rpeters.cinefintv.utils.getSeriesCardDetailLine
 import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.isMovie
@@ -93,7 +93,7 @@ class LibraryViewModel @Inject constructor(
                 item.getFormattedDuration(),
                 item.communityRating?.let { "★ ${"%.1f".format(it)}" },
             ).joinToString(" · ").ifBlank { item.type.toString().replace('_', ' ') }
-            item.isSeries() -> item.getUnwatchedEpisodeCardLabel()
+            item.isSeries() -> item.getSeriesCardDetailLine()
                 ?: item.getYear()?.toString()
                 ?: item.type.toString().replace('_', ' ')
             else -> item.getYear()?.toString()

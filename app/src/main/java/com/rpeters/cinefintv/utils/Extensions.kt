@@ -167,6 +167,39 @@ fun BaseItemDto.getUnwatchedEpisodeCardLabel(): String? {
     }
 }
 
+fun BaseItemDto.getSeriesCardDetailLine(): String? {
+    if (!isSeries()) return null
+
+    val year = getYearRange()
+    val episodeCount = childCount?.takeIf { it > 0 }?.let { count ->
+        if (count == 1) "1 episode" else "$count episodes"
+    }
+
+    return listOfNotNull(year, episodeCount).joinToString("  ·  ").ifBlank { null }
+}
+
+fun BaseItemDto.getEpisodeCode(): String? {
+    if (!isEpisode()) return null
+
+    val season = parentIndexNumber
+    val episode = indexNumber
+
+    return when {
+        season != null && episode != null -> "S${season} · E${episode}"
+        episode != null -> "Episode $episode"
+        else -> null
+    }
+}
+
+fun BaseItemDto.getEpisodeCardDetailLine(): String? {
+    if (!isEpisode()) return null
+
+    val series = seriesName?.takeIf { it.isNotBlank() }
+    val episodeCode = getEpisodeCode()
+
+    return listOfNotNull(series, episodeCode).joinToString("  ·  ").ifBlank { null }
+}
+
 fun BaseItemDto.getUnwatchedEpisodeDetailLabel(): String? {
     if (!isSeries() && !isSeason()) return null
 

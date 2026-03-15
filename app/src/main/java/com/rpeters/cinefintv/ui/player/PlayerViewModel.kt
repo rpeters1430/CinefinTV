@@ -22,6 +22,7 @@ import com.rpeters.cinefintv.data.playback.PlaybackResult
 import com.rpeters.cinefintv.data.playback.RecommendationSeverity
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.ResumePlaybackMode
+import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.repository.JellyfinRepository
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
@@ -77,7 +78,10 @@ class PlayerViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             playbackPreferencesRepository.preferences.collectLatest { prefs ->
-                _uiState.value = _uiState.value.copy(autoPlayNextEpisode = prefs.autoPlayNextEpisode)
+                _uiState.value = _uiState.value.copy(
+                    autoPlayNextEpisode = prefs.autoPlayNextEpisode,
+                    transcodingQuality = prefs.transcodingQuality,
+                )
             }
         }
         viewModelScope.launch {
@@ -378,6 +382,18 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             playbackPreferencesRepository.setAutoPlayNextEpisode(enabled)
             _uiState.value = _uiState.value.copy(autoPlayNextEpisode = enabled)
+        }
+    }
+
+    fun setTranscodingQuality(
+        quality: TranscodingQuality,
+        positionMs: Long,
+        playWhenReady: Boolean,
+    ) {
+        viewModelScope.launch {
+            playbackPreferencesRepository.setTranscodingQuality(quality)
+            _uiState.value = _uiState.value.copy(transcodingQuality = quality)
+            reloadStream(positionMs = positionMs, playWhenReady = playWhenReady)
         }
     }
 

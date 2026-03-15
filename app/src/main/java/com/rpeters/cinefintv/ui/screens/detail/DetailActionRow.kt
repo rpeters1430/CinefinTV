@@ -3,7 +3,6 @@ package com.rpeters.cinefintv.ui.screens.detail
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,7 +17,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -35,17 +33,10 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Surface
-import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.components.CinefinOptionDialog
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
-
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -74,60 +65,15 @@ fun DetailActionRow(
     }
 
     if (showSubtitleDialog) {
-        val firstOptionRequester = remember { FocusRequester() }
-        LaunchedEffect(Unit) { firstOptionRequester.requestFocus() }
-        Popup(
+        CinefinOptionDialog(
+            title = "Select Subtitle",
+            supportingText = "Choose the default subtitle track for this item.",
+            options = item.subtitleOptions,
+            selected = selectedSubtitle ?: item.subtitleOptions.first(),
+            labelFor = { it },
             onDismissRequest = { showSubtitleDialog = false },
-            properties = PopupProperties(
-                focusable = true,
-                dismissOnBackPress = true,
-                dismissOnClickOutside = true,
-            )
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.6f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(spacing.cornerCard),
-                    modifier = Modifier.width(400.dp),
-                    colors = SurfaceDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Text(
-                            text = "Select Subtitle",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(item.subtitleOptions) { option ->
-                                val isSelected = selectedSubtitle == option
-                                val isFirst = item.subtitleOptions.firstOrNull() == option
-                                val optionModifier = Modifier
-                                    .fillMaxWidth()
-                                    .then(if (isFirst) Modifier.focusRequester(firstOptionRequester) else Modifier)
-                                if (isSelected) {
-                                    Button(
-                                        onClick = { selectedSubtitle = option; showSubtitleDialog = false },
-                                        modifier = optionModifier
-                                    ) { Text(option) }
-                                } else {
-                                    OutlinedButton(
-                                        onClick = { selectedSubtitle = option; showSubtitleDialog = false },
-                                        modifier = optionModifier
-                                    ) { Text(option) }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+            onOptionSelected = { selectedSubtitle = it },
+        )
     }
 
     Column(

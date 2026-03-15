@@ -1,5 +1,7 @@
 package com.rpeters.cinefintv.ui.screens.person
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -48,6 +50,7 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
@@ -107,6 +110,7 @@ fun PersonScreen(
 
         is PersonUiState.Content -> {
             val person = state.person
+            var focusedMedia by remember(state.media) { mutableStateOf(state.media.firstOrNull()) }
             
             BackHandler(onBack = onBack)
 
@@ -218,37 +222,145 @@ fun PersonScreen(
 
                     if (state.media.isNotEmpty()) {
                         item {
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text(
-                                    text = "Known For",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = expressiveColors.titleAccent,
-                                )
-                                LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 32.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                ) {
-                                    items(
-                                        state.media,
-                                        key = { it.id },
-                                        contentType = { "MediaCard" }
-                                    ) { item ->
-                                        TvMediaCard(
-                                            title = item.title,
-                                            subtitle = item.subtitle,
-                                            imageUrl = item.imageUrl,
-                                            onClick = { onOpenItem(item.id) },
-                                            watchStatus = item.watchStatus,
-                                            playbackProgress = item.playbackProgress,
-                                            onFocus = { focusedDescription = item.overview },
-                                        )
-                                    }
-                                }
-                            }
+                            PersonImmersiveSection(
+                                personName = person.name,
+                                items = state.media,
+                                focusedItem = focusedMedia ?: state.media.first(),
+                                onOpenItem = onOpenItem,
+                                onItemFocused = {
+                                    focusedMedia = it
+                                    focusedDescription = it.overview
+                                },
+                            )
                         }
                     }
 
                     item { Spacer(Modifier.height(32.dp)) }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun PersonImmersiveSection(
+    personName: String,
+    items: List<PersonMediaModel>,
+    focusedItem: PersonMediaModel,
+    onOpenItem: (String) -> Unit,
+    onItemFocused: (PersonMediaModel) -> Unit,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    val sectionHeight by animateDpAsState(
+        targetValue = 420.dp,
+        animationSpec = tween(durationMillis = 220),
+        label = "PersonImmersiveHeight",
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.18f)),
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                .data(focusedItem.imageUrl)
+                .crossfade(true)
+                .size(1280, 720)
+                .build(),
+            contentDescription = focusedItem.title,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(sectionHeight),
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(sectionHeight)
+                .background(
+                    Brush.horizontalGradient(
+                        colorStops = arrayOf(
+                            0f to expressiveColors.heroStart.copy(alpha = 0.96f),
+                            0.32f to Color.Black.copy(alpha = 0.8f),
+                            0.7f to expressiveColors.heroEnd.copy(alpha = 0.35f),
+                            1f to Color.Transparent,
+                        ),
+                    ),
+                ),
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(sectionHeight)
+                .background(
+                    Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0f to Color.Transparent,
+                            0.72f to Color.Black.copy(alpha = 0.2f),
+                            1f to Color.Black.copy(alpha = 0.72f),
+                        ),
+                    ),
+                ),
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            CinefinShelfTitle(
+                title = "Known For",
+                eyebrow = personName,
+            )
+            Column(
+                modifier = Modifier.fillMaxWidth(0.52f),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = focusedItem.title,
+                    style = MaterialTheme.typography.displaySmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold,
+                )
+                focusedItem.subtitle?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = expressiveColors.titleAccent,
+                    )
+                }
+                focusedItem.overview?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            LazyRow(
+                contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                items(
+                    items,
+                    key = { it.id },
+                    contentType = { "MediaCard" }
+                ) { item ->
+                    TvMediaCard(
+                        title = item.title,
+                        subtitle = item.subtitle,
+                        imageUrl = item.imageUrl,
+                        onClick = { onOpenItem(item.id) },
+                        watchStatus = item.watchStatus,
+                        playbackProgress = item.playbackProgress,
+                        onFocus = { onItemFocused(item) },
+                    )
                 }
             }
         }

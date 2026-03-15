@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
@@ -54,6 +55,8 @@ import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import androidx.compose.ui.text.font.FontWeight
 import com.rpeters.cinefintv.ui.player.PlayerConstants.CONTROLS_HIDE_DELAY_MS
+import com.rpeters.cinefintv.ui.components.CinefinDialogActions
+import com.rpeters.cinefintv.ui.components.CinefinDialogSurface
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.player.PlayerConstants.NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS
 import kotlinx.coroutines.delay
@@ -421,6 +424,8 @@ fun PlayerScreen(
                     subtitleTracks = uiState.subtitleTracks,
                     onAudioTrackSelected = { viewModel.selectAudioTrack(it, position, isPlaying) },
                     onSubtitleTrackSelected = { viewModel.selectSubtitleTrack(it, position, isPlaying) },
+                    onSectionSelected = { trackPanelSection = it },
+                    onQualitySelected = { viewModel.setTranscodingQuality(it, position, isPlaying) },
                     onPlaybackSpeedSelected = { viewModel.setPlaybackSpeed(it) },
                     onAutoPlayChange = { viewModel.setAutoPlayNextEpisode(it) },
                     onClose = {
@@ -441,28 +446,12 @@ private fun ResumeDialog(
     onResume: () -> Unit,
     onStartOver: () -> Unit,
 ) {
-    val focusRequester = remember { FocusRequester() }
-    
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.85f))
-            .onKeyEvent { 
-                // Consuming all keys to prevent interaction with underlying player controls
-                true 
-            }
-            .focusable(),
-        contentAlignment = Alignment.Center
+    CinefinDialogSurface(
+        onDismissRequest = onStartOver,
+        modifier = Modifier.width(560.dp),
     ) {
         Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
-                .padding(40.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(32.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             Text(
@@ -488,17 +477,12 @@ private fun ResumeDialog(
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Button(
-                    onClick = onResume,
-                    modifier = Modifier.focusRequester(focusRequester)
-                ) {
-                    Text("Resume")
-                }
-                OutlinedButton(onClick = onStartOver) {
-                    Text("Start from beginning")
-                }
-            }
+            CinefinDialogActions(
+                dismissLabel = "Start from beginning",
+                confirmLabel = "Resume",
+                onDismiss = onStartOver,
+                onConfirm = onResume,
+            )
         }
     }
 }

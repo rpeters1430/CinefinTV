@@ -6,11 +6,13 @@ import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
+import com.rpeters.cinefintv.utils.getEpisodeCardDetailLine
 import com.rpeters.cinefintv.utils.getFormattedDuration
-import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCardLabel
 import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
+import com.rpeters.cinefintv.utils.getSeriesCardDetailLine
 import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getYear
+import com.rpeters.cinefintv.utils.isEpisode
 import com.rpeters.cinefintv.utils.isSeries
 import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -93,9 +95,15 @@ class HomeViewModel @Inject constructor(
                 musicDeferred,
             )
 
+            val continueWatchingResult = results[1] as ApiResult<List<BaseItemDto>>
+            val nextEpisodesSectionItems = buildNextEpisodeSectionItems(continueWatchingResult)
+
             val sections = buildList {
                 addSection("My Libraries", results[0])
                 addSection("Continue Watching", results[1])
+                if (nextEpisodesSectionItems.isNotEmpty()) {
+                    add(HomeSectionModel(title = "Next Episodes", items = nextEpisodesSectionItems))
+                }
                 addSection("Recently Added TV Episodes", results[3])
                 addSection("Recently Added Movies", results[2])
                 addSection("Recently Added Music", results[5])
@@ -135,6 +143,40 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private suspend fun buildNextEpisodeSectionItems(
+        continueWatchingResult: ApiResult<List<BaseItemDto>>,
+    ): List<HomeCardModel> {
+        val continueItems = (continueWatchingResult as? ApiResult.Success<List<BaseItemDto>>)
+            ?.data
+            .orEmpty()
+
+        if (continueItems.isEmpty()) return emptyList()
+
+        val nextEpisodes = mutableListOf<HomeCardModel>()
+        val seenSeries = mutableSetOf<String>()
+        val seenEpisodeIds = mutableSetOf<String>()
+
+        continueItems
+            .filter { it.isEpisode() }
+            .forEach { currentEpisode ->
+                val seriesKey = currentEpisode.seriesId?.toString() ?: currentEpisode.id.toString()
+                if (!seenSeries.add(seriesKey)) return@forEach
+
+                val nextEpisode = when (val result = repositories.media.getNextEpisode(currentEpisode.id.toString())) {
+                    is ApiResult.Success -> result.data
+                    else -> null
+                } ?: return@forEach
+
+                val nextEpisodeId = nextEpisode.id.toString()
+                if (!seenEpisodeIds.add(nextEpisodeId)) return@forEach
+
+                toCardModel(nextEpisode)?.let(nextEpisodes::add)
+                if (nextEpisodes.size >= 12) return nextEpisodes
+            }
+
+        return nextEpisodes
+    }
+
     private fun toCardModel(item: BaseItemDto): HomeCardModel? {
         val id = item.id.toString()
         val watchedPercentage = item.getWatchedPercentage()
@@ -167,7 +209,10 @@ class HomeViewModel @Inject constructor(
                     "${pct.toInt()}% watched"
                 }
             }
-            item.isSeries() -> item.getUnwatchedEpisodeCardLabel()
+            item.isEpisode() -> item.getEpisodeCardDetailLine()
+                ?: item.getYear()?.toString()
+                ?: item.type.toString().replace('_', ' ')
+            item.isSeries() -> item.getSeriesCardDetailLine()
                 ?: item.getYear()?.toString()
                 ?: item.type.toString().replace('_', ' ')
             item.getYear() != null -> item.getYear().toString()

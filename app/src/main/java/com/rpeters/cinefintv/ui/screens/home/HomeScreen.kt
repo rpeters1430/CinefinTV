@@ -22,16 +22,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -50,11 +48,14 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.CinefinChip
+import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
+import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -65,9 +66,11 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
     val spacing = LocalCinefinSpacing.current
     
     // Key focus anchors for logical navigation
+    val topAnchorRequester = remember { FocusRequester() }
     val carouselFocusRequester = remember { FocusRequester() }
     val firstRowFocusRequester = remember { FocusRequester() }
 
@@ -124,6 +127,23 @@ fun HomeScreen(
                     contentPadding = PaddingValues(top = spacing.rowGap, bottom = spacing.rowGap),
                     verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
                 ) {
+                    item {
+                        ScrollFocusAnchor(
+                            modifier = Modifier
+                                .focusRequester(topAnchorRequester)
+                                .focusProperties {
+                                    down = if (state.featuredItems.isNotEmpty()) {
+                                        carouselFocusRequester
+                                    } else {
+                                        firstRowFocusRequester
+                                    }
+                                },
+                            onFocused = {
+                                coroutineScope.launch { listState.animateScrollToItem(0) }
+                            },
+                        )
+                    }
+
                     if (state.featuredItems.isNotEmpty()) {
                         item {
                             FeaturedCarousel(
@@ -147,15 +167,15 @@ fun HomeScreen(
                         key = { _, section -> section.title }
                     ) { index, section ->
                         val rowRequester = if (index == 0) firstRowFocusRequester else sectionFocusRequesters[index]
-                        
+
                         HomeSection(
                             title = section.title,
                             items = section.items,
                             onOpenItem = onOpenItem,
+                            firstItemFocusRequester = rowRequester,
                             modifier = Modifier
-                                .focusRequester(rowRequester)
                                 .focusProperties {
-                                    if (index == 0) up = carouselFocusRequester
+                                    if (index == 0) up = topAnchorRequester
                                     if (index > 0) up = sectionFocusRequesters[index - 1]
                                     if (index < state.sections.size - 1) down = sectionFocusRequesters[index + 1]
                                 },
@@ -310,23 +330,22 @@ private fun HeroItem(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun HomeSection(
     title: String,
     items: List<HomeCardModel>,
     onOpenItem: (HomeCardModel) -> Unit,
+    firstItemFocusRequester: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
-    val firstItemRequester = remember { FocusRequester() }
-    
+
     Column(modifier = modifier) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            color = com.rpeters.cinefintv.ui.theme.OnBackground,
-            modifier = Modifier.padding(bottom = spacing.elementGap, start = spacing.gutter, end = spacing.gutter),
+        CinefinShelfTitle(
+            title = title,
+            eyebrow = "Browse",
+            modifier = Modifier
+                .padding(bottom = spacing.elementGap, start = spacing.gutter, end = spacing.gutter),
         )
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
@@ -341,7 +360,11 @@ private fun HomeSection(
                     watchStatus = item.watchStatus,
                     unwatchedCount = item.unwatchedCount,
                     playbackProgress = item.playbackProgress,
-                    modifier = if (index == 0) Modifier.focusRequester(firstItemRequester) else Modifier
+                    modifier = if (index == 0) {
+                        Modifier.focusRequester(firstItemFocusRequester)
+                    } else {
+                        Modifier
+                    }
                 )
             }
         }

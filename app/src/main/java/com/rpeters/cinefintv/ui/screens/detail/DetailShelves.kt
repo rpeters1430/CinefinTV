@@ -18,8 +18,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.TvPersonCard
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
@@ -31,6 +30,7 @@ fun DetailShelves(
     onOpenItem: (String) -> Unit,
     onOpenPerson: (String) -> Unit,
     onFocusedDescriptionChange: (String?) -> Unit,
+    onFocusedPreviewImageChange: (String?) -> Unit,
     playButtonRequester: FocusRequester,
     primaryShelfRequester: FocusRequester,
     castShelfRequester: FocusRequester,
@@ -57,7 +57,10 @@ fun DetailShelves(
                         subtitle = season.subtitle,
                         imageUrl = season.imageUrl,
                         onClick = { onOpenItem(season.id) },
-                        onFocus = { onFocusedDescriptionChange(season.overview) },
+                        onFocus = {
+                            onFocusedDescriptionChange(season.overview)
+                            onFocusedPreviewImageChange(season.imageUrl)
+                        },
                         watchStatus = season.watchStatus,
                         playbackProgress = season.playbackProgress,
                         unwatchedCount = season.unwatchedCount,
@@ -89,7 +92,10 @@ fun DetailShelves(
                         subtitle = episode.subtitle,
                         imageUrl = episode.imageUrl,
                         onClick = { onOpenItem(episode.id) },
-                        onFocus = { onFocusedDescriptionChange(episode.overview) },
+                        onFocus = {
+                            onFocusedDescriptionChange(episode.overview)
+                            onFocusedPreviewImageChange(episode.imageUrl)
+                        },
                         watchStatus = episode.watchStatus,
                         playbackProgress = episode.playbackProgress,
                         unwatchedCount = episode.unwatchedCount,
@@ -121,7 +127,10 @@ fun DetailShelves(
                         role = person.role,
                         imageUrl = person.imageUrl,
                         onClick = { onOpenPerson(person.id) },
-                        onFocus = { onFocusedDescriptionChange(null) },
+                        onFocus = {
+                            onFocusedDescriptionChange(null)
+                            onFocusedPreviewImageChange(person.imageUrl)
+                        },
                         modifier = itemModifier
                             .then(if (person == state.cast.first()) Modifier.focusRequester(castShelfRequester) else Modifier)
                             .focusProperties {
@@ -152,7 +161,10 @@ fun DetailShelves(
                         subtitle = related.subtitle,
                         imageUrl = related.imageUrl,
                         onClick = { onOpenItem(related.id) },
-                        onFocus = { onFocusedDescriptionChange(related.overview) },
+                        onFocus = {
+                            onFocusedDescriptionChange(related.overview)
+                            onFocusedPreviewImageChange(related.backdropUrl ?: related.imageUrl)
+                        },
                         watchStatus = related.watchStatus,
                         playbackProgress = related.playbackProgress,
                         unwatchedCount = related.unwatchedCount,
@@ -189,10 +201,9 @@ private fun <T> ShelfRow(
         modifier = Modifier.onFocusChanged { isFocused = it.hasFocus },
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            color = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
+        CinefinShelfTitle(
+            title = title,
+            eyebrow = if (isFocused) "Focused Shelf" else null,
         )
         LazyRow(
             contentPadding = PaddingValues(horizontal = 12.dp),

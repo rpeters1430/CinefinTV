@@ -1,5 +1,7 @@
 package com.rpeters.cinefintv.ui.player
 
+import com.rpeters.cinefintv.data.preferences.TranscodingQuality
+
 data class TrackOption(
     val id: String,
     val label: String,
@@ -29,6 +31,7 @@ data class PlayerUiState(
     val subtitleTracks: List<TrackOption> = emptyList(),
     val selectedAudioTrack: TrackOption? = null,
     val selectedSubtitleTrack: TrackOption? = null,
+    val transcodingQuality: TranscodingQuality = TranscodingQuality.AUTO,
     val playbackSpeed: Float = 1.0f,
     val chapters: List<ChapterMarker> = emptyList(),
     val introSkipRange: SkipRange? = null,

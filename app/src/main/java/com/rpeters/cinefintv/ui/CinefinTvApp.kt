@@ -28,7 +28,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -41,6 +40,8 @@ import androidx.tv.material3.Tab
 import androidx.tv.material3.TabDefaults
 import androidx.tv.material3.TabRow
 import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.components.CinefinDialogActions
+import com.rpeters.cinefintv.ui.components.CinefinDialogSurface
 import com.rpeters.cinefintv.ui.navigation.AuthRoutes
 import com.rpeters.cinefintv.ui.navigation.CinefinTvNavGraph
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
@@ -158,32 +159,52 @@ fun CinefinTvApp(
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 if (showNav) {
-                    Box(
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = spacing.gutter, vertical = 20.dp)
+                            .padding(horizontal = spacing.gutter, vertical = 20.dp),
+                        shape = RoundedCornerShape(spacing.cornerContainer),
+                        colors = androidx.tv.material3.SurfaceDefaults.colors(
+                            containerColor = expressiveColors.chromeSurface.copy(alpha = 0.92f),
+                        ),
+                        border = androidx.tv.material3.Border(
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = expressiveColors.borderSubtle.copy(alpha = 0.75f),
+                            ),
+                        ),
+                        tonalElevation = 8.dp,
                     ) {
-                        Box(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(spacing.cornerContainer))
                                 .background(
                                     Brush.horizontalGradient(
                                         colors = listOf(
-                                            expressiveColors.chromeSurface,
-                                            expressiveColors.accentSurface.copy(alpha = 0.92f),
+                                            Color.Transparent,
+                                            expressiveColors.accentSurface.copy(alpha = 0.28f),
                                         ),
                                     ),
                                 )
-                                .border(
-                                    border = BorderStroke(
-                                        width = 1.dp,
-                                        color = expressiveColors.borderSubtle.copy(alpha = 0.75f),
-                                    ),
-                                    shape = RoundedCornerShape(spacing.cornerContainer),
-                                )
-                                .padding(horizontal = 12.dp, vertical = 12.dp)
+                                .padding(horizontal = 12.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = "Cinefin TV",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                )
+                                Text(
+                                    text = "Browse your library",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                             TabRow(
                                 selectedTabIndex = selectedTabIndex,
                                 modifier = Modifier.fillMaxWidth(),
@@ -196,7 +217,7 @@ fun CinefinTvApp(
                                         onClick = {
                                             if (currentRoute != item.route) {
                                                 navController.navigate(item.route) {
-                                                    popUpTo(navController.graph.startDestinationId) {
+                                                    popUpTo(NavRoutes.HOME) {
                                                         saveState = true
                                                     }
                                                     launchSingleTop = true
@@ -257,69 +278,59 @@ private fun UpdateDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val spacing = LocalCinefinSpacing.current
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(spacing.cornerCard),
-            modifier = Modifier.width(450.dp)
+    CinefinDialogSurface(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.width(520.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(32.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+            Text(
+                text = "New Update Available",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Text(
+                text = "Version ${info.versionName} is ready to install.",
+                style = MaterialTheme.typography.bodyLarge
+            )
+            if (!info.releaseNotes.isNullOrBlank()) {
                 Text(
-                    text = "New Update Available",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onBackground
+                    text = info.releaseNotes,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            if (!errorMessage.isNullOrBlank()) {
                 Text(
-                    text = "Version ${info.versionName} is ready to install.",
-                    style = MaterialTheme.typography.bodyLarge
+                    text = errorMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
                 )
-                if (!info.releaseNotes.isNullOrBlank()) {
-                    Text(
-                        text = info.releaseNotes,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            }
 
-                if (!errorMessage.isNullOrBlank()) {
-                    Text(
-                        text = errorMessage,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-
-                if (isDownloading) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        LinearProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier.fillMaxWidth(),
-                            color = ComposeMaterialTheme.colorScheme.primary,
-                            trackColor = ComposeMaterialTheme.colorScheme.surfaceContainerHigh
-                        )
-                        Text(
-                            text = "Downloading... ${(progress * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                    }
-                } else {
-                    Row(
+            if (isDownloading) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LinearProgressIndicator(
+                        progress = { progress },
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.End)
-                    ) {
-                        if (!info.isCritical) {
-                            androidx.tv.material3.OutlinedButton(onClick = onDismiss) {
-                                Text("Later")
-                            }
-                        }
-                        Button(onClick = onConfirm) {
-                            Text("Update Now")
-                        }
-                    }
+                        color = ComposeMaterialTheme.colorScheme.primary,
+                        trackColor = ComposeMaterialTheme.colorScheme.surfaceContainerHigh
+                    )
+                    Text(
+                        text = "Downloading... ${(progress * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelMedium
+                    )
                 }
+            } else {
+                CinefinDialogActions(
+                    dismissLabel = if (info.isCritical) null else "Later",
+                    confirmLabel = "Update Now",
+                    onDismiss = if (info.isCritical) null else onDismiss,
+                    onConfirm = onConfirm,
+                )
             }
         }
     }
