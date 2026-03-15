@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,7 +35,6 @@ import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
@@ -88,30 +88,24 @@ fun TvMediaCard(
     )
 
     Column(
-        modifier = modifier.width(280.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = modifier.width(168.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Card(
             onClick = onClick,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(158.dp)
+                .aspectRatio(2f / 3f)
                 .onFocusChanged {
                     val focused = it.isFocused || it.hasFocus
                     isFocused = focused
                     if (focused) onFocus()
                 },
-            scale = CardDefaults.scale(focusedScale = 1.08f),
-            glow = CardDefaults.glow(
-                focusedGlow = Glow(
-                    elevation = 18.dp,
-                    elevationColor = expressiveColors.focusGlow,
-                ),
-            ),
+            scale = CardDefaults.scale(focusedScale = 1.03f),
             border = CardDefaults.border(
                 focusedBorder = Border(
                     border = androidx.compose.foundation.BorderStroke(
-                        width = 2.dp,
+                        width = 3.dp,
                         color = expressiveColors.focusRing,
                     ),
                 ),
@@ -122,7 +116,7 @@ fun TvMediaCard(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .background(expressiveColors.accentSurface),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (imageUrl != null) {
@@ -130,7 +124,7 @@ fun TvMediaCard(
                             model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
                                 .data(imageUrl)
                                 .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
-                                .size(560, 316)
+                                .size(336, 504)
                                 .build(),
                             contentDescription = title,
                             contentScale = ContentScale.Crop,
@@ -151,8 +145,8 @@ fun TvMediaCard(
                             Brush.verticalGradient(
                                 colors = listOf(
                                     Color.Transparent,
-                                    Color.Black.copy(alpha = 0.14f),
-                                    Color.Black.copy(alpha = 0.62f),
+                                    Color.Black.copy(alpha = 0.08f),
+                                    Color.Black.copy(alpha = 0.28f),
                                 ),
                             ),
                         ),
@@ -163,7 +157,7 @@ fun TvMediaCard(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .fillMaxWidth()
-                            .height(4.dp)
+                            .height(3.dp)
                             .background(Color.Black.copy(alpha = 0.5f))
                     ) {
                         Box(
@@ -195,20 +189,20 @@ fun TvMediaCard(
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(14.dp),
             colors = SurfaceDefaults.colors(containerColor = metaContainerColor),
-            tonalElevation = if (isFocused) 8.dp else 0.dp,
+            tonalElevation = if (isFocused) 4.dp else 0.dp,
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
-                    .defaultMinSize(minHeight = 84.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                    .defaultMinSize(minHeight = 54.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
                     color = titleColor,
                     maxLines = 2,
@@ -217,7 +211,7 @@ fun TvMediaCard(
                 if (!subtitle.isNullOrBlank()) {
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelMedium,
                         color = subtitleColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

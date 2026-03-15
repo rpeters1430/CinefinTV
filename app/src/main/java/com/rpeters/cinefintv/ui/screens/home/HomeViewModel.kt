@@ -226,7 +226,7 @@ class HomeViewModel @Inject constructor(
             id = id,
             title = item.getDisplayTitle(),
             subtitle = subtitle,
-            imageUrl = repositories.stream.getLandscapeImageUrl(item),
+            imageUrl = repositories.stream.getPosterCardImageUrl(item),
             backdropUrl = repositories.stream.getBackdropUrl(item),
             description = item.overview?.take(140),
             year = item.getYear(),

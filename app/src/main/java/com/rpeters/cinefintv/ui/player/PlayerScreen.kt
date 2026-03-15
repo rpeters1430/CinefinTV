@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Rect
@@ -42,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
@@ -134,6 +136,7 @@ fun PlayerScreen(
             val seekBarFocusRequester = remember { FocusRequester() }
             val playerFocusRequester = remember { FocusRequester() }
             val skipFocusRequester = remember { FocusRequester() }
+            var overlayActionFocused by remember { mutableStateOf(false) }
 
             // Playback state — polled every 500ms
             var isPlaying by remember { mutableStateOf(true) }
@@ -220,6 +223,9 @@ fun PlayerScreen(
                                     }
                                 }
                                 Key.DirectionCenter, Key.Enter, Key.Spacebar -> {
+                                    if (!controlsVisible && overlayActionFocused) {
+                                        return@onKeyEvent false
+                                    }
                                     onInteract()
                                     if (!controlsVisible) {
                                         controlsVisible = true
@@ -322,6 +328,7 @@ fun PlayerScreen(
                     enter = fadeIn(),
                     exit = fadeOut(),
                     modifier = Modifier
+                        .zIndex(2f)
                         .align(Alignment.TopEnd)
                         .padding(horizontal = 32.dp, vertical = 28.dp),
                 ) {
@@ -351,6 +358,7 @@ fun PlayerScreen(
                 // Skip Intro chip + Next Up card — shared right-aligned column
                 Column(
                     modifier = Modifier
+                        .zIndex(2f)
                         .align(Alignment.BottomEnd)
                         .padding(bottom = 96.dp, end = 48.dp),
                     horizontalAlignment = Alignment.End,
@@ -367,7 +375,9 @@ fun PlayerScreen(
                                 player.seekTo(activeSkipTargetMs)
                                 onInteract()
                             },
-                            modifier = Modifier.focusRequester(skipFocusRequester),
+                            modifier = Modifier
+                                .focusRequester(skipFocusRequester)
+                                .onFocusChanged { overlayActionFocused = it.hasFocus },
                             colors = ButtonDefaults.colors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 contentColor = Color.White,
@@ -386,9 +396,8 @@ fun PlayerScreen(
 
                     // Next Up thumbnail card — slides in from right in last 15s
                     val remaining = if (duration > 0L) (duration - position) else -1L
-                    val showNextUp = remaining in 1L..NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS
+                    val showNextUp = remaining in 0L..NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS
                         && uiState.isEpisodicContent
-                        && uiState.autoPlayNextEpisode
                         && uiState.nextEpisodeId != null
 
                     AnimatedVisibility(
@@ -400,6 +409,8 @@ fun PlayerScreen(
                             title = uiState.nextEpisodeTitle ?: "Next Episode",
                             thumbnailUrl = uiState.nextEpisodeThumbnailUrl,
                             remainingMs = remaining.coerceAtLeast(0L),
+                            autoPlayEnabled = uiState.autoPlayNextEpisode,
+                            onActionFocusChanged = { overlayActionFocused = it },
                             onPlayNow = {
                                 uiState.nextEpisodeId?.let { onOpenItem(it) }
                             },

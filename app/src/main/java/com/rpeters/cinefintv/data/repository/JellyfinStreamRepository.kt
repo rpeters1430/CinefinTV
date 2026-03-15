@@ -226,6 +226,48 @@ class JellyfinStreamRepository @Inject constructor(
     }
 
     /**
+     * Get portrait/primary artwork for poster cards.
+     * Episodes prefer the parent series poster because episode Primary art is usually a landscape still.
+     * Seasons fall back to the parent series poster when they do not have their own Primary art.
+     */
+    fun getPosterCardImageUrl(item: BaseItemDto, parentItem: BaseItemDto? = null): String? {
+        return try {
+            val server = authRepository.getCurrentServer() ?: return null
+            if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) return null
+
+            val itemId = item.id.toString()
+
+            if (item.type == BaseItemKind.EPISODE) {
+                val posterOwnerId = item.seriesId?.toString()
+                    ?: parentItem?.seriesId?.toString()
+                    ?: parentItem?.id?.toString()
+                    ?: itemId
+                return "${server.url}/Items/$posterOwnerId/Images/Primary?maxHeight=$DEFAULT_IMAGE_MAX_HEIGHT&maxWidth=$DEFAULT_IMAGE_MAX_WIDTH"
+            }
+
+            item.imageTags?.get(ImageType.PRIMARY)?.let { tag ->
+                return getImageUrl(itemId, "Primary", tag)
+            }
+
+            if (item.type == BaseItemKind.SEASON && parentItem != null) {
+                return "${server.url}/Items/${parentItem.id}/Images/Primary?maxHeight=$DEFAULT_IMAGE_MAX_HEIGHT&maxWidth=$DEFAULT_IMAGE_MAX_WIDTH"
+            }
+
+            item.imageTags?.get(ImageType.THUMB)?.let { tag ->
+                return getImageUrl(itemId, "Thumb", tag)
+            }
+
+            item.backdropImageTags?.firstOrNull()?.let { tag ->
+                return getImageUrl(itemId, "Backdrop", tag)
+            }
+
+            null
+        } catch (e: CancellationException) {
+            throw e
+        }
+    }
+
+    /**
      * Get a landscape (16:9 / backdrop) image URL suitable for horizontal card thumbnails.
      * Order of preference:
      * - Episodes: Primary (landscape still screenshot) -> Backdrop -> Thumb
@@ -319,10 +361,10 @@ class JellyfinStreamRepository @Inject constructor(
     }
 
     /**
-     * Get image URL for search cards, preferring landscape images for consistency.
+     * Get image URL for search cards, preferring poster-style artwork for portrait cards.
      */
     fun getSearchCardImageUrl(item: BaseItemDto): String? {
-        return getLandscapeImageUrl(item)
+        return getPosterCardImageUrl(item)
     }
 
     /**

@@ -17,6 +17,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
@@ -28,16 +30,25 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items as listItems
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
+import com.rpeters.cinefintv.ui.components.RequestScreenFocus
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
+import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
+import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import org.jellyfin.sdk.model.api.BaseItemDto
 
@@ -137,8 +148,21 @@ private fun MusicGridContent(
     imageUrl: (BaseItemDto) -> String?,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
+    val gridState = rememberLazyGridState()
+    val screenFocus = rememberTvScreenFocusState()
+    RegisterPrimaryScreenFocus(
+        route = NavRoutes.LIBRARY_MUSIC,
+        requester = screenFocus.primaryContentRequester,
+    )
+
+    RequestScreenFocus(
+        key = state.viewType to state.items.size,
+        requester = screenFocus.topAnchorRequester,
+    )
+
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 260.dp),
+        columns = GridCells.Adaptive(minSize = 210.dp),
+        state = gridState,
         modifier = Modifier
             .fillMaxSize()
             .background(
@@ -154,6 +178,15 @@ private fun MusicGridContent(
         verticalArrangement = Arrangement.spacedBy(32.dp),
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
+            TvScreenTopFocusAnchor(
+                state = screenFocus,
+                onFocused = {
+                    gridState.requestScrollToItem(0)
+                },
+            )
+        }
+
+        item(span = { GridItemSpan(maxLineSpan) }) {
             MusicHero(
                 viewType = state.viewType,
                 count = state.items.size,
@@ -163,14 +196,28 @@ private fun MusicGridContent(
         item(span = { GridItemSpan(maxLineSpan) }) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (state.viewType == MusicViewType.ALBUMS) {
-                    Button(onClick = { onViewTypeChange(MusicViewType.ALBUMS) }) {
+                    Button(
+                        onClick = { onViewTypeChange(MusicViewType.ALBUMS) },
+                        modifier = Modifier
+                            .focusRequester(screenFocus.primaryContentRequester)
+                            .focusProperties {
+                                up = screenFocus.topAnchorRequester
+                            }
+                    ) {
                         Text("Albums")
                     }
                     OutlinedButton(onClick = { onViewTypeChange(MusicViewType.ARTISTS) }) {
                         Text("Artists")
                     }
                 } else {
-                    OutlinedButton(onClick = { onViewTypeChange(MusicViewType.ALBUMS) }) {
+                    OutlinedButton(
+                        onClick = { onViewTypeChange(MusicViewType.ALBUMS) },
+                        modifier = Modifier
+                            .focusRequester(screenFocus.primaryContentRequester)
+                            .focusProperties {
+                                up = screenFocus.topAnchorRequester
+                            }
+                    ) {
                         Text("Albums")
                     }
                     Button(onClick = { onViewTypeChange(MusicViewType.ARTISTS) }) {
@@ -223,8 +270,16 @@ private fun AlbumDetailContent(
     val albumTitle = album.name ?: "Unknown Album"
     val albumYear = album.productionYear?.toString()
     val expressiveColors = LocalCinefinExpressiveColors.current
+    val listState = rememberLazyListState()
+    val screenFocus = rememberTvScreenFocusState()
+
+    RequestScreenFocus(
+        key = album.id.toString(),
+        requester = screenFocus.topAnchorRequester,
+    )
 
     LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxSize()
             .background(
@@ -239,41 +294,52 @@ private fun AlbumDetailContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(
-                                expressiveColors.chromeSurface,
-                                expressiveColors.accentSurface.copy(alpha = 0.94f),
-                            ),
-                        ),
-                    )
-                    .border(
-                        BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.75f)),
-                        RoundedCornerShape(28.dp),
-                    )
-                    .padding(28.dp)
+            TvScreenTopFocusAnchor(
+                state = screenFocus,
+                onFocused = {
+                    listState.requestScrollToItem(0)
+                },
+            )
+        }
+
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = SurfaceDefaults.colors(
+                    containerColor = expressiveColors.chromeSurface.copy(alpha = 0.74f),
+                ),
+                border = androidx.tv.material3.Border(
+                    border = BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.6f)),
+                ),
+                tonalElevation = 2.dp,
             ) {
-                CinefinShelfTitle(
-                    title = albumTitle,
-                    eyebrow = album.albumArtist ?: album.artists?.firstOrNull() ?: "Album Detail",
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text(
-                    text = listOfNotNull(albumYear, album.albumArtist ?: album.artists?.firstOrNull())
-                        .joinToString("  •  "),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                OutlinedButton(
-                    onClick = onBack,
-                    modifier = Modifier.padding(top = 8.dp),
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.padding(24.dp)
                 ) {
-                    Text("Back")
+                    CinefinShelfTitle(
+                        title = albumTitle,
+                        eyebrow = album.albumArtist ?: album.artists?.firstOrNull() ?: "Album Detail",
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        text = listOfNotNull(albumYear, album.albumArtist ?: album.artists?.firstOrNull())
+                            .joinToString("  •  "),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .focusRequester(screenFocus.primaryContentRequester)
+                            .focusProperties {
+                                up = screenFocus.topAnchorRequester
+                            },
+                    ) {
+                        Text("Back")
+                    }
                 }
             }
         }
@@ -360,42 +426,47 @@ private fun MusicHero(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .background(
-                Brush.horizontalGradient(
-                    colors = listOf(
-                        expressiveColors.heroStart.copy(alpha = 0.92f),
-                        expressiveColors.heroEnd.copy(alpha = 0.95f),
-                    ),
-                ),
-            )
-            .border(
-                BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.75f)),
-                RoundedCornerShape(28.dp),
-            )
-            .padding(28.dp)
+            .padding(bottom = 2.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            androidx.tv.material3.Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = expressiveColors.titleAccent,
-            )
-            Text(
-                text = "Music",
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = if (viewType == MusicViewType.ALBUMS) "Browse albums with cover-forward focus states." else "Browse artists with a richer catalog view.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = "$count ${viewType.name.lowercase()} loaded",
-                style = MaterialTheme.typography.labelLarge,
-                color = expressiveColors.titleAccent,
-            )
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            colors = SurfaceDefaults.colors(
+                containerColor = expressiveColors.chromeSurface.copy(alpha = 0.74f),
+            ),
+            border = androidx.tv.material3.Border(
+                border = BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.6f)),
+            ),
+            tonalElevation = 2.dp,
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                androidx.tv.material3.Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = expressiveColors.titleAccent,
+                )
+                Text(
+                    text = if (viewType == MusicViewType.ALBUMS) "Albums" else "Artists",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Text(
+                    text = if (viewType == MusicViewType.ALBUMS) {
+                        "Browse albums with cover-forward focus states."
+                    } else {
+                        "Browse artists with a richer catalog view."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "$count ${viewType.name.lowercase()} loaded",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = expressiveColors.titleAccent,
+                )
+            }
         }
     }
 }

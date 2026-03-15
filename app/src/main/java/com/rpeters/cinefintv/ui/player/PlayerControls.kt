@@ -338,6 +338,8 @@ internal fun NextEpisodeCard(
     title: String,
     thumbnailUrl: String?,
     remainingMs: Long,
+    autoPlayEnabled: Boolean,
+    onActionFocusChanged: (Boolean) -> Unit,
     onPlayNow: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -386,25 +388,30 @@ internal fun NextEpisodeCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "Starting in ${remainingMs / 1000}s\u2026",
+                    text = if (autoPlayEnabled) {
+                        "Starting in ${remainingMs / 1000}s..."
+                    } else {
+                        "Ready to play next"
+                    },
                     style = MaterialTheme.typography.labelMedium,
                     fontSize = 18.sp,
                     color = Color.White.copy(alpha = 0.5f),
                 )
 
-                // Draining red progress bar
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(2.dp)
-                        .background(Color.White.copy(alpha = 0.15f))
-                ) {
+                if (autoPlayEnabled) {
                     Box(
                         modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(progressFraction)
-                            .background(MaterialTheme.colorScheme.primary)
-                    )
+                            .fillMaxWidth()
+                            .height(2.dp)
+                            .background(Color.White.copy(alpha = 0.15f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(progressFraction)
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+                    }
                 }
 
                 Button(
@@ -412,7 +419,8 @@ internal fun NextEpisodeCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 4.dp)
-                        .focusRequester(playNowFocusRequester),
+                        .focusRequester(playNowFocusRequester)
+                        .onFocusChanged { onActionFocusChanged(it.hasFocus) },
                     colors = ButtonDefaults.colors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = Color.White,
@@ -421,7 +429,7 @@ internal fun NextEpisodeCard(
                     ),
                 ) {
                     Text(
-                        text = "▶  Play Now",
+                        text = if (autoPlayEnabled) "▶  Play Now" else "▶  Play Next",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold,
                     )

@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.ui.screens.stuff
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,7 +23,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -40,11 +42,16 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import coil3.compose.AsyncImage
-import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
+import com.rpeters.cinefintv.ui.components.RequestScreenFocus
+import com.rpeters.cinefintv.ui.components.TvScreenFocusState
+import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -58,6 +65,7 @@ fun StuffDetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val expressiveColors = LocalCinefinExpressiveColors.current
 
     when (val state = uiState) {
         is StuffDetailUiState.Loading -> Box(
@@ -100,12 +108,19 @@ fun StuffDetailScreen(
             val playButtonRequester = remember { FocusRequester() }
             val topAnchorRequester = remember { FocusRequester() }
             val moreShelfRequester = remember { FocusRequester() }
-
-            LaunchedEffect(state.item.id) {
-                topAnchorRequester.requestFocus()
+            val screenFocus = remember(topAnchorRequester, playButtonRequester) {
+                TvScreenFocusState(
+                    topAnchorRequester = topAnchorRequester,
+                    primaryContentRequester = playButtonRequester,
+                )
             }
 
-            LaunchedEffect(state.isDeleted) {
+            RequestScreenFocus(
+                key = state.item.id,
+                requester = screenFocus.topAnchorRequester,
+            )
+
+            androidx.compose.runtime.LaunchedEffect(state.isDeleted) {
                 if (state.isDeleted) {
                     onBack()
                 }
@@ -140,8 +155,8 @@ fun StuffDetailScreen(
                     contentPadding = PaddingValues(horizontal = 48.dp, vertical = 32.dp),
                 ) {
                     item {
-                        ScrollFocusAnchor(
-                            modifier = Modifier.focusRequester(topAnchorRequester),
+                        TvScreenTopFocusAnchor(
+                            state = screenFocus,
                             onFocused = {
                                 coroutineScope.launch {
                                     listState.animateScrollToItem(0)
@@ -153,42 +168,44 @@ fun StuffDetailScreen(
                     item { Spacer(Modifier.fillParentMaxHeight(0.22f)) }
                     item {
                         Column(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .widthIn(max = 760.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            item.metadataLine?.let {
+                            item.metadataLine?.let { metadata ->
                                 Text(
-                                    text = it,
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    text = metadata,
+                                    style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                             Text(
-                                text = item.title, 
-                                style = MaterialTheme.typography.displaySmall,
+                                text = item.title,
+                                style = MaterialTheme.typography.headlineLarge,
                                 color = MaterialTheme.colorScheme.onBackground,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
                             )
-                            item.overview?.takeIf { it.isNotBlank() }?.let {
+                            item.overview?.takeIf { it.isNotBlank() }?.let { overview ->
                                 Text(
-                                    text = it,
+                                    text = overview,
                                     maxLines = 4,
                                     overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.fillMaxWidth(0.7f)
+                                    modifier = Modifier.fillMaxWidth(),
                                 )
                             }
                             item.technicalDetails?.summary?.let { techSummary ->
                                 Text(
                                     text = techSummary,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                 )
                             }
                             Row(
-                                modifier = Modifier.padding(top = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                modifier = Modifier.padding(top = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
                             ) {
                                 Button(
                                     onClick = { onPlay(item.id) },
@@ -210,7 +227,7 @@ fun StuffDetailScreen(
                                 if (state.isDeleting) {
                                     Text(
                                         text = "Deleting...",
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
                                     )
@@ -222,7 +239,9 @@ fun StuffDetailScreen(
                                                 down = moreShelfRequester
                                             }
                                         }
-                                    ) { Text("Confirm Delete") }
+                                    ) {
+                                        Text("Confirm Delete")
+                                    }
                                     OutlinedButton(
                                         onClick = viewModel::cancelDelete,
                                         modifier = Modifier.focusProperties {
@@ -230,7 +249,9 @@ fun StuffDetailScreen(
                                                 down = moreShelfRequester
                                             }
                                         }
-                                    ) { Text("Cancel") }
+                                    ) {
+                                        Text("Cancel")
+                                    }
                                 } else {
                                     OutlinedButton(
                                         onClick = viewModel::requestDelete,
@@ -239,7 +260,9 @@ fun StuffDetailScreen(
                                                 down = moreShelfRequester
                                             }
                                         }
-                                    ) { Text("Delete") }
+                                    ) {
+                                        Text("Delete")
+                                    }
                                 }
                                 OutlinedButton(
                                     onClick = onBack,
@@ -248,11 +271,13 @@ fun StuffDetailScreen(
                                             down = moreShelfRequester
                                         }
                                     }
-                                ) { Text("Back") }
+                                ) {
+                                    Text("Back")
+                                }
                             }
-                            state.actionErrorMessage?.let {
+                            state.actionErrorMessage?.let { actionError ->
                                 Text(
-                                    text = it,
+                                    text = actionError,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.error,
                                 )

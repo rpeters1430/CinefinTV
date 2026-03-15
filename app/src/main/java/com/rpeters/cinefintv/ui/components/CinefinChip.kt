@@ -1,6 +1,5 @@
 package com.rpeters.cinefintv.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -47,20 +46,24 @@ fun CinefinChip(
     val spacing = LocalCinefinSpacing.current
     
     val backgroundColor = if (strong) expressiveColors.pillStrong else expressiveColors.pillMuted
-    val contentColor = if (strong) Color.White else MaterialTheme.colorScheme.onSurface
+    val contentColor = if (strong) Color(0xFF0F1115) else MaterialTheme.colorScheme.onSurface
 
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(spacing.cornerPill))
             .background(backgroundColor)
             .border(
-                border = BorderStroke(
+                border = androidx.compose.foundation.BorderStroke(
                     width = 1.dp, 
-                    color = expressiveColors.borderSubtle.copy(alpha = 0.5f)
+                    color = if (strong) {
+                        expressiveColors.pillStrong.copy(alpha = 0.92f)
+                    } else {
+                        expressiveColors.borderSubtle.copy(alpha = 0.45f)
+                    }
                 ),
                 shape = RoundedCornerShape(spacing.cornerPill),
             )
-            .padding(horizontal = 14.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 5.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -69,9 +72,9 @@ fun CinefinChip(
                     imageVector = icon,
                     contentDescription = null,
                     tint = contentColor,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(14.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(5.dp))
             }
             Text(
                 text = label,

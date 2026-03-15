@@ -5,7 +5,6 @@ import androidx.compose.animation.core.tween
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -32,6 +32,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -46,11 +49,16 @@ import kotlinx.coroutines.launch
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
+import com.rpeters.cinefintv.ui.components.RequestScreenFocus
+import com.rpeters.cinefintv.ui.components.TvScreenFocusState
+import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
@@ -111,10 +119,22 @@ fun PersonScreen(
         is PersonUiState.Content -> {
             val person = state.person
             var focusedMedia by remember(state.media) { mutableStateOf(state.media.firstOrNull()) }
+            val topAnchorRequester = remember { FocusRequester() }
+            val backButtonRequester = remember { FocusRequester() }
+            val screenFocus = remember(topAnchorRequester, backButtonRequester) {
+                TvScreenFocusState(
+                    topAnchorRequester = topAnchorRequester,
+                    primaryContentRequester = backButtonRequester,
+                )
+            }
             
             BackHandler(onBack = onBack)
 
             val listState = rememberLazyListState()
+            RequestScreenFocus(
+                key = person.id,
+                requester = screenFocus.topAnchorRequester,
+            )
 
             Box(modifier = Modifier.fillMaxSize()) {
                 // Background Image (if available)
@@ -158,63 +178,68 @@ fun PersonScreen(
                     contentPadding = PaddingValues(horizontal = 48.dp, vertical = 0.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
-                    // Invisible focusable item to allow scrolling back to the very top
                     item {
-                        Box(
-                            modifier = Modifier
-                                .height(1.dp)
-                                .fillMaxWidth()
-                                .onFocusChanged {
-                                    if (it.isFocused) {
-                                        coroutineScope.launch {
-                                            listState.animateScrollToItem(0)
-                                        }
-                                    }
+                        TvScreenTopFocusAnchor(
+                            state = screenFocus,
+                            onFocused = {
+                                coroutineScope.launch {
+                                    listState.animateScrollToItem(0)
                                 }
-                                .focusable()
+                            },
                         )
                     }
 
-                    item { Spacer(Modifier.fillParentMaxHeight(0.4f)) }
+                    item { Spacer(Modifier.fillParentMaxHeight(0.24f)) }
 
                     item {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .widthIn(max = 760.dp),
+                            shape = RoundedCornerShape(28.dp),
+                            colors = SurfaceDefaults.colors(
+                                containerColor = expressiveColors.chromeSurface.copy(alpha = 0.74f),
+                            ),
+                            tonalElevation = 2.dp,
                         ) {
-                            Text(
-                                text = person.name,
-                                style = MaterialTheme.typography.displaySmall,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                fontWeight = FontWeight.Bold,
-                            )
-
-                            val displayOverview = focusedDescription ?: person.overview
-                            if (!displayOverview.isNullOrBlank()) {
-                                Text(
-                                    text = displayOverview,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 6,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.fillMaxWidth(0.7f)
-                                )
-                            }
-
-                            Row(
-                                modifier = Modifier
-                                    .padding(top = 8.dp)
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(expressiveColors.chromeSurface)
-                                    .border(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
-                                    .padding(10.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            Column(
+                                modifier = Modifier.padding(horizontal = 28.dp, vertical = 24.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
                             ) {
-                                OutlinedButton(
-                                    onClick = onBack,
-                                    modifier = Modifier.onFocusChanged { if (it.isFocused) focusedDescription = null }
+                                Text(
+                                    text = person.name,
+                                    style = MaterialTheme.typography.headlineLarge,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    fontWeight = FontWeight.Bold,
+                                )
+
+                                val displayOverview = focusedDescription ?: person.overview
+                                if (!displayOverview.isNullOrBlank()) {
+                                    Text(
+                                        text = displayOverview,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 6,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+
+                                Row(
+                                    modifier = Modifier.padding(top = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
-                                    Text("Back")
+                                    OutlinedButton(
+                                        onClick = onBack,
+                                        modifier = Modifier
+                                            .focusRequester(backButtonRequester)
+                                            .onFocusChanged { if (it.isFocused) focusedDescription = null }
+                                            .focusProperties {
+                                                up = topAnchorRequester
+                                            }
+                                    ) {
+                                        Text("Back")
+                                    }
                                 }
                             }
                         }

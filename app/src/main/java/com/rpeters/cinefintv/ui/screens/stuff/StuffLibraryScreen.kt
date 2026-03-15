@@ -3,20 +3,17 @@ package com.rpeters.cinefintv.ui.screens.stuff
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
@@ -31,12 +28,12 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
 import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.screens.library.LibraryHeader
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -46,12 +43,14 @@ fun StuffLibraryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val gridState = rememberLazyGridState()
-    val coroutineScope = rememberCoroutineScope()
     val expressiveColors = LocalCinefinExpressiveColors.current
     val topAnchorRequester = remember { FocusRequester() }
     val firstItemRequester = remember { FocusRequester() }
-    var lastFocusedIndex by remember { mutableIntStateOf(-1) }
-    var focusScrollJob by remember { mutableStateOf<Job?>(null) }
+
+    RegisterPrimaryScreenFocus(
+        route = NavRoutes.LIBRARY_STUFF,
+        requester = firstItemRequester,
+    )
 
     LaunchedEffect(Unit) {
         viewModel.load()
@@ -68,7 +67,7 @@ fun StuffLibraryScreen(
         }
 
         is StuffLibraryUiState.Error -> {
-            androidx.compose.foundation.layout.Column(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(48.dp),
@@ -93,7 +92,7 @@ fun StuffLibraryScreen(
         is StuffLibraryUiState.Content -> {
             LaunchedEffect(state.items) {
                 if (state.items.isNotEmpty()) {
-                    firstItemRequester.requestFocus()
+                    topAnchorRequester.requestFocus()
                 }
             }
 
@@ -110,20 +109,22 @@ fun StuffLibraryScreen(
                     ),
             ) {
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 260.dp),
+                    columns = GridCells.Fixed(5),
                     state = gridState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
+                    contentPadding = PaddingValues(horizontal = 64.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(32.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         ScrollFocusAnchor(
-                            modifier = Modifier.focusRequester(topAnchorRequester),
+                            modifier = Modifier
+                                .focusRequester(topAnchorRequester)
+                                .focusProperties {
+                                    down = firstItemRequester
+                                },
                             onFocused = {
-                                coroutineScope.launch {
-                                    gridState.animateScrollToItem(0)
-                                }
+                                gridState.requestScrollToItem(0)
                             },
                         )
                     }
@@ -142,55 +143,14 @@ fun StuffLibraryScreen(
                             subtitle = item.subtitle,
                             imageUrl = item.imageUrl,
                             onClick = { onOpenItem(item.id) },
-                            onFocus = {
-                                val visibleItems = gridState.layoutInfo.visibleItemsInfo
-                                if (visibleItems.isEmpty()) return@TvMediaCard
-
-                                val rowsInView = visibleItems
-                                    .map { it.row }
-                                    .distinct()
-                                    .size
-                                    .coerceAtLeast(1)
-                                val estimatedColumns =
-                                    (visibleItems.size / rowsInView).coerceAtLeast(1)
-                                val visibleRows = visibleItems
-                                    .map { it.row }
-                                    .distinct()
-                                    .sorted()
-                                val bottomThresholdRow = (visibleRows.lastOrNull() ?: 0) - 1
-                                val focusedItemRow = visibleItems
-                                    .firstOrNull { it.index == index }
-                                    ?.row
-                                    ?: return@TvMediaCard
-                                val movingDown = index > lastFocusedIndex
-
-                                lastFocusedIndex = index
-
-                                if (movingDown && focusedItemRow >= bottomThresholdRow) {
-                                    val targetIndex = (index - estimatedColumns).coerceAtLeast(
-                                        gridState.firstVisibleItemIndex
-                                    )
-
-                                    if (targetIndex > gridState.firstVisibleItemIndex) {
-                                        focusScrollJob?.cancel()
-                                        focusScrollJob = coroutineScope.launch {
-                                            gridState.scrollToItem(targetIndex)
-                                        }
-                                    }
-                                } else if (!movingDown && focusedItemRow <= (visibleRows.firstOrNull()
-                                        ?: 0) + 1 && gridState.firstVisibleItemIndex > 0
-                                ) {
-                                    val targetIndex = (index - estimatedColumns).coerceAtLeast(0)
-                                    focusScrollJob?.cancel()
-                                    focusScrollJob = coroutineScope.launch {
-                                        gridState.scrollToItem(targetIndex)
-                                    }
-                                }
-                            },
                             watchStatus = item.watchStatus,
                             playbackProgress = item.playbackProgress,
                             modifier = if (index == 0) {
-                                Modifier.focusRequester(firstItemRequester)
+                                Modifier
+                                    .focusRequester(firstItemRequester)
+                                    .focusProperties {
+                                        up = topAnchorRequester
+                                    }
                             } else {
                                 Modifier
                             },

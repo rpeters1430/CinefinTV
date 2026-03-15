@@ -28,7 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -47,7 +46,9 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
+import com.rpeters.cinefintv.ui.components.RequestScreenFocus
+import com.rpeters.cinefintv.ui.components.TvScreenFocusState
+import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
@@ -122,12 +123,22 @@ fun DetailScreen(
                 }
 
                 // Focus top anchor on initial load to ensure we start at the top
-                LaunchedEffect(state.item.id) {
-                    topAnchorRequester.requestFocus()
+                val screenFocus = remember(topAnchorRequester, playButtonRequester) {
+                    TvScreenFocusState(
+                        topAnchorRequester = topAnchorRequester,
+                        primaryContentRequester = playButtonRequester,
+                    )
+                }
+
+                RequestScreenFocus(
+                    key = state.item.id,
+                    requester = screenFocus.topAnchorRequester,
+                )
+                androidx.compose.runtime.LaunchedEffect(state.item.id) {
                     focusedBackdropUrl = null
                 }
 
-                LaunchedEffect(state.isDeleted) {
+                androidx.compose.runtime.LaunchedEffect(state.isDeleted) {
                     if (state.isDeleted) onBack()
                 }
 
@@ -171,15 +182,15 @@ fun DetailScreen(
                         verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
                     ) {
                         item {
-                            ScrollFocusAnchor(
-                                modifier = Modifier.focusRequester(topAnchorRequester),
+                            TvScreenTopFocusAnchor(
+                                state = screenFocus,
                                 onFocused = {
                                     coroutineScope.launch { listState.animateScrollToItem(0) }
                                 }
                             )
                         }
 
-                        item { Spacer(Modifier.fillParentMaxHeight(0.35f)) }
+                        item { Spacer(Modifier.fillParentMaxHeight(0.22f)) }
 
                         item {
                             DetailHeroSection(

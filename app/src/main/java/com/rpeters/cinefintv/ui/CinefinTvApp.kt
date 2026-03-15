@@ -25,6 +25,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -42,6 +45,8 @@ import androidx.tv.material3.TabRow
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinDialogActions
 import com.rpeters.cinefintv.ui.components.CinefinDialogSurface
+import com.rpeters.cinefintv.ui.components.LocalTvScreenFocusRegistry
+import com.rpeters.cinefintv.ui.components.ProvideTvScreenFocusRegistry
 import com.rpeters.cinefintv.ui.navigation.AuthRoutes
 import com.rpeters.cinefintv.ui.navigation.CinefinTvNavGraph
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
@@ -64,12 +69,17 @@ fun CinefinTvApp(
     updateManager: UpdateManager? = null
 ) {
     CinefinTvTheme {
+        ProvideTvScreenFocusRegistry {
         val navController = rememberNavController()
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
+        val screenFocusRegistry = LocalTvScreenFocusRegistry.current
         val expressiveColors = LocalCinefinExpressiveColors.current
         val spacing = LocalCinefinSpacing.current
         val coroutineScope = rememberCoroutineScope()
+        val tabRequesters = remember(navTabItems.size) {
+            List(navTabItems.size) { FocusRequester() }
+        }
 
         var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
         var isDownloading by remember { mutableStateOf(false) }
@@ -144,6 +154,23 @@ fun CinefinTvApp(
                 (item.route.isNotEmpty() && currentRoute.startsWith(item.route)))
         }.let { if (it == -1) navTabItems.indexOfFirst { it.route == NavRoutes.HOME } else it }
         .coerceAtLeast(0)
+        var focusedTabIndex by remember { mutableStateOf(selectedTabIndex) }
+
+        LaunchedEffect(selectedTabIndex) {
+            focusedTabIndex = selectedTabIndex
+        }
+
+        fun navigateToTab(route: String) {
+            if (currentRoute != route) {
+                navController.navigate(route) {
+                    popUpTo(NavRoutes.HOME) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+        }
 
         Box(
             modifier = Modifier
@@ -162,7 +189,7 @@ fun CinefinTvApp(
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = spacing.gutter, vertical = 20.dp),
+                            .padding(horizontal = spacing.gutter, vertical = 16.dp),
                         shape = RoundedCornerShape(spacing.cornerContainer),
                         colors = androidx.tv.material3.SurfaceDefaults.colors(
                             containerColor = expressiveColors.chromeSurface.copy(alpha = 0.92f),
@@ -186,7 +213,7 @@ fun CinefinTvApp(
                                         ),
                                     ),
                                 )
-                                .padding(horizontal = 12.dp, vertical = 12.dp),
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             Row(
@@ -211,20 +238,16 @@ fun CinefinTvApp(
                             ) {
                                 navTabItems.forEachIndexed { index, item ->
                                     val isSelected = index == selectedTabIndex
+                                    val isFocused = index == focusedTabIndex
                                     Tab(
+                                        modifier = Modifier
+                                            .focusRequester(tabRequesters[index])
+                                            .focusProperties {
+                                                screenFocusRegistry?.requesterFor(item.route)?.let { down = it }
+                                            },
                                         selected = isSelected,
-                                        onFocus = {},
-                                        onClick = {
-                                            if (currentRoute != item.route) {
-                                                navController.navigate(item.route) {
-                                                    popUpTo(NavRoutes.HOME) {
-                                                        saveState = true
-                                                    }
-                                                    launchSingleTop = true
-                                                    restoreState = true
-                                                }
-                                            }
-                                        },
+                                        onFocus = { focusedTabIndex = index },
+                                        onClick = { navigateToTab(item.route) },
                                         colors = TabDefaults.pillIndicatorTabColors(
                                             contentColor = Color.White.copy(alpha = 0.8f),
                                             inactiveContentColor = Color.White.copy(alpha = 0.5f),
@@ -239,7 +262,25 @@ fun CinefinTvApp(
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(999.dp))
+                                                .background(
+                                                    when {
+                                                        isSelected -> Color.Transparent
+                                                        isFocused -> expressiveColors.focusRing.copy(alpha = 0.16f)
+                                                        else -> Color.Transparent
+                                                    }
+                                                )
+                                                .border(
+                                                    width = if (isFocused && !isSelected) 1.dp else 0.dp,
+                                                    color = if (isFocused && !isSelected) {
+                                                        expressiveColors.focusRing.copy(alpha = 0.7f)
+                                                    } else {
+                                                        Color.Transparent
+                                                    },
+                                                    shape = RoundedCornerShape(999.dp),
+                                                )
+                                                .padding(horizontal = 12.dp, vertical = 8.dp)
                                         ) {
                                             Icon(
                                                 imageVector = item.icon,
@@ -264,6 +305,7 @@ fun CinefinTvApp(
                     )
                 }
             }
+        }
         }
     }
 }

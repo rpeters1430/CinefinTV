@@ -1,8 +1,6 @@
 package com.rpeters.cinefintv.ui.screens.auth
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,14 +14,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Border
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
@@ -31,10 +32,14 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.tv.material3.WideButton
+import com.rpeters.cinefintv.ui.components.RequestScreenFocus
 import com.rpeters.cinefintv.ui.components.CinefinTextInputField
+import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
+import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Dns
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -46,6 +51,12 @@ fun ServerConnectionScreen(
     onContinue: () -> Unit,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
+    val screenFocus = rememberTvScreenFocusState()
+
+    RequestScreenFocus(
+        key = serverUrl,
+        requester = screenFocus.primaryContentRequester,
+    )
 
     Box(
         modifier = Modifier
@@ -73,12 +84,22 @@ fun ServerConnectionScreen(
             tonalElevation = 8.dp,
         ) {
             val scrollState = rememberScrollState()
+            val coroutineScope = rememberCoroutineScope()
             Column(
                 modifier = Modifier
                     .verticalScroll(scrollState)
                     .padding(horizontal = 28.dp, vertical = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
+                TvScreenTopFocusAnchor(
+                    state = screenFocus,
+                    onFocused = {
+                        coroutineScope.launch {
+                            scrollState.scrollTo(0)
+                        }
+                    },
+                )
+
                 AuthHero(
                     title = "Connect to Jellyfin",
                     description = "Enter your server URL. Local IPs and reverse-proxy URLs are supported.",
@@ -98,6 +119,11 @@ fun ServerConnectionScreen(
                     placeholder = "https://media.example.com",
                     imeAction = ImeAction.Done,
                     keyboardType = KeyboardType.Uri,
+                    modifier = Modifier
+                        .focusRequester(screenFocus.primaryContentRequester)
+                        .focusProperties {
+                            up = screenFocus.topAnchorRequester
+                        },
                 )
 
                 if (errorMessage != null) {
@@ -129,6 +155,7 @@ internal fun AuthTextField(
     placeholder: String,
     imeAction: ImeAction,
     keyboardType: KeyboardType,
+    modifier: Modifier = Modifier,
     visualTransformation: VisualTransformation = VisualTransformation.None,
 ) {
     CinefinTextInputField(
@@ -136,6 +163,7 @@ internal fun AuthTextField(
         value = value,
         onValueChange = onValueChange,
         placeholder = placeholder,
+        modifier = modifier,
         imeAction = imeAction,
         keyboardType = keyboardType,
         visualTransformation = visualTransformation,
@@ -154,40 +182,46 @@ internal fun AuthHero(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .background(
-                Brush.horizontalGradient(
-                    colors = listOf(
-                        expressiveColors.heroStart.copy(alpha = 0.92f),
-                        expressiveColors.heroEnd.copy(alpha = 0.95f),
-                    ),
-                ),
-            )
-            .border(
-                BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.75f)),
-                RoundedCornerShape(28.dp),
-            )
-            .padding(28.dp),
+            .padding(bottom = 2.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(expressiveColors.pillMuted)
-                    .padding(12.dp)
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            colors = SurfaceDefaults.colors(
+                containerColor = expressiveColors.chromeSurface.copy(alpha = 0.74f),
+            ),
+            border = Border(
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    expressiveColors.borderSubtle.copy(alpha = 0.6f),
+                ),
+            ),
+            tonalElevation = 2.dp,
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                icon()
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = expressiveColors.pillMuted,
+                            shape = CircleShape,
+                        )
+                        .padding(12.dp)
+                ) {
+                    icon()
+                }
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

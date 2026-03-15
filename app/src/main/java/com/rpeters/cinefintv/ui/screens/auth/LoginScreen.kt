@@ -16,11 +16,14 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
@@ -39,7 +42,11 @@ import androidx.tv.material3.WideButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Password
+import com.rpeters.cinefintv.ui.components.RequestScreenFocus
+import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
+import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -62,6 +69,7 @@ fun LoginScreen(
     var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var showQuickConnectPanel by rememberSaveable { mutableStateOf(false) }
+    val screenFocus = rememberTvScreenFocusState()
 
     val canSignIn = username.isNotBlank() && password.isNotBlank() && !isAuthenticating
 
@@ -82,6 +90,11 @@ fun LoginScreen(
             },
         )
     } else {
+        RequestScreenFocus(
+            key = serverUrl,
+            requester = screenFocus.primaryContentRequester,
+        )
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -108,12 +121,22 @@ fun LoginScreen(
                 tonalElevation = 8.dp,
             ) {
                 val scrollState = rememberScrollState()
+                val coroutineScope = rememberCoroutineScope()
                 Column(
                     modifier = Modifier
                         .verticalScroll(scrollState)
                         .padding(horizontal = 28.dp, vertical = 28.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp),
                 ) {
+                    TvScreenTopFocusAnchor(
+                        state = screenFocus,
+                        onFocused = {
+                            coroutineScope.launch {
+                                scrollState.scrollTo(0)
+                            }
+                        },
+                    )
+
                     AuthHero(
                         title = "Sign In",
                         description = helperText,
@@ -133,6 +156,11 @@ fun LoginScreen(
                         placeholder = "Username",
                         imeAction = ImeAction.Next,
                         keyboardType = KeyboardType.Text,
+                        modifier = Modifier
+                            .focusRequester(screenFocus.primaryContentRequester)
+                            .focusProperties {
+                                up = screenFocus.topAnchorRequester
+                            },
                     )
 
                     AuthPasswordField(
@@ -195,6 +223,14 @@ private fun QuickConnectPanel(
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     val scrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+    val screenFocus = rememberTvScreenFocusState()
+
+    RequestScreenFocus(
+        key = code ?: error ?: pollStatus,
+        requester = screenFocus.primaryContentRequester,
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -226,6 +262,15 @@ private fun QuickConnectPanel(
                     .padding(horizontal = 28.dp, vertical = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
+                TvScreenTopFocusAnchor(
+                    state = screenFocus,
+                    onFocused = {
+                        coroutineScope.launch {
+                            scrollState.scrollTo(0)
+                        }
+                    },
+                )
+
                 AuthHero(
                     title = "Quick Connect",
                     description = "Enter this code in the Jellyfin app on your phone or computer:",
@@ -275,7 +320,12 @@ private fun QuickConnectPanel(
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     WideButton(
                         onClick = onNewCode,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(screenFocus.primaryContentRequester)
+                            .focusProperties {
+                                up = screenFocus.topAnchorRequester
+                            },
                         enabled = !isLoading,
                     ) {
                         Text("New Code")
@@ -294,6 +344,7 @@ private fun QuickConnectPanel(
 private fun AuthPasswordField(
     value: String,
     onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     AuthTextField(
         label = "Password",
@@ -302,6 +353,7 @@ private fun AuthPasswordField(
         placeholder = "Password",
         imeAction = ImeAction.Done,
         keyboardType = KeyboardType.Password,
+        modifier = modifier,
         visualTransformation = PasswordVisualTransformation(),
     )
 }

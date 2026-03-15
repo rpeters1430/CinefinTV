@@ -212,7 +212,7 @@ class DetailViewModel @Inject constructor(
                         title = season.getDisplayTitle(),
                         subtitle = DetailMappers.buildSeasonSubtitle(season, episodeModels.size),
                         overview = season.overview?.takeIf { it.isNotBlank() },
-                        imageUrl = repositories.stream.getWideCardImageUrl(season, parentItem = item),
+                        imageUrl = repositories.stream.getPosterCardImageUrl(season, parentItem = item),
                         episodeCount = episodeModels.size.takeIf { it > 0 } ?: (season.childCount ?: 0),
                         watchStatus = seasonWatchStatus,
                         unwatchedCount = season.userData?.unplayedItemCount

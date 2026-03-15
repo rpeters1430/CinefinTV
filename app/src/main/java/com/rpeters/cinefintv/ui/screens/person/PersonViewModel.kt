@@ -135,7 +135,7 @@ class PersonViewModel @Inject constructor(
             title = getDisplayTitle(),
             subtitle = subtitle.ifBlank { null },
             overview = overview,
-            imageUrl = repositories.stream.getLandscapeImageUrl(this),
+            imageUrl = repositories.stream.getPosterCardImageUrl(this),
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,
         )

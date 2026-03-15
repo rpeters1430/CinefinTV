@@ -23,8 +23,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
@@ -33,6 +31,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinOptionDialog
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
@@ -112,89 +111,93 @@ fun DetailActionRow(
         }
 
         Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(spacing.cornerCard))
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            expressiveColors.chromeSurface,
-                            expressiveColors.accentSurface.copy(alpha = 0.88f),
-                        ),
-                    ),
-                )
-                .border(
-                    width = 1.dp,
-                    color = expressiveColors.borderSubtle.copy(alpha = 0.7f),
-                    shape = RoundedCornerShape(spacing.cornerCard),
-                )
-                .padding(12.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            state.playableItemId?.let { playableItemId ->
-                Button(
-                    onClick = { onPlay(playableItemId) },
-                    modifier = Modifier
-                        .focusRequester(playButtonRequester)
-                        .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
-                        .focusProperties {
-                            firstShelfRequester?.let { down = it }
-                        }
+            Surface(
+                shape = RoundedCornerShape(spacing.cornerCard),
+                colors = SurfaceDefaults.colors(
+                    containerColor = expressiveColors.chromeSurface.copy(alpha = 0.72f),
+                ),
+                border = androidx.tv.material3.Border(
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = 1.dp,
+                        color = expressiveColors.borderSubtle.copy(alpha = 0.6f),
+                    ),
+                ),
+                tonalElevation = 2.dp,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(state.playButtonLabel)
-                }
-            }
+                    state.playableItemId?.let { playableItemId ->
+                        Button(
+                            onClick = { onPlay(playableItemId) },
+                            modifier = Modifier
+                                .focusRequester(playButtonRequester)
+                                .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
+                                .focusProperties {
+                                    firstShelfRequester?.let { down = it }
+                                }
+                        ) {
+                            Text(state.playButtonLabel)
+                        }
+                    }
 
-            if (!hideSecondaryActions && state.playableItemId != null) {
-                if (state.isDeleting) {
-                    Surface(shape = RoundedCornerShape(12.dp)) {
-                        Text(
-                            text = "Deleting...",
-                            modifier = Modifier.padding(
-                                horizontal = 18.dp,
-                                vertical = 12.dp,
-                            ),
-                        )
-                    }
-                } else if (state.isDeleteConfirmationVisible) {
-                    Button(
-                        onClick = onConfirmDelete,
-                        modifier = Modifier.onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
-                    ) {
-                        Text("Confirm Delete")
-                    }
-                    OutlinedButton(
-                        onClick = onCancelDelete,
-                        modifier = Modifier.onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
-                    ) {
-                        Text("Cancel")
-                    }
-                } else {
-                    OutlinedButton(
-                        onClick = onRequestDelete,
-                        modifier = Modifier
-                            .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
-                            .focusProperties {
-                                firstShelfRequester?.let { down = it }
+                    if (!hideSecondaryActions && state.playableItemId != null) {
+                        if (state.isDeleting) {
+                            Surface(shape = RoundedCornerShape(12.dp)) {
+                                Text(
+                                    text = "Deleting...",
+                                    modifier = Modifier.padding(
+                                        horizontal = 18.dp,
+                                        vertical = 12.dp,
+                                    ),
+                                )
                             }
-                    ) {
-                        Text("Delete")
-                    }
-                }
-            }
-
-            if (!hideSecondaryActions && state.playableItemId != null) {
-                OutlinedButton(
-                    onClick = {
-                        onDismissActionError()
-                        onBack()
-                    },
-                    modifier = Modifier
-                        .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
-                        .focusProperties {
-                            firstShelfRequester?.let { down = it }
+                        } else if (state.isDeleteConfirmationVisible) {
+                            Button(
+                                onClick = onConfirmDelete,
+                                modifier = Modifier.onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
+                            ) {
+                                Text("Confirm Delete")
+                            }
+                            OutlinedButton(
+                                onClick = onCancelDelete,
+                                modifier = Modifier.onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
+                            ) {
+                                Text("Cancel")
+                            }
+                        } else {
+                            OutlinedButton(
+                                onClick = onRequestDelete,
+                                modifier = Modifier
+                                    .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
+                                    .focusProperties {
+                                        firstShelfRequester?.let { down = it }
+                                    }
+                            ) {
+                                Text("Delete")
+                            }
                         }
-                ) {
-                    Text("Back")
+                    }
+
+                    if (!hideSecondaryActions && state.playableItemId != null) {
+                        OutlinedButton(
+                            onClick = {
+                                onDismissActionError()
+                                onBack()
+                            },
+                            modifier = Modifier
+                                .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
+                                .focusProperties {
+                                    firstShelfRequester?.let { down = it }
+                                }
+                        ) {
+                            Text("Back")
+                        }
+                    }
                 }
             }
         }

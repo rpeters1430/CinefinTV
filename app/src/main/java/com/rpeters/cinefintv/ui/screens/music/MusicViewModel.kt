@@ -104,5 +104,5 @@ class MusicViewModel @Inject constructor(
     }
 
     fun imageUrl(item: BaseItemDto): String? =
-        repositories.stream.getLandscapeImageUrl(item)
+        repositories.stream.getPosterCardImageUrl(item)
 }

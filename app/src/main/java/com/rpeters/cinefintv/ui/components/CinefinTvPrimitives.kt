@@ -61,7 +61,7 @@ fun CinefinDialogSurface(
             colors = SurfaceDefaults.colors(
                 containerColor = expressiveColors.elevatedSurface.copy(alpha = 0.98f),
             ),
-            tonalElevation = 18.dp,
+            tonalElevation = 10.dp,
         ) {
             Box(
                 modifier = Modifier.background(
@@ -274,15 +274,15 @@ fun CinefinShelfTitle(
     val spacing = LocalCinefinSpacing.current
 
     Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(spacing.cornerCard),
-        colors = SurfaceDefaults.colors(
-            containerColor = expressiveColors.chromeSurface.copy(alpha = 0.88f),
-        ),
-        tonalElevation = 4.dp,
+            modifier = modifier,
+            shape = RoundedCornerShape(spacing.cornerCard),
+            colors = SurfaceDefaults.colors(
+                containerColor = expressiveColors.chromeSurface.copy(alpha = 0.76f),
+            ),
+        tonalElevation = 2.dp,
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             if (!eyebrow.isNullOrBlank()) {
@@ -294,7 +294,7 @@ fun CinefinShelfTitle(
             }
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onBackground,
             )
         }
@@ -315,7 +315,7 @@ fun CinefinTextInputField(
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     var isFocused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(16.dp)
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -329,11 +329,11 @@ fun CinefinTextInputField(
         ),
         border = Border(
             border = androidx.compose.foundation.BorderStroke(
-                width = if (isFocused) 2.dp else 1.dp,
+                width = if (isFocused) 3.dp else 1.dp,
                 color = if (isFocused) expressiveColors.focusRing else expressiveColors.borderSubtle,
             ),
         ),
-        tonalElevation = if (isFocused) 10.dp else 2.dp,
+        tonalElevation = if (isFocused) 6.dp else 2.dp,
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),

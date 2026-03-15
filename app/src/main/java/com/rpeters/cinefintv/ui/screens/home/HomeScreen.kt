@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,6 +44,9 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.Carousel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.OutlinedButton
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.tv.material3.rememberCarouselState
 import coil3.compose.AsyncImage
@@ -49,8 +54,10 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
+import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
 import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
@@ -73,6 +80,15 @@ fun HomeScreen(
     val topAnchorRequester = remember { FocusRequester() }
     val carouselFocusRequester = remember { FocusRequester() }
     val firstRowFocusRequester = remember { FocusRequester() }
+
+    RegisterPrimaryScreenFocus(
+        route = NavRoutes.HOME,
+        requester = if ((uiState as? HomeUiState.Content)?.featuredItems?.isNotEmpty() == true) {
+            carouselFocusRequester
+        } else {
+            firstRowFocusRequester
+        },
+    )
 
     when (val state = uiState) {
         HomeUiState.Loading -> {
@@ -124,7 +140,7 @@ fun HomeScreen(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = spacing.rowGap, bottom = spacing.rowGap),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = spacing.rowGap),
                     verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
                 ) {
                     item {
@@ -201,10 +217,10 @@ private fun FeaturedCarousel(
     Carousel(
         itemCount = items.size,
         carouselState = carouselState,
-        autoScrollDurationMillis = 12000L,
+        autoScrollDurationMillis = 15000L,
         modifier = modifier
             .fillMaxWidth()
-            .height(300.dp),
+            .height(440.dp),
     ) { index ->
         val item = items[index]
         HeroItem(
@@ -249,9 +265,9 @@ private fun HeroItem(
                 .background(
                     Brush.horizontalGradient(
                         colorStops = arrayOf(
-                            0.0f to expressiveColors.heroStart.copy(alpha = 0.96f),
-                            0.38f to Color.Black.copy(alpha = 0.76f),
-                            0.68f to expressiveColors.heroEnd.copy(alpha = 0.35f),
+                            0.0f to expressiveColors.heroStart.copy(alpha = 0.98f),
+                            0.28f to Color.Black.copy(alpha = 0.78f),
+                            0.62f to expressiveColors.heroEnd.copy(alpha = 0.4f),
                             1.0f to Color.Transparent,
                         ),
                     ),
@@ -264,8 +280,8 @@ private fun HeroItem(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
                             0.0f to Color.Transparent,
-                            0.75f to Color.Black.copy(alpha = 0.18f),
-                            1.0f to Color.Black.copy(alpha = 0.62f),
+                            0.72f to Color.Black.copy(alpha = 0.24f),
+                            1.0f to Color.Black.copy(alpha = 0.76f),
                         ),
                     ),
                 ),
@@ -273,57 +289,57 @@ private fun HeroItem(
         Column(
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .fillMaxWidth(0.56f)
-                .padding(horizontal = 44.dp, vertical = 36.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(start = 40.dp, end = 40.dp, top = 36.dp, bottom = 36.dp)
+                .widthIn(max = 560.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(spacing.chipGap)) {
-                CinefinChip(label = "Featured", strong = true)
+                CinefinChip(label = "Featured")
                 item.officialRating?.let { CinefinChip(label = it) }
             }
             Text(
                 text = item.title,
-                style = MaterialTheme.typography.displayMedium,
+                style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold,
             )
             val carouselMeta = listOfNotNull(
                 item.year?.toString(),
                 item.runtime,
-                item.officialRating,
                 item.rating?.let { "★ $it" },
-            ).joinToString("  ·  ")
+            ).joinToString("  •  ")
             if (carouselMeta.isNotBlank()) {
                 Text(
                     text = carouselMeta,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             item.subtitle?.let {
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     color = expressiveColors.titleAccent,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            item.description?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 3,
-                )
-            }
+            Text(
+                text = item.description ?: "Browse featured titles from your library.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(spacing.elementGap)) {
                 Button(
                     onClick = onPlay,
                     modifier = Modifier.focusRequester(playButtonRequester)
                 ) {
-                    Text("Play Now")
+                    Text("Play")
                 }
-                Button(onClick = onMoreInfo) {
-                    Text("More Info")
+                OutlinedButton(onClick = onMoreInfo) {
+                    Text("Details")
                 }
             }
         }
@@ -343,13 +359,16 @@ private fun HomeSection(
     Column(modifier = modifier) {
         CinefinShelfTitle(
             title = title,
-            eyebrow = "Browse",
+            eyebrow = null,
             modifier = Modifier
                 .padding(bottom = spacing.elementGap, start = spacing.gutter, end = spacing.gutter),
         )
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
-            contentPadding = PaddingValues(horizontal = spacing.gutter),
+            contentPadding = PaddingValues(
+                start = spacing.gutter + 24.dp,
+                end = spacing.gutter + 24.dp,
+            ),
         ) {
             itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
                 TvMediaCard(

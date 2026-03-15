@@ -22,6 +22,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.WatchStatus
+import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -30,47 +31,52 @@ fun WatchStatusBadge(
     progress: Float?,
     modifier: Modifier = Modifier
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+
+    val containerColor = when (status) {
+        WatchStatus.WATCHED -> expressiveColors.pillMuted
+        WatchStatus.IN_PROGRESS -> expressiveColors.pillStrong.copy(alpha = 0.9f)
+        WatchStatus.NONE -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f)
+    }
+    val contentColor = when (status) {
+        WatchStatus.WATCHED -> MaterialTheme.colorScheme.onSurface
+        WatchStatus.IN_PROGRESS -> Color(0xFF0F1115)
+        WatchStatus.NONE -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
     Surface(
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(999.dp),
         colors = SurfaceDefaults.colors(
-            containerColor = when (status) {
-                WatchStatus.WATCHED -> Color(0xFF4CAF50).copy(alpha = 0.2f)
-                WatchStatus.IN_PROGRESS -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            }
+            containerColor = containerColor
         ),
         modifier = modifier
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            val (icon, text, color) = when (status) {
-                WatchStatus.WATCHED -> Triple(Icons.Default.Check, "Watched", Color(0xFF4CAF50))
+            val (icon, text) = when (status) {
+                WatchStatus.WATCHED -> Pair(Icons.Default.Check, "Watched")
                 WatchStatus.IN_PROGRESS -> Triple(
                     Icons.Default.PlayArrow,
                     if (progress != null) "${(progress * 100).toInt()}%" else "In Progress",
-                    MaterialTheme.colorScheme.primary
-                )
-                else -> Triple(
-                    Icons.Default.VisibilityOff,
-                    "Unwatched",
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                    Unit
+                ).let { Pair(it.first, it.second) }
+                else -> Pair(Icons.Default.VisibilityOff, "Unwatched")
             }
 
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = color
+                modifier = Modifier.size(14.dp),
+                tint = contentColor
             )
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelMedium,
-                color = color,
-                fontWeight = FontWeight.Bold
+                color = contentColor,
+                fontWeight = FontWeight.Medium
             )
         }
     }

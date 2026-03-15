@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -17,6 +18,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
@@ -40,6 +43,11 @@ import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.ui.components.CinefinOptionDialog
 import com.rpeters.cinefintv.ui.components.CinefinSettingListItem
 import com.rpeters.cinefintv.ui.components.CinefinSwitchListItem
+import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
+import com.rpeters.cinefintv.ui.components.RequestScreenFocus
+import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
+import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
+import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
 private enum class SettingsChoiceDialog {
@@ -61,6 +69,18 @@ fun SettingsScreen(
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
     val expressiveColors = LocalCinefinExpressiveColors.current
     var activeDialog by remember { mutableStateOf<SettingsChoiceDialog?>(null) }
+    val listState = rememberLazyListState()
+    val screenFocus = rememberTvScreenFocusState()
+    RegisterPrimaryScreenFocus(
+        route = NavRoutes.SETTINGS,
+        requester = screenFocus.primaryContentRequester,
+    )
+
+    RequestScreenFocus(
+        key = uiState.isLoading,
+        requester = screenFocus.topAnchorRequester,
+        enabled = !uiState.isLoading,
+    )
 
     when (activeDialog) {
         SettingsChoiceDialog.THEME_MODE -> CinefinOptionDialog(
@@ -166,25 +186,34 @@ fun SettingsScreen(
             ),
     ) {
         LazyColumn(
+            state = listState,
             contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 32.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             item {
-                Box(
+                TvScreenTopFocusAnchor(
+                    state = screenFocus,
+                    onFocused = {
+                        listState.requestScrollToItem(0)
+                    },
+                )
+            }
+
+            item {
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    expressiveColors.chromeSurface,
-                                    expressiveColors.accentSurface.copy(alpha = 0.95f),
-                                ),
-                            ),
-                            shape = RoundedCornerShape(28.dp),
-                        )
-                        .padding(28.dp)
+                        .padding(bottom = 4.dp),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = SurfaceDefaults.colors(
+                        containerColor = expressiveColors.chromeSurface.copy(alpha = 0.74f),
+                    ),
+                    tonalElevation = 2.dp,
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Tune,
                             contentDescription = null,
@@ -192,12 +221,12 @@ fun SettingsScreen(
                         )
                         Text(
                             text = "Settings",
-                            style = MaterialTheme.typography.displaySmall,
+                            style = MaterialTheme.typography.headlineLarge,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
                         Text(
                             text = "Playback, subtitles, library actions, casting, and account security.",
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -225,6 +254,11 @@ fun SettingsScreen(
                                 ThemeMode.AMOLED_BLACK -> "AMOLED Black"
                             },
                             onClick = { activeDialog = SettingsChoiceDialog.THEME_MODE },
+                            modifier = Modifier
+                                .focusRequester(screenFocus.primaryContentRequester)
+                                .focusProperties {
+                                    up = screenFocus.topAnchorRequester
+                                },
                         )
                         SettingsToggleListItem(
                             title = "Dynamic colors",
@@ -367,19 +401,20 @@ private fun SettingsSection(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(22.dp),
             colors = SurfaceDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f),
             ),
+            tonalElevation = 1.dp,
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
                 content = content,
             )
         }
@@ -391,12 +426,14 @@ private fun SettingsToggleListItem(
     title: String,
     description: String,
     checked: Boolean,
+    modifier: Modifier = Modifier,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     CinefinSwitchListItem(
         headline = title,
         supporting = description,
         checked = checked,
+        modifier = modifier,
         onCheckedChange = onCheckedChange,
     )
 }
@@ -406,12 +443,14 @@ private fun SettingsChoiceListItem(
     title: String,
     description: String,
     selectedLabel: String,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     CinefinSettingListItem(
         headline = title,
         supporting = description,
         trailingText = selectedLabel,
+        modifier = modifier,
         onClick = onClick,
     )
 }

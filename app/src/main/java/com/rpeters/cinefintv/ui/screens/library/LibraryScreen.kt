@@ -23,13 +23,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -41,8 +41,12 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
+import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
+import com.rpeters.cinefintv.ui.components.RequestScreenFocus
+import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
+import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import kotlinx.coroutines.launch
@@ -82,9 +86,17 @@ fun LibraryScreen(
     val spacing = LocalCinefinSpacing.current
     
     // First focus anchor
-    val topAnchorRequester = remember { FocusRequester() }
+    val screenFocus = rememberTvScreenFocusState()
+    RegisterPrimaryScreenFocus(
+        route = when (category) {
+            LibraryCategory.MOVIES -> NavRoutes.LIBRARY_MOVIES
+            LibraryCategory.TV_SHOWS -> NavRoutes.LIBRARY_TVSHOWS
+            LibraryCategory.STUFF -> NavRoutes.LIBRARY_STUFF
+        },
+        requester = screenFocus.primaryContentRequester,
+    )
 
-    LaunchedEffect(category) {
+    androidx.compose.runtime.LaunchedEffect(category) {
         viewModel.load(category)
     }
 
@@ -129,22 +141,29 @@ fun LibraryScreen(
 
             is LibraryUiState.Content -> {
                 // Initial focus
-                LaunchedEffect(state) {
-                    topAnchorRequester.requestFocus()
-                }
+                RequestScreenFocus(
+                    key = category to state.items.size,
+                    requester = screenFocus.topAnchorRequester,
+                    enabled = state.items.isNotEmpty(),
+                )
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 260.dp),
+                        columns = GridCells.Fixed(5),
                         state = gridState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = spacing.gutter, end = spacing.gutter, top = spacing.rowGap, bottom = spacing.gutter),
+                        contentPadding = PaddingValues(
+                            start = spacing.gutter + 16.dp,
+                            end = spacing.gutter + 16.dp,
+                            top = 8.dp,
+                            bottom = spacing.gutter,
+                        ),
                         horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
-                        verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
                     ) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
-                            ScrollFocusAnchor(
-                                modifier = Modifier.focusRequester(topAnchorRequester),
+                            TvScreenTopFocusAnchor(
+                                state = screenFocus,
                                 onFocused = {
                                     coroutineScope.launch {
                                         gridState.animateScrollToItem(0)
@@ -185,6 +204,15 @@ fun LibraryScreen(
                                 watchStatus = item.watchStatus,
                                 playbackProgress = item.playbackProgress,
                                 unwatchedCount = item.unwatchedCount,
+                                modifier = if (index == 0) {
+                                    Modifier
+                                        .focusRequester(screenFocus.primaryContentRequester)
+                                        .focusProperties {
+                                            up = screenFocus.topAnchorRequester
+                                        }
+                                } else {
+                                    Modifier
+                                },
                             )
                         }
                     }
@@ -211,23 +239,23 @@ fun LibraryHeader(
             .background(
                 Brush.horizontalGradient(
                     colors = listOf(
-                        expressiveColors.chromeSurface,
-                        expressiveColors.accentSurface.copy(alpha = 0.95f),
+                        expressiveColors.chromeSurface.copy(alpha = 0.92f),
+                        expressiveColors.elevatedSurface.copy(alpha = 0.94f),
                     ),
                 ),
             )
             .border(
-                border = BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.8f)),
+                border = BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.65f)),
                 shape = RoundedCornerShape(spacing.cornerContainer),
             )
-            .padding(horizontal = 28.dp, vertical = 24.dp),
+            .padding(horizontal = 24.dp, vertical = 20.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(spacing.elementGap))
                     .background(expressiveColors.pillMuted)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
             ) {
                 Icon(
                     imageVector = Icons.Default.CollectionsBookmark,
@@ -237,17 +265,17 @@ fun LibraryHeader(
             }
             Text(
                 text = title,
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.headlineLarge,
                 color = com.rpeters.cinefintv.ui.theme.OnBackground,
             )
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 color = com.rpeters.cinefintv.ui.theme.OnSurfaceMuted,
             )
             Text(
                 text = "$count titles available",
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelMedium,
                 color = expressiveColors.titleAccent,
             )
         }

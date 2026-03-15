@@ -20,13 +20,13 @@ import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 
 @Immutable
 data class CinefinSpacing(
-    val gutter: Dp = 56.dp,
-    val rowGap: Dp = 32.dp,
-    val cardGap: Dp = 20.dp,
+    val gutter: Dp = 48.dp,
+    val rowGap: Dp = 24.dp,
+    val cardGap: Dp = 16.dp,
     val elementGap: Dp = 12.dp,
-    val chipGap: Dp = 10.dp,
-    val cornerCard: Dp = 18.dp,
-    val cornerContainer: Dp = 28.dp,
+    val chipGap: Dp = 8.dp,
+    val cornerCard: Dp = 16.dp,
+    val cornerContainer: Dp = 24.dp,
     val cornerPill: Dp = 999.dp,
 )
 
@@ -77,17 +77,17 @@ fun CinefinTvTheme(
     val expressiveColors = CinefinExpressiveColors(
         backgroundTop = BackgroundTop,
         backgroundBottom = BackgroundBottom,
-        heroStart = Color(0xFF2A1016),
-        heroEnd = Color(0xFF101722),
+        heroStart = Color(0xFF12161D),
+        heroEnd = Color(0xFF1A2029),
         elevatedSurface = SurfaceElevated,
         accentSurface = SurfaceAccent,
-        chromeSurface = Color(0xCC121A24),
+        chromeSurface = Color(0xE61B1F26),
         borderSubtle = BorderSubtle,
-        focusRing = CinefinCoral,
-        focusGlow = CinefinRed.copy(alpha = 0.28f),
-        pillMuted = Color(0x66303A4B),
-        pillStrong = Color(0x99E50914),
-        titleAccent = CinefinGold,
+        focusRing = Color(0xFFF2F4F8),
+        focusGlow = Color(0x00FFFFFF),
+        pillMuted = Color(0x66323A47),
+        pillStrong = Color(0xFF8AB4F8),
+        titleAccent = Color(0xFFD7E3FF),
     )
     val composeShapes = ComposeShapes(
         extraSmall = RoundedCornerShape(8.dp),

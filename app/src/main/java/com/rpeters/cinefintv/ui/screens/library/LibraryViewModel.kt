@@ -105,7 +105,7 @@ class LibraryViewModel @Inject constructor(
             id = id,
             title = item.getDisplayTitle(),
             subtitle = subtitle,
-            imageUrl = repositories.stream.getLandscapeImageUrl(item),
+            imageUrl = repositories.stream.getPosterCardImageUrl(item),
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,
             unwatchedCount = unwatchedCount,
