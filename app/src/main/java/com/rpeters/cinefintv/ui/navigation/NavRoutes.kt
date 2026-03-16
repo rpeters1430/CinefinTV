@@ -21,8 +21,14 @@ object NavRoutes {
     fun player(itemId: String) = "player/$itemId"
     fun stuffDetail(itemId: String) = "stuff/detail/$itemId"
     fun audioPlayer(itemId: String, queueIds: List<String>): String {
-        val encodedQueue = queueIds.joinToString(",") { Uri.encode(it) }
-        return "audio-player/$itemId?queue=$encodedQueue"
+        val encodedQueue = queueIds
+            .filter(String::isNotBlank)
+            .joinToString(",") { Uri.encode(it) }
+        return if (encodedQueue.isBlank()) {
+            "audio-player/$itemId"
+        } else {
+            "audio-player/$itemId?queue=$encodedQueue"
+        }
     }
 }
 

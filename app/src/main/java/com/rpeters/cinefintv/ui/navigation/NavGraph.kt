@@ -277,7 +277,7 @@ fun CinefinTvNavGraph(
                 navArgument("queue") {
                     type = NavType.StringType
                     nullable = true
-                    defaultValue = ""
+                    defaultValue = null
                 },
             ),
         ) {

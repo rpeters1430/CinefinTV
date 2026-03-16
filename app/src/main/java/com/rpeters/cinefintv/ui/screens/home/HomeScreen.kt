@@ -19,9 +19,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -128,13 +130,20 @@ fun HomeScreen(
             val sectionFocusRequesters = remember(state.sections.size) {
                 List(state.sections.size) { FocusRequester() }
             }
+            var hasAppliedInitialFocus by remember {
+                mutableStateOf(false)
+            }
 
             // Ensure first load focus is intentional
-            LaunchedEffect(state) {
+            LaunchedEffect(state.featuredItems.isNotEmpty(), state.sections.isNotEmpty()) {
+                if (hasAppliedInitialFocus) return@LaunchedEffect
+
                 if (state.featuredItems.isNotEmpty()) {
                     carouselFocusRequester.requestFocus()
+                    hasAppliedInitialFocus = true
                 } else if (state.sections.isNotEmpty()) {
                     firstRowFocusRequester.requestFocus()
+                    hasAppliedInitialFocus = true
                 }
             }
 

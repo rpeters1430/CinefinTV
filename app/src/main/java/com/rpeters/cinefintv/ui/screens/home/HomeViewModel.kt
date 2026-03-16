@@ -229,7 +229,7 @@ class HomeViewModel @Inject constructor(
             description = item.overview?.take(140),
             year = item.getYear(),
             runtime = item.getFormattedDuration(),
-            rating = (item.communityRating as? Number)?.toDouble()
+            rating = item.communityRating
                 ?.takeIf { it > 0.0 }
                 ?.let { String.format(java.util.Locale.US, "%.1f", it) },
             officialRating = item.officialRating?.takeIf { it.isNotBlank() },
