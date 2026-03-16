@@ -47,11 +47,14 @@
 ### Fixed in code during architecture follow-up pass (2026-03-16)
 `U-4`, `A-1`, `A-2`, `A-6`
 
+### Fixed in code during DataStore DI cleanup pass (2026-03-16)
+`A-3`, `A-4`
+
 ### Partially mitigated / still needs investigation
 `P-16`: playback smoothness improved through transcode/profile/polling fixes, but the issue is not fully closed because smoothness still depends on device decoder behavior, display refresh handling, and Jellyfin server playback decisions for specific files.
 
 ### Still open
-`A-3`, `A-4`
+_None (all tracked correctness issues fixed; `P-16` remains partially mitigated and should continue to be profiled)._
 
 ---
 
@@ -72,9 +75,9 @@ Focus next on open items that are either user-visible correctness bugs or low-ef
 8. ✅ **`U-14`** — non-TV settings options were removed from the TV settings UI.
 9. ✅ **`N-3`** — person detail route now keeps top tab navigation visible while other detail routes still hide it.
 
-### 3) Plan separately (larger architectural work)
-9. **`A-*` cluster** — architecture and refactor items should be batched into a dedicated pass.
-10. **Deferred perf/UX improvements** (additional navigation polish) should follow after the above correctness fixes.
+### 3) Remaining follow-up
+9. **`P-16` profiling** — continue playback smoothness instrumentation on target devices/streams (direct play vs transcode behavior).
+10. **Deferred perf/UX improvements** — optional navigation/performance polish after playback profiling.
 
 ---
 
