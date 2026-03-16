@@ -8,6 +8,7 @@ import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getEpisodeCardDetailLine
+import com.rpeters.cinefintv.utils.getEpisodeCode
 import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getSeriesCardDetailLine
 import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
@@ -93,7 +94,7 @@ class HomeViewModel @Inject constructor(
                 musicDeferred,
             )
 
-            val continueWatchingResult = results[1] as ApiResult<List<BaseItemDto>>
+            val continueWatchingResult = results[1]
             val nextEpisodesSectionItems = buildNextEpisodeSectionItems(continueWatchingResult)
 
             val sections = buildList {
@@ -109,7 +110,7 @@ class HomeViewModel @Inject constructor(
             }
 
             val featuredItems = (results[2] as? ApiResult.Success<List<BaseItemDto>>)
-                ?.data?.take(6)?.mapNotNull { toCardModel(it) }
+                ?.data?.take(6)?.map { toCardModel(it) }
                 ?: emptyList()
 
             if (sections.isEmpty() && featuredItems.isEmpty()) {
@@ -135,7 +136,7 @@ class HomeViewModel @Inject constructor(
             add(
                 HomeSectionModel(
                     title = title,
-                    items = result.data.mapNotNull(::toCardModel),
+                    items = result.data.map(::toCardModel),
                 ),
             )
         }
@@ -168,14 +169,14 @@ class HomeViewModel @Inject constructor(
                 val nextEpisodeId = nextEpisode.id.toString()
                 if (!seenEpisodeIds.add(nextEpisodeId)) return@forEach
 
-                toCardModel(nextEpisode)?.let(nextEpisodes::add)
+                toCardModel(nextEpisode).let(nextEpisodes::add)
                 if (nextEpisodes.size >= 12) return nextEpisodes
             }
 
         return nextEpisodes
     }
 
-    private fun toCardModel(item: BaseItemDto): HomeCardModel? {
+    private fun toCardModel(item: BaseItemDto): HomeCardModel {
         val id = item.id.toString()
         val watchedPercentage = item.getWatchedPercentage()
         val isResumable = item.canResume()
