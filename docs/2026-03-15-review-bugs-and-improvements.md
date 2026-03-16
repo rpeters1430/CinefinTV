@@ -52,6 +52,28 @@
 
 ---
 
+## Recommended next fixes (triage update: 2026-03-16)
+
+Focus next on open items that are either user-visible correctness bugs or low-effort/high-impact quality fixes.
+
+### 1) Fix now (small scope, immediate user benefit)
+1. **`U-2`** — stabilize Home focus/scroll side effects (`LaunchedEffect(state)` is too broad).
+2. **`N-5`** — fix audio queue nav arg default from `""` to `null` to prevent malformed queue parsing.
+3. **`D-12`** — replace dead `isNullOrBlank()` check with `isBlank()` on non-nullable codec string.
+4. **`D-14`** — remove redundant `communityRating as? Number` cast and simplify rating formatting.
+
+### 2) Fix next (moderate scope, UX consistency)
+5. **`U-15`** — align `UpdateDialog` progress color with TV Material theme.
+6. **`N-2`** — make player `popUpTo` handling explicit and less route-template fragile.
+7. **`N-4`** — preserve tab/library scroll state via graph start-destination `popUpTo` + `restoreState`.
+8. **`U-14`** — hide non-TV settings options that do nothing on Android TV.
+
+### 3) Plan separately (larger architectural work)
+9. **`A-*` cluster** — architecture and refactor items should be batched into a dedicated pass.
+10. **Deferred perf/UX improvements** (`U-4`, additional navigation polish) should follow after the above correctness fixes.
+
+---
+
 ## Category 1: Player
 
 ### P-1: `setupPlayer()` called in composition body — Compose side-effect violation
