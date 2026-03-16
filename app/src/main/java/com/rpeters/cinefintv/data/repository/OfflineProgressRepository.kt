@@ -1,13 +1,10 @@
 package com.rpeters.cinefintv.data.repository
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import com.rpeters.cinefintv.utils.SecureLogger
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -15,6 +12,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.jellyfin.sdk.model.api.PlayMethod
 import java.util.UUID
+import com.rpeters.cinefintv.di.OfflineProgressDataStore
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,20 +38,16 @@ data class QueuedProgressUpdate(
     val timestamp: Long = System.currentTimeMillis(),
 )
 
-private val Context.offlineProgressDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "offline_progress_updates",
-)
 
 @Singleton
 class OfflineProgressRepository @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+    @OfflineProgressDataStore private val dataStore: DataStore<Preferences>,
 ) {
     companion object {
         private const val MAX_QUEUED_UPDATES = 200
         private const val MAX_EVENT_AGE_MS = 30L * 24L * 60L * 60L * 1000L // 30 days
     }
 
-    private val dataStore = context.offlineProgressDataStore
     private val QUEUED_UPDATES_KEY = stringPreferencesKey("queued_updates")
     private val json = Json { ignoreUnknownKeys = true }
 

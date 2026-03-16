@@ -1,25 +1,19 @@
 package com.rpeters.cinefintv.data.preferences
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import com.rpeters.cinefintv.di.PlaybackPreferencesDataStore
 import com.rpeters.cinefintv.utils.SecureLogger
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
-
-private val Context.playbackDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "playback_preferences",
-)
 
 /**
  * Transcoding quality levels.
@@ -71,14 +65,9 @@ data class PlaybackPreferences(
  * Repository for managing playback-related user preferences using DataStore.
  */
 @Singleton
-class PlaybackPreferencesRepository(
-    private val dataStore: DataStore<Preferences>,
+class PlaybackPreferencesRepository @Inject constructor(
+    @PlaybackPreferencesDataStore private val dataStore: DataStore<Preferences>,
 ) {
-
-    @Inject
-    constructor(
-        @ApplicationContext context: Context,
-    ) : this(context.playbackDataStore)
 
     val preferences: Flow<PlaybackPreferences> = dataStore.data
         .catch { exception ->
