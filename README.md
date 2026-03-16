@@ -6,6 +6,23 @@ It targets a 10-foot experience (D-pad navigation, focused controls, large UI pr
 
 ---
 
+## Download
+
+[![Download APK](https://img.shields.io/github/v/release/rpeters1430/CinefinTV?label=Download%20APK&logo=android)](https://github.com/rpeters1430/CinefinTV/releases/latest/download/app-release.apk)
+
+**[⬇ Download latest signed APK](https://github.com/rpeters1430/CinefinTV/releases/latest/download/app-release.apk)**
+
+The APK is signed and published automatically whenever a new version is released via `./publish.sh`. Each release also pushes an updated `updates/version.json` so the in-app updater can notify existing users.
+
+You can also browse all releases on the [Releases page](https://github.com/rpeters1430/CinefinTV/releases).
+
+### Installation
+1. On your Android TV device, enable **Unknown sources** (Settings → Device Preferences → Security & Restrictions).
+2. Download the APK to your device (via a browser, USB, or `adb sideload`).
+3. Open the APK file to install.
+
+---
+
 ## Project status (current)
 
 **Status:** MVP feature-complete and running on real Android TV hardware.
