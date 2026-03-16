@@ -20,6 +20,7 @@ import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -144,36 +145,32 @@ class HomeViewModel @Inject constructor(
 
     private suspend fun buildNextEpisodeSectionItems(
         continueWatchingResult: ApiResult<List<BaseItemDto>>,
-    ): List<HomeCardModel> {
+    ): List<HomeCardModel> = coroutineScope {
         val continueItems = (continueWatchingResult as? ApiResult.Success<List<BaseItemDto>>)
             ?.data
             .orEmpty()
 
-        if (continueItems.isEmpty()) return emptyList()
+        if (continueItems.isEmpty()) return@coroutineScope emptyList()
 
-        val nextEpisodes = mutableListOf<HomeCardModel>()
-        val seenSeries = mutableSetOf<String>()
+        val uniqueContinueEpisodes = continueItems
+            .filter { it.isEpisode() }
+            .distinctBy { it.seriesId?.toString() ?: it.id.toString() }
+            .take(12)
+
         val seenEpisodeIds = mutableSetOf<String>()
 
-        continueItems
-            .filter { it.isEpisode() }
-            .forEach { currentEpisode ->
-                val seriesKey = currentEpisode.seriesId?.toString() ?: currentEpisode.id.toString()
-                if (!seenSeries.add(seriesKey)) return@forEach
-
-                val nextEpisode = when (val result = repositories.media.getNextEpisode(currentEpisode.id.toString())) {
+        val nextEpisodeResults = uniqueContinueEpisodes.map { currentEpisode ->
+            async {
+                when (val result = repositories.media.getNextEpisode(currentEpisode.id.toString())) {
                     is ApiResult.Success -> result.data
                     else -> null
-                } ?: return@forEach
-
-                val nextEpisodeId = nextEpisode.id.toString()
-                if (!seenEpisodeIds.add(nextEpisodeId)) return@forEach
-
-                toCardModel(nextEpisode).let(nextEpisodes::add)
-                if (nextEpisodes.size >= 12) return nextEpisodes
+                }
             }
+        }.awaitAll()
 
-        return nextEpisodes
+        nextEpisodeResults.mapNotNull { nextEpisode ->
+            nextEpisode?.takeIf { seenEpisodeIds.add(it.id.toString()) }?.let(::toCardModel)
+        }
     }
 
     private fun toCardModel(item: BaseItemDto): HomeCardModel {

@@ -339,6 +339,7 @@ internal fun NextEpisodeCard(
     thumbnailUrl: String?,
     remainingMs: Long,
     autoPlayEnabled: Boolean,
+    autoFocusPlayNow: Boolean = false,
     onActionFocusChanged: (Boolean) -> Unit,
     onPlayNow: () -> Unit,
     modifier: Modifier = Modifier,
@@ -346,7 +347,8 @@ internal fun NextEpisodeCard(
     val progressFraction = ((15_000L - remainingMs) / 15_000f).coerceIn(0f, 1f)
     val playNowFocusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(autoFocusPlayNow) {
+        if (!autoFocusPlayNow) return@LaunchedEffect
         runCatching { playNowFocusRequester.requestFocus() }
     }
 
@@ -502,15 +504,23 @@ private fun SeekBarControl(
     modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    var isSeeking by remember { mutableStateOf(false) }
     var seekDirection by remember { mutableStateOf(0) }
-    // Tracks the live seek position during a hold-seek; resyncs when polled position updates
-    var seekPosition by remember(position) { mutableLongStateOf(position) }
+    // Tracks the live seek position during a hold-seek without being overwritten by polling ticks.
+    var seekPosition by remember { mutableLongStateOf(position) }
+
+    LaunchedEffect(position, isSeeking) {
+        if (!isSeeking) {
+            seekPosition = position
+        }
+    }
 
     val barHeight by animateDpAsState(if (isFocused) 8.dp else 3.dp, label = "BarHeight")
     val thumbScale by animateFloatAsState(if (isFocused) 1f else 0f, label = "ThumbScale")
 
     LaunchedEffect(seekDirection, duration) {
         if (seekDirection == 0 || duration <= 0L) return@LaunchedEffect
+        isSeeking = true
         while (seekDirection != 0) {
             seekPosition = (seekPosition + seekDirection * com.rpeters.cinefintv.core.constants.Constants.PLAYER_SEEK_INCREMENT_MS)
                 .coerceIn(0L, duration)
@@ -518,6 +528,7 @@ private fun SeekBarControl(
             onInteract()
             kotlinx.coroutines.delay(100L)
         }
+        isSeeking = false
     }
 
     Box(
@@ -531,7 +542,11 @@ private fun SeekBarControl(
             }
             .onFocusChanged {
                 isFocused = it.isFocused || it.hasFocus
-                if (!isFocused) seekDirection = 0
+                if (!isFocused) {
+                    seekDirection = 0
+                    isSeeking = false
+                    seekPosition = position
+                }
             }
             .onPreviewKeyEvent { keyEvent ->
                 when {

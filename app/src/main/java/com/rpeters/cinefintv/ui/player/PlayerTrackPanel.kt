@@ -1,6 +1,5 @@
 package com.rpeters.cinefintv.ui.player
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +29,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
@@ -82,6 +83,10 @@ internal fun PlayerTrackPanel(
     if (isVisible && anchorBounds != null) {
         val popupWidth = 320.dp
         val popupMaxHeight = 400.dp
+        val density = LocalDensity.current
+        val configuration = LocalConfiguration.current
+        val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
+        val popupOffsetY = (-(screenHeightPx - anchorBounds.top + 16f)).toInt()
         
         Popup(
             onDismissRequest = onClose,
@@ -93,7 +98,7 @@ internal fun PlayerTrackPanel(
             alignment = Alignment.BottomCenter,
             offset = androidx.compose.ui.unit.IntOffset(
                 x = 0, 
-                y = (-(720 - anchorBounds.top + 16)).toInt() // Adjust based on 720p logical height
+                y = popupOffsetY
             )
         ) {
             Surface(
@@ -307,17 +312,6 @@ internal fun PlayerTrackPanel(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun SectionHeader(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(bottom = 4.dp, start = 8.dp)
-    )
-}
-
 @Composable
 private fun SettingsMenuItem(
     title: String,
@@ -379,52 +373,5 @@ private fun TrackButton(
                 )
             }
         },
-    )
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun ExpressiveVerticalScrollbar(
-    listState: androidx.compose.foundation.lazy.LazyListState,
-    modifier: Modifier = Modifier
-) {
-    val scrollbarAlpha by animateFloatAsState(
-        targetValue = if (listState.isScrollInProgress) 0.8f else 0.4f,
-        label = "ScrollbarAlpha"
-    )
-
-    val thumbColor = MaterialTheme.colorScheme.primary
-
-    Box(
-        modifier = modifier
-            .padding(vertical = 4.dp)
-            .clip(CircleShape)
-            .background(Color.Gray.copy(alpha = 0.1f))
-            .drawWithContent {
-                drawContent()
-                
-                val layoutInfo = listState.layoutInfo
-                val totalItemsCount = layoutInfo.totalItemsCount
-                if (totalItemsCount > 0) {
-                    val visibleItemsInfo = layoutInfo.visibleItemsInfo
-                    if (visibleItemsInfo.isNotEmpty()) {
-                        val firstVisibleItem = visibleItemsInfo.first()
-                        val viewportHeight = size.height
-                        
-                        val thumbHeightPercent = (visibleItemsInfo.size.toFloat() / totalItemsCount).coerceIn(0.1f, 1f)
-                        val thumbOffsetPercent = (firstVisibleItem.index.toFloat() / totalItemsCount).coerceIn(0f, 1f)
-                        
-                        val thumbHeight = viewportHeight * thumbHeightPercent
-                        val thumbOffset = viewportHeight * thumbOffsetPercent
-                        
-                        drawRoundRect(
-                            color = thumbColor.copy(alpha = scrollbarAlpha),
-                            topLeft = androidx.compose.ui.geometry.Offset(0f, thumbOffset),
-                            size = androidx.compose.ui.geometry.Size(size.width, thumbHeight),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width / 2, size.width / 2)
-                        )
-                    }
-                }
-            }
     )
 }

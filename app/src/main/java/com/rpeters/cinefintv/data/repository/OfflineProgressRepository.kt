@@ -135,17 +135,17 @@ class OfflineProgressRepository @Inject constructor(
      */
     fun hasPendingUpdates(): Flow<Boolean> = dataStore.data.map { preferences ->
         val currentJson = preferences[QUEUED_UPDATES_KEY] ?: "[]"
-        decodeQueueOrNull(currentJson)?.isNotEmpty() == true
+        getActiveUpdates(currentJson).isNotEmpty()
     }
 
     fun pendingCount(): Flow<Int> = dataStore.data.map { preferences ->
         val currentJson = preferences[QUEUED_UPDATES_KEY] ?: "[]"
-        decodeQueueOrNull(currentJson)?.size ?: 0
+        getActiveUpdates(currentJson).size
     }
 
     suspend fun pendingCountSnapshot(): Int {
         val currentJson = dataStore.data.first()[QUEUED_UPDATES_KEY] ?: "[]"
-        return decodeQueueOrNull(currentJson)?.size ?: 0
+        return getActiveUpdates(currentJson).size
     }
 
     private fun decodeQueueOrNull(raw: String): List<QueuedProgressUpdate>? {
@@ -155,5 +155,11 @@ class OfflineProgressRepository @Inject constructor(
             SecureLogger.w("OfflineProgress", "Failed to decode queued updates payload, resetting queue: ${e.message}")
             null
         }
+    }
+
+    private fun getActiveUpdates(raw: String, now: Long = System.currentTimeMillis()): List<QueuedProgressUpdate> {
+        return decodeQueueOrNull(raw)
+            ?.filter { now - it.timestamp <= MAX_EVENT_AGE_MS }
+            .orEmpty()
     }
 }

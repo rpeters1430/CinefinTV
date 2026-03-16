@@ -29,6 +29,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import java.security.GeneralSecurityException
 import java.security.KeyStore
 import java.security.KeyStoreException
 import java.security.MessageDigest
@@ -177,10 +178,15 @@ class SecureCredentialManager @Inject constructor(
     }
 
     private fun removeOldKeys(excludeAlias: String) {
+        val stableAlias = getKeyAlias()
         val aliases = keyStore.aliases()
         while (aliases.hasMoreElements()) {
             val alias = aliases.nextElement()
-            if (alias.startsWith(Constants.Security.KEY_ALIAS) && alias != excludeAlias) {
+            if (
+                alias.startsWith(Constants.Security.KEY_ALIAS) &&
+                alias != excludeAlias &&
+                alias != stableAlias
+            ) {
                 try {
                     keyStore.deleteEntry(alias)
                 } catch (e: KeyStoreException) {
@@ -270,6 +276,9 @@ class SecureCredentialManager @Inject constructor(
             Base64.encodeToString(combined, Base64.NO_WRAP)
         } catch (e: CancellationException) {
             throw e
+        } catch (e: GeneralSecurityException) {
+            SecureLogger.e(TAG, "encrypt: failed to encrypt credential", e)
+            throw CredentialEncryptionException("Failed to encrypt credential", e)
         }
     }
 
@@ -328,83 +337,48 @@ class SecureCredentialManager @Inject constructor(
             removeOldKeys(newAlias)
         } catch (e: CancellationException) {
             throw e
+        } catch (e: CredentialEncryptionException) {
+            SecureLogger.e(TAG, "applyCredentialAuthenticationRequirement: failed to re-encrypt credentials", e)
         }
     }
 
     // ✅ ENHANCEMENT: Modern secure storage with Android Keystore + DataStore + Key Rotation
     suspend fun savePassword(serverUrl: String, username: String, password: String) {
         val keys = generateKeys(serverUrl, username)
-        val encryptedPassword = encrypt(password)
 
         logDebug { "savePassword: Saving password for user='$username', serverUrl='$serverUrl'" }
-        logDebug { "savePassword: Generated key='${keys.newKey}'" }
 
         try {
-            logDebug { "savePassword: 🔵 ENTERING NonCancellable block - password save cannot be cancelled from here" }
+            val encryptedPassword = encrypt(password)
             // CRITICAL FIX: Use NonCancellable to ensure password save completes
             // even if parent scope is cancelled (e.g., due to navigation after login)
             // This prevents JobCancellationException when DataStore operations are interrupted
             withContext(NonCancellable + Dispatchers.IO) {
-                // Check DataStore state before edit
-                val beforeEdit = secureCredentialsDataStore.data.first()
-                logDebug { "savePassword: DataStore before edit contains ${beforeEdit.asMap().size} entries" }
-
                 secureCredentialsDataStore.edit { prefs ->
-                    logDebug { "savePassword: Inside edit block, setting key='${keys.newKey}'" }
-                    logDebug { "savePassword: Before setting - prefs.asMap().size = ${prefs.asMap().size}" }
-
                     val passwordKey = stringPreferencesKey(keys.newKey)
                     val timestampKey = longPreferencesKey("${keys.newKey}_timestamp")
 
-                    logDebug { "savePassword: Setting password with key: $passwordKey" }
                     prefs[passwordKey] = encryptedPassword
-                    logDebug { "savePassword: Password set, prefs.asMap().size = ${prefs.asMap().size}" }
-                    logDebug { "savePassword: Verifying password was set: ${prefs[passwordKey] != null}" }
-
-                    logDebug { "savePassword: Setting timestamp with key: $timestampKey" }
                     prefs[timestampKey] = System.currentTimeMillis()
-                    logDebug { "savePassword: Timestamp set, prefs.asMap().size = ${prefs.asMap().size}" }
 
                     // CRITICAL FIX: Only remove legacy keys if they're different from the new key
                     // If they're the same, we'd be deleting the password we just saved!
                     if (keys.legacyRawKey != keys.newKey) {
-                        logDebug { "savePassword: Removing legacy raw key: ${keys.legacyRawKey}" }
                         prefs.remove(stringPreferencesKey(keys.legacyRawKey))
                         prefs.remove(longPreferencesKey("${keys.legacyRawKey}_timestamp"))
-                    } else {
-                        logDebug { "savePassword: Skipping removal of legacyRawKey (same as newKey)" }
                     }
 
                     if (keys.legacyNormalizedKey != keys.newKey) {
-                        logDebug { "savePassword: Removing legacy normalized key: ${keys.legacyNormalizedKey}" }
                         prefs.remove(stringPreferencesKey(keys.legacyNormalizedKey))
                         prefs.remove(longPreferencesKey("${keys.legacyNormalizedKey}_timestamp"))
-                    } else {
-                        logDebug { "savePassword: Skipping removal of legacyNormalizedKey (same as newKey)" }
                     }
-
-                    logDebug { "savePassword: Edit block completed, prefs now contains ${prefs.asMap().size} entries" }
-                    logDebug { "savePassword: Keys in prefs: ${prefs.asMap().keys.joinToString { it.name }} " }
-                }
-
-                logDebug { "savePassword: Edit operation returned successfully" }
-
-                // Verify the password was saved by immediately reading it back
-                val verification = secureCredentialsDataStore.data.first()
-                logDebug { "savePassword: Verification read returned ${verification.asMap().size} entries" }
-
-                val savedPassword = verification[stringPreferencesKey(keys.newKey)]
-                if (savedPassword != null) {
-                    logDebug { "savePassword: ✅ Password saved successfully and verified in DataStore" }
-                    logDebug { "savePassword: DataStore now contains ${verification.asMap().size} entries" }
-                } else {
-                    SecureLogger.e(TAG, "savePassword: ❌ ERROR - Password was not found in DataStore after saving!")
-                    SecureLogger.e(TAG, "savePassword: DataStore keys present: ${verification.asMap().keys.joinToString { it.name }}")
                 }
             }
-            logDebug { "savePassword: 🟢 EXITED NonCancellable block - password save operation completed" }
+            logDebug { "savePassword: Password save completed" }
         } catch (e: CancellationException) {
             throw e
+        } catch (e: CredentialEncryptionException) {
+            SecureLogger.e(TAG, "savePassword: failed to encrypt password for storage", e)
         }
     }
 
@@ -618,6 +592,11 @@ class SecureCredentialManager @Inject constructor(
         val plaintext: String,
         val timestamp: Long?,
     )
+
+    private class CredentialEncryptionException(
+        message: String,
+        cause: Throwable,
+    ) : Exception(message, cause)
 
     private fun generateKeys(serverUrl: String, username: String): CredentialKeys {
         val normalizedUrl = normalizeServerUrl(serverUrl)

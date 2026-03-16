@@ -210,7 +210,7 @@ fun TvMediaCard(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleSmall.copy(fontSize = 18.sp),
                     fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
                     color = titleColor,
                     maxLines = if (hasSubtitle) 2 else 1,
@@ -221,7 +221,7 @@ fun TvMediaCard(
                 if (hasSubtitle) {
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 18.sp),
                         color = subtitleColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

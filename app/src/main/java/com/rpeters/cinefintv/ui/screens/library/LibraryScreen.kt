@@ -17,11 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CollectionsBookmark
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -33,6 +34,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
@@ -47,21 +50,22 @@ import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import kotlinx.coroutines.launch
+import org.jellyfin.sdk.model.api.BaseItemKind
 
 enum class LibraryCategory(
     val title: String,
     val collectionType: String,
-    val itemTypes: String?,
+    val itemTypes: List<BaseItemKind>?,
 ) {
     MOVIES(
         title = "Movies",
         collectionType = "movies",
-        itemTypes = "Movie",
+        itemTypes = listOf(BaseItemKind.MOVIE),
     ),
     TV_SHOWS(
         title = "TV Shows",
         collectionType = "tvshows",
-        itemTypes = "Series",
+        itemTypes = listOf(BaseItemKind.SERIES),
     ),
     STUFF(
         title = "Stuff",
@@ -78,6 +82,7 @@ fun LibraryScreen(
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val pagedItems = viewModel.pagedItems.collectAsLazyPagingItems()
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
     val spacing = LocalCinefinSpacing.current
@@ -104,119 +109,177 @@ fun LibraryScreen(
     ) { state ->
         when (state) {
             is LibraryUiState.Loading -> {
-                Box(modifier = Modifier.fillMaxSize().padding(spacing.gutter)) {
-                    Text(
-                        text = "Loading ${category.title}...",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-            }
-
-            is LibraryUiState.Error -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(spacing.gutter),
-                    verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
-                ) {
-                    Text(
-                        text = "${category.title} could not load",
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Text(
-                        text = state.message,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Button(onClick = { viewModel.load(category, forceRefresh = true) }) {
-                        Text("Retry")
-                    }
-                }
+                LibraryLoadingState(category = category)
             }
 
             is LibraryUiState.Content -> {
-                // Initial focus
-                RequestScreenFocus(
-                    key = category to state.items.size,
-                    requester = screenFocus.topAnchorRequester,
-                    enabled = state.items.isNotEmpty(),
-                )
+                when (val refreshState = pagedItems.loadState.refresh) {
+                    is LoadState.Loading -> {
+                        if (pagedItems.itemCount == 0) {
+                            LibraryLoadingState(category = category)
+                        }
+                    }
 
-                Box(modifier = Modifier.fillMaxSize()) {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(6),
-                        state = gridState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = spacing.gutter + 16.dp,
-                            end = spacing.gutter + 16.dp,
-                            top = 8.dp,
-                            bottom = 120.dp,
-                        ),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
-                        verticalArrangement = Arrangement.spacedBy(24.dp),
-                    ) {
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            TvScreenTopFocusAnchor(
-                                state = screenFocus,
-                                onFocused = {
-                                    coroutineScope.launch {
-                                        gridState.animateScrollToItem(0)
-                                    }
-                                }
+                    is LoadState.Error -> {
+                        if (pagedItems.itemCount == 0) {
+                            LibraryErrorState(
+                                category = category,
+                                message = refreshState.error.message ?: "Unknown paging error",
+                                onRetry = pagedItems::refresh,
                             )
                         }
+                    }
 
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            LibraryHeader(
-                                title = category.title,
-                                description = "A curated view of your ${category.title.lowercase()} library with fast focus navigation.",
-                                count = state.items.size,
-                            )
-                        }
+                    else -> Unit
+                }
 
-                        if (state.items.isEmpty()) {
+                if (pagedItems.itemCount > 0 || pagedItems.loadState.refresh is LoadState.NotLoading) {
+                    RequestScreenFocus(
+                        key = category to pagedItems.itemCount,
+                        requester = screenFocus.topAnchorRequester,
+                        enabled = pagedItems.itemCount > 0,
+                    )
+
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 180.dp),
+                            state = gridState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = spacing.gutter + 16.dp,
+                                end = spacing.gutter + 16.dp,
+                                top = 8.dp,
+                                bottom = 120.dp,
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                            verticalArrangement = Arrangement.spacedBy(24.dp),
+                        ) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
-                                Text(
-                                    text = "No ${category.title.lowercase()} found in your library.",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(top = 8.dp),
+                                TvScreenTopFocusAnchor(
+                                    state = screenFocus,
+                                    onFocused = {
+                                        coroutineScope.launch {
+                                            gridState.animateScrollToItem(0)
+                                        }
+                                    }
                                 )
                             }
-                        }
 
-                        itemsIndexed(
-                            state.items,
-                            key = { _, item -> item.id },
-                            contentType = { _, _ -> "MediaCard" }
-                        ) { index, item ->
-                            TvMediaCard(
-                                title = item.title,
-                                subtitle = item.subtitle,
-                                imageUrl = item.imageUrl,
-                                onClick = { onOpenItem(item.id) },
-                                watchStatus = item.watchStatus,
-                                playbackProgress = item.playbackProgress,
-                                unwatchedCount = item.unwatchedCount,
-                                aspectRatio = 2f / 3f,
-                                cardWidth = null,
-                                modifier = if (index == 0) {
-                                    Modifier
-                                        .focusRequester(screenFocus.primaryContentRequester)
-                                        .focusProperties {
-                                            up = screenFocus.topAnchorRequester
-                                        }
-                                } else {
-                                    Modifier
-                                },
-                            )
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                LibraryHeader(
+                                    title = state.title,
+                                    description = "A curated view of your ${category.title.lowercase()} library with fast focus navigation.",
+                                    count = pagedItems.itemCount,
+                                )
+                            }
+
+                            if (pagedItems.itemCount == 0) {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    Text(
+                                        text = "No ${category.title.lowercase()} found in your library.",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(top = 8.dp),
+                                    )
+                                }
+                            }
+
+                            items(
+                                count = pagedItems.itemCount,
+                                key = { index -> pagedItems[index]?.id ?: "placeholder-$index" },
+                                contentType = { "MediaCard" },
+                            ) { index ->
+                                val item = pagedItems[index] ?: return@items
+
+                                TvMediaCard(
+                                    title = item.title,
+                                    subtitle = item.subtitle,
+                                    imageUrl = item.imageUrl,
+                                    onClick = { onOpenItem(item.id) },
+                                    watchStatus = item.watchStatus,
+                                    playbackProgress = item.playbackProgress,
+                                    unwatchedCount = item.unwatchedCount,
+                                    aspectRatio = 2f / 3f,
+                                    cardWidth = null,
+                                    modifier = if (index == 0) {
+                                        Modifier
+                                            .focusRequester(screenFocus.primaryContentRequester)
+                                            .focusProperties {
+                                                up = screenFocus.topAnchorRequester
+                                            }
+                                    } else {
+                                        Modifier
+                                    },
+                                )
+                            }
+
+                            if (pagedItems.loadState.append is LoadState.Loading) {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 12.dp),
+                                    ) {
+                                        CircularProgressIndicator()
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun LibraryLoadingState(category: LibraryCategory) {
+    val spacing = LocalCinefinSpacing.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(spacing.gutter),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            CircularProgressIndicator()
+            Text(
+                text = "Loading ${category.title}...",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun LibraryErrorState(
+    category: LibraryCategory,
+    message: String,
+    onRetry: () -> Unit,
+) {
+    val spacing = LocalCinefinSpacing.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(spacing.gutter),
+        verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
+    ) {
+        Text(
+            text = "${category.title} could not load",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Button(onClick = onRetry) {
+            Text("Retry")
         }
     }
 }

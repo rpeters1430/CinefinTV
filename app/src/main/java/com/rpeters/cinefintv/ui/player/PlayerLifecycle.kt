@@ -11,6 +11,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.rpeters.cinefintv.ui.player.PlayerConstants.POSITION_SAVE_INTERVAL_MS
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
 
 @UnstableApi
@@ -35,14 +36,14 @@ internal fun PlayerLifecycleManager(
 
     // Position saving interval
     LaunchedEffect(player, isPlaying) {
-        while (true) {
-            if (isPlaying) {
-                viewModel.savePlaybackPosition(
-                    positionMs = player.currentPosition,
-                    durationMs = player.duration.coerceAtLeast(0L),
-                    isPaused = false,
-                )
-            }
+        if (!isPlaying) return@LaunchedEffect
+
+        while (isActive) {
+            viewModel.savePlaybackPosition(
+                positionMs = player.currentPosition,
+                durationMs = player.duration.coerceAtLeast(0L),
+                isPaused = false,
+            )
             delay(POSITION_SAVE_INTERVAL_MS)
         }
     }

@@ -569,7 +569,7 @@ class EnhancedPlaybackManager @Inject constructor(
                 maxHeight = minOf(if (deviceCaps.supports4K) 2160 else 1080, sourceHeight),
                 videoCodec = if (deviceCaps.supportedVideoCodecs.contains(sourceVideoCodec)) sourceVideoCodec else getBestVideoCodec(deviceCaps.supportedVideoCodecs),
                 audioCodec = getBestAudioCodec(deviceCaps.supportedAudioCodecs),
-                container = "mp4",
+                container = "ts",
             )
             TranscodingQuality.HIGH -> TranscodingParams(
                 maxBitrate = 20_000_000, // 20 Mbps
@@ -577,7 +577,7 @@ class EnhancedPlaybackManager @Inject constructor(
                 maxHeight = minOf(1080, sourceHeight),
                 videoCodec = if (deviceCaps.supportedVideoCodecs.contains(sourceVideoCodec)) sourceVideoCodec else "h264",
                 audioCodec = "aac",
-                container = "mp4",
+                container = "ts",
             )
             TranscodingQuality.MEDIUM -> TranscodingParams(
                 maxBitrate = 8_000_000, // 8 Mbps
@@ -585,7 +585,7 @@ class EnhancedPlaybackManager @Inject constructor(
                 maxHeight = minOf(720, sourceHeight),
                 videoCodec = "h264",
                 audioCodec = "aac",
-                container = "mp4",
+                container = "ts",
             )
             TranscodingQuality.LOW -> TranscodingParams(
                 maxBitrate = 3_000_000, // 3 Mbps
@@ -593,11 +593,11 @@ class EnhancedPlaybackManager @Inject constructor(
                 maxHeight = minOf(480, sourceHeight),
                 videoCodec = "h264",
                 audioCodec = "aac",
-                container = "mp4",
+                container = "ts",
             )
             TranscodingQuality.AUTO -> {
                 // This branch shouldn't be reached due to effectiveQuality logic above
-                TranscodingParams(20_000_000, 1920, 1080, "h264", "aac", "mp4")
+                TranscodingParams(20_000_000, 1920, 1080, "h264", "aac", "ts")
             }
         }
 
@@ -625,6 +625,8 @@ class EnhancedPlaybackManager @Inject constructor(
             audioStreamIndex = audioStreamIndex,
             subtitleStreamIndex = subtitleStreamIndex,
             audioChannels = maxAudioChannels,
+            allowVideoStreamCopy = false,
+            allowAudioStreamCopy = false,
         )
 
         // Return error if no valid URL could be generated

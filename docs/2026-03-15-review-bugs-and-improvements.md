@@ -21,6 +21,37 @@
 
 ---
 
+## Implementation Status
+**Status as of 2026-03-15**
+
+### Fixed in code
+`D-1`, `D-2`, `D-3`, `D-4`, `D-5`, `D-6`, `D-7`, `D-8`, `D-9`, `D-10`, `D-11`, `D-13`
+
+`P-1`, `P-2`, `P-3`, `P-4`, `P-5`, `P-6`, `P-7`, `P-8`, `P-9`, `P-10`, `P-11`, `P-12`, `P-13`, `P-14`, `P-15`
+
+`U-1`, `U-3`, `U-5`, `U-6`, `U-7`, `U-9`, `U-10`, `U-11`, `U-12`, `U-13`, `U-16`
+
+`A-5`
+
+### Fixed in code during final high-severity pass
+`N-1` fixed: login success navigation now resets the event first, guards against already being on `HOME`, and uses `launchSingleTop`.
+
+`U-8` fixed: [`TvMediaCard.kt`](../app/src/main/java/com/rpeters/cinefintv/ui/components/TvMediaCard.kt) now enforces an 18sp minimum for title and subtitle text.
+
+### Partially mitigated / still needs investigation
+`P-16`: playback smoothness improved through transcode/profile/polling fixes, but the issue is not fully closed because smoothness still depends on device decoder behavior, display refresh handling, and Jellyfin server playback decisions for specific files.
+
+### Still open
+`D-12`, `D-14`
+
+`U-2`, `U-4`, `U-14`, `U-15`
+
+`N-2`, `N-3`, `N-4`, `N-5`
+
+`A-1`, `A-2`, `A-3`, `A-4`, `A-6`
+
+---
+
 ## Category 1: Player
 
 ### P-1: `setupPlayer()` called in composition body — Compose side-effect violation
@@ -155,6 +186,15 @@ No `FocusRequester` or `focusProperties` defined for the queue sidebar. There is
 No `BackHandler` registered. Hardware Back uses system default navigation, potentially leaving `AudioService` in an inconsistent state.
 
 **Fix:** Add a `BackHandler` that disconnects `MediaController` or stops the service before navigating back.
+
+---
+
+### P-16 *(High)* — Video playback is not smooth during normal viewing
+**File:** `ui/player/PlayerViewModel.kt`, `ui/player/PlayerScreen.kt`, `data/model/JellyfinDeviceProfile.kt`
+
+Playback appears choppy or uneven during normal video playback. This likely points to a playback-pipeline issue rather than a pure UI problem: overly aggressive transcoding, missing direct play capability declarations, poor track/device profile selection, or unnecessary state churn while the player is active.
+
+**Fix:** Profile whether affected streams are direct play vs transcode, verify the generated Jellyfin device profile advertises realistic codec/container support, and audit player-side state updates during active playback to ensure Compose polling/UI refresh work is not interfering with ExoPlayer smoothness.
 
 ---
 
@@ -563,6 +603,7 @@ One overload takes `DirectPlayCapabilities`, the other takes `maxWidth`/`maxHeig
 | P-13 | Player | Medium | `AudioPlayerScreen.kt` |
 | P-14 | Player | **High** | `AudioPlayerScreen.kt` |
 | P-15 | Player | Medium | `AudioPlayerScreen.kt` |
+| P-16 | Player | **High** | `PlayerViewModel.kt`, `PlayerScreen.kt`, `JellyfinDeviceProfile.kt` |
 | D-1 | Data | **High** | `JellyfinAuthRepository.kt` |
 | D-2 | Data | **High** | `JellyfinMediaRepository.kt` |
 | D-3 | Data | Medium | `HomeViewModel.kt` |

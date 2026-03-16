@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +50,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -127,85 +129,100 @@ fun PlayerScreen(
         }
 
         else -> {
-            val player = viewModel.setupPlayer(context)
-            val coroutineScope = rememberCoroutineScope()
-            var isTrackPanelVisible by remember { mutableStateOf(false) }
-            var trackPanelSection by remember { mutableStateOf(SettingsSection.ALL) }
-            var trackPanelAnchor by remember { mutableStateOf<Rect?>(null) }
-            val playPauseFocusRequester = remember { FocusRequester() }
-            val seekBarFocusRequester = remember { FocusRequester() }
-            val playerFocusRequester = remember { FocusRequester() }
-            val skipFocusRequester = remember { FocusRequester() }
-            var overlayActionFocused by remember { mutableStateOf(false) }
+            val currentContext by rememberUpdatedState(context)
+            var player by remember { mutableStateOf<ExoPlayer?>(null) }
 
-            // Playback state — polled every 500ms
-            var isPlaying by remember { mutableStateOf(true) }
-            var isBuffering by remember { mutableStateOf(false) }
-            var position by remember { mutableLongStateOf(0L) }
-            var duration by remember { mutableLongStateOf(0L) }
-            var bufferedFraction by remember { mutableFloatStateOf(0f) }
-
-            LaunchedEffect(player) {
-                while (true) {
-                    isPlaying = player.isPlaying
-                    isBuffering = player.playbackState == Player.STATE_BUFFERING
-                    position = player.currentPosition.coerceAtLeast(0L)
-                    duration = player.duration.coerceAtLeast(0L)
-                    bufferedFraction = player.bufferedPercentage / 100f
-                    delay(500L)
-                }
+            LaunchedEffect(currentContext) {
+                player = viewModel.setupPlayer(currentContext)
             }
 
-            PlayerLifecycleManager(
-                player = player,
-                viewModel = viewModel,
-                uiState = uiState,
-                isPlaying = isPlaying,
-                onNextEpisodeRequest = { nextId ->
-                    coroutineScope.launch {
-                        if (nextId.isNotBlank()) onOpenItem(nextId)
-                        else {
-                            // If no next episode ID but ENDED was called, just exit or handle accordingly
-                        }
+            if (player == null) {
+                Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            } else {
+                val exoPlayer = player ?: return
+                val coroutineScope = rememberCoroutineScope()
+                var isTrackPanelVisible by remember { mutableStateOf(false) }
+                var trackPanelSection by remember { mutableStateOf(SettingsSection.ALL) }
+                var trackPanelAnchor by remember { mutableStateOf<Rect?>(null) }
+                val playPauseFocusRequester = remember { FocusRequester() }
+                val seekBarFocusRequester = remember { FocusRequester() }
+                val playerFocusRequester = remember { FocusRequester() }
+                val skipFocusRequester = remember { FocusRequester() }
+                var overlayActionFocused by remember { mutableStateOf(false) }
+                var controlsVisible by remember { mutableStateOf(true) }
+
+                // Playback state — poll more aggressively with controls visible and back off while hidden
+                var isPlaying by remember { mutableStateOf(true) }
+                var isBuffering by remember { mutableStateOf(false) }
+                var position by remember { mutableLongStateOf(0L) }
+                var duration by remember { mutableLongStateOf(0L) }
+                var bufferedFraction by remember { mutableFloatStateOf(0f) }
+
+                LaunchedEffect(exoPlayer, controlsVisible) {
+                    while (true) {
+                        isPlaying = exoPlayer.isPlaying
+                        isBuffering = exoPlayer.playbackState == Player.STATE_BUFFERING
+                        position = exoPlayer.currentPosition.coerceAtLeast(0L)
+                        duration = exoPlayer.duration.coerceAtLeast(0L)
+                        bufferedFraction = exoPlayer.bufferedPercentage / 100f
+                        delay(if (controlsVisible) 250L else 1000L)
                     }
                 }
-            )
 
-            // Controls visibility — auto-hide logic
-            var controlsVisible by remember { mutableStateOf(true) }
-            var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
-            
-            LaunchedEffect(isPlaying) {
-                if (!isPlaying) {
+                PlayerLifecycleManager(
+                    player = exoPlayer,
+                    viewModel = viewModel,
+                    uiState = uiState,
+                    isPlaying = isPlaying,
+                    onNextEpisodeRequest = { nextId ->
+                        coroutineScope.launch {
+                            if (nextId.isNotBlank()) onOpenItem(nextId)
+                            else {
+                                // If no next episode ID but ENDED was called, just exit or handle accordingly
+                            }
+                        }
+                    }
+                )
+
+                // Controls visibility — auto-hide logic
+                var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+                LaunchedEffect(isPlaying) {
+                    if (!isPlaying) {
+                        controlsVisible = true
+                    }
+                }
+
+                LaunchedEffect(lastInteraction, isPlaying) {
+                    if (isPlaying && !isTrackPanelVisible) {
+                        delay(CONTROLS_HIDE_DELAY_MS)
+                        controlsVisible = false
+                    }
+                }
+
+                fun onInteract() {
                     controlsVisible = true
+                    lastInteraction = System.currentTimeMillis()
                 }
-            }
 
-            LaunchedEffect(lastInteraction, isPlaying) {
-                if (isPlaying && !isTrackPanelVisible) {
-                    delay(CONTROLS_HIDE_DELAY_MS)
-                    controlsVisible = false
+                LaunchedEffect(controlsVisible, isTrackPanelVisible) {
+                    if (controlsVisible && !isTrackPanelVisible) {
+                        seekBarFocusRequester.requestFocus()
+                    } else if (!controlsVisible) {
+                        playerFocusRequester.requestFocus()
+                    }
                 }
-            }
 
-            fun onInteract() {
-                controlsVisible = true
-                lastInteraction = System.currentTimeMillis()
-            }
-
-            LaunchedEffect(controlsVisible) {
-                if (controlsVisible && !isTrackPanelVisible) {
-                    seekBarFocusRequester.requestFocus()
-                } else if (!controlsVisible) {
-                    playerFocusRequester.requestFocus()
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-                    .onKeyEvent { keyEvent ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                        .onKeyEvent { keyEvent ->
                         if (keyEvent.type == KeyEventType.KeyDown) {
                             when (keyEvent.key) {
                                 Key.Back, Key.Escape -> {
@@ -230,7 +247,7 @@ fun PlayerScreen(
                                     if (!controlsVisible) {
                                         controlsVisible = true
                                     } else {
-                                        if (isPlaying) player.pause() else player.play()
+                                        if (isPlaying) exoPlayer.pause() else exoPlayer.play()
                                     }
                                     true
                                 }
@@ -248,9 +265,9 @@ fun PlayerScreen(
                             false
                         }
                     }
-                    .focusRequester(playerFocusRequester)
-                    .focusable()
-            ) {
+                        .focusRequester(playerFocusRequester)
+                        .focusable()
+                ) {
                 // PlayerView (full screen)
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
@@ -258,12 +275,12 @@ fun PlayerScreen(
                         PlayerView(ctx).apply {
                             layoutParams = android.view.ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
                             useController = false
-                            this.player = player
+                            this.player = exoPlayer
                             isFocusable = false
                             isFocusableInTouchMode = false
                         }
                     },
-                    update = { pv -> pv.player = player },
+                    update = { pv -> pv.player = exoPlayer },
                 )
 
                 PlayerControls(
@@ -273,7 +290,7 @@ fun PlayerScreen(
                     duration = duration,
                     bufferedFraction = bufferedFraction,
                     uiState = uiState,
-                    player = player,
+                    player = exoPlayer,
                     playPauseFocusRequester = playPauseFocusRequester,
                     seekBarFocusRequester = seekBarFocusRequester,
                     onInteract = ::onInteract,
@@ -332,11 +349,7 @@ fun PlayerScreen(
                         .align(Alignment.TopEnd)
                         .padding(horizontal = 32.dp, vertical = 28.dp),
                 ) {
-                    val speedLabel = if (uiState.playbackSpeed == uiState.playbackSpeed.toLong().toFloat()) {
-                        "${uiState.playbackSpeed.toInt()}×"
-                    } else {
-                        "${uiState.playbackSpeed}×"
-                    }
+                    val speedLabel = if (uiState.playbackSpeed == 1.0f) "1×" else "${uiState.playbackSpeed}×"
                     Box(
                         modifier = Modifier
                             .background(
@@ -372,7 +385,7 @@ fun PlayerScreen(
                     ) {
                         Button(
                             onClick = {
-                                player.seekTo(activeSkipTargetMs)
+                                exoPlayer.seekTo(activeSkipTargetMs)
                                 onInteract()
                             },
                             modifier = Modifier
@@ -445,6 +458,7 @@ fun PlayerScreen(
                     },
                     onInteract = ::onInteract
                 )
+                }
             }
         }
     }

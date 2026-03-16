@@ -83,5 +83,6 @@ sealed class DetailUiState {
         val isDeleting: Boolean = false,
         val isDeleted: Boolean = false,
         val actionErrorMessage: String? = null,
+        val refreshErrorMessage: String? = null,
     ) : DetailUiState()
 }

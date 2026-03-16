@@ -69,11 +69,14 @@ fun CinefinTvNavGraph(
     }
 
     LaunchedEffect(authUiState.loginSucceeded) {
-        if (authUiState.loginSucceeded) {
-            navController.navigate(NavRoutes.HOME) {
-                popUpTo(AuthRoutes.SERVER_CONNECTION) { inclusive = true }
-            }
-            authViewModel.resetLoginSuccess()
+        if (!authUiState.loginSucceeded || navController.currentDestination?.route == NavRoutes.HOME) {
+            return@LaunchedEffect
+        }
+
+        authViewModel.resetLoginSuccess()
+        navController.navigate(NavRoutes.HOME) {
+            launchSingleTop = true
+            popUpTo(AuthRoutes.SERVER_CONNECTION) { inclusive = true }
         }
     }
 

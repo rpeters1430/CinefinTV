@@ -1,5 +1,6 @@
 package com.rpeters.cinefintv.ui.player.audio
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -74,6 +76,10 @@ fun AudioPlayerScreen(
     val expressiveColors = LocalCinefinExpressiveColors.current
     
     val playPauseFocusRequester = remember { FocusRequester() }
+    val queueFocusRequester = remember { FocusRequester() }
+    val queueListState = rememberLazyListState()
+
+    BackHandler(onBack = onBack)
 
     if (uiState.isConnecting || uiState.isLoadingQueue) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
@@ -102,6 +108,12 @@ fun AudioPlayerScreen(
 
     LaunchedEffect(Unit) {
         playPauseFocusRequester.requestFocus()
+    }
+
+    LaunchedEffect(uiState.currentIndex, uiState.queueItems.size) {
+        if (uiState.queueItems.isNotEmpty() && uiState.currentIndex in uiState.queueItems.indices) {
+            queueListState.animateScrollToItem(uiState.currentIndex)
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
@@ -208,7 +220,7 @@ fun AudioPlayerScreen(
                         AudioSeekBar(
                             position = uiState.positionMs,
                             duration = uiState.durationMs,
-                            onSeek = { /* Future: add seeking */ }
+                            onSeek = viewModel::seekToPosition
                         )
 
                         Row(
@@ -227,7 +239,12 @@ fun AudioPlayerScreen(
 
                                 IconButton(
                                     onClick = viewModel::togglePlayPause,
-                                    modifier = Modifier.size(80.dp).focusRequester(playPauseFocusRequester),
+                                    modifier = Modifier
+                                        .size(80.dp)
+                                        .focusRequester(playPauseFocusRequester)
+                                        .focusProperties {
+                                            right = queueFocusRequester
+                                        },
                                     scale = IconButtonDefaults.scale(focusedScale = 1.15f),
                                     colors = IconButtonDefaults.colors(
                                         containerColor = Color.White,
@@ -283,7 +300,6 @@ fun AudioPlayerScreen(
                     ),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    val queueListState = rememberLazyListState()
                     LazyColumn(
                         state = queueListState,
                         contentPadding = PaddingValues(12.dp),
@@ -294,7 +310,12 @@ fun AudioPlayerScreen(
                             QueueItem(
                                 track = track,
                                 isCurrent = isCurrent,
-                                onClick = { viewModel.skipToItem(index) }
+                                onClick = { viewModel.skipToItem(index) },
+                                modifier = Modifier
+                                    .then(if (isCurrent) Modifier.focusRequester(queueFocusRequester) else Modifier)
+                                    .focusProperties {
+                                        left = playPauseFocusRequester
+                                    },
                             )
                         }
                     }
@@ -309,12 +330,13 @@ fun AudioPlayerScreen(
 private fun QueueItem(
     track: AudioQueueItem,
     isCurrent: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     DenseListItem(
         selected = isCurrent,
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         leadingContent = {
             AsyncImage(
                 model = track.imageUrl,

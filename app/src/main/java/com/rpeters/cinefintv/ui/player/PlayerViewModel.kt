@@ -27,6 +27,7 @@ import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -110,124 +111,129 @@ class PlayerViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            val localPlaybackPositionMs = PlaybackPositionStore.getPlaybackPosition(appContext, itemId)
-            val detailResult = repositories.media.getItemDetails(itemId)
-            val item = (detailResult as? ApiResult.Success)?.data
-            currentItem = item
-            val chapters = item?.chapters.orEmpty().map { chapter ->
-                ChapterMarker(positionMs = chapter.startPositionTicks / TICKS_PER_MILLISECOND, name = chapter.name)
-            }
-            var introSkipRange: SkipRange? = null
-            var creditsSkipRange: SkipRange? = null
-            chapters.forEachIndexed { i, chapter ->
-                val name = chapter.name?.lowercase() ?: return@forEachIndexed
-                val nextStart = chapters.getOrNull(i + 1)?.positionMs
-                when {
-                    name.contains("intro") || name.contains("opening") ->
-                        introSkipRange = SkipRange(startMs = chapter.positionMs, endMs = nextStart)
-                    name.contains("credit") || name.contains("outro") ->
-                        creditsSkipRange = SkipRange(startMs = chapter.positionMs, endMs = nextStart)
-                }
-            }
-            val serverPlaybackPositionMs = item?.userData?.playbackPositionTicks
-                ?.takeIf { it > 0L }
-                ?.div(TICKS_PER_MILLISECOND)
-                ?: 0L
-
-            val playbackPrefs = playbackPreferencesRepository.preferences.first()
-            val resumeMode = playbackPrefs.resumePlaybackMode
-            
-            val potentialResumePositionMs = maxOf(localPlaybackPositionMs, serverPlaybackPositionMs)
-            
-            val (savedPlaybackPositionMs, shouldShowResumeDialog) = when (resumeMode) {
-                ResumePlaybackMode.NEVER -> 0L to false
-                ResumePlaybackMode.ASK -> {
-                    if (potentialResumePositionMs > 0L) {
-                        potentialResumePositionMs to true
-                    } else {
-                        0L to false
-                    }
-                }
-                ResumePlaybackMode.ALWAYS -> potentialResumePositionMs to false
-            }
-
-            val title = item?.getDisplayTitle() ?: "Now Playing"
-            val playbackInfo = runCatching { jellyfinRepository.getPlaybackInfo(itemId) }.getOrNull()
-            val mediaSource = playbackInfo?.mediaSources?.firstOrNull()
-            val audioTracks = PlayerMappers.toAudioTrackOptions(mediaSource)
-            val subtitleTracks = PlayerMappers.toSubtitleTrackOptions(mediaSource)
-            activeMediaSourceId = mediaSource?.id
-            activePlaySessionId = playbackInfo?.playSessionId
-
-            val streamUrl = resolvePlaybackUrl(
-                item = item,
-                audioStreamIndex = null,
-                subtitleStreamIndex = null,
-                startPositionMs = if (shouldShowResumeDialog) 0L else savedPlaybackPositionMs,
-            ) ?: repositories.stream.getStreamUrl(itemId)
-
-            if (streamUrl == null) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = "Unable to create a stream for this item.",
-                )
-                return@launch
-            }
-
-            val logoUrl = if (item != null) {
-                item.seriesId?.let { seriesId ->
-                    val seriesResult = repositories.media.getSeriesDetails(seriesId.toString())
-                    (seriesResult as? ApiResult.Success)?.data?.let { series ->
-                        repositories.stream.getLogoUrl(series)
-                    }
-                } ?: repositories.stream.getLogoUrl(item)
-            } else null
-
-            val isEpisodicContent = item?.type == BaseItemKind.EPISODE
-            var seasonNumber: Int? = null
-            var episodeNumber: Int? = null
-            
-            if (item != null && isEpisodicContent) {
-                seasonNumber = item.parentIndexNumber
-                episodeNumber = item.indexNumber
-            }
-
-            var nextEpisodeId: String? = null
-            var nextEpisodeTitle: String? = null
-            var nextEpisodeThumbnailUrl: String? = null
-
-            if (isEpisodicContent) {
-                val nextResult = repositories.media.getNextEpisode(itemId)
-                if (nextResult is ApiResult.Success) {
-                    val nextEpisode = nextResult.data
-                    if (nextEpisode != null) {
-                        nextEpisodeId = nextEpisode.id.toString()
-                        nextEpisodeTitle = nextEpisode.getDisplayTitle()
-                        nextEpisodeThumbnailUrl = repositories.stream.getImageUrl(nextEpisode.id.toString())
-                    }
-                }
-            }
-
-            _uiState.value = _uiState.value.copy(
-                title = title,
-                logoUrl = logoUrl,
-                seasonNumber = seasonNumber,
-                episodeNumber = episodeNumber,
-                streamUrl = streamUrl,
-                savedPlaybackPositionMs = savedPlaybackPositionMs,
-                shouldShowResumeDialog = shouldShowResumeDialog,
-                isEpisodicContent = isEpisodicContent,
-                nextEpisodeId = nextEpisodeId,
-                nextEpisodeTitle = nextEpisodeTitle,
-                nextEpisodeThumbnailUrl = nextEpisodeThumbnailUrl,
-                audioTracks = audioTracks,
-                subtitleTracks = subtitleTracks,
-                chapters = chapters,
-                introSkipRange = introSkipRange,
-                creditsSkipRange = creditsSkipRange,
-                isLoading = false,
-            )
+            loadInternal()
         }
+    }
+
+    private suspend fun loadInternal(): Boolean {
+        val localPlaybackPositionMs = PlaybackPositionStore.getPlaybackPosition(appContext, itemId)
+        val detailResult = repositories.media.getItemDetails(itemId)
+        val item = (detailResult as? ApiResult.Success)?.data
+        currentItem = item
+        val chapters = item?.chapters.orEmpty().map { chapter ->
+            ChapterMarker(positionMs = chapter.startPositionTicks / TICKS_PER_MILLISECOND, name = chapter.name)
+        }
+        var introSkipRange: SkipRange? = null
+        var creditsSkipRange: SkipRange? = null
+        chapters.forEachIndexed { i, chapter ->
+            val name = chapter.name?.lowercase() ?: return@forEachIndexed
+            val nextStart = chapters.getOrNull(i + 1)?.positionMs
+            when {
+                name.contains("intro") || name.contains("opening") ->
+                    introSkipRange = SkipRange(startMs = chapter.positionMs, endMs = nextStart)
+                name.contains("credit") || name.contains("outro") ->
+                    creditsSkipRange = SkipRange(startMs = chapter.positionMs, endMs = nextStart)
+            }
+        }
+        val serverPlaybackPositionMs = item?.userData?.playbackPositionTicks
+            ?.takeIf { it > 0L }
+            ?.div(TICKS_PER_MILLISECOND)
+            ?: 0L
+
+        val playbackPrefs = playbackPreferencesRepository.preferences.first()
+        val resumeMode = playbackPrefs.resumePlaybackMode
+
+        val potentialResumePositionMs = maxOf(localPlaybackPositionMs, serverPlaybackPositionMs)
+
+        val (savedPlaybackPositionMs, shouldShowResumeDialog) = when (resumeMode) {
+            ResumePlaybackMode.NEVER -> 0L to false
+            ResumePlaybackMode.ASK -> {
+                if (potentialResumePositionMs > 0L) {
+                    potentialResumePositionMs to true
+                } else {
+                    0L to false
+                }
+            }
+            ResumePlaybackMode.ALWAYS -> potentialResumePositionMs to false
+        }
+
+        val title = item?.getDisplayTitle() ?: "Now Playing"
+        val playbackInfo = runCatching { jellyfinRepository.getPlaybackInfo(itemId) }.getOrNull()
+        val mediaSource = playbackInfo?.mediaSources?.firstOrNull()
+        val audioTracks = PlayerMappers.toAudioTrackOptions(mediaSource)
+        val subtitleTracks = PlayerMappers.toSubtitleTrackOptions(mediaSource)
+        activeMediaSourceId = mediaSource?.id
+        activePlaySessionId = playbackInfo?.playSessionId
+
+        val streamUrl = resolvePlaybackUrl(
+            item = item,
+            audioStreamIndex = null,
+            subtitleStreamIndex = null,
+            startPositionMs = if (shouldShowResumeDialog) 0L else savedPlaybackPositionMs,
+        ) ?: repositories.stream.getStreamUrl(itemId)
+
+        if (streamUrl == null) {
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                errorMessage = "Unable to create a stream for this item.",
+            )
+            return false
+        }
+
+        val logoUrl = if (item != null) {
+            item.seriesId?.let { seriesId ->
+                val seriesResult = repositories.media.getSeriesDetails(seriesId.toString())
+                (seriesResult as? ApiResult.Success)?.data?.let { series ->
+                    repositories.stream.getLogoUrl(series)
+                }
+            } ?: repositories.stream.getLogoUrl(item)
+        } else null
+
+        val isEpisodicContent = item?.type == BaseItemKind.EPISODE
+        var seasonNumber: Int? = null
+        var episodeNumber: Int? = null
+
+        if (item != null && isEpisodicContent) {
+            seasonNumber = item.parentIndexNumber
+            episodeNumber = item.indexNumber
+        }
+
+        var nextEpisodeId: String? = null
+        var nextEpisodeTitle: String? = null
+        var nextEpisodeThumbnailUrl: String? = null
+
+        if (isEpisodicContent) {
+            val nextResult = repositories.media.getNextEpisode(itemId)
+            if (nextResult is ApiResult.Success) {
+                val nextEpisode = nextResult.data
+                if (nextEpisode != null) {
+                    nextEpisodeId = nextEpisode.id.toString()
+                    nextEpisodeTitle = nextEpisode.getDisplayTitle()
+                    nextEpisodeThumbnailUrl = repositories.stream.getImageUrl(nextEpisode.id.toString())
+                }
+            }
+        }
+
+        _uiState.value = _uiState.value.copy(
+            title = title,
+            logoUrl = logoUrl,
+            seasonNumber = seasonNumber,
+            episodeNumber = episodeNumber,
+            streamUrl = streamUrl,
+            savedPlaybackPositionMs = savedPlaybackPositionMs,
+            shouldShowResumeDialog = shouldShowResumeDialog,
+            isEpisodicContent = isEpisodicContent,
+            nextEpisodeId = nextEpisodeId,
+            nextEpisodeTitle = nextEpisodeTitle,
+            nextEpisodeThumbnailUrl = nextEpisodeThumbnailUrl,
+            audioTracks = audioTracks,
+            subtitleTracks = subtitleTracks,
+            chapters = chapters,
+            introSkipRange = introSkipRange,
+            creditsSkipRange = creditsSkipRange,
+            isLoading = false,
+        )
+        return true
     }
 
     fun setupPlayer(context: Context): ExoPlayer {
@@ -403,14 +409,6 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun onAudioTrackSelected(track: TrackOption?) {
-        _uiState.value = _uiState.value.copy(selectedAudioTrack = track)
-    }
-
-    fun onSubtitleTrackSelected(track: TrackOption?) {
-        _uiState.value = _uiState.value.copy(selectedSubtitleTrack = track)
-    }
-
     fun setPlaybackSpeed(speed: Float) {
         _uiState.value = _uiState.value.copy(playbackSpeed = speed)
         _player?.setPlaybackSpeed(speed)
@@ -458,14 +456,13 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val delayMs = (2.0.pow(nextRetryCount - 1).toLong() * 1000L)
             delay(delayMs)
-            
-            val player = _player ?: return@launch
-            val currentPos = player.currentPosition
-            
-            load()
-            
-            reloadStream(positionMs = currentPos, playWhenReady = true)
-            
+
+            val currentPos = _player?.currentPosition ?: 0L
+            val didLoad = loadInternal()
+            if (didLoad) {
+                reloadStream(positionMs = currentPos, playWhenReady = true)
+            }
+
             _uiState.value = _uiState.value.copy(isRetrying = false)
         }
     }
@@ -492,23 +489,33 @@ class PlayerViewModel @Inject constructor(
             PlaybackPositionStore.savePlaybackPosition(appContext, itemId, persistedPosition)
 
             if (shouldSyncToServer) {
-                val positionTicks = if (persistedPosition <= 0L) null else persistedPosition * TICKS_PER_MILLISECOND
-                val sessionId = activePlaySessionId?.takeIf { it.isNotBlank() } ?: playbackSessionId
-                if (isCompleted) {
-                    repositories.user.reportPlaybackStopped(
-                        itemId = itemId,
-                        sessionId = sessionId,
-                        positionTicks = positionTicks,
-                        mediaSourceId = activeMediaSourceId,
-                    )
-                } else {
-                    repositories.user.reportPlaybackProgress(
-                        itemId = itemId,
-                        sessionId = sessionId,
-                        positionTicks = positionTicks,
-                        mediaSourceId = activeMediaSourceId,
-                        playMethod = activePlayMethod,
-                        isPaused = isPaused,
+                try {
+                    val positionTicks = if (persistedPosition <= 0L) null else persistedPosition * TICKS_PER_MILLISECOND
+                    val sessionId = activePlaySessionId?.takeIf { it.isNotBlank() } ?: playbackSessionId
+                    if (isCompleted) {
+                        repositories.user.reportPlaybackStopped(
+                            itemId = itemId,
+                            sessionId = sessionId,
+                            positionTicks = positionTicks,
+                            mediaSourceId = activeMediaSourceId,
+                        )
+                    } else {
+                        repositories.user.reportPlaybackProgress(
+                            itemId = itemId,
+                            sessionId = sessionId,
+                            positionTicks = positionTicks,
+                            mediaSourceId = activeMediaSourceId,
+                            playMethod = activePlayMethod,
+                            isPaused = isPaused,
+                        )
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(
+                        "PlayerViewModel",
+                        "Failed to sync playback position for item $itemId: ${e.message}",
+                        e,
                     )
                 }
             }

@@ -11,6 +11,9 @@ import com.rpeters.cinefintv.utils.isMovie
 import com.rpeters.cinefintv.utils.isSeason
 import com.rpeters.cinefintv.utils.isSeries
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,9 +30,16 @@ class DetailViewModel @Inject constructor(
     private val itemId: String = savedStateHandle.get<String>("itemId").orEmpty()
     private val _uiState = MutableStateFlow<DetailUiState>(DetailUiState.Loading)
     val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
+    private var lastSuccessfulRefreshAtMs: Long = 0L
 
     init {
         load()
+    }
+
+    fun refreshIfStale() {
+        val now = System.currentTimeMillis()
+        if (now - lastSuccessfulRefreshAtMs < REFRESH_STALE_AFTER_MS) return
+        refresh()
     }
 
     fun refresh() {
@@ -69,10 +79,15 @@ class DetailViewModel @Inject constructor(
                         cast = heroModel.cast,
                         playableItemId = playbackTarget?.id,
                         playButtonLabel = playbackTarget?.label ?: "Play",
+                        refreshErrorMessage = null,
                     )
+                    lastSuccessfulRefreshAtMs = System.currentTimeMillis()
                 }
                 is ApiResult.Error -> {
-                    if (_uiState.value !is DetailUiState.Content) {
+                    val currentState = _uiState.value
+                    if (currentState is DetailUiState.Content) {
+                        _uiState.value = currentState.copy(refreshErrorMessage = detailResult.message)
+                    } else {
                         _uiState.value = DetailUiState.Error(detailResult.message)
                     }
                 }
@@ -119,7 +134,9 @@ class DetailViewModel @Inject constructor(
                         cast = heroModel.cast,
                         playableItemId = playbackTarget?.id,
                         playButtonLabel = playbackTarget?.label ?: "Play",
+                        refreshErrorMessage = null,
                     )
+                    lastSuccessfulRefreshAtMs = System.currentTimeMillis()
                 }
                 is ApiResult.Error -> {
                     _uiState.value = DetailUiState.Error(detailResult.message)
@@ -185,22 +202,27 @@ class DetailViewModel @Inject constructor(
 
     private suspend fun loadSeasonsAndEpisodes(
         item: BaseItemDto,
-    ): Pair<List<DetailSeasonModel>, Map<String, List<DetailEpisodeModel>>> {
-        return when {
+    ): Pair<List<DetailSeasonModel>, Map<String, List<DetailEpisodeModel>>> = coroutineScope {
+        return@coroutineScope when {
             item.isSeries() -> {
                 val seasonsResult = repositories.media.getSeasonsForSeries(item.id.toString())
                 val seasons = when (seasonsResult) {
                     is ApiResult.Success -> seasonsResult.data
                     else -> emptyList()
                 }
-                val allEpisodes = mutableListOf<DetailEpisodeModel>()
-                val seasonModels = seasons.map { season ->
-                    val episodeModels = when (
-                        val episodesResult = repositories.media.getEpisodesForSeason(season.id.toString())
-                    ) {
-                        is ApiResult.Success -> episodesResult.data.map { DetailMappers.toEpisodeModel(it, repositories.stream) }
-                        else -> emptyList()
+                val episodesBySeason = seasons.map { season ->
+                    async {
+                        val episodeModels = when (
+                            val episodesResult = repositories.media.getEpisodesForSeason(season.id.toString())
+                        ) {
+                            is ApiResult.Success -> episodesResult.data.map { DetailMappers.toEpisodeModel(it, repositories.stream) }
+                            else -> emptyList()
+                        }
+                        season to episodeModels
                     }
+                }.awaitAll()
+                val allEpisodes = mutableListOf<DetailEpisodeModel>()
+                val seasonModels = episodesBySeason.map { (season, episodeModels) ->
                     allEpisodes += episodeModels
                     val seasonWatchStatus = when {
                         episodeModels.isNotEmpty() && episodeModels.all { it.isWatched } -> WatchStatus.WATCHED
@@ -244,5 +266,9 @@ class DetailViewModel @Inject constructor(
             is ApiResult.Success -> result.data
             else -> emptyList()
         }
+    }
+
+    private companion object {
+        private const val REFRESH_STALE_AFTER_MS = 5 * 60 * 1000L
     }
 }

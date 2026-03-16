@@ -64,9 +64,6 @@ class JellyfinRepository @Inject constructor(
     companion object {
         private const val TAG = "JellyfinRepository"
 
-        // ✅ PHASE 4: Use centralized constants
-        private const val TOKEN_VALIDITY_DURATION_MS = Constants.TOKEN_VALIDITY_DURATION_MS
-
         // API retry constants
         private const val DEFAULT_MAX_RETRIES = Constants.MAX_RETRY_ATTEMPTS - 1 // Convert to retry count
         private const val RE_AUTH_DELAY_MS = Constants.RE_AUTH_DELAY_MS
@@ -883,12 +880,7 @@ class JellyfinRepository @Inject constructor(
 
     private fun isTokenExpired(): Boolean {
         val server = authRepository.getCurrentServer() ?: return true
-        val loginTimestamp = server.loginTimestamp ?: return true
-        val currentTime = System.currentTimeMillis()
-
-        // Consider token expired after 50 minutes (10 minutes before actual expiry)
-        // This gives us time to refresh before hitting 401 errors
-        val isExpired = (currentTime - loginTimestamp) > TOKEN_VALIDITY_DURATION_MS
+        val isExpired = server.accessToken.isNullOrBlank()
 
         if (isExpired) {
             // Log only non-sensitive information for debugging

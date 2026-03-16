@@ -22,6 +22,7 @@ import org.jellyfin.sdk.model.api.TranscodingProfile
  * This profile adapts to the actual device hardware capabilities for optimal streaming decisions.
  */
 object JellyfinDeviceProfile {
+    private const val DEFAULT_MAX_VIDEO_FRAMERATE = 60
 
     /**
      * Creates a dynamic Android device profile based on detected hardware capabilities.
@@ -29,6 +30,8 @@ object JellyfinDeviceProfile {
     fun createAndroidDeviceProfile(capabilities: DirectPlayCapabilities): DeviceProfile {
         val maxWidth = capabilities.maxResolution.first
         val maxHeight = capabilities.maxResolution.second
+        val maxVideoBitrate = capabilities.maxBitrate
+        val maxVideoFramerate = DEFAULT_MAX_VIDEO_FRAMERATE
 
         Log.d("JellyfinDeviceProfile", "Creating dynamic device profile for ${capabilities.supportedVideoCodecs.size} video and ${capabilities.supportedAudioCodecs.size} audio codecs")
 
@@ -71,30 +74,17 @@ object JellyfinDeviceProfile {
         // Add Video Codec Profiles for detected codecs
         capabilities.supportedVideoCodecs.forEach { codec ->
             val conditions = mutableListOf<ProfileCondition>(
-                ProfileCondition(
-                    condition = ProfileConditionType.LESS_THAN_EQUAL,
-                    property = ProfileConditionValue.WIDTH,
-                    value = "$maxWidth",
-                    isRequired = false,
-                ),
-                ProfileCondition(
-                    condition = ProfileConditionType.LESS_THAN_EQUAL,
-                    property = ProfileConditionValue.HEIGHT,
-                    value = "$maxHeight",
-                    isRequired = false,
-                ),
+                createMaxCondition(ProfileConditionValue.WIDTH, maxWidth),
+                createMaxCondition(ProfileConditionValue.HEIGHT, maxHeight),
+                createMaxCondition(ProfileConditionValue.VIDEO_BITRATE, maxVideoBitrate),
+                createMaxCondition(ProfileConditionValue.VIDEO_FRAMERATE, maxVideoFramerate),
             )
 
             // For HEVC/H.265, explicitly declare 10-bit support to enable direct play of Main10 content
             // Most modern Android devices with hardware HEVC support can decode 10-bit
             if (codec == "h265" || codec == "hevc") {
                 conditions.add(
-                    ProfileCondition(
-                        condition = ProfileConditionType.LESS_THAN_EQUAL,
-                        property = ProfileConditionValue.VIDEO_BIT_DEPTH,
-                        value = "10", // Support up to 10-bit color depth
-                        isRequired = false,
-                    ),
+                    createMaxCondition(ProfileConditionValue.VIDEO_BIT_DEPTH, capabilities.maxVideoBitDepth),
                 )
             }
 
@@ -104,6 +94,19 @@ object JellyfinDeviceProfile {
                     codec = codec,
                     applyConditions = emptyList<ProfileCondition>(),
                     conditions = conditions,
+                ),
+            )
+        }
+
+        capabilities.maxAudioChannelsByCodec.forEach { (codec, maxChannels) ->
+            codecProfiles.add(
+                CodecProfile(
+                    type = CodecType.AUDIO,
+                    codec = codec,
+                    applyConditions = emptyList<ProfileCondition>(),
+                    conditions = listOf(
+                        createMaxCondition(ProfileConditionValue.AUDIO_CHANNELS, maxChannels),
+                    ),
                 ),
             )
         }
@@ -123,15 +126,20 @@ object JellyfinDeviceProfile {
                 // Preferred: HEVC/h265 if supported
                 if (capabilities.supportedVideoCodecs.contains("h265") || capabilities.supportedVideoCodecs.contains("hevc")) {
                     TranscodingProfile(
-                        container = "mp4",
+                        container = "ts",
                         type = DlnaProfileType.VIDEO,
                         videoCodec = "h265,hevc",
                         audioCodec = "aac,opus",
-                        protocol = MediaStreamProtocol.HTTP,
+                        protocol = MediaStreamProtocol.HLS,
                         context = EncodingContext.STREAMING,
+                        enableMpegtsM2TsMode = true,
+                        minSegments = 2,
+                        segmentLength = 6,
                         conditions = listOf(
-                            ProfileCondition(ProfileConditionType.LESS_THAN_EQUAL, ProfileConditionValue.WIDTH, "$maxWidth", isRequired = false),
-                            ProfileCondition(ProfileConditionType.LESS_THAN_EQUAL, ProfileConditionValue.HEIGHT, "$maxHeight", isRequired = false),
+                            createMaxCondition(ProfileConditionValue.WIDTH, maxWidth),
+                            createMaxCondition(ProfileConditionValue.HEIGHT, maxHeight),
+                            createMaxCondition(ProfileConditionValue.VIDEO_BITRATE, maxVideoBitrate),
+                            createMaxCondition(ProfileConditionValue.VIDEO_FRAMERATE, maxVideoFramerate),
                         ),
                     )
                 } else {
@@ -139,15 +147,20 @@ object JellyfinDeviceProfile {
                 },
                 // Fallback: h264
                 TranscodingProfile(
-                    container = "mp4",
+                    container = "ts",
                     type = DlnaProfileType.VIDEO,
                     videoCodec = "h264",
                     audioCodec = "aac,opus",
                     protocol = MediaStreamProtocol.HLS,
                     context = EncodingContext.STREAMING,
+                    enableMpegtsM2TsMode = true,
+                    minSegments = 2,
+                    segmentLength = 6,
                     conditions = listOf(
-                        ProfileCondition(ProfileConditionType.LESS_THAN_EQUAL, ProfileConditionValue.WIDTH, "$maxWidth", isRequired = false),
-                        ProfileCondition(ProfileConditionType.LESS_THAN_EQUAL, ProfileConditionValue.HEIGHT, "$maxHeight", isRequired = false),
+                        createMaxCondition(ProfileConditionValue.WIDTH, maxWidth),
+                        createMaxCondition(ProfileConditionValue.HEIGHT, maxHeight),
+                        createMaxCondition(ProfileConditionValue.VIDEO_BITRATE, maxVideoBitrate),
+                        createMaxCondition(ProfileConditionValue.VIDEO_FRAMERATE, maxVideoFramerate),
                     ),
                 ),
                 // Audio fallback
@@ -397,7 +410,42 @@ object JellyfinDeviceProfile {
                     ),
                 ),
             ),
-            transcodingProfiles = emptyList<TranscodingProfile>(),
+            transcodingProfiles = listOf(
+                TranscodingProfile(
+                    container = "ts",
+                    type = DlnaProfileType.VIDEO,
+                    videoCodec = "h264",
+                    audioCodec = "aac,opus",
+                    protocol = MediaStreamProtocol.HLS,
+                    context = EncodingContext.STREAMING,
+                    enableMpegtsM2TsMode = true,
+                    minSegments = 2,
+                    segmentLength = 6,
+                    conditions = listOf(
+                        createMaxCondition(ProfileConditionValue.WIDTH, maxWidth),
+                        createMaxCondition(ProfileConditionValue.HEIGHT, maxHeight),
+                        createMaxCondition(ProfileConditionValue.VIDEO_FRAMERATE, DEFAULT_MAX_VIDEO_FRAMERATE),
+                    ),
+                ),
+                TranscodingProfile(
+                    container = "mp3",
+                    type = DlnaProfileType.AUDIO,
+                    audioCodec = "mp3",
+                    protocol = MediaStreamProtocol.HTTP,
+                    context = EncodingContext.STREAMING,
+                    videoCodec = "",
+                    conditions = emptyList(),
+                ),
+            ),
+        )
+    }
+
+    private fun createMaxCondition(property: ProfileConditionValue, value: Int): ProfileCondition {
+        return ProfileCondition(
+            condition = ProfileConditionType.LESS_THAN_EQUAL,
+            property = property,
+            value = value.toString(),
+            isRequired = false,
         )
     }
 }

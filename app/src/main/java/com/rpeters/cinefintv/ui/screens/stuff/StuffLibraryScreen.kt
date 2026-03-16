@@ -6,12 +6,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,6 +26,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -42,6 +46,7 @@ fun StuffLibraryScreen(
     viewModel: StuffLibraryViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val pagedItems = viewModel.pagedItems.collectAsLazyPagingItems()
     val gridState = rememberLazyGridState()
     val expressiveColors = LocalCinefinExpressiveColors.current
     val topAnchorRequester = remember { FocusRequester() }
@@ -58,106 +63,172 @@ fun StuffLibraryScreen(
 
     when (val state = uiState) {
         is StuffLibraryUiState.Loading -> {
-            Text(
-                text = "Loading Stuff (Home Videos)...",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(48.dp),
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-        }
-
-        is StuffLibraryUiState.Error -> {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(48.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Text(
-                    text = "Stuff could not load", 
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = state.message,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Button(onClick = { viewModel.load(forceRefresh = true) }) {
-                    Text("Retry")
-                }
-            }
+            StuffLoadingState()
         }
 
         is StuffLibraryUiState.Content -> {
-            LaunchedEffect(state.items) {
-                if (state.items.isNotEmpty()) {
+            when (val refreshState = pagedItems.loadState.refresh) {
+                is LoadState.Loading -> {
+                    if (pagedItems.itemCount == 0) {
+                        StuffLoadingState()
+                    }
+                }
+
+                is LoadState.Error -> {
+                    if (pagedItems.itemCount == 0) {
+                        StuffErrorState(
+                            message = refreshState.error.message ?: "Unknown paging error",
+                            onRetry = pagedItems::refresh,
+                        )
+                    }
+                }
+
+                else -> Unit
+            }
+
+            LaunchedEffect(pagedItems.itemCount) {
+                if (pagedItems.itemCount > 0) {
                     topAnchorRequester.requestFocus()
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                expressiveColors.backgroundTop,
-                                expressiveColors.backgroundBottom,
+            if (pagedItems.itemCount > 0 || pagedItems.loadState.refresh is LoadState.NotLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    expressiveColors.backgroundTop,
+                                    expressiveColors.backgroundBottom,
+                                ),
                             ),
                         ),
-                    ),
-            ) {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(5),
-                    state = gridState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 64.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        ScrollFocusAnchor(
-                            modifier = Modifier
-                                .focusRequester(topAnchorRequester)
-                                .focusProperties {
-                                    down = firstItemRequester
-                                },
-                            onFocused = {
-                                gridState.requestScrollToItem(0)
-                            },
-                        )
-                    }
-
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        LibraryHeader(
-                            title = "Stuff",
-                            description = "Home videos and personal media with a gallery-style browsing surface.",
-                            count = state.items.size,
-                        )
-                    }
-
-                    itemsIndexed(state.items, key = { _, item -> item.id }) { index, item ->
-                        TvMediaCard(
-                            title = item.title,
-                            subtitle = item.subtitle,
-                            imageUrl = item.imageUrl,
-                            onClick = { onOpenItem(item.id) },
-                            watchStatus = item.watchStatus,
-                            playbackProgress = item.playbackProgress,
-                            modifier = if (index == 0) {
-                                Modifier
-                                    .focusRequester(firstItemRequester)
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(5),
+                        state = gridState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 64.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                    ) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            ScrollFocusAnchor(
+                                modifier = Modifier
+                                    .focusRequester(topAnchorRequester)
                                     .focusProperties {
-                                        up = topAnchorRequester
-                                    }
-                            } else {
-                                Modifier
-                            },
-                        )
+                                        down = firstItemRequester
+                                    },
+                                onFocused = {
+                                    gridState.requestScrollToItem(0)
+                                },
+                            )
+                        }
+
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            LibraryHeader(
+                                title = "Stuff",
+                                description = "Home videos and personal media with a gallery-style browsing surface.",
+                                count = pagedItems.itemCount,
+                            )
+                        }
+
+                        if (pagedItems.itemCount == 0) {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                Text(
+                                    text = "No home videos were found in Stuff.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+
+                        items(
+                            count = pagedItems.itemCount,
+                            key = { index -> pagedItems[index]?.id ?: "placeholder-$index" },
+                        ) { index ->
+                            val item = pagedItems[index] ?: return@items
+
+                            TvMediaCard(
+                                title = item.title,
+                                subtitle = item.subtitle,
+                                imageUrl = item.imageUrl,
+                                onClick = { onOpenItem(item.id) },
+                                watchStatus = item.watchStatus,
+                                playbackProgress = item.playbackProgress,
+                                modifier = if (index == 0) {
+                                    Modifier
+                                        .focusRequester(firstItemRequester)
+                                        .focusProperties {
+                                            up = topAnchorRequester
+                                        }
+                                } else {
+                                    Modifier
+                                },
+                            )
+                        }
+
+                        if (pagedItems.loadState.append is LoadState.Loading) {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 12.dp),
+                                ) {
+                                    CircularProgressIndicator()
+                                }
+                            }
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun StuffLoadingState() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(48.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            CircularProgressIndicator()
+            Text(
+                text = "Loading Stuff (Home Videos)...",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun StuffErrorState(
+    message: String,
+    onRetry: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(48.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(
+            text = "Stuff could not load",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Button(onClick = onRetry) {
+            Text("Retry")
         }
     }
 }

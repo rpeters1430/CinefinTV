@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusProperties
@@ -46,6 +47,7 @@ import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -57,6 +59,7 @@ fun SearchScreen(
     val expressiveColors = LocalCinefinExpressiveColors.current
     val spacing = LocalCinefinSpacing.current
     val gridState = rememberLazyGridState()
+    val scope = rememberCoroutineScope()
     val screenFocus = rememberTvScreenFocusState()
     RegisterPrimaryScreenFocus(
         route = NavRoutes.SEARCH,
@@ -92,7 +95,9 @@ fun SearchScreen(
                 TvScreenTopFocusAnchor(
                     state = screenFocus,
                     onFocused = {
-                        gridState.requestScrollToItem(0)
+                        scope.launch {
+                            gridState.animateScrollToItem(0)
+                        }
                     },
                 )
             }
@@ -143,7 +148,7 @@ fun SearchScreen(
                         Text(
                             text = uiState.errorMessage.orEmpty(),
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.error,
                         )
                     }
                 }

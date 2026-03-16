@@ -1,5 +1,6 @@
 package com.rpeters.cinefintv.ui.screens.music
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -58,6 +59,10 @@ fun MusicScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val expressiveColors = LocalCinefinExpressiveColors.current
+
+    BackHandler(enabled = uiState is MusicUiState.AlbumDetail) {
+        viewModel.backToGrid()
+    }
 
     when (val state = uiState) {
         is MusicUiState.Loading -> {
@@ -270,6 +275,10 @@ private fun AlbumDetailContent(
     val expressiveColors = LocalCinefinExpressiveColors.current
     val listState = rememberLazyListState()
     val screenFocus = rememberTvScreenFocusState()
+    RegisterPrimaryScreenFocus(
+        route = NavRoutes.LIBRARY_MUSIC,
+        requester = screenFocus.primaryContentRequester,
+    )
 
     RequestScreenFocus(
         key = album.id.toString(),

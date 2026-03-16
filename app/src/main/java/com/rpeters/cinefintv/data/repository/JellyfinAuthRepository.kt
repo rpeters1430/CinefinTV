@@ -57,8 +57,6 @@ class JellyfinAuthRepository @Inject constructor(
 
     companion object {
         private const val TAG = "JellyfinAuthRepository"
-        private const val TOKEN_VALIDITY_DURATION_MS = 50 * 60 * 1000L // 50 minutes (10 min buffer)
-        private const val TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000L // Refresh 5 minutes before expiration
     }
 
     // TokenProvider implementation
@@ -160,13 +158,12 @@ class JellyfinAuthRepository @Inject constructor(
             // Double-check: if another thread just successfully re-authenticated,
             // we might not need to do it again
             val currentServer = _currentServer.value
-            if (currentServer?.accessToken != null && !isTokenExpired()) {
-                Log.d(TAG, "forceReAuthenticate: Token is now valid, skipping re-authentication")
+            if (currentServer?.accessToken != null) {
+                Log.d(TAG, "forceReAuthenticate: Access token is already present, skipping forced re-authentication")
                 return@withLock true
             }
 
-            // Token is still invalid, proceed with re-authentication
-            Log.d(TAG, "forceReAuthenticate: Token still invalid, proceeding with re-authentication")
+            Log.d(TAG, "forceReAuthenticate: No access token available, proceeding with re-authentication")
             reAuthenticateInternal()
         }
     }
@@ -204,11 +201,7 @@ class JellyfinAuthRepository @Inject constructor(
     fun isUserAuthenticated(): Boolean = _currentServer.value?.accessToken != null
 
     fun isTokenExpired(): Boolean {
-        val server = _currentServer.value ?: return true
-        val loginTimestamp = server.loginTimestamp ?: return true
-        val currentTime = timeProvider()
-
-        return (currentTime - loginTimestamp) > TOKEN_VALIDITY_DURATION_MS
+        return _currentServer.value?.accessToken.isNullOrBlank()
     }
 
     /**
@@ -217,14 +210,7 @@ class JellyfinAuthRepository @Inject constructor(
      * This allows the interceptor to refresh tokens before they expire, reducing blocking.
      */
     fun shouldRefreshToken(): Boolean {
-        val server = _currentServer.value ?: return false
-        val loginTimestamp = server.loginTimestamp ?: return false
-        val currentTime = timeProvider()
-
-        val tokenAge = currentTime - loginTimestamp
-        val refreshThreshold = TOKEN_VALIDITY_DURATION_MS - TOKEN_REFRESH_BUFFER_MS
-
-        return tokenAge >= refreshThreshold
+        return false
     }
 
     @VisibleForTesting
@@ -251,6 +237,7 @@ class JellyfinAuthRepository @Inject constructor(
 
     suspend fun logout() {
         authMutex.withLock {
+            _isAuthenticating.update { false }
             val server = _currentServer.value
             if (server != null && server.username != null) {
                 try {
@@ -372,6 +359,11 @@ class JellyfinAuthRepository @Inject constructor(
                     ApiResult.Error(throwableMessageOrFallback("Failed to check Quick Connect state", e), e, errorType)
                 }
             }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Log.e(TAG, "getQuickConnectState: Error", e)
+            val errorType = RepositoryUtils.getErrorType(e)
+            ApiResult.Error(throwableMessageOrFallback("Failed to check Quick Connect state", e), e, errorType)
         }
     }
     suspend fun authenticateWithQuickConnect(

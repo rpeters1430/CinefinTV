@@ -134,6 +134,13 @@ class AudioPlayerViewModel @Inject constructor(
         refreshFromController()
     }
 
+    fun seekToPosition(positionMs: Long) {
+        val activeController = controller ?: return
+        val currentIndex = activeController.currentMediaItemIndex.takeIf { it >= 0 } ?: return
+        activeController.seekTo(currentIndex, positionMs.coerceAtLeast(0L))
+        refreshFromPlayer(activeController)
+    }
+
     fun retry() {
         _uiState.value = _uiState.value.copy(
             isConnecting = true,

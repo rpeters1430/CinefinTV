@@ -18,6 +18,7 @@ class LibraryItemPagingSource(
     private val mediaRepository: JellyfinMediaRepository,
     private val parentId: String? = null,
     private val itemTypes: List<BaseItemKind>? = null,
+    private val collectionType: String? = null,
     private val pageSize: Int = 20,
 ) : PagingSource<Int, BaseItemDto>() {
 
@@ -56,6 +57,7 @@ class LibraryItemPagingSource(
                     itemTypes = itemTypesString,
                     startIndex = startIndex,
                     limit = params.loadSize,
+                    collectionType = collectionType,
                 )
             ) {
                 is ApiResult.Success -> {

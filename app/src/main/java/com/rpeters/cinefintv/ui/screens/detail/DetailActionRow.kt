@@ -107,6 +107,14 @@ fun DetailActionRow(
             )
         }
 
+        if (!state.refreshErrorMessage.isNullOrBlank()) {
+            Text(
+                text = state.refreshErrorMessage,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)

@@ -6,10 +6,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -200,16 +196,12 @@ private fun <T> ShelfRow(
     itemContent: @Composable (T, Modifier) -> Unit
 ) {
     val spacing = LocalCinefinSpacing.current
-    var isFocused by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.onFocusChanged { isFocused = it.hasFocus },
+        modifier = Modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        CinefinShelfTitle(
-            title = title,
-            eyebrow = if (isFocused) "Focused Shelf" else null,
-        )
+        CinefinShelfTitle(title = title)
         LazyRow(
             contentPadding = PaddingValues(horizontal = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(spacing.cardGap)

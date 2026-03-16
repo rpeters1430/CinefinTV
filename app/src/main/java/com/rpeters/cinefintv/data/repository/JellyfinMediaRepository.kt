@@ -12,6 +12,7 @@ import com.rpeters.cinefintv.utils.SecureLogger
 import kotlinx.coroutines.CancellationException
 import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
+import org.jellyfin.sdk.api.client.extensions.tvShowsApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ItemFields
@@ -243,39 +244,11 @@ class JellyfinMediaRepository @Inject constructor(
                         }
                     }
 
-                    // Strategy 3: Try without parentId (library-wide search)
-                    if (parent != null) {
-                        try {
-                            SecureLogger.v(
-                                "JellyfinMediaRepository",
-                                "Fallback strategy 3: Requesting without parentId constraint",
-                            )
-
-                            val response = client.itemsApi.getItems(
-                                userId = userUuid,
-                                parentId = null, // Remove library constraint
-                                recursive = true,
-                                includeItemTypes = itemKinds,
-                                startIndex = validatedParams.startIndex,
-                                limit = validatedParams.limit,
-                            )
-                            SecureLogger.v(
-                                "JellyfinMediaRepository",
-                                "Fallback strategy 3 succeeded: ${response.content.items.size} items",
-                            )
-                            return@withServerClient response.content.items
-                        } catch (fallbackException3: Exception) {
-                            SecureLogger.w(
-                                "JellyfinMediaRepository",
-                                "Fallback strategy 3 also failed: ${fallbackException3.message}",
-                            )
-                        }
-                    }
-
-                    // Strategy 4: Return empty list as graceful degradation
+                    // Never remove the library constraint as a fallback. Returning cross-library
+                    // content is worse than returning an empty state for the selected library.
                     SecureLogger.w(
                         "JellyfinMediaRepository",
-                        "All fallback strategies failed for library ${validatedParams.parentId}, returning empty list",
+                        "Library-scoped fallback strategies failed for library ${validatedParams.parentId}, returning empty list",
                     )
 
                     // Report failure to health checker unless it's a known fragile type
@@ -480,7 +453,6 @@ class JellyfinMediaRepository @Inject constructor(
                 sortBy = listOf(ItemSortBy.SORT_NAME),
                 sortOrder = listOf(SortOrder.ASCENDING),
                 fields = listOf(
-                    org.jellyfin.sdk.model.api.ItemFields.MEDIA_SOURCES,
                     org.jellyfin.sdk.model.api.ItemFields.DATE_CREATED,
                     org.jellyfin.sdk.model.api.ItemFields.OVERVIEW,
                 ),
@@ -559,20 +531,15 @@ class JellyfinMediaRepository @Inject constructor(
             val currentEpisode = getItemDetailsById(episodeId, "episode", server, client)
             val seriesUuid = currentEpisode.seriesId ?: return@withServerClient null
 
-            val response = client.itemsApi.getItems(
+            val response = client.tvShowsApi.getNextUp(
                 userId = userUuid,
-                parentId = seriesUuid,
-                recursive = true,
-                includeItemTypes = listOf(BaseItemKind.EPISODE),
-                sortBy = listOf(ItemSortBy.PARENT_INDEX_NUMBER, ItemSortBy.INDEX_NUMBER),
-                sortOrder = listOf(SortOrder.ASCENDING),
+                seriesId = seriesUuid,
+                limit = 2,
                 fields = listOf(ItemFields.MEDIA_SOURCES),
+                enableUserData = true,
             )
 
-            val episodes = response.content.items
-            val currentIndex = episodes.indexOfFirst { it.id == currentEpisode.id }
-            if (currentIndex == -1) return@withServerClient null
-            episodes.getOrNull(currentIndex + 1)
+            response.content.items.firstOrNull { it.id != currentEpisode.id }
         }
 
     /**
