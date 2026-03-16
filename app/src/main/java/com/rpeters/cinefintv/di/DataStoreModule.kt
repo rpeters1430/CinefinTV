@@ -32,9 +32,11 @@ object DataStoreModule {
     @PlaybackPreferencesDataStore
     fun providePlaybackPreferencesDataStore(
         @ApplicationContext context: Context,
+        @ApplicationScope scope: kotlinx.coroutines.CoroutineScope,
     ): DataStore<Preferences> {
         return PreferenceDataStoreFactory.create(
             corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+            scope = scope,
             produceFile = { context.preferencesDataStoreFile("playback_preferences") },
         )
     }
