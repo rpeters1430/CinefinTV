@@ -60,7 +60,7 @@ Focus next on open items that are either user-visible correctness bugs or low-ef
 ### 1) Recently fixed (2026-03-16)
 1. ✅ **`U-2`** — Home focus/scroll side effects stabilized by narrowing side-effect keys and gating initial request.
 2. ✅ **`N-5`** — audio queue nav handling corrected (`queue` default `null`, empty queues no longer force malformed query usage).
-3. ✅ **`D-12`** — dead non-nullable `isNullOrBlank()` check replaced with non-null-safe check.
+3. ✅ **`D-12`** — dead non-nullable `isNullOrBlank()` check replaced with explicit `value != null && value.isNotBlank()` check.
 4. ✅ **`D-14`** — redundant `communityRating as? Number` cast removed and rating formatting simplified.
 
 ### 2) Fix next (moderate scope, UX consistency)
