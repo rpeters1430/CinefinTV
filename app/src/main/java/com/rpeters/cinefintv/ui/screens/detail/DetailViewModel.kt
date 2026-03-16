@@ -44,56 +44,8 @@ class DetailViewModel @Inject constructor(
 
     fun refresh() {
         if (itemId.isBlank()) return
-        
-        viewModelScope.launch {
-            if (_uiState.value !is DetailUiState.Content) {
-                _uiState.value = DetailUiState.Loading
-            }
 
-            when (val detailResult = repositories.media.getItemDetails(itemId)) {
-                is ApiResult.Success -> {
-                    val item = detailResult.data
-                    val seasonsAndEpisodes = loadSeasonsAndEpisodes(item)
-                    val relatedItems = loadRelated(item)
-                    val playbackTarget = DetailPlaybackResolver.resolvePlaybackTarget(item, seasonsAndEpisodes.second)
-                    
-                    val parentForBackdrop: BaseItemDto? = if (item.isSeason()) {
-                        item.seriesId?.toString()?.let { seriesId ->
-                            (repositories.media.getItemDetails(seriesId) as? ApiResult.Success)?.data
-                        }
-                    } else null
-
-                    val heroModel = DetailMappers.toHeroModel(
-                        item = item,
-                        streamRepository = repositories.stream,
-                        seasons = seasonsAndEpisodes.first,
-                        episodesBySeasonId = seasonsAndEpisodes.second,
-                        parentForBackdrop = parentForBackdrop,
-                    )
-
-                    _uiState.value = DetailUiState.Content(
-                        item = heroModel,
-                        seasons = seasonsAndEpisodes.first,
-                        episodesBySeasonId = seasonsAndEpisodes.second,
-                        related = relatedItems.map { DetailMappers.toHeroModel(it, repositories.stream) },
-                        cast = heroModel.cast,
-                        playableItemId = playbackTarget?.id,
-                        playButtonLabel = playbackTarget?.label ?: "Play",
-                        refreshErrorMessage = null,
-                    )
-                    lastSuccessfulRefreshAtMs = System.currentTimeMillis()
-                }
-                is ApiResult.Error -> {
-                    val currentState = _uiState.value
-                    if (currentState is DetailUiState.Content) {
-                        _uiState.value = currentState.copy(refreshErrorMessage = detailResult.message)
-                    } else {
-                        _uiState.value = DetailUiState.Error(detailResult.message)
-                    }
-                }
-                is ApiResult.Loading -> Unit
-            }
-        }
+        viewModelScope.launch { fetchAndBuildState(showLoading = _uiState.value !is DetailUiState.Content) }
     }
 
     fun load() {
@@ -103,46 +55,59 @@ class DetailViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            fetchAndBuildState(showLoading = true)
+        }
+    }
+
+    private suspend fun fetchAndBuildState(showLoading: Boolean) {
+        if (showLoading) {
             _uiState.value = DetailUiState.Loading
+        }
 
-            when (val detailResult = repositories.media.getItemDetails(itemId)) {
-                is ApiResult.Success -> {
-                    val item = detailResult.data
-                    val seasonsAndEpisodes = loadSeasonsAndEpisodes(item)
-                    val relatedItems = loadRelated(item)
-                    val playbackTarget = DetailPlaybackResolver.resolvePlaybackTarget(item, seasonsAndEpisodes.second)
-                    
-                    val parentForBackdrop: BaseItemDto? = if (item.isSeason()) {
-                        item.seriesId?.toString()?.let { seriesId ->
-                            (repositories.media.getItemDetails(seriesId) as? ApiResult.Success)?.data
-                        }
-                    } else null
+        when (val detailResult = repositories.media.getItemDetails(itemId)) {
+            is ApiResult.Success -> {
+                val item = detailResult.data
+                val seasonsAndEpisodes = loadSeasonsAndEpisodes(item)
+                val relatedItems = loadRelated(item)
+                val playbackTarget = DetailPlaybackResolver.resolvePlaybackTarget(item, seasonsAndEpisodes.second)
 
-                    val heroModel = DetailMappers.toHeroModel(
-                        item = item,
-                        streamRepository = repositories.stream,
-                        seasons = seasonsAndEpisodes.first,
-                        episodesBySeasonId = seasonsAndEpisodes.second,
-                        parentForBackdrop = parentForBackdrop,
-                    )
-
-                    _uiState.value = DetailUiState.Content(
-                        item = heroModel,
-                        seasons = seasonsAndEpisodes.first,
-                        episodesBySeasonId = seasonsAndEpisodes.second,
-                        related = relatedItems.map { DetailMappers.toHeroModel(it, repositories.stream) },
-                        cast = heroModel.cast,
-                        playableItemId = playbackTarget?.id,
-                        playButtonLabel = playbackTarget?.label ?: "Play",
-                        refreshErrorMessage = null,
-                    )
-                    lastSuccessfulRefreshAtMs = System.currentTimeMillis()
+                val parentForBackdrop: BaseItemDto? = if (item.isSeason()) {
+                    item.seriesId?.toString()?.let { seriesId ->
+                        (repositories.media.getItemDetails(seriesId) as? ApiResult.Success)?.data
+                    }
+                } else {
+                    null
                 }
-                is ApiResult.Error -> {
+
+                val heroModel = DetailMappers.toHeroModel(
+                    item = item,
+                    streamRepository = repositories.stream,
+                    seasons = seasonsAndEpisodes.first,
+                    episodesBySeasonId = seasonsAndEpisodes.second,
+                    parentForBackdrop = parentForBackdrop,
+                )
+
+                _uiState.value = DetailUiState.Content(
+                    item = heroModel,
+                    seasons = seasonsAndEpisodes.first,
+                    episodesBySeasonId = seasonsAndEpisodes.second,
+                    related = relatedItems.map { DetailMappers.toHeroModel(it, repositories.stream) },
+                    cast = heroModel.cast,
+                    playableItemId = playbackTarget?.id,
+                    playButtonLabel = playbackTarget?.label ?: "Play",
+                    refreshErrorMessage = null,
+                )
+                lastSuccessfulRefreshAtMs = System.currentTimeMillis()
+            }
+            is ApiResult.Error -> {
+                val currentState = _uiState.value
+                if (!showLoading && currentState is DetailUiState.Content) {
+                    _uiState.value = currentState.copy(refreshErrorMessage = detailResult.message)
+                } else {
                     _uiState.value = DetailUiState.Error(detailResult.message)
                 }
-                is ApiResult.Loading -> Unit
             }
+            is ApiResult.Loading -> Unit
         }
     }
 
