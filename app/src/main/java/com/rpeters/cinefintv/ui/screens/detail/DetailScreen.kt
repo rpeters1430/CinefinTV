@@ -1,5 +1,6 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -12,13 +13,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,12 +32,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.tv.material3.Button
-import kotlinx.coroutines.launch
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
@@ -52,6 +50,7 @@ import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -149,17 +148,23 @@ fun DetailScreen(
                 Box(modifier = Modifier.fillMaxSize()) {
                     // Backdrop
                     val activeBackdropUrl = focusedBackdropUrl ?: item.backdropUrl
-                    if (activeBackdropUrl != null) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                                .data(activeBackdropUrl)
-                                .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
-                                .size(1920, 1080)
-                                .build(),
-                            contentDescription = item.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
-                        )
+                    AnimatedContent(
+                        targetState = activeBackdropUrl,
+                        transitionSpec = { fadeIn().togetherWith(fadeOut()) },
+                        label = "ImmersiveBackdrop"
+                    ) { url ->
+                        if (url != null) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                    .data(url)
+                                    .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
+                                    .size(1920, 1080)
+                                    .build(),
+                                contentDescription = item.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
                     }
 
                     Box(

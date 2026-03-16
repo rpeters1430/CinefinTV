@@ -14,9 +14,9 @@ import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
+import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
 import com.rpeters.cinefintv.utils.getUnwatchedEpisodeDetailLabel
 import com.rpeters.cinefintv.utils.getWatchedPercentage
-import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
 import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.getYearRange
 import com.rpeters.cinefintv.utils.isEpisode
@@ -151,7 +151,7 @@ object DetailMappers {
             title = item.getDisplayTitle(),
             subtitle = episodeMetadata,
             overview = item.overview?.takeIf { it.isNotBlank() },
-            imageUrl = streamRepository.getPosterCardImageUrl(item),
+            imageUrl = streamRepository.getLandscapeImageUrl(item),
             canResume = isResumable,
             isWatched = item.isWatched(),
             watchStatus = watchStatus,

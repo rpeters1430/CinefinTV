@@ -1,9 +1,6 @@
 package com.rpeters.cinefintv.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme as ComposeMaterialTheme
-import androidx.compose.material3.Shapes as ComposeShapes
-import androidx.compose.material3.darkColorScheme as ComposeDarkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -12,11 +9,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.MaterialTheme as TvMaterialTheme
-import androidx.tv.material3.darkColorScheme as TvDarkColorScheme
-
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
+import androidx.compose.material3.MaterialTheme as ComposeMaterialTheme
+import androidx.compose.material3.Shapes as ComposeShapes
+import androidx.compose.material3.darkColorScheme as ComposeDarkColorScheme
+import androidx.tv.material3.MaterialTheme as TvMaterialTheme
+import androidx.tv.material3.darkColorScheme as TvDarkColorScheme
 
 @Immutable
 data class CinefinSpacing(

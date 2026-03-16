@@ -4,16 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
-import com.rpeters.cinefintv.ui.screens.home.HomeCardModel
 import com.rpeters.cinefintv.ui.components.WatchStatus
+import com.rpeters.cinefintv.ui.screens.home.HomeCardModel
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
-import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
-import com.rpeters.cinefintv.utils.getSeriesCardDetailLine
 import com.rpeters.cinefintv.utils.getWatchedPercentage
-import com.rpeters.cinefintv.utils.getYear
-import com.rpeters.cinefintv.utils.isMovie
 import com.rpeters.cinefintv.utils.isSeries
 import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -87,24 +83,10 @@ class LibraryViewModel @Inject constructor(
             item.getUnwatchedEpisodeCount().takeIf { it > 0 }
         } else null
 
-        val subtitle = when {
-            item.isMovie() -> listOfNotNull(
-                item.getYear()?.toString(),
-                item.getFormattedDuration(),
-                item.communityRating?.let { "★ ${"%.1f".format(it)}" },
-            ).joinToString(" · ").ifBlank { item.type.toString().replace('_', ' ') }
-            item.isSeries() -> item.getSeriesCardDetailLine()
-                ?: item.getYear()?.toString()
-                ?: item.type.toString().replace('_', ' ')
-            else -> item.getYear()?.toString()
-                ?: item.getFormattedDuration()
-                ?: item.type.toString().replace('_', ' ')
-        }
-
         return HomeCardModel(
             id = id,
             title = item.getDisplayTitle(),
-            subtitle = subtitle,
+            subtitle = null,
             imageUrl = repositories.stream.getPosterCardImageUrl(item),
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,

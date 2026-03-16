@@ -3,7 +3,6 @@ package com.rpeters.cinefintv.ui.screens.detail
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
@@ -64,6 +63,8 @@ fun DetailShelves(
                         watchStatus = season.watchStatus,
                         playbackProgress = season.playbackProgress,
                         unwatchedCount = season.unwatchedCount,
+                        aspectRatio = 2f / 3f,
+                        cardWidth = 168.dp,
                         modifier = itemModifier
                             .then(if (season == state.seasons.first()) Modifier.focusRequester(primaryShelfRequester) else Modifier)
                             .focusProperties {
@@ -99,6 +100,8 @@ fun DetailShelves(
                         watchStatus = episode.watchStatus,
                         playbackProgress = episode.playbackProgress,
                         unwatchedCount = episode.unwatchedCount,
+                        aspectRatio = 16f / 9f,
+                        cardWidth = 260.dp,
                         modifier = itemModifier
                             .then(if (episode == episodes.first()) Modifier.focusRequester(primaryShelfRequester) else Modifier)
                             .focusProperties {
@@ -168,6 +171,8 @@ fun DetailShelves(
                         watchStatus = related.watchStatus,
                         playbackProgress = related.playbackProgress,
                         unwatchedCount = related.unwatchedCount,
+                        aspectRatio = 2f / 3f,
+                        cardWidth = 168.dp,
                         modifier = itemModifier
                             .then(if (related == state.related.first()) Modifier.focusRequester(relatedShelfRequester) else Modifier)
                             .focusProperties {

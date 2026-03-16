@@ -3,8 +3,8 @@ package com.rpeters.cinefintv.di
 import com.rpeters.cinefintv.ui.player.audio.AudioControllerConnector
 import com.rpeters.cinefintv.ui.player.audio.AudioMediaItemFactory
 import com.rpeters.cinefintv.ui.player.audio.AudioPlaybackPositionRepository
-import com.rpeters.cinefintv.ui.player.audio.DefaultAudioPlaybackPositionRepository
 import com.rpeters.cinefintv.ui.player.audio.DefaultAudioMediaItemFactory
+import com.rpeters.cinefintv.ui.player.audio.DefaultAudioPlaybackPositionRepository
 import com.rpeters.cinefintv.ui.player.audio.Media3AudioControllerConnector
 import dagger.Binds
 import dagger.Module

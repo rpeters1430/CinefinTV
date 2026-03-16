@@ -1,8 +1,7 @@
 package com.rpeters.cinefintv.ui.screens.music
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,29 +10,26 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.GraphicEq
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items as gridItems
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items as listItems
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.ListItem
@@ -42,15 +38,17 @@ import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
 import com.rpeters.cinefintv.ui.components.RequestScreenFocus
-import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
 import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import org.jellyfin.sdk.model.api.BaseItemDto
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.items as listItems
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable

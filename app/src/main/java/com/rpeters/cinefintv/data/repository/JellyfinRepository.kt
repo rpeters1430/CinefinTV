@@ -6,6 +6,8 @@ import android.net.NetworkCapabilities
 import android.util.Log
 import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.R
+import com.rpeters.cinefintv.core.ErrorHandler
+import com.rpeters.cinefintv.core.OfflineManager
 import com.rpeters.cinefintv.core.constants.Constants
 import com.rpeters.cinefintv.data.DeviceCapabilities
 import com.rpeters.cinefintv.data.JellyfinServer
@@ -18,11 +20,9 @@ import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.data.repository.common.ErrorType
 import com.rpeters.cinefintv.data.session.JellyfinSessionManager
 import com.rpeters.cinefintv.data.utils.RepositoryUtils
-import com.rpeters.cinefintv.core.ErrorHandler
-import com.rpeters.cinefintv.core.OfflineManager
+import com.rpeters.cinefintv.utils.AnalyticsHelper
 import com.rpeters.cinefintv.utils.AppResources
 import com.rpeters.cinefintv.utils.SecureLogger
-import com.rpeters.cinefintv.utils.AnalyticsHelper
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers

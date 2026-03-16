@@ -2,7 +2,20 @@ package com.rpeters.cinefintv.data.model
 
 import android.util.Log
 import com.rpeters.cinefintv.data.DirectPlayCapabilities
-import org.jellyfin.sdk.model.api.*
+import org.jellyfin.sdk.model.api.CodecProfile
+import org.jellyfin.sdk.model.api.CodecType
+import org.jellyfin.sdk.model.api.ContainerProfile
+import org.jellyfin.sdk.model.api.DeviceProfile
+import org.jellyfin.sdk.model.api.DirectPlayProfile
+import org.jellyfin.sdk.model.api.DlnaProfileType
+import org.jellyfin.sdk.model.api.EncodingContext
+import org.jellyfin.sdk.model.api.MediaStreamProtocol
+import org.jellyfin.sdk.model.api.ProfileCondition
+import org.jellyfin.sdk.model.api.ProfileConditionType
+import org.jellyfin.sdk.model.api.ProfileConditionValue
+import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
+import org.jellyfin.sdk.model.api.SubtitleProfile
+import org.jellyfin.sdk.model.api.TranscodingProfile
 
 /**
  * Creates a device profile optimized for direct play with dynamic capability detection.

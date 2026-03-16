@@ -2,8 +2,8 @@ package com.rpeters.cinefintv.ui.screens.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.rpeters.cinefintv.data.preferences.AudioChannelPreference
 import com.rpeters.cinefintv.data.preferences.AccentColor
+import com.rpeters.cinefintv.data.preferences.AudioChannelPreference
 import com.rpeters.cinefintv.data.preferences.CastPreferences
 import com.rpeters.cinefintv.data.preferences.CastPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.ContrastLevel
@@ -23,13 +23,13 @@ import com.rpeters.cinefintv.data.preferences.ThemePreferences
 import com.rpeters.cinefintv.data.preferences.ThemePreferencesRepository
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class SettingsUiState(
     val isLoading: Boolean = true,

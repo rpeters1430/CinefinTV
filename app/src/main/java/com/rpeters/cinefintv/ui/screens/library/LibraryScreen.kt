@@ -24,15 +24,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,8 +40,8 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
 import com.rpeters.cinefintv.ui.components.RequestScreenFocus
-import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
 import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
@@ -149,14 +146,14 @@ fun LibraryScreen(
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(5),
+                        columns = GridCells.Fixed(6),
                         state = gridState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = spacing.gutter + 16.dp,
                             end = spacing.gutter + 16.dp,
                             top = 8.dp,
-                            bottom = spacing.gutter,
+                            bottom = 120.dp,
                         ),
                         horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
                         verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -204,6 +201,8 @@ fun LibraryScreen(
                                 watchStatus = item.watchStatus,
                                 playbackProgress = item.playbackProgress,
                                 unwatchedCount = item.unwatchedCount,
+                                aspectRatio = 2f / 3f,
+                                cardWidth = null,
                                 modifier = if (index == 0) {
                                     Modifier
                                         .focusRequester(screenFocus.primaryContentRequester)

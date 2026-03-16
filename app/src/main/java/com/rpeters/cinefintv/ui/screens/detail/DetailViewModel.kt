@@ -11,12 +11,12 @@ import com.rpeters.cinefintv.utils.isMovie
 import com.rpeters.cinefintv.utils.isSeason
 import com.rpeters.cinefintv.utils.isSeries
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemDto
+import javax.inject.Inject
 
 @HiltViewModel
 class DetailViewModel @Inject constructor(

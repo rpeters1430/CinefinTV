@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
-import com.rpeters.cinefintv.ui.screens.home.HomeCardModel
 import com.rpeters.cinefintv.ui.components.WatchStatus
+import com.rpeters.cinefintv.ui.screens.home.HomeCardModel
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration

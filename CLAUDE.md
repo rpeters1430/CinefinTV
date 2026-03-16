@@ -42,7 +42,22 @@ class JellyfinRepositoryCoordinator @Inject constructor(
 )
 ```
 
-All repository methods return `ApiResult<T>` (sealed class: `Success`, `Error`, `Loading`). `ErrorType` enum gives callers structured error categories (e.g. `DNS_RESOLUTION`, `UNAUTHORIZED`).
+All repository methods return `ApiResult<T>` (`data/repository/common/ApiResult.kt` — sealed class: `Success`, `Error`, `Loading`). `ErrorType` enum gives callers structured error categories (e.g. `DNS_RESOLUTION`, `UNAUTHORIZED`).
+
+All concrete repositories extend `BaseJellyfinRepository`, which provides standard execution helpers:
+
+```kotlin
+// Preferred: gets validated server + authenticated client, wraps result in ApiResult
+withServerClient("operationName") { server, client -> ... }
+
+// With automatic retry (3 attempts, exponential backoff)
+executeWithRetry("operationName") { ... }
+
+// Cache-first: checks JellyfinCache, falls back to network, caches result
+executeWithCache("operationName", cacheKey = "key", cacheTtlMs = 30 * 60 * 1000L) { ... }
+```
+
+`withServerClient` is the standard pattern for new repository methods — it handles token validation, 401 retry, and circuit-breaking automatically.
 
 ### Auth & Session Persistence
 - `JellyfinAuthRepository` owns `_currentServer: StateFlow<JellyfinServer?>` and implements `TokenProvider`
@@ -83,9 +98,16 @@ class XxxViewModel @Inject constructor(
 ### Other Repositories
 `JellyfinSystemRepository` (not in the coordinator) handles server info / system-level API calls and is injected independently where needed.
 
+### BaseItemDto Extensions
+`utils/Extensions.kt` provides rich extension functions on `BaseItemDto` — prefer these over direct field access:
+- Type checks: `isMovie()`, `isSeries()`, `isSeason()`, `isEpisode()`, `isMusic()`
+- Display: `getDisplayTitle()`, `getYear()`, `getYearRange()`, `getFormattedDuration()`, `getEpisodeCode()`
+- Watch state: `isWatched()`, `isPartiallyWatched()`, `canResume()`, `getWatchedPercentage()`
+- Series helpers: `getUnwatchedEpisodeCount()`, `hasUnwatchedEpisodes()`, `getNextUpInfo()`
+
 ## TV-Specific Rules
 
-- All `androidx.tv.material3` composables require `@OptIn(ExperimentalTvMaterial3Api::class)`
+- All `androidx.tv.material3` composables require `@OptIn(ExperimentalTvMaterial3Api::class)`. A file-level `@file:OptIn(ExperimentalTvMaterial3Api::class)` annotation is preferred over per-call opt-ins.
 - **Do not use** `TvLazyRow` / `TvLazyColumn` (deprecated) — use standard `LazyRow`, `LazyColumn`, `LazyVerticalGrid`
 - Minimum body text size is **18sp** for 10-foot viewing
 - Navigation is D-pad driven; test focus traversal when adding interactive elements

@@ -7,14 +7,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
-import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.data.PlaybackPositionStore
 import com.rpeters.cinefintv.data.playback.AdaptiveBitrateMonitor
 import com.rpeters.cinefintv.data.playback.EnhancedPlaybackManager
@@ -307,12 +305,20 @@ class PlayerViewModel @Inject constructor(
 
     fun selectAudioTrack(track: TrackOption, positionMs: Long, playWhenReady: Boolean) {
         _uiState.value = _uiState.value.copy(selectedAudioTrack = track)
-        reloadStream(positionMs = positionMs, playWhenReady = playWhenReady)
+        if (activePlayMethod == org.jellyfin.sdk.model.api.PlayMethod.DIRECT_PLAY) {
+            applyTrackSelection(track, uiState.value.selectedSubtitleTrack)
+        } else {
+            reloadStream(positionMs = positionMs, playWhenReady = playWhenReady)
+        }
     }
 
     fun selectSubtitleTrack(track: TrackOption?, positionMs: Long, playWhenReady: Boolean) {
         _uiState.value = _uiState.value.copy(selectedSubtitleTrack = track)
-        reloadStream(positionMs = positionMs, playWhenReady = playWhenReady)
+        if (activePlayMethod == org.jellyfin.sdk.model.api.PlayMethod.DIRECT_PLAY) {
+            applyTrackSelection(uiState.value.selectedAudioTrack, track)
+        } else {
+            reloadStream(positionMs = positionMs, playWhenReady = playWhenReady)
+        }
     }
 
     private fun applyTrackSelection(audioTrack: TrackOption?, subtitleTrack: TrackOption?) {

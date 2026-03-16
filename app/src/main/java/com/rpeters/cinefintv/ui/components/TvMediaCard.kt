@@ -6,8 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,9 +22,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,6 +61,8 @@ fun TvMediaCard(
     watchStatus: WatchStatus = WatchStatus.NONE,
     playbackProgress: Float? = null,
     unwatchedCount: Int? = null,
+    aspectRatio: Float = 2f / 3f,
+    cardWidth: androidx.compose.ui.unit.Dp? = null,
 ) {
     val performanceProfile = LocalPerformanceProfile.current
     val expressiveColors = LocalCinefinExpressiveColors.current
@@ -88,20 +90,20 @@ fun TvMediaCard(
     )
 
     Column(
-        modifier = modifier.width(168.dp),
+        modifier = if (cardWidth != null) modifier.width(cardWidth) else modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Card(
             onClick = onClick,
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(2f / 3f)
+                .aspectRatio(aspectRatio)
                 .onFocusChanged {
                     val focused = it.isFocused || it.hasFocus
                     isFocused = focused
                     if (focused) onFocus()
                 },
-            scale = CardDefaults.scale(focusedScale = 1.03f),
+            scale = CardDefaults.scale(focusedScale = 1.05f),
             border = CardDefaults.border(
                 focusedBorder = Border(
                     border = androidx.compose.foundation.BorderStroke(
@@ -124,7 +126,7 @@ fun TvMediaCard(
                             model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
                                 .data(imageUrl)
                                 .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
-                                .size(336, 504)
+                                .size(if (aspectRatio > 1f) 640 else 336, if (aspectRatio > 1f) 360 else 504)
                                 .build(),
                             contentDescription = title,
                             contentScale = ContentScale.Crop,
@@ -187,34 +189,43 @@ fun TvMediaCard(
             }
         }
 
+        val isHorizontal = aspectRatio > 1f
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(14.dp),
-            colors = SurfaceDefaults.colors(containerColor = metaContainerColor),
-            tonalElevation = if (isFocused) 4.dp else 0.dp,
+            colors = SurfaceDefaults.colors(
+                containerColor = if (isHorizontal) Color.Transparent else metaContainerColor
+            ),
+            tonalElevation = if (isFocused && !isHorizontal) 4.dp else 0.dp,
         ) {
+            val hasSubtitle = !subtitle.isNullOrBlank()
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 8.dp)
-                    .defaultMinSize(minHeight = 54.dp),
+                    .padding(horizontal = 4.dp, vertical = if (hasSubtitle) 8.dp else 6.dp)
+                    .defaultMinSize(minHeight = if (hasSubtitle) 54.dp else 44.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalAlignment = if (isHorizontal) Alignment.CenterHorizontally else Alignment.Start,
             ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
                     color = titleColor,
-                    maxLines = 2,
+                    maxLines = if (hasSubtitle) 2 else 1,
                     overflow = TextOverflow.Ellipsis,
+                    textAlign = if (isHorizontal) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                if (!subtitle.isNullOrBlank()) {
+                if (hasSubtitle) {
                     Text(
-                        text = subtitle,
+                        text = subtitle!!,
                         style = MaterialTheme.typography.labelMedium,
                         color = subtitleColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        textAlign = if (isHorizontal) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -231,17 +242,16 @@ private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifie
             WatchStatus.WATCHED -> {
                 Box(
                     modifier = Modifier
-                        .height(28.dp)
+                        .size(28.dp)
                         .background(
                             color = Color(0xFF2E7D32).copy(alpha = 0.95f),
                             shape = RoundedCornerShape(999.dp),
-                        )
-                        .padding(horizontal = 10.dp),
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Watched",
-                        style = MaterialTheme.typography.labelSmall,
+                        text = "✓",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
@@ -276,17 +286,19 @@ private fun UnwatchedCountOverlay(count: Int, modifier: Modifier = Modifier) {
     Box(modifier = modifier.padding(spacing.chipGap.coerceAtLeast(0.dp).div(1.5f))) {
         Box(
             modifier = Modifier
-                .height(28.dp)
+                .size(28.dp)
                 .background(
                     color = expressiveBadgeColor(),
                     shape = RoundedCornerShape(999.dp),
-                )
-                .padding(horizontal = 10.dp),
+                ),
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = if (count > 99) "99+ new" else "$count new",
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                text = if (count > 99) "99+" else "$count",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = if (count > 9) 10.sp else 12.sp
+                ),
                 color = MaterialTheme.colorScheme.onPrimary,
             )
         }

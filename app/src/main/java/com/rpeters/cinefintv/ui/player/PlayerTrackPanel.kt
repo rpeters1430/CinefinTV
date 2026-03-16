@@ -1,21 +1,14 @@
 package com.rpeters.cinefintv.ui.player
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,7 +18,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,8 +29,8 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
@@ -87,285 +79,224 @@ internal fun PlayerTrackPanel(
             onSectionSelected(SettingsSection.ALL)
         }
     }
-    if (isVisible) {
+    if (isVisible && anchorBounds != null) {
+        val popupWidth = 320.dp
+        val popupMaxHeight = 400.dp
+        
         Popup(
-            onDismissRequest = dismissOrReturnToMenu,
+            onDismissRequest = onClose,
             properties = PopupProperties(
                 focusable = true,
                 dismissOnBackPress = true,
                 dismissOnClickOutside = true
+            ),
+            alignment = Alignment.BottomCenter,
+            offset = androidx.compose.ui.unit.IntOffset(
+                x = 0, 
+                y = (-(720 - anchorBounds.top + 16)).toInt() // Adjust based on 720p logical height
             )
         ) {
-            Box(
+            Surface(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.4f))
+                    .width(popupWidth)
+                    .heightIn(max = popupMaxHeight),
+                shape = RoundedCornerShape(24.dp),
+                colors = SurfaceDefaults.colors(
+                    containerColor = expressiveColors.chromeSurface.copy(alpha = 0.98f),
+                ),
+                border = androidx.tv.material3.Border(
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
+                ),
+                tonalElevation = 12.dp,
             ) {
-                AnimatedVisibility(
-                    visible = isVisible,
-                    enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
-                    exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
-                    modifier = Modifier.align(Alignment.CenterEnd)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
                 ) {
-                    Surface(
-                        modifier = Modifier
-                            .width(280.dp)
-                            .fillMaxHeight(),
-                        shape = RoundedCornerShape(topStart = 32.dp, bottomStart = 32.dp),
-                        colors = SurfaceDefaults.colors(
-                            containerColor = expressiveColors.elevatedSurface.copy(alpha = 0.98f),
-                        ),
-                        tonalElevation = 16.dp,
+                    val panelTitle = when (section) {
+                        SettingsSection.AUDIO -> "Audio"
+                        SettingsSection.SUBTITLES -> "Subtitles"
+                        SettingsSection.QUALITY -> "Quality"
+                        SettingsSection.SPEED -> "Speed"
+                        SettingsSection.ALL -> "Playback Options"
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 24.dp, vertical = 24.dp)
-                        ) {
-                            val panelTitle = when (section) {
-                                SettingsSection.AUDIO -> "Audio Tracks"
-                                SettingsSection.SUBTITLES -> "Subtitle Tracks"
-                                SettingsSection.QUALITY -> "Streaming Quality"
-                                SettingsSection.SPEED -> "Playback Speed"
-                                SettingsSection.ALL -> "Playback Options"
-                            }
+                        Text(
+                            text = panelTitle,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                        if (section != SettingsSection.ALL) {
+                            Button(
+                                onClick = { onSectionSelected(SettingsSection.ALL) },
+                                colors = ButtonDefaults.colors(
+                                    containerColor = Color.Transparent,
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                ),
+                                modifier = Modifier.height(32.dp),
+                                scale = ButtonDefaults.scale(focusedScale = 1.1f)
                             ) {
-                                Text(
-                                    text = panelTitle,
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                Text("Back", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+
+                    val listState = rememberLazyListState()
+                    val initialFocusRequester = remember { FocusRequester() }
+
+                    LaunchedEffect(isVisible, section) {
+                        if (isVisible) {
+                            initialFocusRequester.requestFocus()
+                        }
+                    }
+
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (section == SettingsSection.ALL) {
+                            item {
+                                SettingsMenuItem(
+                                    title = "Streaming Quality",
+                                    description = uiState.transcodingQuality.label,
+                                    selectedValue = "",
+                                    modifier = Modifier.focusRequester(initialFocusRequester),
+                                    onClick = {
+                                        onInteract()
+                                        onSectionSelected(SettingsSection.QUALITY)
+                                    },
                                 )
-
-                                Button(
-                                    onClick = dismissOrReturnToMenu,
-                                    colors = ButtonDefaults.colors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                    ),
-                                    modifier = Modifier.size(48.dp),
-                                    shape = ButtonDefaults.shape(CircleShape)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Close",
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
                             }
-
-                            Spacer(Modifier.height(24.dp))
-
-                            val listState = rememberLazyListState()
-                            val initialFocusRequester = remember { FocusRequester() }
-
-                            LaunchedEffect(isVisible, section) {
-                                if (isVisible) {
-                                    initialFocusRequester.requestFocus()
-                                }
+                            item {
+                                SettingsMenuItem(
+                                    title = "Audio Track",
+                                    description = uiState.selectedAudioTrack?.label ?: audioTracks.firstOrNull()?.label ?: "Default",
+                                    selectedValue = "",
+                                    onClick = {
+                                        onInteract()
+                                        onSectionSelected(SettingsSection.AUDIO)
+                                    },
+                                )
                             }
+                            item {
+                                SettingsMenuItem(
+                                    title = "Subtitles",
+                                    description = uiState.selectedSubtitleTrack?.label ?: "Off",
+                                    selectedValue = "",
+                                    onClick = {
+                                        onInteract()
+                                        onSectionSelected(SettingsSection.SUBTITLES)
+                                    },
+                                )
+                            }
+                            item {
+                                SettingsMenuItem(
+                                    title = "Playback Speed",
+                                    description = if (uiState.playbackSpeed == 1.0f) "Normal" else "${uiState.playbackSpeed}x",
+                                    selectedValue = "",
+                                    onClick = {
+                                        onInteract()
+                                        onSectionSelected(SettingsSection.SPEED)
+                                    },
+                                )
+                            }
+                        }
 
-                            Row(
-                                modifier = Modifier.weight(1f),
-                                horizontalArrangement = Arrangement.spacedBy(24.dp)
-                            ) {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    LazyColumn(
-                                        state = listState,
-                                        modifier = Modifier.fillMaxSize(),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        if (section == SettingsSection.ALL) {
-                                            item {
-                                                SettingsMenuItem(
-                                                    title = "Streaming Quality",
-                                                    description = "Cap transcoding quality for compatible streams.",
-                                                    selectedValue = uiState.transcodingQuality.label,
-                                                    modifier = Modifier.focusRequester(initialFocusRequester),
-                                                    onClick = {
-                                                        onInteract()
-                                                        onSectionSelected(SettingsSection.QUALITY)
-                                                    },
-                                                )
-                                            }
-                                            item {
-                                                SettingsMenuItem(
-                                                    title = "Audio Track",
-                                                    description = "Choose the active audio stream for this playback session.",
-                                                    selectedValue = uiState.selectedAudioTrack?.label ?: audioTracks.firstOrNull()?.label ?: "Default",
-                                                    onClick = {
-                                                        onInteract()
-                                                        onSectionSelected(SettingsSection.AUDIO)
-                                                    },
-                                                )
-                                            }
-                                            item {
-                                                SettingsMenuItem(
-                                                    title = "Subtitles",
-                                                    description = "Choose subtitles or turn them off for this playback session.",
-                                                    selectedValue = uiState.selectedSubtitleTrack?.label ?: "Off",
-                                                    onClick = {
-                                                        onInteract()
-                                                        onSectionSelected(SettingsSection.SUBTITLES)
-                                                    },
-                                                )
-                                            }
-                                            item {
-                                                SettingsMenuItem(
-                                                    title = "Playback Speed",
-                                                    description = "Adjust playback speed for the current session.",
-                                                    selectedValue = if (uiState.playbackSpeed == 1.0f) "Normal (1x)" else "${uiState.playbackSpeed}x",
-                                                    onClick = {
-                                                        onInteract()
-                                                        onSectionSelected(SettingsSection.SPEED)
-                                                    },
-                                                )
-                                            }
-                                        }
+                        if (section == SettingsSection.AUDIO) {
+                            items(audioTracks.size) { index ->
+                                val track = audioTracks[index]
+                                TrackButton(
+                                    selected = uiState.selectedAudioTrack?.id == track.id,
+                                    label = track.label,
+                                    modifier = if (index == 0) Modifier.focusRequester(initialFocusRequester) else Modifier,
+                                    onClick = {
+                                        onInteract()
+                                        onAudioTrackSelected(track)
+                                        onClose()
+                                    },
+                                )
+                            }
+                        }
 
-                                        if (section == SettingsSection.AUDIO || section == SettingsSection.ALL) {
-                                            if (section != SettingsSection.ALL) {
-                                                item {
-                                                    SectionHeader("Audio")
-                                                }
-                                            } else if (audioTracks.isNotEmpty()) {
-                                                item {
-                                                    Spacer(Modifier.height(8.dp))
-                                                }
-                                            }
-                                            items(audioTracks.size) { index ->
-                                                val track = audioTracks[index]
-                                                TrackButton(
-                                                    selected = uiState.selectedAudioTrack?.id == track.id,
-                                                    label = track.label,
-                                                    modifier = if (index == 0 && section == SettingsSection.AUDIO)
-                                                        Modifier.focusRequester(initialFocusRequester) else Modifier,
-                                                    onClick = {
-                                                        onInteract()
-                                                        onAudioTrackSelected(track)
-                                                        onClose()
-                                                    },
-                                                )
-                                            }
-                                        }
+                        if (section == SettingsSection.SUBTITLES) {
+                            item {
+                                TrackButton(
+                                    selected = uiState.selectedSubtitleTrack == null,
+                                    label = "None",
+                                    modifier = Modifier.focusRequester(initialFocusRequester),
+                                    onClick = {
+                                        onInteract()
+                                        onSubtitleTrackSelected(null)
+                                        onClose()
+                                    },
+                                )
+                            }
+                            items(subtitleTracks.size) { index ->
+                                val track = subtitleTracks[index]
+                                TrackButton(
+                                    selected = uiState.selectedSubtitleTrack?.id == track.id,
+                                    label = track.label,
+                                    onClick = {
+                                        onInteract()
+                                        onSubtitleTrackSelected(track)
+                                        onClose()
+                                    },
+                                )
+                            }
+                        }
 
-                                        if (section == SettingsSection.SUBTITLES || section == SettingsSection.ALL) {
-                                            if (section != SettingsSection.ALL) {
-                                                item {
-                                                    SectionHeader("Subtitles")
-                                                }
-                                            } else {
-                                                item {
-                                                    Spacer(Modifier.height(8.dp))
-                                                }
-                                            }
-                                            item {
-                                                TrackButton(
-                                                    selected = uiState.selectedSubtitleTrack == null,
-                                                    label = "None",
-                                                    modifier = if (section == SettingsSection.SUBTITLES) 
-                                                        Modifier.focusRequester(initialFocusRequester) else Modifier,
-                                                    onClick = {
-                                                        onInteract()
-                                                        onSubtitleTrackSelected(null)
-                                                        onClose()
-                                                    },
-                                                )
-                                            }
-                                            items(subtitleTracks.size) { index ->
-                                                val track = subtitleTracks[index]
-                                                TrackButton(
-                                                    selected = uiState.selectedSubtitleTrack?.id == track.id,
-                                                    label = track.label,
-                                                    onClick = {
-                                                        onInteract()
-                                                        onSubtitleTrackSelected(track)
-                                                        onClose()
-                                                    },
-                                                )
-                                            }
-                                        }
+                        if (section == SettingsSection.QUALITY) {
+                            items(STREAMING_QUALITIES.size) { index ->
+                                val quality = STREAMING_QUALITIES[index]
+                                TrackButton(
+                                    selected = uiState.transcodingQuality == quality,
+                                    label = quality.label,
+                                    modifier = if (index == 0) Modifier.focusRequester(initialFocusRequester) else Modifier,
+                                    onClick = {
+                                        onInteract()
+                                        onQualitySelected(quality)
+                                        onClose()
+                                    },
+                                )
+                            }
+                        }
 
-                                        if (section == SettingsSection.QUALITY) {
-                                            items(STREAMING_QUALITIES.size) { index ->
-                                                val quality = STREAMING_QUALITIES[index]
-                                                TrackButton(
-                                                    selected = uiState.transcodingQuality == quality,
-                                                    label = quality.label,
-                                                    modifier = if (index == 0) {
-                                                        Modifier.focusRequester(initialFocusRequester)
-                                                    } else {
-                                                        Modifier
-                                                    },
-                                                    onClick = {
-                                                        onInteract()
-                                                        onQualitySelected(quality)
-                                                        onClose()
-                                                    },
-                                                )
-                                            }
-                                        }
+                        if (section == SettingsSection.SPEED) {
+                            items(PLAYBACK_SPEEDS.size) { index ->
+                                val speed = PLAYBACK_SPEEDS[index]
+                                val label = if (speed == 1.0f) "Normal (1x)" else "${speed}x"
+                                TrackButton(
+                                    selected = uiState.playbackSpeed == speed,
+                                    label = label,
+                                    modifier = if (index == 2) Modifier.focusRequester(initialFocusRequester) else Modifier,
+                                    onClick = {
+                                        onInteract()
+                                        onPlaybackSpeedSelected(speed)
+                                        onClose()
+                                    },
+                                )
+                            }
+                        }
 
-                                        if (section == SettingsSection.SPEED || section == SettingsSection.ALL) {
-                                            if (section != SettingsSection.ALL) {
-                                                item {
-                                                    SectionHeader("Playback Speed")
-                                                }
-                                            } else {
-                                                item {
-                                                    Spacer(Modifier.height(8.dp))
-                                                }
-                                            }
-                                            items(PLAYBACK_SPEEDS.size) { index ->
-                                                val speed = PLAYBACK_SPEEDS[index]
-                                                val label = if (speed == 1.0f) "Normal (1x)" else "${speed}x"
-                                                TrackButton(
-                                                    selected = uiState.playbackSpeed == speed,
-                                                    label = label,
-                                                    modifier = if (index == 2 && section == SettingsSection.SPEED) 
-                                                        Modifier.focusRequester(initialFocusRequester) else Modifier,
-                                                    onClick = {
-                                                        onInteract()
-                                                        onPlaybackSpeedSelected(speed)
-                                                        onClose()
-                                                    },
-                                                )
-                                            }
-                                        }
-
-                                        if (section == SettingsSection.ALL && uiState.isEpisodicContent) {
-                                            item {
-                                                Spacer(Modifier.height(8.dp))
-                                                SectionHeader("Playback")
-                                            }
-                                            item {
-                                                PlaybackSwitch(
-                                                    title = "Auto-play next episode",
-                                                    subtitle = "Start the next episode automatically near the end.",
-                                                    checked = uiState.autoPlayNextEpisode,
-                                                    onCheckedChange = {
-                                                        onInteract()
-                                                        onAutoPlayChange(it)
-                                                    }
-                                                )
-                                            }
-                                        }
-                                        
-                                        // Padding at bottom for expressive feel
-                                        item { Spacer(Modifier.height(16.dp)) }
+                        if (section == SettingsSection.ALL && uiState.isEpisodicContent) {
+                            item {
+                                PlaybackSwitch(
+                                    title = "Auto-play next",
+                                    subtitle = "Start next episode automatically",
+                                    checked = uiState.autoPlayNextEpisode,
+                                    onCheckedChange = {
+                                        onInteract()
+                                        onAutoPlayChange(it)
                                     }
-                                }
-
-                                // Expressive Vertical Scrollbar
-                                ExpressiveVerticalScrollbar(
-                                    listState = listState,
-                                    modifier = Modifier
-                                        .width(6.dp)
-                                        .fillMaxHeight()
                                 )
                             }
                         }

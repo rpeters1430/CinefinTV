@@ -1,20 +1,16 @@
 package com.rpeters.cinefintv.ui.screens.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -45,8 +41,6 @@ import androidx.tv.material3.Carousel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
-import androidx.tv.material3.Surface
-import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.tv.material3.rememberCarouselState
 import coil3.compose.AsyncImage
@@ -140,7 +134,7 @@ fun HomeScreen(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = spacing.rowGap),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp),
                     verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
                 ) {
                     item {
@@ -367,7 +361,7 @@ private fun HomeSection(
             horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
             contentPadding = PaddingValues(
                 start = spacing.gutter + 24.dp,
-                end = spacing.gutter + 24.dp,
+                end = spacing.gutter + 64.dp,
             ),
         ) {
             itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
@@ -379,6 +373,8 @@ private fun HomeSection(
                     watchStatus = item.watchStatus,
                     unwatchedCount = item.unwatchedCount,
                     playbackProgress = item.playbackProgress,
+                    aspectRatio = 16f / 9f,
+                    cardWidth = 260.dp,
                     modifier = if (index == 0) {
                         Modifier.focusRequester(firstItemFocusRequester)
                     } else {

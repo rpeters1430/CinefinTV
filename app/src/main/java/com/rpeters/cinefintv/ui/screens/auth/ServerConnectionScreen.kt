@@ -13,6 +13,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -32,13 +34,11 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.tv.material3.WideButton
-import com.rpeters.cinefintv.ui.components.RequestScreenFocus
 import com.rpeters.cinefintv.ui.components.CinefinTextInputField
+import com.rpeters.cinefintv.ui.components.RequestScreenFocus
 import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
 import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Dns
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)

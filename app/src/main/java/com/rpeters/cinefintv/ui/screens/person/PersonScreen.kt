@@ -1,10 +1,9 @@
 package com.rpeters.cinefintv.ui.screens.person
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -23,7 +21,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,7 +42,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
-import kotlinx.coroutines.launch
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
@@ -57,10 +53,11 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.RequestScreenFocus
+import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.TvScreenFocusState
 import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
-import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable

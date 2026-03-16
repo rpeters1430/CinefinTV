@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme as ComposeMaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
@@ -58,8 +56,8 @@ import com.rpeters.cinefintv.update.UpdateInfo
 import com.rpeters.cinefintv.update.UpdateInstallResult
 import com.rpeters.cinefintv.update.UpdateManager
 import com.rpeters.cinefintv.update.UpdateStatus
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.material3.MaterialTheme as ComposeMaterialTheme
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @UnstableApi

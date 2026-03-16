@@ -10,7 +10,6 @@ import com.rpeters.cinefintv.data.repository.common.ErrorType
 import com.rpeters.cinefintv.data.repository.common.LibraryHealthChecker
 import com.rpeters.cinefintv.utils.SecureLogger
 import kotlinx.coroutines.CancellationException
-import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.model.api.BaseItemDto

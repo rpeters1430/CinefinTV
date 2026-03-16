@@ -4,9 +4,9 @@ import android.content.Context
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.security.keystore.UserNotAuthenticatedException
 import android.util.Base64
 import android.util.Log
-import android.security.keystore.UserNotAuthenticatedException
 import androidx.annotation.VisibleForTesting
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory

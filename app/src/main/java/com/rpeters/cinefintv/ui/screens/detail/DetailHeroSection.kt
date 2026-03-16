@@ -8,8 +8,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Speaker
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,16 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.HighQuality
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Speaker
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Timer
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.WatchStatus
-import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalLayoutApi::class)

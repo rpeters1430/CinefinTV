@@ -26,6 +26,8 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.player.PlayerScreen
+import com.rpeters.cinefintv.ui.player.audio.AudioPlayerScreen
 import com.rpeters.cinefintv.ui.screens.auth.AuthViewModel
 import com.rpeters.cinefintv.ui.screens.auth.LoginScreen
 import com.rpeters.cinefintv.ui.screens.auth.ServerConnectionScreen
@@ -35,12 +37,10 @@ import com.rpeters.cinefintv.ui.screens.library.LibraryCategory
 import com.rpeters.cinefintv.ui.screens.library.LibraryScreen
 import com.rpeters.cinefintv.ui.screens.music.MusicScreen
 import com.rpeters.cinefintv.ui.screens.person.PersonScreen
-import com.rpeters.cinefintv.ui.screens.stuff.StuffDetailScreen
-import com.rpeters.cinefintv.ui.screens.stuff.StuffLibraryScreen
 import com.rpeters.cinefintv.ui.screens.search.SearchScreen
 import com.rpeters.cinefintv.ui.screens.settings.SettingsScreen
-import com.rpeters.cinefintv.ui.player.PlayerScreen
-import com.rpeters.cinefintv.ui.player.audio.AudioPlayerScreen
+import com.rpeters.cinefintv.ui.screens.stuff.StuffDetailScreen
+import com.rpeters.cinefintv.ui.screens.stuff.StuffLibraryScreen
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @UnstableApi

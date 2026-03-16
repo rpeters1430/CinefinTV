@@ -4,12 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
+import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getEpisodeCardDetailLine
 import com.rpeters.cinefintv.utils.getFormattedDuration
-import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
 import com.rpeters.cinefintv.utils.getSeriesCardDetailLine
+import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
 import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.isEpisode
@@ -21,13 +22,10 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import javax.inject.Inject
-
-import com.rpeters.cinefintv.ui.components.WatchStatus
 
 data class HomeCardModel(
     val id: String,
@@ -209,9 +207,11 @@ class HomeViewModel @Inject constructor(
                     "${pct.toInt()}% watched"
                 }
             }
-            item.isEpisode() -> item.getEpisodeCardDetailLine()
-                ?: item.getYear()?.toString()
-                ?: item.type.toString().replace('_', ' ')
+            item.isEpisode() -> {
+                val series = item.seriesName?.takeIf { it.isNotBlank() }
+                val code = item.getEpisodeCode()?.replace(" · ", " ") // S1 E2
+                listOfNotNull(series, code).joinToString("  ·  ").ifBlank { null }
+            }
             item.isSeries() -> item.getSeriesCardDetailLine()
                 ?: item.getYear()?.toString()
                 ?: item.type.toString().replace('_', ' ')
@@ -226,7 +226,7 @@ class HomeViewModel @Inject constructor(
             id = id,
             title = item.getDisplayTitle(),
             subtitle = subtitle,
-            imageUrl = repositories.stream.getPosterCardImageUrl(item),
+            imageUrl = repositories.stream.getLandscapeImageUrl(item),
             backdropUrl = repositories.stream.getBackdropUrl(item),
             description = item.overview?.take(140),
             year = item.getYear(),
