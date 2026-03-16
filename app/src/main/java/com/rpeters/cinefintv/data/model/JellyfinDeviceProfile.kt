@@ -465,7 +465,7 @@ fun DeviceProfile.toUrlParameters(): Map<String, String> {
         .distinct()
         .joinToString(",")
 
-    if (!videoCodecs.isNullOrBlank()) {
+    if (videoCodecs.isNotBlank()) {
         params["VideoCodec"] = videoCodecs
     }
 

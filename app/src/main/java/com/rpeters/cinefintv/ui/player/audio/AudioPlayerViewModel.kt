@@ -66,14 +66,14 @@ class AudioPlayerViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val itemId: String = savedStateHandle.get<String>("itemId").orEmpty()
-    private val encodedQueue: String = savedStateHandle.get<String>("queue").orEmpty()
+    private val encodedQueue: String? = savedStateHandle.get<String>("queue")
 
     private val _uiState = MutableStateFlow(AudioPlayerUiState())
     val uiState: StateFlow<AudioPlayerUiState> = _uiState
 
     private val queueIds: List<String> by lazy {
         val parsed = encodedQueue
-            .takeIf { it.isNotBlank() }
+            ?.takeIf { it.isNotBlank() }
             ?.split(",")
             ?.mapNotNull { encodedId ->
                 URLDecoder.decode(encodedId, Charsets.UTF_8.name())

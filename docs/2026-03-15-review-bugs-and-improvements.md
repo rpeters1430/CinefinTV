@@ -22,7 +22,7 @@
 ---
 
 ## Implementation Status
-**Status as of 2026-03-15**
+**Status as of 2026-03-16**
 
 ### Fixed in code
 `D-1`, `D-2`, `D-3`, `D-4`, `D-5`, `D-6`, `D-7`, `D-8`, `D-9`, `D-10`, `D-11`, `D-13`
@@ -38,15 +38,16 @@
 
 `U-8` fixed: [`TvMediaCard.kt`](../app/src/main/java/com/rpeters/cinefintv/ui/components/TvMediaCard.kt) now enforces an 18sp minimum for title and subtitle text.
 
+### Fixed in code during follow-up pass (2026-03-16)
+`U-2`, `N-5`, `D-12`, `D-14`
+
 ### Partially mitigated / still needs investigation
 `P-16`: playback smoothness improved through transcode/profile/polling fixes, but the issue is not fully closed because smoothness still depends on device decoder behavior, display refresh handling, and Jellyfin server playback decisions for specific files.
 
 ### Still open
-`D-12`, `D-14`
+`U-4`, `U-14`, `U-15`
 
-`U-2`, `U-4`, `U-14`, `U-15`
-
-`N-2`, `N-3`, `N-4`, `N-5`
+`N-2`, `N-3`, `N-4`
 
 `A-1`, `A-2`, `A-3`, `A-4`, `A-6`
 
@@ -56,11 +57,11 @@
 
 Focus next on open items that are either user-visible correctness bugs or low-effort/high-impact quality fixes.
 
-### 1) Fix now (small scope, immediate user benefit)
-1. **`U-2`** — stabilize Home focus/scroll side effects (`LaunchedEffect(state)` is too broad).
-2. **`N-5`** — fix audio queue nav arg default from `""` to `null` to prevent malformed queue parsing.
-3. **`D-12`** — replace dead `isNullOrBlank()` check with `isBlank()` on non-nullable codec string.
-4. **`D-14`** — remove redundant `communityRating as? Number` cast and simplify rating formatting.
+### 1) Recently fixed (2026-03-16)
+1. ✅ **`U-2`** — Home focus/scroll side effects stabilized by narrowing side-effect keys and gating initial request.
+2. ✅ **`N-5`** — audio queue nav handling corrected (`queue` default `null`, empty queues no longer force malformed query usage).
+3. ✅ **`D-12`** — dead non-nullable `isNullOrBlank()` check replaced with non-null-safe check.
+4. ✅ **`D-14`** — redundant `communityRating as? Number` cast removed and rating formatting simplified.
 
 ### 2) Fix next (moderate scope, UX consistency)
 5. **`U-15`** — align `UpdateDialog` progress color with TV Material theme.
