@@ -46,9 +46,11 @@ object DataStoreModule {
     @OfflineProgressDataStore
     fun provideOfflineProgressDataStore(
         @ApplicationContext context: Context,
+        @ApplicationScope scope: kotlinx.coroutines.CoroutineScope,
     ): DataStore<Preferences> {
         return PreferenceDataStoreFactory.create(
             corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+            scope = scope,
             produceFile = { context.preferencesDataStoreFile("offline_progress_updates") },
         )
     }
