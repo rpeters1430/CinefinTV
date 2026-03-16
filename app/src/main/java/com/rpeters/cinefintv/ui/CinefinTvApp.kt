@@ -160,9 +160,18 @@ fun CinefinTvApp(
 
         fun navigateToTab(route: String) {
             if (currentRoute != route) {
+                // Prefer popping up to the authenticated HOME destination to preserve tab state
+                val homeDestinationId = navController.graph.findNode(NavRoutes.HOME)?.id
                 navController.navigate(route) {
-                    popUpTo(navController.graph.findStartDestination().id) {
-                        saveState = true
+                    if (homeDestinationId != null) {
+                        popUpTo(homeDestinationId) {
+                            saveState = true
+                        }
+                    } else {
+                        // Fallback to the NavHost's start destination if HOME cannot be resolved
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
                     }
                     launchSingleTop = true
                     restoreState = true
