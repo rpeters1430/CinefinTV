@@ -42,7 +42,7 @@
 `U-2`, `N-5`, `D-12`, `D-14`
 
 ### Fixed in code during navigation/settings polish pass (2026-03-16)
-`U-14`, `U-15`, `N-2`, `N-4`
+`U-14`, `U-15`, `N-2`, `N-3`, `N-4`
 
 ### Fixed in code during architecture follow-up pass (2026-03-16)
 `U-4`, `A-1`, `A-2`, `A-6`
@@ -51,8 +51,6 @@
 `P-16`: playback smoothness improved through transcode/profile/polling fixes, but the issue is not fully closed because smoothness still depends on device decoder behavior, display refresh handling, and Jellyfin server playback decisions for specific files.
 
 ### Still open
-`N-3`
-
 `A-3`, `A-4`
 
 ---
@@ -72,6 +70,7 @@ Focus next on open items that are either user-visible correctness bugs or low-ef
 6. ✅ **`N-2`** — player follow-up navigation now pops via destination ID instead of route-template string matching.
 7. ✅ **`N-4`** — tab navigation now pops to graph start destination ID while preserving/restoring state.
 8. ✅ **`U-14`** — non-TV settings options were removed from the TV settings UI.
+9. ✅ **`N-3`** — person detail route now keeps top tab navigation visible while other detail routes still hide it.
 
 ### 3) Plan separately (larger architectural work)
 9. **`A-*` cluster** — architecture and refactor items should be batched into a dedicated pass.
@@ -519,12 +518,12 @@ Some screens show "Loading Home..." plain text; the player shows `CircularProgre
 
 ---
 
-### N-3: Person detail hides nav bar (probably intentional)
+### N-3: Person detail hides nav bar
 **File:** `ui/CinefinTvApp.kt:142`
 
 `showNav` is false for all routes starting with `"detail/"`, including `detail/person/{personId}`. Users can't jump to another section from a person screen without pressing Back multiple times.
 
-**No change required if intentional.** If nav access is desired on person screens, add `"detail/person/"` as a separate route exclusion from the detail group.
+**Fixed (2026-03-16):** Person detail (`detail/person/{personId}`) is now excluded from the generic detail nav-hide rule so top navigation remains visible on person screens.
 
 ---
 
