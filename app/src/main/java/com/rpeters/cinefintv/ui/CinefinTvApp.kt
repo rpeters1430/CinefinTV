@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.findStartDestination
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
@@ -57,7 +58,6 @@ import com.rpeters.cinefintv.update.UpdateInstallResult
 import com.rpeters.cinefintv.update.UpdateManager
 import com.rpeters.cinefintv.update.UpdateStatus
 import kotlinx.coroutines.launch
-import androidx.compose.material3.MaterialTheme as ComposeMaterialTheme
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @UnstableApi
@@ -161,7 +161,7 @@ fun CinefinTvApp(
         fun navigateToTab(route: String) {
             if (currentRoute != route) {
                 navController.navigate(route) {
-                    popUpTo(NavRoutes.HOME) {
+                    popUpTo(navController.graph.findStartDestination().id) {
                         saveState = true
                     }
                     launchSingleTop = true
@@ -356,8 +356,8 @@ private fun UpdateDialog(
                     LinearProgressIndicator(
                         progress = { progress },
                         modifier = Modifier.fillMaxWidth(),
-                        color = ComposeMaterialTheme.colorScheme.primary,
-                        trackColor = ComposeMaterialTheme.colorScheme.surfaceContainerHigh
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                     Text(
                         text = "Downloading... ${(progress * 100).toInt()}%",

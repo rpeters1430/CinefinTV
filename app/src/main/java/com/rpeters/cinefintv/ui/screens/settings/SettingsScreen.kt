@@ -32,13 +32,10 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
-import com.rpeters.cinefintv.data.preferences.AccentColor
 import com.rpeters.cinefintv.data.preferences.AudioChannelPreference
-import com.rpeters.cinefintv.data.preferences.ContrastLevel
 import com.rpeters.cinefintv.data.preferences.ResumePlaybackMode
 import com.rpeters.cinefintv.data.preferences.SubtitleBackground
 import com.rpeters.cinefintv.data.preferences.SubtitleTextSize
-import com.rpeters.cinefintv.data.preferences.ThemeMode
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.ui.components.CinefinOptionDialog
 import com.rpeters.cinefintv.ui.components.CinefinSettingListItem
@@ -51,9 +48,6 @@ import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
 private enum class SettingsChoiceDialog {
-    THEME_MODE,
-    ACCENT_COLOR,
-    CONTRAST,
     RESUME_PLAYBACK,
     STREAMING_QUALITY,
     AUDIO_CHANNELS,
@@ -83,43 +77,6 @@ fun SettingsScreen(
     )
 
     when (activeDialog) {
-        SettingsChoiceDialog.THEME_MODE -> CinefinOptionDialog(
-            title = "Theme mode",
-            supportingText = "Choose the overall app theme behavior.",
-            options = ThemeMode.entries,
-            selected = uiState.appearance.themeMode,
-            labelFor = {
-                when (it) {
-                    ThemeMode.SYSTEM -> "System"
-                    ThemeMode.LIGHT -> "Light"
-                    ThemeMode.DARK -> "Dark"
-                    ThemeMode.AMOLED_BLACK -> "AMOLED Black"
-                }
-            },
-            onDismissRequest = { activeDialog = null },
-            onOptionSelected = viewModel::setThemeMode,
-        )
-
-        SettingsChoiceDialog.ACCENT_COLOR -> CinefinOptionDialog(
-            title = "Accent color",
-            supportingText = "Pick a fallback accent when dynamic colors are off.",
-            options = AccentColor.entries,
-            selected = uiState.appearance.accentColor,
-            labelFor = { it.name.replace('_', ' ') },
-            onDismissRequest = { activeDialog = null },
-            onOptionSelected = viewModel::setAccentColor,
-        )
-
-        SettingsChoiceDialog.CONTRAST -> CinefinOptionDialog(
-            title = "Contrast",
-            supportingText = "Increase contrast for stronger readability and focus states.",
-            options = ContrastLevel.entries,
-            selected = uiState.appearance.contrastLevel,
-            labelFor = { it.name.lowercase().replaceFirstChar(Char::uppercase) },
-            onDismissRequest = { activeDialog = null },
-            onOptionSelected = viewModel::setContrastLevel,
-        )
-
         SettingsChoiceDialog.RESUME_PLAYBACK -> CinefinOptionDialog(
             title = "Resume playback",
             supportingText = "Choose how playback resumes when an item has saved progress.",
@@ -244,58 +201,15 @@ fun SettingsScreen(
             } else {
                 item {
                     SettingsSection(title = "Appearance") {
-                        SettingsChoiceListItem(
-                            title = "Theme mode",
-                            description = "Choose the overall app theme behavior.",
-                            selectedLabel = when (uiState.appearance.themeMode) {
-                                ThemeMode.SYSTEM -> "System"
-                                ThemeMode.LIGHT -> "Light"
-                                ThemeMode.DARK -> "Dark"
-                                ThemeMode.AMOLED_BLACK -> "AMOLED Black"
-                            },
-                            onClick = { activeDialog = SettingsChoiceDialog.THEME_MODE },
+                        SettingsToggleListItem(
+                            title = "Reduce motion",
+                            description = "Respect reduced-motion preferences where possible.",
+                            checked = uiState.appearance.respectReduceMotion,
                             modifier = Modifier
                                 .focusRequester(screenFocus.primaryContentRequester)
                                 .focusProperties {
                                     up = screenFocus.topAnchorRequester
                                 },
-                        )
-                        SettingsToggleListItem(
-                            title = "Dynamic colors",
-                            description = "Use wallpaper-derived Material colors when supported.",
-                            checked = uiState.appearance.useDynamicColors,
-                            onCheckedChange = viewModel::setUseDynamicColors,
-                        )
-                        SettingsChoiceListItem(
-                            title = "Accent color",
-                            description = "Pick a fallback accent when dynamic colors are off.",
-                            selectedLabel = uiState.appearance.accentColor.name.replace('_', ' '),
-                            onClick = { activeDialog = SettingsChoiceDialog.ACCENT_COLOR },
-                        )
-                        SettingsChoiceListItem(
-                            title = "Contrast",
-                            description = "Increase contrast for stronger readability and focus states.",
-                            selectedLabel = uiState.appearance.contrastLevel.name
-                                .lowercase()
-                                .replaceFirstChar(Char::uppercase),
-                            onClick = { activeDialog = SettingsChoiceDialog.CONTRAST },
-                        )
-                        SettingsToggleListItem(
-                            title = "Themed app icon",
-                            description = "Use a wallpaper-adaptive icon when the launcher supports it.",
-                            checked = uiState.appearance.useThemedIcon,
-                            onCheckedChange = viewModel::setUseThemedIcon,
-                        )
-                        SettingsToggleListItem(
-                            title = "Edge-to-edge layout",
-                            description = "Allow content and system surfaces to blend more tightly.",
-                            checked = uiState.appearance.enableEdgeToEdge,
-                            onCheckedChange = viewModel::setEnableEdgeToEdge,
-                        )
-                        SettingsToggleListItem(
-                            title = "Reduce motion",
-                            description = "Respect reduced-motion preferences where possible.",
-                            checked = uiState.appearance.respectReduceMotion,
                             onCheckedChange = viewModel::setRespectReduceMotion,
                         )
                     }

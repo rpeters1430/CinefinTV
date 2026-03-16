@@ -41,13 +41,16 @@
 ### Fixed in code during follow-up pass (2026-03-16)
 `U-2`, `N-5`, `D-12`, `D-14`
 
+### Fixed in code during navigation/settings polish pass (2026-03-16)
+`U-14`, `U-15`, `N-2`, `N-4`
+
 ### Partially mitigated / still needs investigation
 `P-16`: playback smoothness improved through transcode/profile/polling fixes, but the issue is not fully closed because smoothness still depends on device decoder behavior, display refresh handling, and Jellyfin server playback decisions for specific files.
 
 ### Still open
-`U-4`, `U-14`, `U-15`
+`U-4`
 
-`N-2`, `N-3`, `N-4`
+`N-3`
 
 `A-1`, `A-2`, `A-3`, `A-4`, `A-6`
 
@@ -63,11 +66,11 @@ Focus next on open items that are either user-visible correctness bugs or low-ef
 3. ✅ **`D-12`** — dead non-nullable `isNullOrBlank()` check replaced with explicit `value != null && value.isNotBlank()` check.
 4. ✅ **`D-14`** — redundant `communityRating as? Number` cast removed and rating formatting simplified.
 
-### 2) Fix next (moderate scope, UX consistency)
-5. **`U-15`** — align `UpdateDialog` progress color with TV Material theme.
-6. **`N-2`** — make player `popUpTo` handling explicit and less route-template fragile.
-7. **`N-4`** — preserve tab/library scroll state via graph start-destination `popUpTo` + `restoreState`.
-8. **`U-14`** — hide non-TV settings options that do nothing on Android TV.
+### 2) Completed in navigation/settings polish pass (2026-03-16)
+5. ✅ **`U-15`** — `UpdateDialog` progress indicator now uses TV Material colors.
+6. ✅ **`N-2`** — player follow-up navigation now pops via destination ID instead of route-template string matching.
+7. ✅ **`N-4`** — tab navigation now pops to graph start destination ID while preserving/restoring state.
+8. ✅ **`U-14`** — non-TV settings options were removed from the TV settings UI.
 
 ### 3) Plan separately (larger architectural work)
 9. **`A-*` cluster** — architecture and refactor items should be batched into a dedicated pass.

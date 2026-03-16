@@ -22,6 +22,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.findNode
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -264,8 +265,12 @@ fun CinefinTvNavGraph(
                     navController.popBackStack()
                 },
                 onOpenItem = { nextItemId ->
+                    val playerDestinationId = navController.graph.findNode(NavRoutes.PLAYER)?.id
                     navController.navigate(NavRoutes.player(nextItemId)) {
-                        popUpTo(NavRoutes.PLAYER) { inclusive = true }
+                        if (playerDestinationId != null) {
+                            popUpTo(playerDestinationId) { inclusive = true }
+                        }
+                        launchSingleTop = true
                     }
                 },
             )
