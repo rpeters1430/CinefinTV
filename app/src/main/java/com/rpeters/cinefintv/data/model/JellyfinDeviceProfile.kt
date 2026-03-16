@@ -27,7 +27,7 @@ object JellyfinDeviceProfile {
     /**
      * Creates a dynamic Android device profile based on detected hardware capabilities.
      */
-    fun createAndroidDeviceProfile(capabilities: DirectPlayCapabilities): DeviceProfile {
+    fun createDeviceProfileFromCapabilities(capabilities: DirectPlayCapabilities): DeviceProfile {
         val maxWidth = capabilities.maxResolution.first
         val maxHeight = capabilities.maxResolution.second
         val maxVideoBitrate = capabilities.maxBitrate
@@ -375,7 +375,7 @@ object JellyfinDeviceProfile {
         )
     }
 
-    fun createAndroidDeviceProfile(maxWidth: Int = 1920, maxHeight: Int = 1080): DeviceProfile {
+    fun createDeviceProfileWithResolution(maxWidth: Int = 1920, maxHeight: Int = 1080): DeviceProfile {
         Log.d("JellyfinDeviceProfile", "Creating static device profile with maxWidth=$maxWidth, maxHeight=$maxHeight")
 
         val permissiveAudioCodecs = "aac,mp3,ac3,eac3,flac,vorbis,opus,pcm,alac"

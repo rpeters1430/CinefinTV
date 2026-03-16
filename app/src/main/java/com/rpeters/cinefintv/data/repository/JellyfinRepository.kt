@@ -1068,7 +1068,7 @@ class JellyfinRepository @Inject constructor(
         // Get device capabilities to create proper device profile
         val capabilities = deviceCapabilities.getDirectPlayCapabilities()
         Log.d("JellyfinRepository", "Device capabilities: maxResolution=${capabilities.maxResolution}, supports4K=${capabilities.supports4K}")
-        val deviceProfile = JellyfinDeviceProfile.createAndroidDeviceProfile(capabilities)
+        val deviceProfile = JellyfinDeviceProfile.createDeviceProfileFromCapabilities(capabilities)
         Log.d("JellyfinRepository", "DeviceProfile created with codecProfiles: ${deviceProfile.codecProfiles.size}")
 
         // Log the actual codec profiles being sent

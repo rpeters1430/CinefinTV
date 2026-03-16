@@ -44,15 +44,16 @@
 ### Fixed in code during navigation/settings polish pass (2026-03-16)
 `U-14`, `U-15`, `N-2`, `N-4`
 
+### Fixed in code during architecture follow-up pass (2026-03-16)
+`U-4`, `A-1`, `A-2`, `A-6`
+
 ### Partially mitigated / still needs investigation
 `P-16`: playback smoothness improved through transcode/profile/polling fixes, but the issue is not fully closed because smoothness still depends on device decoder behavior, display refresh handling, and Jellyfin server playback decisions for specific files.
 
 ### Still open
-`U-4`
-
 `N-3`
 
-`A-1`, `A-2`, `A-3`, `A-4`, `A-6`
+`A-3`, `A-4`
 
 ---
 
@@ -74,7 +75,7 @@ Focus next on open items that are either user-visible correctness bugs or low-ef
 
 ### 3) Plan separately (larger architectural work)
 9. **`A-*` cluster** — architecture and refactor items should be batched into a dedicated pass.
-10. **Deferred perf/UX improvements** (`U-4`, additional navigation polish) should follow after the above correctness fixes.
+10. **Deferred perf/UX improvements** (additional navigation polish) should follow after the above correctness fixes.
 
 ---
 

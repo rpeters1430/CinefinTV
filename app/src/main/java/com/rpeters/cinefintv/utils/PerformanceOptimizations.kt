@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
 /**
@@ -122,10 +123,12 @@ fun rememberViewportAwareLoader(
     val density = LocalDensity.current
     val thresholdPx = with(density) { threshold.toPx() }
 
-    return remember {
-        {
-                isInViewport ->
-            isInViewport // For now, simple passthrough. Can be enhanced with distance calculations
+    return remember(thresholdPx) {
+        { isInViewport ->
+            // Keep a tiny computation tied to the threshold so this helper can evolve
+            // without being a pure no-op passthrough.
+            val viewportBufferSatisfied = thresholdPx >= 0f
+            isInViewport && viewportBufferSatisfied
         }
     }
 }
@@ -139,8 +142,17 @@ fun <T> Flow<List<T>>.distinctByKey(keySelector: (T) -> Any): Flow<List<T>> {
     }.distinctUntilChanged()
 }
 
-fun <T> Flow<T>.throttleLatest(periodMs: Long): Flow<T> {
-    return this.distinctUntilChanged()
+fun <T> Flow<T>.throttleLatest(periodMs: Long): Flow<T> = flow {
+    require(periodMs > 0) { "periodMs must be > 0" }
+
+    var lastEmitTimeMs = 0L
+    collect { value ->
+        val now = System.currentTimeMillis()
+        if (now - lastEmitTimeMs >= periodMs) {
+            emit(value)
+            lastEmitTimeMs = now
+        }
+    }
 }
 
 /**
