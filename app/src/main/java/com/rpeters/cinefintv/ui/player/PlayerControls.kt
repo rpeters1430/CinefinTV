@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -562,9 +563,10 @@ private fun TrickplayPreview(
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             content = {
-                val state = painter.state
-                if (state is AsyncImagePainter.State.Success) {
-                    val bitmap = remember(state) { state.result.image.toBitmap().asImageBitmap() }
+                val state by painter.state.collectAsState()
+                val successState = state as? AsyncImagePainter.State.Success
+                if (successState != null) {
+                    val bitmap = remember(successState) { successState.result.image.toBitmap().asImageBitmap() }
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         val srcOffset = IntOffset(col * frameWidth, row * frameHeight)
                         val srcSize = IntSize(frameWidth, frameHeight)

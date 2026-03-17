@@ -41,7 +41,7 @@ data class QueuedProgressUpdate(
 
 @Singleton
 class OfflineProgressRepository @Inject constructor(
-    @OfflineProgressDataStore private val dataStore: DataStore<Preferences>,
+    @param:OfflineProgressDataStore private val dataStore: DataStore<Preferences>,
 ) {
     companion object {
         private const val MAX_QUEUED_UPDATES = 200

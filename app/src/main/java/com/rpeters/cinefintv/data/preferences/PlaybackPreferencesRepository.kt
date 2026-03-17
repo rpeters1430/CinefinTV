@@ -66,7 +66,7 @@ data class PlaybackPreferences(
  */
 @Singleton
 class PlaybackPreferencesRepository @Inject constructor(
-    @PlaybackPreferencesDataStore private val dataStore: DataStore<Preferences>,
+    @param:PlaybackPreferencesDataStore private val dataStore: DataStore<Preferences>,
 ) {
 
     val preferences: Flow<PlaybackPreferences> = dataStore.data

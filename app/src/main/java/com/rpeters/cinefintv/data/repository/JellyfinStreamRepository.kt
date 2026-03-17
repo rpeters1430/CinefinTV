@@ -12,6 +12,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import org.jellyfin.sdk.api.client.extensions.mediaInfoApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -31,7 +32,7 @@ import okhttp3.OkHttpClient
  */
 @Singleton
 class JellyfinStreamRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val authRepository: JellyfinAuthRepository,
     private val deviceCapabilities: DeviceCapabilities,
     private val okHttpClient: OkHttpClient,
@@ -53,6 +54,8 @@ class JellyfinStreamRepository @Inject constructor(
         private const val DEFAULT_VIDEO_CODEC = "h264"
         private const val DEFAULT_AUDIO_CODEC = "aac"
         private const val DEFAULT_CONTAINER = "mp4"
+
+        private val trickplayJson = Json { ignoreUnknownKeys = true }
     }
 
     /**
@@ -259,10 +262,8 @@ class JellyfinStreamRepository @Inject constructor(
                 
             okHttpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return null
-                val body = response.body?.string() ?: return null
-                kotlinx.serialization.json.Json { 
-                    ignoreUnknownKeys = true 
-                }.decodeFromString<TrickplayManifest>(body)
+                val body = response.body.string()
+                trickplayJson.decodeFromString<TrickplayManifest>(body)
             }
         } catch (e: Exception) {
             Log.w("JellyfinStreamRepository", "Failed to fetch trickplay manifest for $itemId", e)
