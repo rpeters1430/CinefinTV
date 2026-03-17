@@ -22,6 +22,9 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.rpeters.cinefintv.ui.player.TrickplayManifest
+import okhttp3.OkHttpClient
+
 /**
  * Repository component responsible for streaming URLs, image URLs, and media playback.
  * Extracted from JellyfinRepository to improve code organization and maintainability.
@@ -31,6 +34,7 @@ class JellyfinStreamRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val authRepository: JellyfinAuthRepository,
     private val deviceCapabilities: DeviceCapabilities,
+    private val okHttpClient: OkHttpClient,
 ) {
     companion object {
         // Stream quality constants
@@ -238,6 +242,50 @@ class JellyfinStreamRepository @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         }
+    }
+
+    /**
+     * Get Trickplay manifest for smooth seeking thumbnails
+     */
+    suspend fun getTrickplayManifest(itemId: String, width: Int = 320): TrickplayManifest? {
+        return try {
+            val server = authRepository.getCurrentServer() ?: return null
+            val url = "${server.url}/Videos/$itemId/Trickplay/$width/manifest.json"
+            
+            val request = okhttp3.Request.Builder()
+                .url(url)
+                .header("X-Emby-Token", server.accessToken ?: "")
+                .build()
+                
+            okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return null
+                val body = response.body?.string() ?: return null
+                kotlinx.serialization.json.Json { 
+                    ignoreUnknownKeys = true 
+                }.decodeFromString<TrickplayManifest>(body)
+            }
+        } catch (e: Exception) {
+            Log.w("JellyfinStreamRepository", "Failed to fetch trickplay manifest for $itemId", e)
+            null
+        }
+    }
+
+    /**
+     * Get base URL for Trickplay images
+     */
+    fun getTrickplayBaseUrl(itemId: String, width: Int = 320): String? {
+        val server = authRepository.getCurrentServer() ?: return null
+        return "${server.url}/Videos/$itemId/Trickplay/$width/"
+    }
+
+    /**
+     * Get image URL for a specific chapter
+     */
+    fun getChapterImageUrl(itemId: String, chapterIndex: Int): String? {
+        val server = authRepository.getCurrentServer() ?: return null
+        if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) return null
+        
+        return "${server.url}/Items/$itemId/Images/Chapter/$chapterIndex"
     }
 
     /**

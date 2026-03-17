@@ -48,6 +48,7 @@ import kotlin.math.pow
 class PlayerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repositories: JellyfinRepositoryCoordinator,
+    private val jellyfinRepository: JellyfinRepository,
     private val enhancedPlaybackManager: EnhancedPlaybackManager,
     private val adaptiveBitrateMonitor: AdaptiveBitrateMonitor,
     private val playbackPreferencesRepository: PlaybackPreferencesRepository,
@@ -56,6 +57,7 @@ class PlayerViewModel @Inject constructor(
 ) : ViewModel() {
     private val playbackSessionId: String = UUID.randomUUID().toString()
     val itemId: String = savedStateHandle.get<String>("itemId").orEmpty()
+    private val requestedStartPositionMs: Long = savedStateHandle.get<Long>("start") ?: -1L
     
     private val _uiState = MutableStateFlow(
         PlayerUiState(
@@ -144,20 +146,22 @@ class PlayerViewModel @Inject constructor(
 
         val potentialResumePositionMs = maxOf(localPlaybackPositionMs, serverPlaybackPositionMs)
 
-        val (savedPlaybackPositionMs, shouldShowResumeDialog) = when (resumeMode) {
-            ResumePlaybackMode.NEVER -> 0L to false
-            ResumePlaybackMode.ASK -> {
+        val (savedPlaybackPositionMs, shouldShowResumeDialog) = when {
+            requestedStartPositionMs >= 0L -> requestedStartPositionMs to false
+            resumeMode == ResumePlaybackMode.NEVER -> 0L to false
+            resumeMode == ResumePlaybackMode.ASK -> {
                 if (potentialResumePositionMs > 0L) {
                     potentialResumePositionMs to true
                 } else {
                     0L to false
                 }
             }
-            ResumePlaybackMode.ALWAYS -> potentialResumePositionMs to false
+            resumeMode == ResumePlaybackMode.ALWAYS -> potentialResumePositionMs to false
+            else -> 0L to false
         }
 
         val title = item?.getDisplayTitle() ?: "Now Playing"
-        val playbackInfo = runCatching { repositories.stream.getPlaybackInfo(itemId) }.getOrNull()
+        val playbackInfo = runCatching { jellyfinRepository.getPlaybackInfo(itemId) }.getOrNull()
         val mediaSource = playbackInfo?.mediaSources?.firstOrNull()
         val audioTracks = PlayerMappers.toAudioTrackOptions(mediaSource)
         val subtitleTracks = PlayerMappers.toSubtitleTrackOptions(mediaSource)
@@ -213,6 +217,9 @@ class PlayerViewModel @Inject constructor(
             }
         }
 
+        val trickplayManifest = repositories.stream.getTrickplayManifest(itemId)
+        val trickplayBaseUrl = if (trickplayManifest != null) repositories.stream.getTrickplayBaseUrl(itemId) else null
+
         _uiState.value = _uiState.value.copy(
             title = title,
             logoUrl = logoUrl,
@@ -230,6 +237,8 @@ class PlayerViewModel @Inject constructor(
             chapters = chapters,
             introSkipRange = introSkipRange,
             creditsSkipRange = creditsSkipRange,
+            trickplayManifest = trickplayManifest,
+            trickplayBaseUrl = trickplayBaseUrl,
             isLoading = false,
         )
         return true

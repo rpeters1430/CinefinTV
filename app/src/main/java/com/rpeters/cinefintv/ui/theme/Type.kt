@@ -9,11 +9,11 @@ import androidx.compose.material3.Typography as ComposeTypography
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 val CinefinTvTypography = Typography(
-    displayLarge  = TextStyle(fontSize = 57.sp, fontWeight = FontWeight.Bold),
-    displayMedium = TextStyle(fontSize = 45.sp, fontWeight = FontWeight.Bold),
-    headlineLarge = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.SemiBold),
+    displayLarge  = TextStyle(fontSize = 57.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.5).sp),
+    displayMedium = TextStyle(fontSize = 45.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.2).sp),
+    headlineLarge = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.2).sp),
     headlineMedium= TextStyle(fontSize = 28.sp, fontWeight = FontWeight.SemiBold),
-    titleLarge    = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Medium),
+    titleLarge    = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.SemiBold),
     titleMedium   = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Medium),
     bodyLarge     = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Normal),
     bodyMedium    = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Normal),
@@ -22,11 +22,11 @@ val CinefinTvTypography = Typography(
 )
 
 val CinefinComposeTypography = ComposeTypography(
-    displayLarge = TextStyle(fontSize = 57.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.4).sp),
+    displayLarge = TextStyle(fontSize = 57.sp, fontWeight = FontWeight.Black, letterSpacing = (-0.5).sp),
     displayMedium = TextStyle(fontSize = 45.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.2).sp),
-    headlineLarge = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.2).sp),
+    headlineLarge = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.2).sp),
     headlineMedium = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.SemiBold),
-    titleLarge = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Medium),
+    titleLarge = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.SemiBold),
     titleMedium = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Medium),
     bodyLarge = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Normal),
     bodyMedium = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Normal),

@@ -31,12 +31,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.palette.graphics.Palette
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -44,7 +46,10 @@ import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.allowHardware
 import coil3.request.crossfade
+import coil3.toBitmap
+import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.RequestScreenFocus
 import com.rpeters.cinefintv.ui.components.TvScreenFocusState
 import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
@@ -56,7 +61,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun DetailScreen(
-    onPlay: (String) -> Unit,
+    onPlay: (String, Long?) -> Unit,
     onOpenItem: (String) -> Unit,
     onOpenPerson: (String) -> Unit = {},
     onBack: () -> Unit,
@@ -69,6 +74,7 @@ fun DetailScreen(
     val performanceProfile = LocalPerformanceProfile.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val spacing = LocalCinefinSpacing.current
+    val themeController = LocalCinefinThemeController.current
 
     // Refresh data when screen becomes active
     LaunchedEffect(lifecycleOwner) {
@@ -117,11 +123,13 @@ fun DetailScreen(
                 val item = state.item
                 val playButtonRequester = remember { FocusRequester() }
                 val primaryShelfRequester = remember { FocusRequester() }
+                val chapterShelfRequester = remember { FocusRequester() }
                 val castShelfRequester = remember { FocusRequester() }
                 val relatedShelfRequester = remember { FocusRequester() }
                 val topAnchorRequester = remember { FocusRequester() }
                 
                 val firstShelfRequester = when {
+                    state.item.chapters.isNotEmpty() -> chapterShelfRequester
                     state.seasons.isNotEmpty() || state.episodesBySeasonId.isNotEmpty() -> primaryShelfRequester
                     state.cast.isNotEmpty() -> castShelfRequester
                     state.related.isNotEmpty() -> relatedShelfRequester
@@ -140,11 +148,11 @@ fun DetailScreen(
                     key = state.item.id,
                     requester = screenFocus.topAnchorRequester,
                 )
-                androidx.compose.runtime.LaunchedEffect(state.item.id) {
+                LaunchedEffect(state.item.id) {
                     focusedBackdropUrl = null
                 }
 
-                androidx.compose.runtime.LaunchedEffect(state.isDeleted) {
+                LaunchedEffect(state.isDeleted) {
                     if (state.isDeleted) onBack()
                 }
 
@@ -162,13 +170,21 @@ fun DetailScreen(
                     ) { url ->
                         if (url != null) {
                             AsyncImage(
-                                model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                model = ImageRequest.Builder(LocalContext.current)
                                     .data(url)
                                     .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
+                                    .allowHardware(false) // Required for Palette
                                     .size(1920, 1080)
                                     .build(),
                                 contentDescription = item.title,
                                 contentScale = ContentScale.Crop,
+                                onSuccess = { state ->
+                                    val bitmap = state.result.image.toBitmap()
+                                    Palette.from(bitmap).generate { palette ->
+                                        val color = palette?.vibrantSwatch?.rgb ?: palette?.dominantSwatch?.rgb
+                                        color?.let { themeController.updateSeedColor(Color(it)) }
+                                    }
+                                },
                                 modifier = Modifier.fillMaxSize(),
                             )
                         }
@@ -234,10 +250,12 @@ fun DetailScreen(
                                 state = state,
                                 onOpenItem = onOpenItem,
                                 onOpenPerson = onOpenPerson,
+                                onChapterClick = { pos -> state.playableItemId?.let { onPlay(it, pos) } },
                                 onFocusedDescriptionChange = { focusedDescription = it },
                                 onFocusedPreviewImageChange = { focusedBackdropUrl = it },
                                 playButtonRequester = playButtonRequester,
                                 primaryShelfRequester = primaryShelfRequester,
+                                chapterShelfRequester = chapterShelfRequester,
                                 castShelfRequester = castShelfRequester,
                                 relatedShelfRequester = relatedShelfRequester
                             )

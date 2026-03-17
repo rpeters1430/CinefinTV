@@ -38,7 +38,7 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 @Composable
 fun DetailActionRow(
     state: DetailUiState.Content,
-    onPlay: (String) -> Unit,
+    onPlay: (String, Long?) -> Unit,
     onBack: () -> Unit,
     onRequestDelete: () -> Unit,
     onConfirmDelete: () -> Unit,
@@ -138,7 +138,7 @@ fun DetailActionRow(
                 ) {
                     state.playableItemId?.let { playableItemId ->
                         Button(
-                            onClick = { onPlay(playableItemId) },
+                            onClick = { onPlay(playableItemId, null) },
                             modifier = Modifier
                                 .focusRequester(playButtonRequester)
                                 .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }

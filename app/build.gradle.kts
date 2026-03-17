@@ -146,6 +146,7 @@ dependencies {
     implementation(libs.security.crypto)
     implementation(libs.paging.runtime)
     implementation(libs.paging.compose)
+    implementation(libs.palette.ktx)
     implementation(libs.kotlinx.serialization)
     implementation(libs.kotlinx.coroutines)
     implementation(libs.core.ktx)

@@ -212,8 +212,8 @@ fun CinefinTvNavGraph(
             arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
         ) {
             DetailScreen(
-                onPlay = { itemId ->
-                    navController.navigate(NavRoutes.player(itemId))
+                onPlay = { itemId, startPos ->
+                    navController.navigate(NavRoutes.player(itemId, startPos))
                 },
                 onOpenItem = { itemId ->
                     navController.navigate(NavRoutes.detail(itemId))
@@ -257,7 +257,13 @@ fun CinefinTvNavGraph(
         }
         composable(
             NavRoutes.PLAYER,
-            arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
+            arguments = listOf(
+                navArgument("itemId") { type = NavType.StringType },
+                navArgument("start") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                }
+            ),
         ) {
             PlayerScreen(
                 onBack = {

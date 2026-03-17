@@ -24,21 +24,60 @@ fun DetailShelves(
     state: DetailUiState.Content,
     onOpenItem: (String) -> Unit,
     onOpenPerson: (String) -> Unit,
+    onChapterClick: (Long) -> Unit,
     onFocusedDescriptionChange: (String?) -> Unit,
     onFocusedPreviewImageChange: (String?) -> Unit,
     playButtonRequester: FocusRequester,
     primaryShelfRequester: FocusRequester,
+    chapterShelfRequester: FocusRequester,
     castShelfRequester: FocusRequester,
     relatedShelfRequester: FocusRequester,
     modifier: Modifier = Modifier
 ) {
     val spacing = LocalCinefinSpacing.current
     val episodes = state.episodesBySeasonId.values.flatten()
+    val chapters = state.item.chapters
 
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(spacing.rowGap)
     ) {
+        if (chapters.isNotEmpty()) {
+            ShelfRow(
+                title = "Chapters",
+                items = chapters,
+                key = { it.index.toString() + it.positionMs },
+                onItemClick = { onChapterClick(it.positionMs) },
+                onItemFocus = { onFocusedDescriptionChange(null) },
+                itemContent = { chapter, itemModifier ->
+                    TvMediaCard(
+                        title = chapter.name ?: "Chapter ${chapter.index + 1}",
+                        subtitle = chapter.subtitle,
+                        imageUrl = chapter.imageUrl,
+                        onClick = { onChapterClick(chapter.positionMs) },
+                        onFocus = {
+                            onFocusedDescriptionChange(null)
+                            onFocusedPreviewImageChange(chapter.imageUrl)
+                        },
+                        aspectRatio = 16f / 9f,
+                        cardWidth = 220.dp,
+                        modifier = itemModifier
+                            .then(if (chapter == chapters.first()) Modifier.focusRequester(chapterShelfRequester) else Modifier)
+                            .focusProperties {
+                                up = playButtonRequester
+                                if (state.seasons.isNotEmpty() || episodes.isNotEmpty()) {
+                                    down = primaryShelfRequester
+                                } else if (state.cast.isNotEmpty()) {
+                                    down = castShelfRequester
+                                } else if (state.related.isNotEmpty()) {
+                                    down = relatedShelfRequester
+                                }
+                            },
+                    )
+                }
+            )
+        }
+
         if (state.seasons.isNotEmpty()) {
             ShelfRow(
                 title = "Seasons",
@@ -64,7 +103,7 @@ fun DetailShelves(
                         modifier = itemModifier
                             .then(if (season == state.seasons.first()) Modifier.focusRequester(primaryShelfRequester) else Modifier)
                             .focusProperties {
-                                up = playButtonRequester
+                                up = if (chapters.isNotEmpty()) chapterShelfRequester else playButtonRequester
                                 if (state.cast.isNotEmpty()) {
                                     down = castShelfRequester
                                 } else if (state.related.isNotEmpty()) {
@@ -101,7 +140,7 @@ fun DetailShelves(
                         modifier = itemModifier
                             .then(if (episode == episodes.first()) Modifier.focusRequester(primaryShelfRequester) else Modifier)
                             .focusProperties {
-                                up = playButtonRequester
+                                up = if (chapters.isNotEmpty()) chapterShelfRequester else playButtonRequester
                                 if (state.cast.isNotEmpty()) {
                                     down = castShelfRequester
                                 } else if (state.related.isNotEmpty()) {
@@ -133,10 +172,10 @@ fun DetailShelves(
                         modifier = itemModifier
                             .then(if (person == state.cast.first()) Modifier.focusRequester(castShelfRequester) else Modifier)
                             .focusProperties {
-                                up = if (state.seasons.isNotEmpty() || episodes.isNotEmpty()) {
-                                    primaryShelfRequester
-                                } else {
-                                    playButtonRequester
+                                up = when {
+                                    state.seasons.isNotEmpty() || episodes.isNotEmpty() -> primaryShelfRequester
+                                    chapters.isNotEmpty() -> chapterShelfRequester
+                                    else -> playButtonRequester
                                 }
                                 if (state.related.isNotEmpty()) {
                                     down = relatedShelfRequester
@@ -175,6 +214,7 @@ fun DetailShelves(
                                 up = when {
                                     state.cast.isNotEmpty() -> castShelfRequester
                                     state.seasons.isNotEmpty() || episodes.isNotEmpty() -> primaryShelfRequester
+                                    chapters.isNotEmpty() -> chapterShelfRequester
                                     else -> playButtonRequester
                                 }
                             },

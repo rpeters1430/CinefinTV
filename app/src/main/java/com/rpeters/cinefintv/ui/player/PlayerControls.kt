@@ -1,10 +1,14 @@
 package com.rpeters.cinefintv.ui.player
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -22,6 +26,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,6 +38,7 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,6 +57,9 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -60,7 +69,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.exoplayer.ExoPlayer
@@ -75,9 +87,16 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.SubcomposeAsyncImage
+import coil3.toBitmap
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.ui.theme.SurfaceDark
+import com.rpeters.cinefintv.utils.formatMs
+import kotlinx.coroutines.delay
+
+private val defaultBounds = Rect.Zero
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -92,16 +111,19 @@ internal fun PlayerControls(
     playPauseFocusRequester: FocusRequester,
     seekBarFocusRequester: FocusRequester,
     onInteract: () -> Unit,
-    onSettingsClick: (SettingsSection, Rect) -> Unit,
+    onSettingsClick: (SettingsSection, Rect?) -> Unit,
     onBack: () -> Unit,
 ) {
     val spacing = LocalCinefinSpacing.current
     val expressiveColors = LocalCinefinExpressiveColors.current
-    val defaultBounds = Rect.Zero
-    val (subtitleButtonBounds, setSubtitleButtonBounds) = remember { mutableStateOf(defaultBounds) }
-    val (audioButtonBounds, setAudioButtonBounds) = remember { mutableStateOf(defaultBounds) }
-    val (qualityButtonBounds, setQualityButtonBounds) = remember { mutableStateOf(defaultBounds) }
-    val (allOptionsButtonBounds, setAllOptionsButtonBounds) = remember { mutableStateOf(defaultBounds) }
+    val chapters = uiState.chapters
+    val trickplayManifest = uiState.trickplayManifest
+    val trickplayBaseUrl = uiState.trickplayBaseUrl
+
+    val (subtitleButtonBounds, setSubtitleButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
+    val (audioButtonBounds, setAudioButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
+    val (qualityButtonBounds, setQualityButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
+    val (allOptionsButtonBounds, setAllOptionsButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
 
     val backFocusRequester = remember { FocusRequester() }
     val subtitleFocusRequester = remember { FocusRequester() }
@@ -215,6 +237,8 @@ internal fun PlayerControls(
                         duration = duration,
                         bufferedFraction = bufferedFraction,
                         chapters = uiState.chapters,
+                        trickplayManifest = trickplayManifest,
+                        trickplayBaseUrl = trickplayBaseUrl,
                         onSeek = { player.seekTo(it) },
                         onInteract = onInteract,
                         focusRequester = seekBarFocusRequester,
@@ -275,7 +299,7 @@ internal fun PlayerControls(
                                 .focusProperties {
                                     up = seekBarFocusRequester
                                     left = playPauseFocusRequester
-                                    right = subtitleFocusRequester
+                                    right = audioFocusRequester
                                 }
                         )
 
@@ -504,6 +528,64 @@ private fun ActionIconButton(
     }
 }
 
+@Composable
+private fun TrickplayPreview(
+    seekPosition: Long,
+    manifest: TrickplayManifest,
+    baseUrl: String,
+    modifier: Modifier = Modifier
+) {
+    val interval = manifest.intervalMs.toLong()
+    if (interval <= 0) return
+
+    val totalFramesPerTile = manifest.tiles.firstOrNull()?.let { it.rowCount * it.columnCount } ?: 1
+    val tileDuration = interval * totalFramesPerTile
+    val tileIndex = (seekPosition / tileDuration).toInt().coerceIn(0, manifest.tiles.size - 1)
+    val tile = manifest.tiles[tileIndex]
+    
+    val frameIndexInTile = ((seekPosition % tileDuration) / interval).toInt().coerceIn(0, totalFramesPerTile - 1)
+    val row = frameIndexInTile / tile.columnCount
+    val col = frameIndexInTile % tile.columnCount
+
+    val frameWidth = manifest.width
+    val frameHeight = manifest.height
+
+    Box(
+        modifier = modifier
+            .size(width = 160.dp, height = 90.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.Black)
+            .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+    ) {
+        SubcomposeAsyncImage(
+            model = baseUrl + tile.image,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            content = {
+                val state = painter.state
+                if (state is AsyncImagePainter.State.Success) {
+                    val bitmap = remember(state) { state.result.image.toBitmap().asImageBitmap() }
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val srcOffset = IntOffset(col * frameWidth, row * frameHeight)
+                        val srcSize = IntSize(frameWidth, frameHeight)
+                        
+                        drawImage(
+                            image = bitmap,
+                            srcOffset = srcOffset,
+                            srcSize = srcSize,
+                            dstSize = IntSize(size.width.toInt(), size.height.toInt())
+                        )
+                    }
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    }
+                }
+            }
+        )
+    }
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun SeekBarControl(
@@ -511,6 +593,8 @@ private fun SeekBarControl(
     duration: Long,
     bufferedFraction: Float,
     chapters: List<ChapterMarker>,
+    trickplayManifest: TrickplayManifest?,
+    trickplayBaseUrl: String?,
     onSeek: (Long) -> Unit,
     onInteract: () -> Unit,
     focusRequester: FocusRequester,
@@ -534,18 +618,49 @@ private fun SeekBarControl(
     val barHeight by animateDpAsState(if (isFocused) 8.dp else 3.dp, label = "BarHeight")
     val thumbScale by animateFloatAsState(if (isFocused) 1f else 0f, label = "ThumbScale")
 
+    // Smooth seeking logic with acceleration
     LaunchedEffect(seekDirection, duration) {
         if (seekDirection == 0 || duration <= 0L) return@LaunchedEffect
         isSeeking = true
+        var holdDuration = 0L
         while (seekDirection != 0) {
-            seekPosition = (seekPosition + seekDirection * com.rpeters.cinefintv.core.constants.Constants.PLAYER_SEEK_INCREMENT_MS)
-                .coerceIn(0L, duration)
-            onSeek(seekPosition)
+            // Acceleration: starts at 5s per second of real time, ramps up to 60s/sec
+            val baseIncrementPerSec = when {
+                holdDuration < 1000L -> 5_000L  // 5s/sec
+                holdDuration < 3000L -> 15_000L // 15s/sec
+                else -> 60_000L                 // 60s/sec
+            }
+            
+            // Interval is 32ms (~30fps) for smooth visual updates
+            val intervalMs = 32L
+            val increment = (baseIncrementPerSec * intervalMs) / 1000L
+            
+            seekPosition = (seekPosition + seekDirection * increment).coerceIn(0L, duration)
+            
+            // Only update player occasionally to avoid lag, but update UI (seekPosition) constantly
+            if (holdDuration % 128L < intervalMs) {
+                onSeek(seekPosition)
+            }
+            
             onInteract()
-            kotlinx.coroutines.delay(100L)
+            delay(intervalMs)
+            holdDuration += intervalMs
         }
+        // Final seek when button is released
+        onSeek(seekPosition)
         isSeeking = false
     }
+
+    // Visual progress animation for smooth bar/thumb movement
+    val progressFractionRaw = if (duration > 0L) (seekPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
+    val animatedProgressFraction by animateFloatAsState(
+        targetValue = progressFractionRaw,
+        animationSpec = tween(
+            durationMillis = if (isSeeking) 32 else 250,
+            easing = LinearEasing
+        ),
+        label = "SmoothProgress"
+    )
 
     Box(
         modifier = modifier
@@ -589,13 +704,10 @@ private fun SeekBarControl(
                 .clip(CircleShape)
                 .background(expressiveColors.playerContentPrimary.copy(alpha = 0.2f))
         ) {
-            val progressFraction =
-                if (duration > 0L) (seekPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-                else 0f
             val bufferedClamped = bufferedFraction.coerceIn(0f, 1f)
 
-            // Buffered section — lighter grey between progress end and buffered position
-            if (bufferedClamped > progressFraction) {
+            // Buffered section
+            if (bufferedClamped > animatedProgressFraction) {
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
@@ -604,11 +716,11 @@ private fun SeekBarControl(
                 )
             }
 
-            // Progress fill — CinefinRed
+            // Progress fill
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .fillMaxWidth(progressFraction)
+                    .fillMaxWidth(animatedProgressFraction)
                     .background(MaterialTheme.colorScheme.primary)
             )
 
@@ -627,13 +739,13 @@ private fun SeekBarControl(
                 )
             }
 
-            // Thumb — only visible when focused
+            // Thumb
             if (thumbScale > 0f) {
                 val thumbDp = 20.dp * thumbScale
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
-                        .offset(x = maxWidth * progressFraction - thumbDp / 2)
+                        .offset(x = maxWidth * animatedProgressFraction - thumbDp / 2)
                         .size(thumbDp)
                         .shadow(
                             elevation = 8.dp,
@@ -648,37 +760,55 @@ private fun SeekBarControl(
             }
         }
 
-        // Timestamp bubble — floats above the thumb when focused
+        // Timestamp bubble + Trickplay Preview — floats above the thumb when focused
         if (isFocused) {
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
             ) {
-                val progressFraction =
-                    if (duration > 0L) (seekPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-                    else 0f
-                val bubbleWidth = 56.dp
-                val thumbX = maxWidth * progressFraction
-                val clampedX = thumbX.coerceIn(0.dp, maxWidth - bubbleWidth)
+                val bubbleWidth = 110.dp
+                val previewWidth = 160.dp
+                val thumbX = maxWidth * animatedProgressFraction
+                
+                val bubbleClampedX = thumbX.coerceIn(0.dp, maxWidth - bubbleWidth)
+                val previewClampedX = thumbX.coerceIn(0.dp, maxWidth - previewWidth)
+
+                if (trickplayManifest != null && trickplayBaseUrl != null) {
+                    TrickplayPreview(
+                        seekPosition = seekPosition,
+                        manifest = trickplayManifest,
+                        baseUrl = trickplayBaseUrl,
+                        modifier = Modifier.offset(x = previewClampedX, y = (-128).dp)
+                    )
+                }
+
+                val percentage = if (duration > 0L) (seekPosition.toFloat() / duration.toFloat()) * 100f else 0f
+                val percentageStr = String.format(java.util.Locale.US, "%.2f%%", percentage)
+                val timeStr = formatMs(seekPosition)
 
                 Surface(
                     modifier = Modifier
-                        .offset(x = clampedX, y = (-30).dp)
+                        .offset(x = bubbleClampedX, y = (-30).dp)
                         .width(bubbleWidth),
-                    shape = RoundedCornerShape(4.dp),
+                    shape = RoundedCornerShape(6.dp),
                     colors = SurfaceDefaults.colors(
-                        containerColor = expressiveColors.playerSurface.copy(alpha = 0.85f)
+                        containerColor = expressiveColors.playerSurface.copy(alpha = 0.92f)
+                    ),
+                    border = androidx.tv.material3.Border(
+                        border = BorderStroke(1.dp, expressiveColors.playerContentPrimary.copy(alpha = 0.2f))
                     )
                 ) {
                     Text(
-                        text = formatMs(seekPosition),
+                        text = "$timeStr • $percentageStr",
                         style = MaterialTheme.typography.labelMedium,
-                        fontSize = 18.sp,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
                         color = expressiveColors.playerContentPrimary,
                         modifier = Modifier
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         maxLines = 1,
+                        textAlign = TextAlign.Center
                     )
                 }
             }

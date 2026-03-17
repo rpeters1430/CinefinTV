@@ -17,6 +17,14 @@ data class DetailPersonModel(
     val imageUrl: String?,
 )
 
+data class DetailChapterModel(
+    val index: Int,
+    val name: String?,
+    val positionMs: Long,
+    val imageUrl: String?,
+    val subtitle: String?,
+)
+
 data class DetailHeroModel(
     val id: String,
     val title: String,
@@ -29,6 +37,7 @@ data class DetailHeroModel(
     val technicalDetails: DetailTechnicalDetails? = null,
     val subtitleOptions: List<String> = emptyList(),
     val cast: List<DetailPersonModel> = emptyList(),
+    val chapters: List<DetailChapterModel> = emptyList(),
     val watchStatus: WatchStatus = WatchStatus.NONE,
     val playbackProgress: Float? = null,
     val unwatchedCount: Int? = null,

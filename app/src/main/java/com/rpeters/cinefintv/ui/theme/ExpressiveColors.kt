@@ -1,5 +1,7 @@
 package com.rpeters.cinefintv.ui.theme
 
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Easing
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
@@ -19,13 +21,37 @@ data class CinefinExpressiveColors(
     val pillMuted: Color,
     val pillStrong: Color,
     val titleAccent: Color,
+    
+    // M3 Expressive Tokens
+    val surfaceContainerLowest: Color = SurfaceContainerLowest,
+    val surfaceContainerLow: Color = SurfaceContainerLow,
+    val surfaceContainer: Color = SurfaceContainer,
+    val surfaceContainerHigh: Color = SurfaceContainerHigh,
+    val surfaceContainerHighest: Color = SurfaceContainerHighest,
+    
     // Player tokens
-    val playerSurface: Color = Color.Black,
-    val playerContentPrimary: Color = Color.White,
-    val playerContentSecondary: Color = Color.White.copy(alpha = 0.7f),
-    val playerOverlayStart: Color = Color.Black.copy(alpha = 0.7f),
-    val playerOverlayEnd: Color = Color.Black.copy(alpha = 0.92f),
+    val playerSurface: Color = PlayerSurface,
+    val playerContentPrimary: Color = PlayerContentPrimary,
+    val playerContentSecondary: Color = PlayerContentSecondary,
+    val playerOverlayStart: Color = PlayerOverlayStart,
+    val playerOverlayEnd: Color = PlayerOverlayEnd,
 )
+
+/**
+ * Material Expressive Motion Tokens
+ */
+@Immutable
+object CinefinMotion {
+    /**
+     * Standard M3 Easing with a slight overshoot for expressive feedback on TV.
+     */
+    val Overshoot: Easing = CubicBezierEasing(0.3f, 0.0f, 0.2f, 1.4f)
+    val Emphasized: Easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
+    
+    const val DurationShort = 150
+    const val DurationMedium = 350
+    const val DurationLong = 600
+}
 
 val LocalCinefinExpressiveColors = staticCompositionLocalOf {
     CinefinExpressiveColors(
@@ -37,10 +63,12 @@ val LocalCinefinExpressiveColors = staticCompositionLocalOf {
         accentSurface = SurfaceAccent,
         chromeSurface = SurfaceDark,
         borderSubtle = BorderSubtle,
-        focusRing = CinefinCoral,
+        focusRing = CinefinRed,
         focusGlow = CinefinRed.copy(alpha = 0.28f),
         pillMuted = ProgressGray,
         pillStrong = CinefinRed.copy(alpha = 0.7f),
         titleAccent = CinefinGold,
     )
 }
+
+val LocalCinefinMotion = staticCompositionLocalOf { CinefinMotion }

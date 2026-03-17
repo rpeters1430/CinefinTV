@@ -13,12 +13,13 @@ object NavRoutes {
     const val DETAIL = "detail/{itemId}"
     const val PERSON_DETAIL = "detail/person/{personId}"
     const val COLLECTIONS_DETAIL = "collections/detail/{itemId}"
-    const val PLAYER = "player/{itemId}"
+    const val PLAYER = "player/{itemId}?start={start}"
     const val AUDIO_PLAYER = "audio-player/{itemId}?queue={queue}"
 
     fun detail(itemId: String) = "detail/$itemId"
     fun personDetail(personId: String) = "detail/person/$personId"
-    fun player(itemId: String) = "player/$itemId"
+    fun player(itemId: String, startPositionMs: Long? = null) = 
+        if (startPositionMs != null) "player/$itemId?start=$startPositionMs" else "player/$itemId"
     fun collectionsDetail(itemId: String) = "collections/detail/$itemId"
     fun audioPlayer(itemId: String, queueIds: List<String>): String {
         val encodedQueue = queueIds

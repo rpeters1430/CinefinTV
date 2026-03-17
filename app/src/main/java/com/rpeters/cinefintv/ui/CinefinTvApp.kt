@@ -15,8 +15,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +34,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -57,6 +61,7 @@ import com.rpeters.cinefintv.ui.navigation.navTabItems
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import com.rpeters.cinefintv.ui.theme.ThemeViewModel
 import com.rpeters.cinefintv.update.UpdateInfo
 import com.rpeters.cinefintv.update.UpdateInstallResult
 import com.rpeters.cinefintv.update.UpdateManager
@@ -64,300 +69,316 @@ import com.rpeters.cinefintv.update.UpdateStatus
 import com.rpeters.cinefintv.update.shouldCheckForUpdate
 import kotlinx.coroutines.launch
 
+/**
+ * CompositionLocal to allow any screen to update the theme's seed color
+ * for content-based dynamic theming (Material You).
+ */
+val LocalCinefinThemeController = compositionLocalOf<ThemeViewModel> {
+    error("No ThemeViewModel provided")
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @UnstableApi
 @Composable
 fun CinefinTvApp(
     isAuthenticated: Boolean = false,
-    updateManager: UpdateManager? = null
+    updateManager: UpdateManager? = null,
+    themeViewModel: ThemeViewModel = hiltViewModel()
 ) {
-    CinefinTvTheme {
-        ProvideTvScreenFocusRegistry {
-        val navController = rememberNavController()
-        val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry?.destination?.route
-        val screenFocusRegistry = LocalTvScreenFocusRegistry.current
-        val expressiveColors = LocalCinefinExpressiveColors.current
-        val spacing = LocalCinefinSpacing.current
-        val coroutineScope = rememberCoroutineScope()
-        val lifecycleOwner = LocalLifecycleOwner.current
-        val tabRequesters = remember(navTabItems.size) {
-            List(navTabItems.size) { FocusRequester() }
-        }
-
-        var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
-        var isDownloading by remember { mutableStateOf(false) }
-        var downloadProgress by remember { mutableStateOf(0f) }
-        var updateError by remember { mutableStateOf<String?>(null) }
-        var lastUpdateCheckAtMs by remember { mutableStateOf(0L) }
-        var isCheckingForUpdate by remember { mutableStateOf(false) }
-
-        fun launchUpdateCheck(force: Boolean = false) {
-            if (updateManager == null || isCheckingForUpdate) return
-
-            val nowMs = System.currentTimeMillis()
-            if (!force && !shouldCheckForUpdate(lastUpdateCheckAtMs, nowMs)) return
-
-            isCheckingForUpdate = true
-            lastUpdateCheckAtMs = nowMs
-            coroutineScope.launch {
-                val status = updateManager.checkForUpdate()
-                when (status) {
-                    is UpdateStatus.UpdateAvailable -> {
-                        updateInfo = status.info
-                        updateError = null
-                    }
-                    is UpdateStatus.NoUpdate -> {
-                        updateInfo = null
-                        updateError = null
-                    }
-                    is UpdateStatus.Error -> {
-                        updateError = status.message
-                    }
-                    is UpdateStatus.Downloading -> Unit
-                }
-                isCheckingForUpdate = false
-            }
-        }
-
-        if (updateManager != null) {
-            LaunchedEffect(updateManager) {
-                launchUpdateCheck(force = true)
-            }
-
-            DisposableEffect(lifecycleOwner, updateManager) {
-                val observer = LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_START) {
-                        launchUpdateCheck()
-                    }
+    val themePrefs by themeViewModel.themePreferences.collectAsState()
+    
+    CinefinTvTheme(
+        seedColor = themeViewModel.currentSeedColor,
+        useDynamicColors = themePrefs.useDynamicColors
+    ) {
+        CompositionLocalProvider(LocalCinefinThemeController provides themeViewModel) {
+            ProvideTvScreenFocusRegistry {
+                val navController = rememberNavController()
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
+                val screenFocusRegistry = LocalTvScreenFocusRegistry.current
+                val expressiveColors = LocalCinefinExpressiveColors.current
+                val spacing = LocalCinefinSpacing.current
+                val coroutineScope = rememberCoroutineScope()
+                val lifecycleOwner = LocalLifecycleOwner.current
+                val tabRequesters = remember(navTabItems.size) {
+                    List(navTabItems.size) { FocusRequester() }
                 }
 
-                lifecycleOwner.lifecycle.addObserver(observer)
-                onDispose {
-                    lifecycleOwner.lifecycle.removeObserver(observer)
-                }
-            }
-        }
+                var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+                var isDownloading by remember { mutableStateOf(false) }
+                var downloadProgress by remember { mutableStateOf(0f) }
+                var updateError by remember { mutableStateOf<String?>(null) }
+                var lastUpdateCheckAtMs by remember { mutableStateOf(0L) }
+                var isCheckingForUpdate by remember { mutableStateOf(false) }
 
-        updateInfo?.let { info ->
-            UpdateDialog(
-                info = info,
-                isDownloading = isDownloading,
-                progress = downloadProgress,
-                errorMessage = updateError,
-                onConfirm = {
-                    if (updateManager != null) {
-                        isDownloading = true
-                        downloadProgress = 0f
-                        updateError = null
-                        coroutineScope.launch {
-                            val result = updateManager.downloadAndInstallApk(info) { progress ->
-                                downloadProgress = progress
+                fun launchUpdateCheck(force: Boolean = false) {
+                    if (updateManager == null || isCheckingForUpdate) return
+
+                    val nowMs = System.currentTimeMillis()
+                    if (!force && !shouldCheckForUpdate(lastUpdateCheckAtMs, nowMs)) return
+
+                    isCheckingForUpdate = true
+                    lastUpdateCheckAtMs = nowMs
+                    coroutineScope.launch {
+                        val status = updateManager.checkForUpdate()
+                        when (status) {
+                            is UpdateStatus.UpdateAvailable -> {
+                                updateInfo = status.info
+                                updateError = null
                             }
-                            isDownloading = false
-                            result.fold(
-                                onSuccess = { installResult ->
-                                    when (installResult) {
-                                        UpdateInstallResult.InstallerLaunched -> {
-                                            updateInfo = null
-                                            updateError = null
+                            is UpdateStatus.NoUpdate -> {
+                                updateInfo = null
+                                updateError = null
+                            }
+                            is UpdateStatus.Error -> {
+                                updateError = status.message
+                            }
+                            is UpdateStatus.Downloading -> Unit
+                        }
+                        isCheckingForUpdate = false
+                    }
+                }
+
+                if (updateManager != null) {
+                    LaunchedEffect(updateManager) {
+                        launchUpdateCheck(force = true)
+                    }
+
+                    DisposableEffect(lifecycleOwner, updateManager) {
+                        val observer = LifecycleEventObserver { _, event ->
+                            if (event == Lifecycle.Event.ON_START) {
+                                launchUpdateCheck()
+                            }
+                        }
+
+                        lifecycleOwner.lifecycle.addObserver(observer)
+                        onDispose {
+                            lifecycleOwner.lifecycle.removeObserver(observer)
+                        }
+                    }
+                }
+
+                updateInfo?.let { info ->
+                    UpdateDialog(
+                        info = info,
+                        isDownloading = isDownloading,
+                        progress = downloadProgress,
+                        errorMessage = updateError,
+                        onConfirm = {
+                            if (updateManager != null) {
+                                isDownloading = true
+                                downloadProgress = 0f
+                                updateError = null
+                                coroutineScope.launch {
+                                    val result = updateManager.downloadAndInstallApk(info) { progress ->
+                                        downloadProgress = progress
+                                    }
+                                    isDownloading = false
+                                    result.fold(
+                                        onSuccess = { installResult ->
+                                            when (installResult) {
+                                                UpdateInstallResult.InstallerLaunched -> {
+                                                    updateInfo = null
+                                                    updateError = null
+                                                }
+                                                UpdateInstallResult.PermissionRequired -> {
+                                                    updateError = "Allow installs from this app, then choose Update Now again."
+                                                }
+                                            }
+                                        },
+                                        onFailure = { error ->
+                                            updateError = error.message ?: "Update failed."
                                         }
-                                        UpdateInstallResult.PermissionRequired -> {
-                                            updateError = "Allow installs from this app, then choose Update Now again."
+                                    )
+                                }
+                            }
+                        },
+                        onDismiss = {
+                            if (!info.isCritical) {
+                                updateInfo = null
+                                updateError = null
+                            }
+                        }
+                    )
+                }
+
+                val isPersonDetailRoute = currentRoute?.startsWith("detail/person/") == true
+                val showNav = currentRoute != null &&
+                    !currentRoute.startsWith("auth/") &&
+                    !currentRoute.startsWith("player/") &&
+                    !currentRoute.startsWith("audio-player/") &&
+                    (!currentRoute.startsWith("detail/") || isPersonDetailRoute) &&
+                    !currentRoute.startsWith("collections/detail/")
+
+                // Determine selected tab based on route prefix to keep it highlighted during sub-navigation
+                val selectedTabIndex = navTabItems.indexOfFirst { item ->
+                    currentRoute != null && (currentRoute == item.route || 
+                        (item.route.isNotEmpty() && currentRoute.startsWith(item.route)))
+                }.let { if (it == -1) navTabItems.indexOfFirst { it.route == NavRoutes.HOME } else it }
+                .coerceAtLeast(0)
+                var focusedTabIndex by remember { mutableStateOf(selectedTabIndex) }
+
+                LaunchedEffect(selectedTabIndex) {
+                    focusedTabIndex = selectedTabIndex
+                }
+
+                fun navigateToTab(route: String) {
+                    if (currentRoute != route) {
+                        // Prefer popping up to the authenticated HOME destination to preserve tab state
+                        val homeDestinationId = navController.graph.findNode(NavRoutes.HOME)?.id
+                        navController.navigate(route) {
+                            if (homeDestinationId != null) {
+                                popUpTo(homeDestinationId) {
+                                    saveState = true
+                                }
+                            } else {
+                                // Fallback to the NavHost's start destination if HOME cannot be resolved
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    expressiveColors.backgroundTop,
+                                    expressiveColors.backgroundBottom,
+                                ),
+                            ),
+                        )
+                ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        if (showNav) {
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = spacing.gutter, vertical = 16.dp),
+                                shape = RoundedCornerShape(spacing.cornerContainer),
+                                colors = androidx.tv.material3.SurfaceDefaults.colors(
+                                    containerColor = expressiveColors.chromeSurface.copy(alpha = 0.92f),
+                                ),
+                                border = androidx.tv.material3.Border(
+                                    border = BorderStroke(
+                                        width = 1.dp,
+                                        color = expressiveColors.borderSubtle.copy(alpha = 0.75f),
+                                    ),
+                                ),
+                                tonalElevation = 8.dp,
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            Brush.horizontalGradient(
+                                                colors = listOf(
+                                                    Color.Transparent,
+                                                    expressiveColors.accentSurface.copy(alpha = 0.28f),
+                                                ),
+                                            ),
+                                        )
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = "Cinefin TV",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onBackground,
+                                        )
+                                        Text(
+                                            text = "Browse your library",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    TabRow(
+                                        selectedTabIndex = selectedTabIndex,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        navTabItems.forEachIndexed { index, item ->
+                                            val isSelected = index == selectedTabIndex
+                                            val isFocused = index == focusedTabIndex
+                                            Tab(
+                                                modifier = Modifier
+                                                    .focusRequester(tabRequesters[index])
+                                                    .focusProperties {
+                                                        screenFocusRegistry?.requesterFor(item.route)?.let { down = it }
+                                                    },
+                                                selected = isSelected,
+                                                onFocus = { focusedTabIndex = index },
+                                                onClick = { navigateToTab(item.route) },
+                                                colors = TabDefaults.pillIndicatorTabColors(
+                                                    contentColor = Color.White.copy(alpha = 0.8f),
+                                                    inactiveContentColor = Color.White.copy(alpha = 0.5f),
+                                                    selectedContentColor = Color(0xFF0D1117),
+                                                    focusedContentColor = expressiveColors.focusRing,
+                                                    focusedSelectedContentColor = Color(0xFF0D1117),
+                                                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                                    disabledInactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                                    disabledSelectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                                ),
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(999.dp))
+                                                        .background(
+                                                            when {
+                                                                isSelected -> Color.Transparent
+                                                                isFocused -> expressiveColors.focusRing.copy(alpha = 0.16f)
+                                                                else -> Color.Transparent
+                                                            }
+                                                        )
+                                                        .border(
+                                                            width = if (isFocused && !isSelected) 1.dp else 0.dp,
+                                                            color = if (isFocused && !isSelected) {
+                                                                expressiveColors.focusRing.copy(alpha = 0.7f)
+                                                            } else {
+                                                                Color.Transparent
+                                                            },
+                                                            shape = RoundedCornerShape(999.dp),
+                                                        )
+                                                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = item.icon,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                    Text(
+                                                        text = item.label,
+                                                        style = MaterialTheme.typography.labelMedium
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
-                                },
-                                onFailure = { error ->
-                                    updateError = error.message ?: "Update failed."
                                 }
+                            }
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            CinefinTvNavGraph(
+                                navController = navController,
+                                startDestination = if (isAuthenticated) NavRoutes.HOME else AuthRoutes.SERVER_CONNECTION,
                             )
                         }
                     }
-                },
-                onDismiss = {
-                    if (!info.isCritical) {
-                        updateInfo = null
-                        updateError = null
-                    }
-                }
-            )
-        }
-
-        val isPersonDetailRoute = currentRoute?.startsWith("detail/person/") == true
-        val showNav = currentRoute != null &&
-            !currentRoute.startsWith("auth/") &&
-            !currentRoute.startsWith("player/") &&
-            !currentRoute.startsWith("audio-player/") &&
-            (!currentRoute.startsWith("detail/") || isPersonDetailRoute) &&
-            !currentRoute.startsWith("collections/detail/")
-
-        // Determine selected tab based on route prefix to keep it highlighted during sub-navigation
-        val selectedTabIndex = navTabItems.indexOfFirst { item ->
-            currentRoute != null && (currentRoute == item.route || 
-                (item.route.isNotEmpty() && currentRoute.startsWith(item.route)))
-        }.let { if (it == -1) navTabItems.indexOfFirst { it.route == NavRoutes.HOME } else it }
-        .coerceAtLeast(0)
-        var focusedTabIndex by remember { mutableStateOf(selectedTabIndex) }
-
-        LaunchedEffect(selectedTabIndex) {
-            focusedTabIndex = selectedTabIndex
-        }
-
-        fun navigateToTab(route: String) {
-            if (currentRoute != route) {
-                // Prefer popping up to the authenticated HOME destination to preserve tab state
-                val homeDestinationId = navController.graph.findNode(NavRoutes.HOME)?.id
-                navController.navigate(route) {
-                    if (homeDestinationId != null) {
-                        popUpTo(homeDestinationId) {
-                            saveState = true
-                        }
-                    } else {
-                        // Fallback to the NavHost's start destination if HOME cannot be resolved
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                    }
-                    launchSingleTop = true
-                    restoreState = true
                 }
             }
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            expressiveColors.backgroundTop,
-                            expressiveColors.backgroundBottom,
-                        ),
-                    ),
-                )
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                if (showNav) {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = spacing.gutter, vertical = 16.dp),
-                        shape = RoundedCornerShape(spacing.cornerContainer),
-                        colors = androidx.tv.material3.SurfaceDefaults.colors(
-                            containerColor = expressiveColors.chromeSurface.copy(alpha = 0.92f),
-                        ),
-                        border = androidx.tv.material3.Border(
-                            border = BorderStroke(
-                                width = 1.dp,
-                                color = expressiveColors.borderSubtle.copy(alpha = 0.75f),
-                            ),
-                        ),
-                        tonalElevation = 8.dp,
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    Brush.horizontalGradient(
-                                        colors = listOf(
-                                            Color.Transparent,
-                                            expressiveColors.accentSurface.copy(alpha = 0.28f),
-                                        ),
-                                    ),
-                                )
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    text = "Cinefin TV",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onBackground,
-                                )
-                                Text(
-                                    text = "Browse your library",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            TabRow(
-                                selectedTabIndex = selectedTabIndex,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                navTabItems.forEachIndexed { index, item ->
-                                    val isSelected = index == selectedTabIndex
-                                    val isFocused = index == focusedTabIndex
-                                    Tab(
-                                        modifier = Modifier
-                                            .focusRequester(tabRequesters[index])
-                                            .focusProperties {
-                                                screenFocusRegistry?.requesterFor(item.route)?.let { down = it }
-                                            },
-                                        selected = isSelected,
-                                        onFocus = { focusedTabIndex = index },
-                                        onClick = { navigateToTab(item.route) },
-                                        colors = TabDefaults.pillIndicatorTabColors(
-                                            contentColor = Color.White.copy(alpha = 0.8f),
-                                            inactiveContentColor = Color.White.copy(alpha = 0.5f),
-                                            selectedContentColor = Color(0xFF0D1117),
-                                            focusedContentColor = expressiveColors.focusRing,
-                                            focusedSelectedContentColor = Color(0xFF0D1117),
-                                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                            disabledInactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                            disabledSelectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                        ),
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(999.dp))
-                                                .background(
-                                                    when {
-                                                        isSelected -> Color.Transparent
-                                                        isFocused -> expressiveColors.focusRing.copy(alpha = 0.16f)
-                                                        else -> Color.Transparent
-                                                    }
-                                                )
-                                                .border(
-                                                    width = if (isFocused && !isSelected) 1.dp else 0.dp,
-                                                    color = if (isFocused && !isSelected) {
-                                                        expressiveColors.focusRing.copy(alpha = 0.7f)
-                                                    } else {
-                                                        Color.Transparent
-                                                    },
-                                                    shape = RoundedCornerShape(999.dp),
-                                                )
-                                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = item.icon,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Text(
-                                                text = item.label,
-                                                style = MaterialTheme.typography.labelMedium
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                Box(modifier = Modifier.weight(1f)) {
-                    CinefinTvNavGraph(
-                        navController = navController,
-                        startDestination = if (isAuthenticated) NavRoutes.HOME else AuthRoutes.SERVER_CONNECTION,
-                    )
-                }
-            }
-        }
         }
     }
 }

@@ -19,8 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.palette.graphics.Palette
 import androidx.tv.material3.Button
 import androidx.tv.material3.Carousel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -48,7 +49,10 @@ import androidx.tv.material3.Text
 import androidx.tv.material3.rememberCarouselState
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.allowHardware
 import coil3.request.crossfade
+import coil3.toBitmap
+import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
@@ -59,6 +63,7 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
+import com.rpeters.cinefintv.utils.coerceAlpha
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -257,6 +262,7 @@ private fun HeroItem(
     val expressiveColors = LocalCinefinExpressiveColors.current
     val performanceProfile = LocalPerformanceProfile.current
     val spacing = LocalCinefinSpacing.current
+    val themeController = LocalCinefinThemeController.current
     val playButtonRequester = remember { FocusRequester() }
 
     Box(modifier = modifier.clip(RoundedCornerShape(spacing.cornerContainer))) {
@@ -264,10 +270,18 @@ private fun HeroItem(
             model = ImageRequest.Builder(context)
                 .data(item.backdropUrl ?: item.imageUrl)
                 .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
+                .allowHardware(false) // Required for Palette extraction
                 .size(1280, 720)
                 .build(),
             contentDescription = item.title,
             contentScale = ContentScale.Crop,
+            onSuccess = { state ->
+                val bitmap = state.result.image.toBitmap()
+                Palette.from(bitmap).generate { palette ->
+                    val color = palette?.vibrantSwatch?.rgb ?: palette?.dominantSwatch?.rgb
+                    color?.let { themeController.updateSeedColor(androidx.compose.ui.graphics.Color(it)) }
+                }
+            },
             modifier = Modifier.fillMaxSize(),
         )
         Box(
@@ -276,9 +290,9 @@ private fun HeroItem(
                 .background(
                     Brush.horizontalGradient(
                         colorStops = arrayOf(
-                            0.0f to expressiveColors.heroStart.copy(alpha = 0.98f),
+                            0.0f to expressiveColors.surfaceContainerHighest.coerceAlpha(0.98f),
                             0.28f to Color.Black.copy(alpha = 0.78f),
-                            0.62f to expressiveColors.heroEnd.copy(alpha = 0.4f),
+                            0.62f to expressiveColors.surfaceContainer.coerceAlpha(0.4f),
                             1.0f to Color.Transparent,
                         ),
                     ),
@@ -310,9 +324,9 @@ private fun HeroItem(
             }
             Text(
                 text = item.title,
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.ExtraBold,
             )
             val carouselMeta = listOfNotNull(
                 item.year?.toString(),

@@ -29,6 +29,8 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.MediaStreamType
 import java.util.Locale
 
+import com.rpeters.cinefintv.utils.formatMs
+
 object DetailMappers {
 
     fun toHeroModel(
@@ -38,6 +40,7 @@ object DetailMappers {
         episodesBySeasonId: Map<String, List<DetailEpisodeModel>> = emptyMap(),
         parentForBackdrop: BaseItemDto? = null,
     ): DetailHeroModel {
+        val itemId = item.id.toString()
         val totalEpisodeCount = when {
             item.isSeries() -> seasons.sumOf { it.episodeCount }
             item.isSeason() -> episodesBySeasonId.values.flatten().size
@@ -73,6 +76,17 @@ object DetailMappers {
                     imageType = "Primary",
                     tag = person.primaryImageTag
                 )
+            )
+        }
+
+        val chapters = item.chapters.orEmpty().mapIndexed { index, chapter ->
+            val positionMs = chapter.startPositionTicks / 10_000L
+            DetailChapterModel(
+                index = index,
+                name = chapter.name ?: "Chapter ${index + 1}",
+                positionMs = positionMs,
+                imageUrl = streamRepository.getChapterImageUrl(itemId, index),
+                subtitle = formatMs(positionMs)
             )
         }
 

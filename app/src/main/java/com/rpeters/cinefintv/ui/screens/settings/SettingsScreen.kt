@@ -18,9 +18,9 @@ import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.HighQuality
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MotionPhotosPaused
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Subtitles
@@ -214,15 +214,22 @@ fun SettingsScreen(
                 item {
                     SettingsSection(title = "Appearance") {
                         SettingsToggleListItem(
-                            icon = Icons.Default.MotionPhotosPaused,
-                            title = "Reduce motion",
-                            description = "Respect reduced-motion preferences where possible.",
-                            checked = uiState.appearance.respectReduceMotion,
+                            icon = Icons.Default.Palette,
+                            title = "Use dynamic colors",
+                            description = "Extract accent colors from media artwork (Material You for TV).",
+                            checked = uiState.appearance.useDynamicColors,
                             modifier = Modifier
                                 .focusRequester(screenFocus.primaryContentRequester)
                                 .focusProperties {
                                     up = screenFocus.topAnchorRequester
                                 },
+                            onCheckedChange = viewModel::setUseDynamicColors,
+                        )
+                        SettingsToggleListItem(
+                            icon = Icons.Default.MotionPhotosPaused,
+                            title = "Reduce motion",
+                            description = "Respect reduced-motion preferences where possible.",
+                            checked = uiState.appearance.respectReduceMotion,
                             onCheckedChange = viewModel::setRespectReduceMotion,
                         )
                     }

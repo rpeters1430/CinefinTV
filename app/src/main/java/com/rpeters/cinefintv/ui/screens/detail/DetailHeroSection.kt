@@ -46,9 +46,9 @@ fun DetailHeroSection(
     ) {
         Text(
             text = item.title,
-            style = MaterialTheme.typography.headlineLarge,
+            style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
         )
 
         if (!item.subtitle.isNullOrBlank()) {

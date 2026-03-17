@@ -47,6 +47,7 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
+import com.rpeters.cinefintv.utils.coerceAlpha
 
 enum class WatchStatus { NONE, WATCHED, IN_PROGRESS }
 
@@ -82,11 +83,14 @@ fun TvMediaCard(
     )
     val metaContainerColor by animateColorAsState(
         targetValue = if (isFocused) {
-            expressiveColors.elevatedSurface.copy(alpha = 0.98f)
+            expressiveColors.surfaceContainerHighest.coerceAlpha(0.98f)
         } else {
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.46f)
+            expressiveColors.surfaceContainerLow.coerceAlpha(0.46f)
         },
-        animationSpec = tween(durationMillis = 180),
+        animationSpec = tween(
+            durationMillis = com.rpeters.cinefintv.ui.theme.CinefinMotion.DurationMedium,
+            easing = com.rpeters.cinefintv.ui.theme.CinefinMotion.Emphasized
+        ),
         label = "MediaCardMetaSurface",
     )
 

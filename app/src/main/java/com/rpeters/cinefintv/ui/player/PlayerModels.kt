@@ -2,6 +2,9 @@ package com.rpeters.cinefintv.ui.player
 
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
 data class TrackOption(
     val id: String,
     val label: String,
@@ -12,6 +15,22 @@ data class TrackOption(
 data class ChapterMarker(val positionMs: Long, val name: String?)
 
 data class SkipRange(val startMs: Long, val endMs: Long?)
+
+@Serializable
+data class TrickplayManifest(
+    @SerialName("Version") val version: String,
+    @SerialName("Width") val width: Int,
+    @SerialName("Height") val height: Int,
+    @SerialName("Interval") val intervalMs: Int,
+    @SerialName("Tiles") val tiles: List<TrickplayTile>
+)
+
+@Serializable
+data class TrickplayTile(
+    @SerialName("Image") val image: String,
+    @SerialName("RowCount") val rowCount: Int,
+    @SerialName("ColumnCount") val columnCount: Int
+)
 
 data class PlayerUiState(
     val itemId: String = "",
@@ -36,6 +55,8 @@ data class PlayerUiState(
     val chapters: List<ChapterMarker> = emptyList(),
     val introSkipRange: SkipRange? = null,
     val creditsSkipRange: SkipRange? = null,
+    val trickplayManifest: TrickplayManifest? = null,
+    val trickplayBaseUrl: String? = null,
     val isLoading: Boolean = true,
     val isRetrying: Boolean = false,
     val retryCount: Int = 0,
