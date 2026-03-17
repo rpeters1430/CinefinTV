@@ -35,6 +35,7 @@ import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.tv.material3.WideButton
 import com.rpeters.cinefintv.ui.components.CinefinTextInputField
+import com.rpeters.cinefintv.ui.components.DismissImeOnDispose
 import com.rpeters.cinefintv.ui.components.RequestScreenFocus
 import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
 import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
@@ -52,6 +53,7 @@ fun ServerConnectionScreen(
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     val screenFocus = rememberTvScreenFocusState()
+    DismissImeOnDispose()
 
     RequestScreenFocus(
         key = serverUrl,

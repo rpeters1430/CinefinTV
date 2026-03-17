@@ -52,6 +52,7 @@ import androidx.tv.material3.TabRow
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinDialogActions
 import com.rpeters.cinefintv.ui.components.CinefinDialogSurface
+import com.rpeters.cinefintv.ui.components.DismissImeOnEnter
 import com.rpeters.cinefintv.ui.components.LocalTvScreenFocusRegistry
 import com.rpeters.cinefintv.ui.components.ProvideTvScreenFocusRegistry
 import com.rpeters.cinefintv.ui.navigation.AuthRoutes
@@ -103,6 +104,13 @@ fun CinefinTvApp(
                 val lifecycleOwner = LocalLifecycleOwner.current
                 val tabRequesters = remember(navTabItems.size) {
                     List(navTabItems.size) { FocusRequester() }
+                }
+                val allowIme = currentRoute == AuthRoutes.SERVER_CONNECTION ||
+                    currentRoute == AuthRoutes.LOGIN ||
+                    currentRoute == NavRoutes.SEARCH
+
+                if (!allowIme) {
+                    DismissImeOnEnter(key = currentRoute)
                 }
 
                 var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }

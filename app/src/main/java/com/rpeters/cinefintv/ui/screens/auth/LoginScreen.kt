@@ -41,6 +41,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.tv.material3.WideButton
+import com.rpeters.cinefintv.ui.components.DismissImeOnDispose
 import com.rpeters.cinefintv.ui.components.RequestScreenFocus
 import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
 import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
@@ -69,6 +70,7 @@ fun LoginScreen(
     var password by rememberSaveable { mutableStateOf("") }
     var showQuickConnectPanel by rememberSaveable { mutableStateOf(false) }
     val screenFocus = rememberTvScreenFocusState()
+    DismissImeOnDispose()
 
     val canSignIn = username.isNotBlank() && password.isNotBlank() && !isAuthenticating
 

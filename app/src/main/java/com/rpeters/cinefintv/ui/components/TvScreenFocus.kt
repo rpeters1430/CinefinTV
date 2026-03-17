@@ -7,6 +7,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -79,6 +82,34 @@ fun RequestScreenFocus(
 ) {
     LaunchedEffect(key, enabled) {
         if (enabled) requester.requestFocus()
+    }
+}
+
+@Composable
+fun DismissImeOnDispose() {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val view = LocalView.current
+
+    DisposableEffect(keyboardController, focusManager, view) {
+        onDispose {
+            keyboardController?.hide()
+            focusManager.clearFocus(force = true)
+            view.clearFocus()
+        }
+    }
+}
+
+@Composable
+fun DismissImeOnEnter(key: Any? = Unit) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val view = LocalView.current
+
+    LaunchedEffect(key) {
+        keyboardController?.hide()
+        focusManager.clearFocus(force = true)
+        view.clearFocus()
     }
 }
 

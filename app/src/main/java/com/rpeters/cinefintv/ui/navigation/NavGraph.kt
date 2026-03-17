@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
@@ -51,13 +52,11 @@ fun CinefinTvNavGraph(
 ) {
     val authViewModel: AuthViewModel = hiltViewModel()
     val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
+    val resolvedStartDestination = if (authUiState.isSessionActive) NavRoutes.HOME else startDestination
 
-    LaunchedEffect(authUiState.isSessionChecked) {
-        if (authUiState.isSessionChecked && authUiState.isSessionActive) {
-            navController.navigate(NavRoutes.HOME) {
-                popUpTo(AuthRoutes.SERVER_CONNECTION) { inclusive = true }
-            }
-        }
+    if (!authUiState.isSessionChecked) {
+        AuthBootstrapScreen()
+        return
     }
 
     LaunchedEffect(authUiState.connectedServerUrl) {
@@ -82,7 +81,7 @@ fun CinefinTvNavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = startDestination,
+        startDestination = resolvedStartDestination,
         enterTransition = { fadeIn(animationSpec = tween(200)) },
         exitTransition = { fadeOut(animationSpec = tween(200)) },
         popEnterTransition = { fadeIn(animationSpec = tween(200)) },
@@ -295,6 +294,27 @@ fun CinefinTvNavGraph(
                 onBack = {
                     navController.popBackStack()
                 },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun AuthBootstrapScreen() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            CircularProgressIndicator()
+            Text(
+                text = "Restoring session...",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
