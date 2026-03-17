@@ -13,6 +13,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.LibraryBooks
+import androidx.compose.material.icons.filled.Cast
+import androidx.compose.material.icons.filled.ClosedCaption
+import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MotionPhotosPaused
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,14 +34,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
+import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
+import androidx.tv.material3.Switch
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.data.preferences.AudioChannelPreference
 import com.rpeters.cinefintv.data.preferences.ResumePlaybackMode
@@ -38,8 +52,6 @@ import com.rpeters.cinefintv.data.preferences.SubtitleBackground
 import com.rpeters.cinefintv.data.preferences.SubtitleTextSize
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.ui.components.CinefinOptionDialog
-import com.rpeters.cinefintv.ui.components.CinefinSettingListItem
-import com.rpeters.cinefintv.ui.components.CinefinSwitchListItem
 import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
 import com.rpeters.cinefintv.ui.components.RequestScreenFocus
 import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
@@ -202,6 +214,7 @@ fun SettingsScreen(
                 item {
                     SettingsSection(title = "Appearance") {
                         SettingsToggleListItem(
+                            icon = Icons.Default.MotionPhotosPaused,
                             title = "Reduce motion",
                             description = "Respect reduced-motion preferences where possible.",
                             checked = uiState.appearance.respectReduceMotion,
@@ -218,24 +231,28 @@ fun SettingsScreen(
                 item {
                     SettingsSection(title = "Playback") {
                         SettingsToggleListItem(
+                            icon = Icons.Default.PlayArrow,
                             title = "Auto-play next episode",
                             description = "Start the next episode automatically near the end.",
                             checked = uiState.playback.autoPlayNextEpisode,
                             onCheckedChange = viewModel::setAutoPlayNextEpisode,
                         )
                         SettingsChoiceListItem(
+                            icon = Icons.Default.PlayArrow,
                             title = "Resume playback",
                             description = "Choose how playback resumes when an item has saved progress.",
                             selectedLabel = uiState.playback.resumePlaybackMode.label,
                             onClick = { activeDialog = SettingsChoiceDialog.RESUME_PLAYBACK },
                         )
                         SettingsChoiceListItem(
+                            icon = Icons.Default.HighQuality,
                             title = "Streaming quality",
                             description = "Cap transcoding quality for compatible streams.",
                             selectedLabel = uiState.playback.transcodingQuality.label,
                             onClick = { activeDialog = SettingsChoiceDialog.STREAMING_QUALITY },
                         )
                         SettingsChoiceListItem(
+                            icon = Icons.Default.MusicNote,
                             title = "Audio channels",
                             description = "Limit the maximum audio channel count used for playback.",
                             selectedLabel = uiState.playback.audioChannels.label,
@@ -247,12 +264,14 @@ fun SettingsScreen(
                 item {
                     SettingsSection(title = "Subtitles") {
                         SettingsChoiceListItem(
+                            icon = Icons.Default.Subtitles,
                             title = "Text size",
                             description = "Preferred subtitle text size in the player.",
                             selectedLabel = uiState.subtitles.textSize.name.replace('_', ' '),
                             onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_TEXT_SIZE },
                         )
                         SettingsChoiceListItem(
+                            icon = Icons.Default.ClosedCaption,
                             title = "Background",
                             description = "Subtitle background treatment for readability.",
                             selectedLabel = uiState.subtitles.background.name.replace('_', ' '),
@@ -264,6 +283,7 @@ fun SettingsScreen(
                 item {
                     SettingsSection(title = "Library") {
                         SettingsToggleListItem(
+                            icon = Icons.AutoMirrored.Filled.LibraryBooks,
                             title = "Enable management actions",
                             description = "Allow sensitive actions like delete or metadata refresh when available.",
                             checked = uiState.libraryActions.enableManagementActions,
@@ -275,12 +295,14 @@ fun SettingsScreen(
                 item {
                     SettingsSection(title = "Casting") {
                         SettingsToggleListItem(
+                            icon = Icons.Default.Cast,
                             title = "Auto-reconnect",
                             description = "Reconnect to the last cast session automatically when possible.",
                             checked = uiState.cast.autoReconnect,
                             onCheckedChange = viewModel::setCastAutoReconnect,
                         )
                         SettingsToggleListItem(
+                            icon = Icons.Default.Devices,
                             title = "Remember last device",
                             description = uiState.cast.lastDeviceName?.let {
                                 "Keep the last used cast device available for faster reconnects. Last device: $it"
@@ -294,6 +316,7 @@ fun SettingsScreen(
                 item {
                     SettingsSection(title = "Security") {
                         SettingsToggleListItem(
+                            icon = Icons.Default.Security,
                             title = "Require strong auth for credentials",
                             description = "Protect credential access behind stronger device authentication when available.",
                             checked = uiState.credentialSecurity.requireStrongAuthForCredentials,
@@ -337,34 +360,83 @@ private fun SettingsSection(
 
 @Composable
 private fun SettingsToggleListItem(
+    icon: ImageVector,
     title: String,
     description: String,
     checked: Boolean,
     modifier: Modifier = Modifier,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    CinefinSwitchListItem(
-        headline = title,
-        supporting = description,
-        checked = checked,
-        modifier = modifier,
-        onCheckedChange = onCheckedChange,
+    ListItem(
+        selected = checked,
+        onClick = { onCheckedChange(!checked) },
+        modifier = modifier.fillMaxWidth(),
+        leadingContent = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+            )
+        },
+        headlineContent = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        },
+        supportingContent = {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        trailingContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+            )
+        },
     )
 }
 
 @Composable
 private fun SettingsChoiceListItem(
+    icon: ImageVector,
     title: String,
     description: String,
     selectedLabel: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    CinefinSettingListItem(
-        headline = title,
-        supporting = description,
-        trailingText = selectedLabel,
-        modifier = modifier,
+    ListItem(
+        selected = false,
         onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        leadingContent = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+            )
+        },
+        headlineContent = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        },
+        supportingContent = {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        trailingContent = {
+            Text(
+                text = selectedLabel,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        },
     )
 }

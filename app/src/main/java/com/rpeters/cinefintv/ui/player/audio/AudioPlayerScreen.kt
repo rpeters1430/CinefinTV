@@ -49,11 +49,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
-import androidx.tv.material3.DenseListItem
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
 import androidx.tv.material3.IconButtonDefaults
+import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Surface
@@ -333,7 +333,7 @@ private fun QueueItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    DenseListItem(
+    ListItem(
         selected = isCurrent,
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),

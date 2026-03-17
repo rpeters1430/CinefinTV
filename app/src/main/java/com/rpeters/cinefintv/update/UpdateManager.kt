@@ -40,6 +40,8 @@ sealed class UpdateInstallResult {
     data object PermissionRequired : UpdateInstallResult()
 }
 
+internal const val FOREGROUND_UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000L
+
 internal enum class InstallAction {
     LaunchInstaller,
     RequestUnknownSourcesPermission,
@@ -54,6 +56,15 @@ internal fun determineInstallAction(
     } else {
         InstallAction.LaunchInstaller
     }
+}
+
+internal fun shouldCheckForUpdate(
+    lastCheckedAtMs: Long,
+    nowMs: Long,
+    minIntervalMs: Long = FOREGROUND_UPDATE_CHECK_INTERVAL_MS,
+): Boolean {
+    if (lastCheckedAtMs <= 0L) return true
+    return nowMs - lastCheckedAtMs >= minIntervalMs
 }
 
 // URL pointing to the version JSON file in your repository

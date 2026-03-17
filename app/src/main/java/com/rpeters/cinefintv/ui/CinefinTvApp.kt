@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +31,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -57,6 +61,7 @@ import com.rpeters.cinefintv.update.UpdateInfo
 import com.rpeters.cinefintv.update.UpdateInstallResult
 import com.rpeters.cinefintv.update.UpdateManager
 import com.rpeters.cinefintv.update.UpdateStatus
+import com.rpeters.cinefintv.update.shouldCheckForUpdate
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -75,6 +80,7 @@ fun CinefinTvApp(
         val expressiveColors = LocalCinefinExpressiveColors.current
         val spacing = LocalCinefinSpacing.current
         val coroutineScope = rememberCoroutineScope()
+        val lifecycleOwner = LocalLifecycleOwner.current
         val tabRequesters = remember(navTabItems.size) {
             List(navTabItems.size) { FocusRequester() }
         }
@@ -83,14 +89,52 @@ fun CinefinTvApp(
         var isDownloading by remember { mutableStateOf(false) }
         var downloadProgress by remember { mutableStateOf(0f) }
         var updateError by remember { mutableStateOf<String?>(null) }
+        var lastUpdateCheckAtMs by remember { mutableStateOf(0L) }
+        var isCheckingForUpdate by remember { mutableStateOf(false) }
 
-        // Check for updates on startup
-        if (updateManager != null) {
-            LaunchedEffect(Unit) {
+        fun launchUpdateCheck(force: Boolean = false) {
+            if (updateManager == null || isCheckingForUpdate) return
+
+            val nowMs = System.currentTimeMillis()
+            if (!force && !shouldCheckForUpdate(lastUpdateCheckAtMs, nowMs)) return
+
+            isCheckingForUpdate = true
+            lastUpdateCheckAtMs = nowMs
+            coroutineScope.launch {
                 val status = updateManager.checkForUpdate()
-                if (status is UpdateStatus.UpdateAvailable) {
-                    updateInfo = status.info
-                    updateError = null
+                when (status) {
+                    is UpdateStatus.UpdateAvailable -> {
+                        updateInfo = status.info
+                        updateError = null
+                    }
+                    is UpdateStatus.NoUpdate -> {
+                        updateInfo = null
+                        updateError = null
+                    }
+                    is UpdateStatus.Error -> {
+                        updateError = status.message
+                    }
+                    is UpdateStatus.Downloading -> Unit
+                }
+                isCheckingForUpdate = false
+            }
+        }
+
+        if (updateManager != null) {
+            LaunchedEffect(updateManager) {
+                launchUpdateCheck(force = true)
+            }
+
+            DisposableEffect(lifecycleOwner, updateManager) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_START) {
+                        launchUpdateCheck()
+                    }
+                }
+
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
                 }
             }
         }

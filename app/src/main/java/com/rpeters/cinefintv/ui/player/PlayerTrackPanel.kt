@@ -4,9 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -16,7 +14,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ClosedCaption
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,25 +31,21 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
-import androidx.tv.material3.DenseListItem
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
+import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
-import com.rpeters.cinefintv.ui.components.CinefinSettingListItem
-import com.rpeters.cinefintv.ui.components.CinefinSwitchListItem
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
 internal enum class SettingsSection { AUDIO, SUBTITLES, QUALITY, SPEED, ALL }
@@ -127,32 +126,13 @@ internal fun PlayerTrackPanel(
                         SettingsSection.ALL -> "Playback Options"
                     }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = panelTitle,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        if (section != SettingsSection.ALL) {
-                            Button(
-                                onClick = { onSectionSelected(SettingsSection.ALL) },
-                                colors = ButtonDefaults.colors(
-                                    containerColor = Color.Transparent,
-                                    contentColor = MaterialTheme.colorScheme.primary
-                                ),
-                                modifier = Modifier.height(32.dp),
-                                scale = ButtonDefaults.scale(focusedScale = 1.1f)
-                            ) {
-                                Text("Back", style = MaterialTheme.typography.labelMedium)
-                            }
-                        }
-                    }
+                    Text(
+                        text = panelTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 12.dp),
+                    )
 
                     val listState = rememberLazyListState()
                     val initialFocusRequester = remember { FocusRequester() }
@@ -168,9 +148,24 @@ internal fun PlayerTrackPanel(
                         modifier = Modifier.weight(1f, fill = false),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        if (section != SettingsSection.ALL) {
+                            item {
+                                NavigationListItem(
+                                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                                    title = "Back to playback options",
+                                    modifier = Modifier.focusRequester(initialFocusRequester),
+                                    onClick = {
+                                        onInteract()
+                                        onSectionSelected(SettingsSection.ALL)
+                                    },
+                                )
+                            }
+                        }
+
                         if (section == SettingsSection.ALL) {
                             item {
                                 SettingsMenuItem(
+                                    icon = Icons.Default.HighQuality,
                                     title = "Streaming Quality",
                                     description = uiState.transcodingQuality.label,
                                     selectedValue = "",
@@ -183,6 +178,7 @@ internal fun PlayerTrackPanel(
                             }
                             item {
                                 SettingsMenuItem(
+                                    icon = Icons.Default.MusicNote,
                                     title = "Audio Track",
                                     description = uiState.selectedAudioTrack?.label ?: audioTracks.firstOrNull()?.label ?: "Default",
                                     selectedValue = "",
@@ -194,6 +190,7 @@ internal fun PlayerTrackPanel(
                             }
                             item {
                                 SettingsMenuItem(
+                                    icon = Icons.Default.ClosedCaption,
                                     title = "Subtitles",
                                     description = uiState.selectedSubtitleTrack?.label ?: "Off",
                                     selectedValue = "",
@@ -205,6 +202,7 @@ internal fun PlayerTrackPanel(
                             }
                             item {
                                 SettingsMenuItem(
+                                    icon = Icons.Default.PlayArrow,
                                     title = "Playback Speed",
                                     description = if (uiState.playbackSpeed == 1.0f) "Normal" else "${uiState.playbackSpeed}x",
                                     selectedValue = "",
@@ -314,18 +312,73 @@ internal fun PlayerTrackPanel(
 
 @Composable
 private fun SettingsMenuItem(
+    icon: ImageVector,
     title: String,
     description: String,
     selectedValue: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    CinefinSettingListItem(
-        headline = title,
-        supporting = description,
-        trailingText = selectedValue,
-        modifier = modifier,
+    ListItem(
+        selected = false,
         onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        leadingContent = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
+        },
+        headlineContent = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        },
+        supportingContent = {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        trailingContent = {
+            if (selectedValue.isNotBlank()) {
+                Text(
+                    text = selectedValue,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun NavigationListItem(
+    icon: ImageVector,
+    title: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    ListItem(
+        selected = false,
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        leadingContent = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
+        },
+        headlineContent = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        },
     )
 }
 
@@ -337,11 +390,29 @@ private fun PlaybackSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    CinefinSwitchListItem(
-        headline = title,
-        supporting = subtitle,
-        checked = checked,
-        onCheckedChange = onCheckedChange,
+    ListItem(
+        selected = checked,
+        onClick = { onCheckedChange(!checked) },
+        modifier = Modifier.fillMaxWidth(),
+        headlineContent = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        },
+        supportingContent = {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        trailingContent = {
+            androidx.tv.material3.Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+            )
+        },
     )
 }
 
@@ -353,7 +424,7 @@ private fun TrackButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    DenseListItem(
+    ListItem(
         selected = selected,
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),

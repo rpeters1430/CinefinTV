@@ -13,6 +13,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
-import androidx.tv.material3.DenseListItem
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
@@ -38,6 +39,7 @@ import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Switch
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
@@ -197,7 +199,7 @@ fun <T> CinefinOptionDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(options) { option ->
-                    DenseListItem(
+                    ListItem(
                         selected = option == selected,
                         onClick = {
                             onOptionSelected(option)
@@ -211,10 +213,9 @@ fun <T> CinefinOptionDialog(
                         },
                         trailingContent = {
                             if (option == selected) {
-                                Text(
-                                    text = "Selected",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
                                 )
                             }
                         },

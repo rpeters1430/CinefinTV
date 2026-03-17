@@ -2,6 +2,8 @@ package com.rpeters.cinefintv.update
 
 import android.os.Build
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UpdateManagerTest {
@@ -34,5 +36,35 @@ class UpdateManagerTest {
         )
 
         assertEquals(InstallAction.LaunchInstaller, result)
+    }
+
+    @Test
+    fun shouldCheckForUpdate_returnsTrue_whenNeverChecked() {
+        assertTrue(
+            shouldCheckForUpdate(
+                lastCheckedAtMs = 0L,
+                nowMs = 1_000L,
+            )
+        )
+    }
+
+    @Test
+    fun shouldCheckForUpdate_returnsFalse_withinCooldown() {
+        assertFalse(
+            shouldCheckForUpdate(
+                lastCheckedAtMs = 10_000L,
+                nowMs = 10_000L + FOREGROUND_UPDATE_CHECK_INTERVAL_MS - 1L,
+            )
+        )
+    }
+
+    @Test
+    fun shouldCheckForUpdate_returnsTrue_afterCooldown() {
+        assertTrue(
+            shouldCheckForUpdate(
+                lastCheckedAtMs = 10_000L,
+                nowMs = 10_000L + FOREGROUND_UPDATE_CHECK_INTERVAL_MS,
+            )
+        )
     }
 }

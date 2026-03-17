@@ -28,11 +28,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Forward10
-import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -100,12 +100,14 @@ internal fun PlayerControls(
     val defaultBounds = Rect.Zero
     val (subtitleButtonBounds, setSubtitleButtonBounds) = remember { mutableStateOf(defaultBounds) }
     val (audioButtonBounds, setAudioButtonBounds) = remember { mutableStateOf(defaultBounds) }
-    val (moreButtonBounds, setMoreButtonBounds) = remember { mutableStateOf(defaultBounds) }
+    val (qualityButtonBounds, setQualityButtonBounds) = remember { mutableStateOf(defaultBounds) }
+    val (allOptionsButtonBounds, setAllOptionsButtonBounds) = remember { mutableStateOf(defaultBounds) }
 
     val backFocusRequester = remember { FocusRequester() }
     val subtitleFocusRequester = remember { FocusRequester() }
     val audioFocusRequester = remember { FocusRequester() }
-    val settingsFocusRequester = remember { FocusRequester() }
+    val qualityFocusRequester = remember { FocusRequester() }
+    val allOptionsFocusRequester = remember { FocusRequester() }
     val skipBackFocusRequester = remember { FocusRequester() }
     val skipForwardFocusRequester = remember { FocusRequester() }
 
@@ -228,16 +230,15 @@ internal fun PlayerControls(
                     )
                 }
 
-                // Button row: [-10] [spacer] [▶] [spacer] [+10] [divider] [CC] [♪] [⚙]
-                Row(
+                // Button row: left skip, center play/pause, right utility cluster.
+                Box(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Skip Back 10s
                     ActionIconButton(
                         icon = Icons.Default.Replay10,
                         onClick = { onInteract(); player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L)) },
                         modifier = Modifier
+                            .align(Alignment.CenterStart)
                             .focusRequester(skipBackFocusRequester)
                             .focusProperties {
                                 up = seekBarFocusRequester
@@ -245,9 +246,6 @@ internal fun PlayerControls(
                             }
                     )
 
-                    Spacer(Modifier.weight(1f))
-
-                    // Play/Pause
                     PlayPauseButton(
                         isPlaying = isPlaying,
                         onClick = {
@@ -255,6 +253,7 @@ internal fun PlayerControls(
                             if (isPlaying) player.pause() else player.play()
                         },
                         modifier = Modifier
+                            .align(Alignment.Center)
                             .size(56.dp)
                             .focusRequester(playPauseFocusRequester)
                             .focusProperties {
@@ -264,70 +263,81 @@ internal fun PlayerControls(
                             }
                     )
 
-                    Spacer(Modifier.weight(1f))
+                    Row(
+                        modifier = Modifier.align(Alignment.CenterEnd),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ActionIconButton(
+                            icon = Icons.Default.Forward10,
+                            onClick = { onInteract(); player.seekTo((player.currentPosition + 10_000L).coerceIn(0L, duration)) },
+                            modifier = Modifier
+                                .focusRequester(skipForwardFocusRequester)
+                                .focusProperties {
+                                    up = seekBarFocusRequester
+                                    left = playPauseFocusRequester
+                                    right = subtitleFocusRequester
+                                }
+                        )
 
-                    // Skip Forward 10s
-                    ActionIconButton(
-                        icon = Icons.Default.Forward10,
-                        onClick = { onInteract(); player.seekTo((player.currentPosition + 10_000L).coerceIn(0L, duration)) },
-                        modifier = Modifier
-                            .focusRequester(skipForwardFocusRequester)
-                            .focusProperties {
-                                up = seekBarFocusRequester
-                                left = playPauseFocusRequester
-                                right = subtitleFocusRequester
-                            }
-                    )
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .width(1.dp)
+                                .height(24.dp)
+                                .background(expressiveColors.playerContentPrimary.copy(alpha = 0.4f))
+                        )
 
-                    // Vertical divider
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .width(1.dp)
-                            .height(24.dp)
-                            .background(expressiveColors.playerContentPrimary.copy(alpha = 0.4f))
-                    )
+                        ActionIconButton(
+                            icon = Icons.Default.MusicNote,
+                            onClick = { onInteract(); onSettingsClick(SettingsSection.AUDIO, audioButtonBounds) },
+                            modifier = Modifier
+                                .focusRequester(audioFocusRequester)
+                                .focusProperties {
+                                    up = seekBarFocusRequester
+                                    left = skipForwardFocusRequester
+                                    right = subtitleFocusRequester
+                                }
+                                .onGloballyPositioned { setAudioButtonBounds(it.boundsInRoot()) }
+                        )
 
-                    // CC (Subtitles)
-                    ActionIconButton(
-                        icon = Icons.Default.ClosedCaption,
-                        onClick = { onInteract(); onSettingsClick(SettingsSection.SUBTITLES, subtitleButtonBounds) },
-                        modifier = Modifier
-                            .focusRequester(subtitleFocusRequester)
-                            .focusProperties {
-                                up = seekBarFocusRequester
-                                left = skipForwardFocusRequester
-                                right = audioFocusRequester
-                            }
-                            .onGloballyPositioned { setSubtitleButtonBounds(it.boundsInRoot()) }
-                    )
+                        ActionIconButton(
+                            icon = Icons.Default.ClosedCaption,
+                            onClick = { onInteract(); onSettingsClick(SettingsSection.SUBTITLES, subtitleButtonBounds) },
+                            modifier = Modifier
+                                .focusRequester(subtitleFocusRequester)
+                                .focusProperties {
+                                    up = seekBarFocusRequester
+                                    left = audioFocusRequester
+                                    right = qualityFocusRequester
+                                }
+                                .onGloballyPositioned { setSubtitleButtonBounds(it.boundsInRoot()) }
+                        )
 
-                    // ♪ (Audio tracks)
-                    ActionIconButton(
-                        icon = Icons.Default.GraphicEq,
-                        onClick = { onInteract(); onSettingsClick(SettingsSection.AUDIO, audioButtonBounds) },
-                        modifier = Modifier
-                            .focusRequester(audioFocusRequester)
-                            .focusProperties {
-                                up = seekBarFocusRequester
-                                left = subtitleFocusRequester
-                                right = settingsFocusRequester
-                            }
-                            .onGloballyPositioned { setAudioButtonBounds(it.boundsInRoot()) }
-                    )
+                        ActionIconButton(
+                            icon = Icons.Default.HighQuality,
+                            onClick = { onInteract(); onSettingsClick(SettingsSection.QUALITY, qualityButtonBounds) },
+                            modifier = Modifier
+                                .focusRequester(qualityFocusRequester)
+                                .focusProperties {
+                                    up = seekBarFocusRequester
+                                    left = subtitleFocusRequester
+                                    right = allOptionsFocusRequester
+                                }
+                                .onGloballyPositioned { setQualityButtonBounds(it.boundsInRoot()) }
+                        )
 
-                    // ⚙ (All settings)
-                    ActionIconButton(
-                        icon = Icons.Default.Settings,
-                        onClick = { onInteract(); onSettingsClick(SettingsSection.ALL, moreButtonBounds) },
-                        modifier = Modifier
-                            .focusRequester(settingsFocusRequester)
-                            .focusProperties {
-                                up = seekBarFocusRequester
-                                left = audioFocusRequester
-                            }
-                            .onGloballyPositioned { setMoreButtonBounds(it.boundsInRoot()) }
-                    )
+                        ActionIconButton(
+                            icon = Icons.Default.PlayArrow,
+                            onClick = { onInteract(); onSettingsClick(SettingsSection.ALL, allOptionsButtonBounds) },
+                            modifier = Modifier
+                                .focusRequester(allOptionsFocusRequester)
+                                .focusProperties {
+                                    up = seekBarFocusRequester
+                                    left = qualityFocusRequester
+                                }
+                                .onGloballyPositioned { setAllOptionsButtonBounds(it.boundsInRoot()) }
+                        )
+                    }
                 }
             }
         }
