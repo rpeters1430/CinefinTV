@@ -1,4 +1,4 @@
-package com.rpeters.cinefintv.ui.screens.stuff
+package com.rpeters.cinefintv.ui.screens.collections
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -20,20 +20,20 @@ import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.MediaStreamType
 import javax.inject.Inject
 
-sealed class StuffDetailUiState {
-    data object Loading : StuffDetailUiState()
-    data class Error(val message: String) : StuffDetailUiState()
+sealed class CollectionsDetailUiState {
+    data object Loading : CollectionsDetailUiState()
+    data class Error(val message: String) : CollectionsDetailUiState()
     data class Content(
-        val item: StuffDetailModel,
-        val moreFromStuff: List<StuffItemCardModel>,
+        val item: CollectionsDetailModel,
+        val moreFromCollections: List<CollectionsItemCardModel>,
         val isDeleteConfirmationVisible: Boolean = false,
         val isDeleting: Boolean = false,
         val isDeleted: Boolean = false,
         val actionErrorMessage: String? = null,
-    ) : StuffDetailUiState()
+    ) : CollectionsDetailUiState()
 }
 
-data class StuffTechnicalDetails(
+data class CollectionsTechnicalDetails(
     val videoCodec: String?,
     val resolution: String?,
     val audioCodec: String?,
@@ -58,25 +58,25 @@ data class StuffTechnicalDetails(
         }
 }
 
-data class StuffDetailModel(
+data class CollectionsDetailModel(
     val id: String,
     val title: String,
     val overview: String?,
     val metadataLine: String?,
     val imageUrl: String?,
     val backdropUrl: String?,
-    val technicalDetails: StuffTechnicalDetails? = null,
+    val technicalDetails: CollectionsTechnicalDetails? = null,
 )
 
 @HiltViewModel
-class StuffDetailViewModel @Inject constructor(
+class CollectionsDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repositories: JellyfinRepositoryCoordinator,
 ) : ViewModel() {
     private val itemId = savedStateHandle.get<String>("itemId").orEmpty()
 
-    private val _uiState = MutableStateFlow<StuffDetailUiState>(StuffDetailUiState.Loading)
-    val uiState: StateFlow<StuffDetailUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow<CollectionsDetailUiState>(CollectionsDetailUiState.Loading)
+    val uiState: StateFlow<CollectionsDetailUiState> = _uiState.asStateFlow()
 
     init {
         load()
@@ -94,19 +94,19 @@ class StuffDetailViewModel @Inject constructor(
 
     fun load() {
         if (itemId.isBlank()) {
-            _uiState.value = StuffDetailUiState.Error("No Stuff item ID was provided.")
+            _uiState.value = CollectionsDetailUiState.Error("No Collections item ID was provided.")
             return
         }
 
         viewModelScope.launch {
-            _uiState.value = StuffDetailUiState.Loading
+            _uiState.value = CollectionsDetailUiState.Loading
 
             val detailsResult = repositories.media.getItemDetails(itemId)
             val libraryResult = repositories.media.getLibraryItems(collectionType = "homevideos", limit = 40)
 
             if (detailsResult !is ApiResult.Success) {
-                val message = (detailsResult as? ApiResult.Error)?.message ?: "Unable to load Stuff details."
-                _uiState.value = StuffDetailUiState.Error(message)
+                val message = (detailsResult as? ApiResult.Error)?.message ?: "Unable to load Collections details."
+                _uiState.value = CollectionsDetailUiState.Error(message)
                 return@launch
             }
 
@@ -120,7 +120,7 @@ class StuffDetailViewModel @Inject constructor(
                 ?: item.mediaStreams.orEmpty()
             val videoStream = streams.firstOrNull { it.type == MediaStreamType.VIDEO }
             val audioStream = streams.firstOrNull { it.type == MediaStreamType.AUDIO }
-            val technicalDetails = StuffTechnicalDetails(
+            val technicalDetails = CollectionsTechnicalDetails(
                 videoCodec = videoStream?.codec?.uppercase(),
                 resolution = heightToResolutionLabel(videoStream?.height),
                 audioCodec = audioStream?.codec?.uppercase(),
@@ -145,7 +145,7 @@ class StuffDetailViewModel @Inject constructor(
                             it.getWatchedPercentage().toFloat() / 100f
                         } else null
 
-                        StuffItemCardModel(
+                        CollectionsItemCardModel(
                             id = it.id.toString(),
                             title = it.getDisplayTitle(),
                             subtitle = it.getYear()?.toString() ?: it.getFormattedDuration(),
@@ -159,8 +159,8 @@ class StuffDetailViewModel @Inject constructor(
                 emptyList()
             }
 
-            _uiState.value = StuffDetailUiState.Content(
-                item = StuffDetailModel(
+            _uiState.value = CollectionsDetailUiState.Content(
+                item = CollectionsDetailModel(
                     id = itemId,
                     title = item.getDisplayTitle(),
                     overview = item.overview,
@@ -169,13 +169,13 @@ class StuffDetailViewModel @Inject constructor(
                     backdropUrl = repositories.stream.getBackdropUrl(item),
                     technicalDetails = technicalDetails,
                 ),
-                moreFromStuff = moreItems,
+                moreFromCollections = moreItems,
             )
         }
     }
 
     fun requestDelete() {
-        val state = _uiState.value as? StuffDetailUiState.Content ?: return
+        val state = _uiState.value as? CollectionsDetailUiState.Content ?: return
         _uiState.value = state.copy(
             isDeleteConfirmationVisible = true,
             actionErrorMessage = null,
@@ -183,7 +183,7 @@ class StuffDetailViewModel @Inject constructor(
     }
 
     fun cancelDelete() {
-        val state = _uiState.value as? StuffDetailUiState.Content ?: return
+        val state = _uiState.value as? CollectionsDetailUiState.Content ?: return
         _uiState.value = state.copy(
             isDeleteConfirmationVisible = false,
             actionErrorMessage = null,
@@ -191,7 +191,7 @@ class StuffDetailViewModel @Inject constructor(
     }
 
     fun confirmDelete() {
-        val state = _uiState.value as? StuffDetailUiState.Content ?: return
+        val state = _uiState.value as? CollectionsDetailUiState.Content ?: return
 
         viewModelScope.launch {
             _uiState.value = state.copy(

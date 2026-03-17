@@ -346,13 +346,11 @@ class SecureCredentialManager @Inject constructor(
     suspend fun savePassword(serverUrl: String, username: String, password: String) {
         val keys = generateKeys(serverUrl, username)
 
-        logDebug { "savePassword: Saving password for user='$username', serverUrl='$serverUrl'" }
+        logDebug { "savePassword: Saving password for user='$username'" }
 
         try {
             val encryptedPassword = encrypt(password)
             // CRITICAL FIX: Use NonCancellable to ensure password save completes
-            // even if parent scope is cancelled (e.g., due to navigation after login)
-            // This prevents JobCancellationException when DataStore operations are interrupted
             withContext(NonCancellable + Dispatchers.IO) {
                 secureCredentialsDataStore.edit { prefs ->
                     val passwordKey = stringPreferencesKey(keys.newKey)
@@ -362,7 +360,6 @@ class SecureCredentialManager @Inject constructor(
                     prefs[timestampKey] = System.currentTimeMillis()
 
                     // CRITICAL FIX: Only remove legacy keys if they're different from the new key
-                    // If they're the same, we'd be deleting the password we just saved!
                     if (keys.legacyRawKey != keys.newKey) {
                         prefs.remove(stringPreferencesKey(keys.legacyRawKey))
                         prefs.remove(longPreferencesKey("${keys.legacyRawKey}_timestamp"))
@@ -374,7 +371,7 @@ class SecureCredentialManager @Inject constructor(
                     }
                 }
             }
-            logDebug { "savePassword: Password save completed" }
+            logDebug { "savePassword: SUCCESS" }
         } catch (e: CancellationException) {
             throw e
         } catch (e: CredentialEncryptionException) {
@@ -397,62 +394,48 @@ class SecureCredentialManager @Inject constructor(
         activity: Any? = null,
         requireStrongBiometric: Boolean = false,
     ): String? {
-        logDebug { "getPassword: CALLED - Retrieving password for user='$username', serverUrl='$serverUrl'" }
+        logDebug { "getPassword: Retrieving password for user='$username'" }
 
         return try {
             // Biometric auth is not used in the TV MVP - proceed directly to key lookup
             val keys = generateKeys(serverUrl, username)
-            logDebug { "getPassword: Generated key='${keys.newKey}'" }
 
             val preferences = secureCredentialsDataStore.data.first()
-            logDebug { "getPassword: DataStore contains ${preferences.asMap().size} entries" }
             var encryptedPassword = preferences[stringPreferencesKey(keys.newKey)]
 
             if (encryptedPassword == null) {
-                logDebug { "getPassword: Password not found with new key='${keys.newKey}', checking legacy keys" }
                 val legacySearchOrder = listOf(keys.legacyNormalizedKey, keys.legacyRawKey)
                 var matchedKey: String? = null
                 for (legacyKey in legacySearchOrder) {
-                    logDebug { "getPassword: Checking legacy key='$legacyKey'" }
                     encryptedPassword = preferences[stringPreferencesKey(legacyKey)]
                     if (encryptedPassword != null) {
                         matchedKey = legacyKey
-                        logDebug { "getPassword: Found password with legacy key='$legacyKey'" }
                         break
                     }
                 }
 
                 // FIX: If still not found, try with the raw (non-normalized) server URL
-                // This handles the case where credentials were saved before URL normalization was fixed
                 if (encryptedPassword == null) {
-                    logDebug { "getPassword: Checking with raw server URL (pre-normalization fix)" }
                     val rawKey = generateKey(serverUrl, username)
                     if (rawKey != keys.newKey) { // Don't check the same key twice
-                        logDebug { "getPassword: Trying raw URL key='$rawKey'" }
                         encryptedPassword = preferences[stringPreferencesKey(rawKey)]
                         if (encryptedPassword != null) {
                             matchedKey = rawKey
-                            logDebug { "getPassword: Found password with raw URL key='$rawKey'" }
                         }
                     }
                 }
 
                 if (encryptedPassword != null && matchedKey != null) {
-                    logDebug { "getPassword: Migrating legacy credential from key='$matchedKey' to key='${keys.newKey}'" }
+                    logDebug { "getPassword: Migrating legacy credential to current format" }
                     migrateLegacyCredential(matchedKey, keys.newKey, encryptedPassword)
                 }
-            } else {
-                logDebug { "getPassword: Found password with new key" }
             }
 
             val result = encryptedPassword?.let { decrypt(it) }
             if (result != null) {
-                logDebug { "🟢 getPassword: SUCCESS - Password retrieved and decrypted" }
-            } else {
-                SecureLogger.e(
-                    TAG,
-                    "🔴 getPassword: FAILED - Password is NULL (encryptedPassword was ${if (encryptedPassword != null) "found but decrypt failed" else "not found in DataStore"})",
-                )
+                logDebug { "getPassword: SUCCESS" }
+            } else if (encryptedPassword != null) {
+                SecureLogger.e(TAG, "getPassword: FAILED - Decryption failed")
             }
             result
         } catch (e: CancellationException) {

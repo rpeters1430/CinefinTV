@@ -1,11 +1,8 @@
 package com.rpeters.cinefintv.utils
 
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,80 +16,21 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
+import androidx.compose.runtime.staticCompositionLocalOf
+
 /**
- * ✅ CompositionLocal for the current device's performance profile
+ * ✅ Performance: Local provider for the device's performance profile
  */
-val LocalPerformanceProfile = compositionLocalOf<DevicePerformanceProfile> {
-    error("No PerformanceProfile provided")
+val LocalPerformanceProfile = staticCompositionLocalOf {
+    DevicePerformanceProfile(
+        tier = DevicePerformanceProfile.Tier.LOW,
+        memoryCachePercent = 0.12,
+        diskCacheSizeMb = 80L,
+    )
 }
 
 /**
- * ✅ PHASE 3: Advanced Performance Optimizations
- * Provides utilities for improving app performance and user experience
- */
-
-/**
- * ✅ Performance: Infinite scroll detection for LazyColumn/LazyRow
- */
-@Composable
-fun LazyListState.OnBottomReached(
-    loadMore: () -> Unit,
-    buffer: Int = 3,
-) {
-    val shouldLoadMore = remember {
-        derivedStateOf {
-            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()
-                ?: return@derivedStateOf true
-
-            lastVisibleItem.index >= layoutInfo.totalItemsCount - 1 - buffer
-        }
-    }
-
-    LaunchedEffect(shouldLoadMore.value) {
-        if (shouldLoadMore.value) {
-            loadMore()
-        }
-    }
-}
-
-/**
- * ✅ Performance: Infinite scroll detection for LazyVerticalGrid
- */
-@Composable
-fun LazyGridState.OnBottomReached(
-    loadMore: () -> Unit,
-    buffer: Int = 6,
-) {
-    val shouldLoadMore = remember {
-        derivedStateOf {
-            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()
-                ?: return@derivedStateOf true
-
-            lastVisibleItem.index >= layoutInfo.totalItemsCount - 1 - buffer
-        }
-    }
-
-    LaunchedEffect(shouldLoadMore.value) {
-        if (shouldLoadMore.value) {
-            loadMore()
-        }
-    }
-}
-
-/**
- * ✅ Performance: Smart image loading with size optimization
- */
-data class ImageLoadingConfig(
-    val maxWidth: Dp = 400.dp,
-    val maxHeight: Dp = 600.dp,
-    val quality: Int = 85,
-    val enableMemoryCache: Boolean = true,
-    val enableDiskCache: Boolean = true,
-    val crossfadeMs: Int = 300,
-)
-
-/**
- * ✅ Performance: Debounced state for search and other rapid inputs
+ * ✅ Performance: State-based debouncing for UI inputs
  */
 @Composable
 fun <T> rememberDebouncedState(
@@ -114,23 +52,28 @@ fun <T> rememberDebouncedState(
  */
 
 /**
- * ✅ Performance: Viewport-aware loading
+ * ✅ Performance: Viewport-aware loading helper
+ * Hook into LazyListState to check if an item is within the visible viewport plus a buffer.
  */
 @Composable
 fun rememberViewportAwareLoader(
-    threshold: Dp = 200.dp,
-): (Boolean) -> Boolean {
-    val density = LocalDensity.current
-    val thresholdPx = with(density) { threshold.toPx() }
-
-    return remember(thresholdPx) {
-        { isInViewport ->
-            // Keep a tiny computation tied to the threshold so this helper can evolve
-            // without being a pure no-op passthrough.
-            val viewportBufferSatisfied = thresholdPx >= 0f
-            isInViewport && viewportBufferSatisfied
+    state: LazyListState,
+    index: Int,
+    buffer: Int = 3,
+): Boolean {
+    val isVisible by remember(state, index) {
+        derivedStateOf {
+            val layoutInfo = state.layoutInfo
+            val visibleItems = layoutInfo.visibleItemsInfo
+            if (visibleItems.isEmpty()) return@derivedStateOf false
+            
+            val firstVisible = visibleItems.first().index
+            val lastVisible = visibleItems.last().index
+            
+            index >= (firstVisible - buffer) && index <= (lastVisible + buffer)
         }
     }
+    return isVisible
 }
 
 /**
@@ -149,89 +92,8 @@ fun <T> Flow<T>.throttleLatest(periodMs: Long): Flow<T> = flow {
     collect { value ->
         val now = System.currentTimeMillis()
         if (now - lastEmitTimeMs >= periodMs) {
-            emit(value)
             lastEmitTimeMs = now
+            emit(value)
         }
     }
-}
-
-/**
- * ✅ Performance: Memory management constants
- */
-object PerformanceConstants {
-    const val DEFAULT_PAGE_SIZE = 20
-    const val LARGE_PAGE_SIZE = 50
-    const val PREFETCH_BUFFER = 3
-    const val MAX_CACHED_IMAGES = 100
-    const val IMAGE_CACHE_SIZE_MB = 50
-    const val ANIMATION_DURATION_MS = 300
-    const val DEBOUNCE_DELAY_MS = 300L
-    const val NETWORK_TIMEOUT_MS = 30_000L
-}
-
-/**
- * ✅ Performance: Resource cleanup utilities
- */
-class ResourceManager {
-    private val resources = mutableSetOf<() -> Unit>()
-
-    fun addCleanupTask(cleanup: () -> Unit) {
-        resources.add(cleanup)
-    }
-
-    fun cleanup() {
-        resources.forEach { it() }
-        resources.clear()
-    }
-}
-
-@Composable
-fun rememberResourceManager(): ResourceManager {
-    val resourceManager = remember { ResourceManager() }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            resourceManager.cleanup()
-        }
-    }
-
-    return resourceManager
-}
-
-/**
- * ✅ Performance: Smart preloading strategy
- */
-sealed class PreloadStrategy {
-    object Aggressive : PreloadStrategy() // Preload 2 screens ahead
-    object Moderate : PreloadStrategy() // Preload 1 screen ahead
-    object Conservative : PreloadStrategy() // Preload only visible + buffer
-}
-
-data class PreloadConfig(
-    val strategy: PreloadStrategy = PreloadStrategy.Moderate,
-    val bufferSize: Int = 5,
-    val enablePrefetch: Boolean = true,
-)
-
-/**
- * ✅ Performance: Battery and network aware optimizations
- */
-object AdaptivePerformance {
-    fun getOptimalImageQuality(isLowPowerMode: Boolean, isMeteredConnection: Boolean): Int {
-        return when {
-            isLowPowerMode && isMeteredConnection -> 60
-            isLowPowerMode || isMeteredConnection -> 75
-            else -> 85
-        }
-    }
-
-    fun getOptimalCacheSize(availableMemoryMb: Long): Int {
-        return when {
-            availableMemoryMb < 512 -> 25
-            availableMemoryMb < 1024 -> 50
-            else -> 100
-        }.coerceAtMost(availableMemoryMb.toInt() / 10)
-    }
-
-    fun shouldReduceAnimations(isLowPowerMode: Boolean): Boolean = isLowPowerMode
 }

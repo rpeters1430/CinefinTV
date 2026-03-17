@@ -391,7 +391,7 @@ private fun HomeSection(
                     unwatchedCount = item.unwatchedCount,
                     playbackProgress = item.playbackProgress,
                     aspectRatio = 16f / 9f,
-                    cardWidth = 260.dp,
+                    cardWidth = 220.dp,
                     modifier = if (index == 0) {
                         Modifier.focusRequester(firstItemFocusRequester)
                     } else {

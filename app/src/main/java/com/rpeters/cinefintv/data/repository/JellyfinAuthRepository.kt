@@ -261,6 +261,14 @@ class JellyfinAuthRepository @Inject constructor(
         }
     }
 
+    fun createApiClient(): ApiClient? {
+        val server = _currentServer.value ?: return null
+        return jellyfin.createApi(
+            baseUrl = server.url,
+            accessToken = server.accessToken,
+        )
+    }
+
     private fun createApiClient(serverUrl: String, accessToken: String? = null): ApiClient {
         return jellyfin.createApi(
             baseUrl = serverUrl,

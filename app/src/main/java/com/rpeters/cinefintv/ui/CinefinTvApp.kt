@@ -31,9 +31,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.findStartDestination
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
@@ -95,9 +95,9 @@ fun CinefinTvApp(
             }
         }
 
-        if (updateInfo != null) {
+        updateInfo?.let { info ->
             UpdateDialog(
-                info = updateInfo!!,
+                info = info,
                 isDownloading = isDownloading,
                 progress = downloadProgress,
                 errorMessage = updateError,
@@ -107,7 +107,7 @@ fun CinefinTvApp(
                         downloadProgress = 0f
                         updateError = null
                         coroutineScope.launch {
-                            val result = updateManager.downloadAndInstallApk(updateInfo!!) { progress ->
+                            val result = updateManager.downloadAndInstallApk(info) { progress ->
                                 downloadProgress = progress
                             }
                             isDownloading = false
@@ -131,7 +131,7 @@ fun CinefinTvApp(
                     }
                 },
                 onDismiss = {
-                    if (!updateInfo!!.isCritical) {
+                    if (!info.isCritical) {
                         updateInfo = null
                         updateError = null
                     }
@@ -145,7 +145,7 @@ fun CinefinTvApp(
             !currentRoute.startsWith("player/") &&
             !currentRoute.startsWith("audio-player/") &&
             (!currentRoute.startsWith("detail/") || isPersonDetailRoute) &&
-            !currentRoute.startsWith("stuff/detail/")
+            !currentRoute.startsWith("collections/detail/")
 
         // Determine selected tab based on route prefix to keep it highlighted during sub-navigation
         val selectedTabIndex = navTabItems.indexOfFirst { item ->

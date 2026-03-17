@@ -76,10 +76,11 @@ fun PlayerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val expressiveColors = LocalCinefinExpressiveColors.current
 
     when {
         uiState.isLoading || uiState.isRetrying -> {
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize().background(expressiveColors.playerSurface), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(48.dp),
@@ -99,7 +100,7 @@ fun PlayerScreen(
         }
 
         uiState.errorMessage != null -> {
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize().background(expressiveColors.playerSurface), contentAlignment = Alignment.Center) {
                 Column(
                     modifier = Modifier.padding(48.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -137,7 +138,7 @@ fun PlayerScreen(
             }
 
             if (player == null) {
-                Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.fillMaxSize().background(expressiveColors.playerSurface), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(48.dp),
                         color = MaterialTheme.colorScheme.primary
@@ -221,7 +222,7 @@ fun PlayerScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black)
+                        .background(expressiveColors.playerSurface)
                         .onKeyEvent { keyEvent ->
                         if (keyEvent.type == KeyEventType.KeyDown) {
                             when (keyEvent.key) {
@@ -339,7 +340,6 @@ fun PlayerScreen(
                     }
                 }
                 // Speed badge — persistent pill shown when speed is not 1×
-                val expressiveColors = LocalCinefinExpressiveColors.current
                 AnimatedVisibility(
                     visible = uiState.playbackSpeed != 1.0f,
                     enter = fadeIn(),
@@ -393,8 +393,8 @@ fun PlayerScreen(
                                 .onFocusChanged { overlayActionFocused = it.hasFocus },
                             colors = ButtonDefaults.colors(
                                 containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = Color.White,
-                                focusedContainerColor = Color.White,
+                                contentColor = expressiveColors.playerContentPrimary,
+                                focusedContainerColor = expressiveColors.playerContentPrimary,
                                 focusedContentColor = MaterialTheme.colorScheme.primary,
                             ),
                             shape = ButtonDefaults.shape(shape = RoundedCornerShape(50)),

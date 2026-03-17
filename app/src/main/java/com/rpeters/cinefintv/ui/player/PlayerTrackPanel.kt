@@ -110,7 +110,7 @@ internal fun PlayerTrackPanel(
                     containerColor = expressiveColors.chromeSurface.copy(alpha = 0.98f),
                 ),
                 border = androidx.tv.material3.Border(
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, expressiveColors.playerContentPrimary.copy(alpha = 0.15f))
                 ),
                 tonalElevation = 12.dp,
             ) {

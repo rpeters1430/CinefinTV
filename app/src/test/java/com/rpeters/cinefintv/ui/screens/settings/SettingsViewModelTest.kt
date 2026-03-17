@@ -1,0 +1,61 @@
+package com.rpeters.cinefintv.ui.screens.settings
+
+import com.rpeters.cinefintv.data.preferences.CastPreferences
+import com.rpeters.cinefintv.data.preferences.CastPreferencesRepository
+import com.rpeters.cinefintv.data.preferences.CredentialSecurityPreferences
+import com.rpeters.cinefintv.data.preferences.CredentialSecurityPreferencesRepository
+import com.rpeters.cinefintv.data.preferences.LibraryActionsPreferences
+import com.rpeters.cinefintv.data.preferences.LibraryActionsPreferencesRepository
+import com.rpeters.cinefintv.data.preferences.PlaybackPreferences
+import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
+import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
+import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferencesRepository
+import com.rpeters.cinefintv.data.preferences.ThemePreferences
+import com.rpeters.cinefintv.data.preferences.ThemePreferencesRepository
+import com.rpeters.cinefintv.testutil.MainDispatcherRule
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertFalse
+import org.junit.Rule
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class SettingsViewModelTest {
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    @Test
+    fun init_loadsPreferences() = runTest {
+        val themeRepo = mockk<ThemePreferencesRepository>(relaxed = true)
+        val playbackRepo = mockk<PlaybackPreferencesRepository>(relaxed = true)
+        val subtitleRepo = mockk<SubtitleAppearancePreferencesRepository>(relaxed = true)
+        val libraryRepo = mockk<LibraryActionsPreferencesRepository>(relaxed = true)
+        val castRepo = mockk<CastPreferencesRepository>(relaxed = true)
+        val securityRepo = mockk<CredentialSecurityPreferencesRepository>(relaxed = true)
+
+        every { themeRepo.themePreferencesFlow } returns flowOf(ThemePreferences.DEFAULT)
+        every { playbackRepo.preferences } returns flowOf(PlaybackPreferences.DEFAULT)
+        every { subtitleRepo.preferencesFlow } returns flowOf(SubtitleAppearancePreferences.DEFAULT)
+        every { libraryRepo.preferences } returns flowOf(LibraryActionsPreferences.DEFAULT)
+        every { castRepo.castPreferencesFlow } returns flowOf(CastPreferences.DEFAULT)
+        every { securityRepo.preferences } returns flowOf(CredentialSecurityPreferences.DEFAULT)
+
+        val viewModel = SettingsViewModel(
+            themeRepo,
+            playbackRepo,
+            subtitleRepo,
+            libraryRepo,
+            castRepo,
+            securityRepo
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+    }
+}

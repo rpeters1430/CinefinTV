@@ -7,19 +7,19 @@ object NavRoutes {
     const val SEARCH = "search"
     const val LIBRARY_MOVIES = "library/movies"
     const val LIBRARY_TVSHOWS = "library/tvshows"
-    const val LIBRARY_STUFF = "library/stuff"
+    const val LIBRARY_COLLECTIONS = "library/collections"
     const val LIBRARY_MUSIC = "library/music"
     const val SETTINGS = "settings"
     const val DETAIL = "detail/{itemId}"
     const val PERSON_DETAIL = "detail/person/{personId}"
-    const val STUFF_DETAIL = "stuff/detail/{itemId}"
+    const val COLLECTIONS_DETAIL = "collections/detail/{itemId}"
     const val PLAYER = "player/{itemId}"
     const val AUDIO_PLAYER = "audio-player/{itemId}?queue={queue}"
 
     fun detail(itemId: String) = "detail/$itemId"
     fun personDetail(personId: String) = "detail/person/$personId"
     fun player(itemId: String) = "player/$itemId"
-    fun stuffDetail(itemId: String) = "stuff/detail/$itemId"
+    fun collectionsDetail(itemId: String) = "collections/detail/$itemId"
     fun audioPlayer(itemId: String, queueIds: List<String>): String {
         val encodedQueue = queueIds
             .filter(String::isNotBlank)

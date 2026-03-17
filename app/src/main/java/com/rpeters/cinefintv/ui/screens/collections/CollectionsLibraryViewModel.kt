@@ -1,4 +1,4 @@
-package com.rpeters.cinefintv.ui.screens.stuff
+package com.rpeters.cinefintv.ui.screens.collections
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,12 +27,12 @@ import kotlinx.coroutines.flow.map
 import org.jellyfin.sdk.model.api.BaseItemDto
 import javax.inject.Inject
 
-sealed class StuffLibraryUiState {
-    data object Loading : StuffLibraryUiState()
-    data object Content : StuffLibraryUiState()
+sealed class CollectionsLibraryUiState {
+    data object Loading : CollectionsLibraryUiState()
+    data object Content : CollectionsLibraryUiState()
 }
 
-data class StuffItemCardModel(
+data class CollectionsItemCardModel(
     val id: String,
     val title: String,
     val subtitle: String?,
@@ -43,29 +43,29 @@ data class StuffItemCardModel(
 
 @HiltViewModel
 @OptIn(ExperimentalCoroutinesApi::class)
-class StuffLibraryViewModel @Inject constructor(
+class CollectionsLibraryViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow<StuffLibraryUiState>(StuffLibraryUiState.Loading)
-    val uiState: StateFlow<StuffLibraryUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow<CollectionsLibraryUiState>(CollectionsLibraryUiState.Loading)
+    val uiState: StateFlow<CollectionsLibraryUiState> = _uiState.asStateFlow()
 
     private val refreshGeneration = MutableStateFlow(0)
 
-    val pagedItems: Flow<PagingData<StuffItemCardModel>> =
+    val pagedItems: Flow<PagingData<CollectionsItemCardModel>> =
         refreshGeneration
             .flatMapLatest {
                 Pager(
                     config = PagingConfig(
-                        pageSize = STUFF_PAGE_SIZE,
-                        initialLoadSize = STUFF_PAGE_SIZE * 2,
-                        prefetchDistance = STUFF_PAGE_SIZE,
+                        pageSize = COLLECTIONS_PAGE_SIZE,
+                        initialLoadSize = COLLECTIONS_PAGE_SIZE * 2,
+                        prefetchDistance = COLLECTIONS_PAGE_SIZE,
                         enablePlaceholders = false,
                     ),
                 ) {
                     LibraryItemPagingSource(
                         mediaRepository = repositories.media,
                         collectionType = "homevideos",
-                        pageSize = STUFF_PAGE_SIZE,
+                        pageSize = COLLECTIONS_PAGE_SIZE,
                     )
                 }.flow
             }
@@ -73,15 +73,15 @@ class StuffLibraryViewModel @Inject constructor(
             .cachedIn(viewModelScope)
 
     fun load(forceRefresh: Boolean = false) {
-        if (!forceRefresh && _uiState.value is StuffLibraryUiState.Content) return
+        if (!forceRefresh && _uiState.value is CollectionsLibraryUiState.Content) return
 
-        _uiState.value = StuffLibraryUiState.Content
+        _uiState.value = CollectionsLibraryUiState.Content
         if (forceRefresh) {
             refreshGeneration.value += 1
         }
     }
 
-    private fun toCardModel(item: BaseItemDto): StuffItemCardModel {
+    private fun toCardModel(item: BaseItemDto): CollectionsItemCardModel {
         val isResumable = item.canResume()
         val isWatched = item.isWatched()
         val watchStatus = when {
@@ -93,7 +93,7 @@ class StuffLibraryViewModel @Inject constructor(
             item.getWatchedPercentage().toFloat() / 100f
         } else null
 
-        return StuffItemCardModel(
+        return CollectionsItemCardModel(
             id = item.id.toString(),
             title = item.getDisplayTitle(),
             subtitle = item.getYear()?.toString() ?: item.getFormattedDuration(),
@@ -104,6 +104,6 @@ class StuffLibraryViewModel @Inject constructor(
     }
 
     companion object {
-        private const val STUFF_PAGE_SIZE = 40
+        private const val COLLECTIONS_PAGE_SIZE = 40
     }
 }

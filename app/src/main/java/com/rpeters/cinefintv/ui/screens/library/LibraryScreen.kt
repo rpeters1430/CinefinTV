@@ -67,8 +67,8 @@ enum class LibraryCategory(
         collectionType = "tvshows",
         itemTypes = listOf(BaseItemKind.SERIES),
     ),
-    STUFF(
-        title = "Stuff",
+    COLLECTIONS(
+        title = "Collections",
         collectionType = "homevideos",
         itemTypes = null,
     ),
@@ -93,7 +93,7 @@ fun LibraryScreen(
         route = when (category) {
             LibraryCategory.MOVIES -> NavRoutes.LIBRARY_MOVIES
             LibraryCategory.TV_SHOWS -> NavRoutes.LIBRARY_TVSHOWS
-            LibraryCategory.STUFF -> NavRoutes.LIBRARY_STUFF
+            LibraryCategory.COLLECTIONS -> NavRoutes.LIBRARY_COLLECTIONS
         },
         requester = screenFocus.primaryContentRequester,
     )
@@ -142,7 +142,7 @@ fun LibraryScreen(
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         LazyVerticalGrid(
-                            columns = GridCells.Adaptive(minSize = 180.dp),
+                            columns = GridCells.Adaptive(minSize = 150.dp),
                             state = gridState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(

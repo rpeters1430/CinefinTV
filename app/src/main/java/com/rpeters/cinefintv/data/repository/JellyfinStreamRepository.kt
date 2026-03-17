@@ -1,11 +1,23 @@
 package com.rpeters.cinefintv.data.repository
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.util.Log
+import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.data.DeviceCapabilities
+import com.rpeters.cinefintv.data.model.JellyfinDeviceProfile
+import com.rpeters.cinefintv.utils.SecureLogger
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.jellyfin.sdk.api.client.extensions.mediaInfoApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
+import org.jellyfin.sdk.model.api.PlaybackInfoDto
+import org.jellyfin.sdk.model.api.PlaybackInfoResponse
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -16,6 +28,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class JellyfinStreamRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val authRepository: JellyfinAuthRepository,
     private val deviceCapabilities: DeviceCapabilities,
 ) {
@@ -23,6 +36,8 @@ class JellyfinStreamRepository @Inject constructor(
         // Stream quality constants
         private const val DEFAULT_MAX_BITRATE = 140_000_000
         private const val DEFAULT_MAX_AUDIO_CHANNELS = 8
+        private const val DEFAULT_TV_MAX_AUDIO_CHANNELS = 6 // Standard 5.1 for TV
+        private const val TICKS_PER_MILLISECOND = 10_000L
 
         // Image size constants
         private const val DEFAULT_IMAGE_MAX_HEIGHT = 800
@@ -441,4 +456,96 @@ class JellyfinStreamRepository @Inject constructor(
         }
     }
 
+    /**
+     * Gets playback information for a media item, including available streams and transcoding decisions.
+     */
+    suspend fun getPlaybackInfo(
+        itemId: String,
+        audioStreamIndex: Int? = null,
+        subtitleStreamIndex: Int? = null,
+        startPositionMs: Long = 0L,
+    ): PlaybackInfoResponse = withContext(Dispatchers.IO) {
+        val client = authRepository.createApiClient()
+            ?: throw IllegalStateException("Client not authenticated")
+
+        val server = authRepository.getCurrentServer()
+            ?: throw IllegalStateException("No active server found")
+
+        val userUuid = runCatching { UUID.fromString(server.userId ?: "") }.getOrNull()
+            ?: throw IllegalStateException("Invalid user UUID: ${server.userId}")
+        val itemUuid = runCatching { UUID.fromString(itemId) }.getOrNull()
+            ?: throw IllegalArgumentException("Invalid item UUID: $itemId")
+
+        // Get device capabilities to create proper device profile
+        val capabilities = deviceCapabilities.getDirectPlayCapabilities()
+        val deviceProfile = JellyfinDeviceProfile.createDeviceProfileFromCapabilities(capabilities)
+
+        // Set maxStreamingBitrate based on network quality
+        val maxBitrate = getNetworkBasedMaxBitrate()
+
+        val playbackInfoDto = PlaybackInfoDto(
+            userId = userUuid,
+            maxStreamingBitrate = maxBitrate,
+            startTimeTicks = if (startPositionMs > 0L) startPositionMs * TICKS_PER_MILLISECOND else null,
+            audioStreamIndex = audioStreamIndex,
+            subtitleStreamIndex = subtitleStreamIndex,
+            maxAudioChannels = DEFAULT_TV_MAX_AUDIO_CHANNELS,
+            mediaSourceId = null,
+            liveStreamId = null,
+            deviceProfile = deviceProfile,
+            enableDirectPlay = true,
+            enableDirectStream = true,
+            enableTranscoding = true,
+            allowVideoStreamCopy = true,
+            allowAudioStreamCopy = true,
+            autoOpenLiveStream = null,
+        )
+
+        if (BuildConfig.DEBUG) {
+            SecureLogger.d(
+                "JellyfinStreamRepository",
+                "PlaybackInfo request for item $itemId: " +
+                    "maxBitrate=${playbackInfoDto.maxStreamingBitrate} (${maxBitrate / 1_000_000}Mbps), " +
+                    "directPlay=${playbackInfoDto.enableDirectPlay}, " +
+                    "directStream=${playbackInfoDto.enableDirectStream}, " +
+                    "transcode=${playbackInfoDto.enableTranscoding}",
+            )
+        }
+
+        val response = client.mediaInfoApi.getPostedPlaybackInfo(
+            itemId = itemUuid,
+            data = playbackInfoDto,
+        ).content
+
+        if (BuildConfig.DEBUG) {
+            SecureLogger.d(
+                "JellyfinStreamRepository",
+                "PlaybackInfo response: playSessionId=${response.playSessionId}, " +
+                    "mediaSources=${response.mediaSources.size}",
+            )
+        }
+
+        response
+    }
+
+    private fun getNetworkBasedMaxBitrate(): Int {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return 25_000_000 // Default to 25 Mbps if network service unavailable
+
+        val activeNetwork = connectivityManager.activeNetwork
+        val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+
+        return when {
+            // Ethernet: Best quality
+            networkCapabilities?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true -> {
+                120_000_000 // 120 Mbps
+            }
+            // WiFi: Good quality
+            networkCapabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true -> {
+                60_000_000 // 60 Mbps
+            }
+            // Default (Mobile or other): Conservative quality
+            else -> 20_000_000 // 20 Mbps
+        }
+    }
 }

@@ -164,7 +164,7 @@ private fun MusicGridContent(
     )
 
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 210.dp),
+        columns = GridCells.Adaptive(minSize = 160.dp),
         state = gridState,
         modifier = Modifier
             .fillMaxSize()

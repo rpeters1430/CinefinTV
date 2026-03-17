@@ -19,6 +19,12 @@ data class CinefinExpressiveColors(
     val pillMuted: Color,
     val pillStrong: Color,
     val titleAccent: Color,
+    // Player tokens
+    val playerSurface: Color = Color.Black,
+    val playerContentPrimary: Color = Color.White,
+    val playerContentSecondary: Color = Color.White.copy(alpha = 0.7f),
+    val playerOverlayStart: Color = Color.Black.copy(alpha = 0.7f),
+    val playerOverlayEnd: Color = Color.Black.copy(alpha = 0.92f),
 )
 
 val LocalCinefinExpressiveColors = staticCompositionLocalOf {

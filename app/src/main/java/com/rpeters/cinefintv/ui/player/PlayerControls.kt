@@ -75,6 +75,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.ui.theme.SurfaceDark
 
@@ -95,6 +96,7 @@ internal fun PlayerControls(
     onBack: () -> Unit,
 ) {
     val spacing = LocalCinefinSpacing.current
+    val expressiveColors = LocalCinefinExpressiveColors.current
     val defaultBounds = Rect.Zero
     val (subtitleButtonBounds, setSubtitleButtonBounds) = remember { mutableStateOf(defaultBounds) }
     val (audioButtonBounds, setAudioButtonBounds) = remember { mutableStateOf(defaultBounds) }
@@ -117,10 +119,10 @@ internal fun PlayerControls(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        0.0f to Color.Black.copy(alpha = 0.7f),
+                        0.0f to expressiveColors.playerOverlayStart,
                         0.25f to Color.Transparent,
                         0.55f to Color.Transparent,
-                        1.0f to Color.Black.copy(alpha = 0.92f)
+                        1.0f to expressiveColors.playerOverlayEnd
                     )
                 )
         ) {
@@ -146,10 +148,10 @@ internal fun PlayerControls(
                             },
                         scale = IconButtonDefaults.scale(focusedScale = 1.15f),
                         colors = IconButtonDefaults.colors(
-                            containerColor = Color.White.copy(alpha = 0.1f),
-                            contentColor = Color.White,
+                            containerColor = expressiveColors.playerContentPrimary.copy(alpha = 0.1f),
+                            contentColor = expressiveColors.playerContentPrimary,
                             focusedContainerColor = MaterialTheme.colorScheme.primary,
-                            focusedContentColor = Color.White,
+                            focusedContentColor = expressiveColors.playerContentPrimary,
                         )
                     ) {
                         Icon(
@@ -163,7 +165,7 @@ internal fun PlayerControls(
                         Text(
                             text = uiState.title,
                             style = MaterialTheme.typography.headlineMedium,
-                            color = Color.White,
+                            color = expressiveColors.playerContentPrimary,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -179,7 +181,7 @@ internal fun PlayerControls(
                             Text(
                                 text = episodeInfo,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Color.White.copy(alpha = 0.7f),
+                                color = expressiveColors.playerContentSecondary,
                             )
                         }
                     }
@@ -204,7 +206,7 @@ internal fun PlayerControls(
                         text = formatMs(position),
                         style = MaterialTheme.typography.labelLarge,
                         fontSize = 18.sp,
-                        color = Color.White.copy(alpha = 0.9f),
+                        color = expressiveColors.playerContentPrimary.copy(alpha = 0.9f),
                     )
                     SeekBarControl(
                         position = position,
@@ -222,7 +224,7 @@ internal fun PlayerControls(
                         text = formatMs(duration),
                         style = MaterialTheme.typography.labelLarge,
                         fontSize = 18.sp,
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = expressiveColors.playerContentPrimary.copy(alpha = 0.5f),
                     )
                 }
 
@@ -283,7 +285,7 @@ internal fun PlayerControls(
                             .padding(horizontal = 16.dp)
                             .width(1.dp)
                             .height(24.dp)
-                            .background(Color.White.copy(alpha = 0.4f))
+                            .background(expressiveColors.playerContentPrimary.copy(alpha = 0.4f))
                     )
 
                     // CC (Subtitles)
@@ -346,6 +348,7 @@ internal fun NextEpisodeCard(
 ) {
     val progressFraction = ((15_000L - remainingMs) / 15_000f).coerceIn(0f, 1f)
     val playNowFocusRequester = remember { FocusRequester() }
+    val expressiveColors = LocalCinefinExpressiveColors.current
 
     LaunchedEffect(autoFocusPlayNow) {
         if (!autoFocusPlayNow) return@LaunchedEffect
@@ -378,14 +381,14 @@ internal fun NextEpisodeCard(
                     text = "UP NEXT",
                     style = MaterialTheme.typography.labelMedium,
                     fontSize = 18.sp,
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = expressiveColors.playerContentPrimary.copy(alpha = 0.5f),
                 )
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyMedium,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
+                    color = expressiveColors.playerContentPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -397,7 +400,7 @@ internal fun NextEpisodeCard(
                     },
                     style = MaterialTheme.typography.labelMedium,
                     fontSize = 18.sp,
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = expressiveColors.playerContentPrimary.copy(alpha = 0.5f),
                 )
 
                 if (autoPlayEnabled) {
@@ -405,7 +408,7 @@ internal fun NextEpisodeCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(2.dp)
-                            .background(Color.White.copy(alpha = 0.15f))
+                            .background(expressiveColors.playerContentPrimary.copy(alpha = 0.15f))
                     ) {
                         Box(
                             modifier = Modifier
@@ -425,8 +428,8 @@ internal fun NextEpisodeCard(
                         .onFocusChanged { onActionFocusChanged(it.hasFocus) },
                     colors = ButtonDefaults.colors(
                         containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White,
-                        focusedContainerColor = Color.White,
+                        contentColor = expressiveColors.playerContentPrimary,
+                        focusedContainerColor = expressiveColors.playerContentPrimary,
                         focusedContentColor = MaterialTheme.colorScheme.primary,
                     ),
                 ) {
@@ -448,15 +451,16 @@ private fun PlayPauseButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     IconButton(
         onClick = onClick,
         modifier = modifier,
         scale = IconButtonDefaults.scale(focusedScale = 1.2f),
         colors = IconButtonDefaults.colors(
-            containerColor = Color.White,
-            contentColor = Color.Black,
+            containerColor = expressiveColors.playerContentPrimary,
+            contentColor = expressiveColors.playerSurface,
             focusedContainerColor = MaterialTheme.colorScheme.primary,
-            focusedContentColor = Color.White
+            focusedContentColor = expressiveColors.playerContentPrimary
         )
     ) {
         Icon(
@@ -474,15 +478,16 @@ private fun ActionIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     IconButton(
         onClick = onClick,
         modifier = modifier,
         scale = IconButtonDefaults.scale(focusedScale = 1.15f),
         colors = IconButtonDefaults.colors(
             containerColor = Color.Transparent,
-            contentColor = Color.White.copy(alpha = 0.8f),
-            focusedContainerColor = Color.White.copy(alpha = 0.2f),
-            focusedContentColor = Color.White
+            contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.8f),
+            focusedContainerColor = expressiveColors.playerContentPrimary.copy(alpha = 0.2f),
+            focusedContentColor = expressiveColors.playerContentPrimary
         )
     ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(26.dp))
@@ -508,6 +513,7 @@ private fun SeekBarControl(
     var seekDirection by remember { mutableStateOf(0) }
     // Tracks the live seek position during a hold-seek without being overwritten by polling ticks.
     var seekPosition by remember { mutableLongStateOf(position) }
+    val expressiveColors = LocalCinefinExpressiveColors.current
 
     LaunchedEffect(position, isSeeking) {
         if (!isSeeking) {
@@ -571,7 +577,7 @@ private fun SeekBarControl(
                 .fillMaxWidth()
                 .height(barHeight)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.2f))
+                .background(expressiveColors.playerContentPrimary.copy(alpha = 0.2f))
         ) {
             val progressFraction =
                 if (duration > 0L) (seekPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
@@ -584,7 +590,7 @@ private fun SeekBarControl(
                     modifier = Modifier
                         .fillMaxHeight()
                         .fillMaxWidth(bufferedClamped)
-                        .background(Color.White.copy(alpha = 0.35f))
+                        .background(expressiveColors.playerContentPrimary.copy(alpha = 0.35f))
                 )
             }
 
@@ -607,7 +613,7 @@ private fun SeekBarControl(
                         .offset(x = maxWidth * chapterFraction - 1.dp)
                         .width(2.dp)
                         .height(barHeight)
-                        .background(Color.White.copy(alpha = 0.6f))
+                        .background(expressiveColors.playerContentPrimary.copy(alpha = 0.6f))
                 )
             }
 
@@ -627,7 +633,7 @@ private fun SeekBarControl(
                             spotColor = MaterialTheme.colorScheme.primary,
                         )
                         .background(MaterialTheme.colorScheme.primary, CircleShape)
-                        .border(width = 3.dp, color = Color.White, shape = CircleShape)
+                        .border(width = 3.dp, color = expressiveColors.playerContentPrimary, shape = CircleShape)
                 )
             }
         }
@@ -652,14 +658,14 @@ private fun SeekBarControl(
                         .width(bubbleWidth),
                     shape = RoundedCornerShape(4.dp),
                     colors = SurfaceDefaults.colors(
-                        containerColor = Color.Black.copy(alpha = 0.85f)
+                        containerColor = expressiveColors.playerSurface.copy(alpha = 0.85f)
                     )
                 ) {
                     Text(
                         text = formatMs(seekPosition),
                         style = MaterialTheme.typography.labelMedium,
                         fontSize = 18.sp,
-                        color = Color.White,
+                        color = expressiveColors.playerContentPrimary,
                         modifier = Modifier
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         maxLines = 1,

@@ -1,4 +1,4 @@
-package com.rpeters.cinefintv.ui.screens.stuff
+package com.rpeters.cinefintv.ui.screens.collections
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -41,9 +41,9 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun StuffLibraryScreen(
+fun CollectionsLibraryScreen(
     onOpenItem: (String) -> Unit,
-    viewModel: StuffLibraryViewModel = hiltViewModel(),
+    viewModel: CollectionsLibraryViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val pagedItems = viewModel.pagedItems.collectAsLazyPagingItems()
@@ -53,7 +53,7 @@ fun StuffLibraryScreen(
     val firstItemRequester = remember { FocusRequester() }
 
     RegisterPrimaryScreenFocus(
-        route = NavRoutes.LIBRARY_STUFF,
+        route = NavRoutes.LIBRARY_COLLECTIONS,
         requester = firstItemRequester,
     )
 
@@ -62,21 +62,21 @@ fun StuffLibraryScreen(
     }
 
     when (val state = uiState) {
-        is StuffLibraryUiState.Loading -> {
-            StuffLoadingState()
+        is CollectionsLibraryUiState.Loading -> {
+            CollectionsLoadingState()
         }
 
-        is StuffLibraryUiState.Content -> {
+        is CollectionsLibraryUiState.Content -> {
             when (val refreshState = pagedItems.loadState.refresh) {
                 is LoadState.Loading -> {
                     if (pagedItems.itemCount == 0) {
-                        StuffLoadingState()
+                        CollectionsLoadingState()
                     }
                 }
 
                 is LoadState.Error -> {
                     if (pagedItems.itemCount == 0) {
-                        StuffErrorState(
+                        CollectionsErrorState(
                             message = refreshState.error.message ?: "Unknown paging error",
                             onRetry = pagedItems::refresh,
                         )
@@ -106,7 +106,7 @@ fun StuffLibraryScreen(
                         ),
                 ) {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(5),
+                        columns = GridCells.Fixed(7),
                         state = gridState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(horizontal = 64.dp, vertical = 8.dp),
@@ -128,7 +128,7 @@ fun StuffLibraryScreen(
 
                         item(span = { GridItemSpan(maxLineSpan) }) {
                             LibraryHeader(
-                                title = "Stuff",
+                                title = "Collections",
                                 description = "Home videos and personal media with a gallery-style browsing surface.",
                                 count = pagedItems.itemCount,
                             )
@@ -137,7 +137,7 @@ fun StuffLibraryScreen(
                         if (pagedItems.itemCount == 0) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 Text(
-                                    text = "No home videos were found in Stuff.",
+                                    text = "No home videos were found in Collections.",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -188,7 +188,7 @@ fun StuffLibraryScreen(
 }
 
 @Composable
-private fun StuffLoadingState() {
+private fun CollectionsLoadingState() {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -197,7 +197,7 @@ private fun StuffLoadingState() {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             CircularProgressIndicator()
             Text(
-                text = "Loading Stuff (Home Videos)...",
+                text = "Loading Collections (Home Videos)...",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onBackground,
             )
@@ -207,7 +207,7 @@ private fun StuffLoadingState() {
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun StuffErrorState(
+private fun CollectionsErrorState(
     message: String,
     onRetry: () -> Unit,
 ) {
@@ -218,7 +218,7 @@ private fun StuffErrorState(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
-            text = "Stuff could not load",
+            text = "Collections could not load",
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onBackground,
         )

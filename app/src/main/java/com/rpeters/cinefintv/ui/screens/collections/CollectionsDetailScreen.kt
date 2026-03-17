@@ -1,4 +1,4 @@
-package com.rpeters.cinefintv.ui.screens.stuff
+package com.rpeters.cinefintv.ui.screens.collections
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -52,11 +52,11 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun StuffDetailScreen(
+fun CollectionsDetailScreen(
     onPlay: (String) -> Unit,
     onOpenItem: (String) -> Unit,
     onBack: () -> Unit,
-    viewModel: StuffDetailViewModel = hiltViewModel(),
+    viewModel: CollectionsDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
@@ -64,18 +64,18 @@ fun StuffDetailScreen(
     val expressiveColors = LocalCinefinExpressiveColors.current
 
     when (val state = uiState) {
-        is StuffDetailUiState.Loading -> Box(
+        is CollectionsDetailUiState.Loading -> Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = androidx.compose.ui.Alignment.Center
         ) {
             Text(
-                text = "Loading Stuff details...",
+                text = "Loading Collections details...",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onBackground,
             )
         }
 
-        is StuffDetailUiState.Error -> {
+        is CollectionsDetailUiState.Error -> {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -83,7 +83,7 @@ fun StuffDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
-                    text = "Stuff detail could not load", 
+                    text = "Collections detail could not load", 
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -99,7 +99,7 @@ fun StuffDetailScreen(
             }
         }
 
-        is StuffDetailUiState.Content -> {
+        is CollectionsDetailUiState.Content -> {
             val item = state.item
             val playButtonRequester = remember { FocusRequester() }
             val topAnchorRequester = remember { FocusRequester() }
@@ -209,7 +209,7 @@ fun StuffDetailScreen(
                                     modifier = Modifier
                                         .focusRequester(playButtonRequester)
                                         .focusProperties {
-                                            if (state.moreFromStuff.isNotEmpty()) {
+                                            if (state.moreFromCollections.isNotEmpty()) {
                                                 down = moreShelfRequester
                                             }
                                         }
@@ -232,7 +232,7 @@ fun StuffDetailScreen(
                                     Button(
                                         onClick = viewModel::confirmDelete,
                                         modifier = Modifier.focusProperties {
-                                            if (state.moreFromStuff.isNotEmpty()) {
+                                            if (state.moreFromCollections.isNotEmpty()) {
                                                 down = moreShelfRequester
                                             }
                                         }
@@ -242,7 +242,7 @@ fun StuffDetailScreen(
                                     OutlinedButton(
                                         onClick = viewModel::cancelDelete,
                                         modifier = Modifier.focusProperties {
-                                            if (state.moreFromStuff.isNotEmpty()) {
+                                            if (state.moreFromCollections.isNotEmpty()) {
                                                 down = moreShelfRequester
                                             }
                                         }
@@ -253,7 +253,7 @@ fun StuffDetailScreen(
                                     OutlinedButton(
                                         onClick = viewModel::requestDelete,
                                         modifier = Modifier.focusProperties {
-                                            if (state.moreFromStuff.isNotEmpty()) {
+                                            if (state.moreFromCollections.isNotEmpty()) {
                                                 down = moreShelfRequester
                                             }
                                         }
@@ -264,7 +264,7 @@ fun StuffDetailScreen(
                                 OutlinedButton(
                                     onClick = onBack,
                                     modifier = Modifier.focusProperties {
-                                        if (state.moreFromStuff.isNotEmpty()) {
+                                        if (state.moreFromCollections.isNotEmpty()) {
                                             down = moreShelfRequester
                                         }
                                     }
@@ -282,19 +282,19 @@ fun StuffDetailScreen(
                         }
                     }
 
-                    if (state.moreFromStuff.isNotEmpty()) {
+                    if (state.moreFromCollections.isNotEmpty()) {
                         item { Spacer(Modifier.height(32.dp)) }
                         item {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 CinefinShelfTitle(
-                                    title = "More Stuff",
+                                    title = "More Collections",
                                     eyebrow = item.title,
                                 )
                                 LazyRow(
                                     contentPadding = PaddingValues(horizontal = 12.dp),
                                     horizontalArrangement = Arrangement.spacedBy(20.dp),
                                 ) {
-                                    items(state.moreFromStuff, key = { it.id }) { item ->
+                                    items(state.moreFromCollections, key = { it.id }) { item ->
                                         TvMediaCard(
                                             title = item.title,
                                             subtitle = item.subtitle,
@@ -304,7 +304,7 @@ fun StuffDetailScreen(
                                             playbackProgress = item.playbackProgress,
                                             modifier = Modifier
                                                 .then(
-                                                    if (item == state.moreFromStuff.first()) {
+                                                    if (item == state.moreFromCollections.first()) {
                                                         Modifier.focusRequester(moreShelfRequester)
                                                     } else {
                                                         Modifier

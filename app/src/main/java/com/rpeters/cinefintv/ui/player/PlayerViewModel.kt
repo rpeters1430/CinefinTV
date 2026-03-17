@@ -48,7 +48,6 @@ import kotlin.math.pow
 class PlayerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repositories: JellyfinRepositoryCoordinator,
-    private val jellyfinRepository: JellyfinRepository,
     private val enhancedPlaybackManager: EnhancedPlaybackManager,
     private val adaptiveBitrateMonitor: AdaptiveBitrateMonitor,
     private val playbackPreferencesRepository: PlaybackPreferencesRepository,
@@ -158,7 +157,7 @@ class PlayerViewModel @Inject constructor(
         }
 
         val title = item?.getDisplayTitle() ?: "Now Playing"
-        val playbackInfo = runCatching { jellyfinRepository.getPlaybackInfo(itemId) }.getOrNull()
+        val playbackInfo = runCatching { repositories.stream.getPlaybackInfo(itemId) }.getOrNull()
         val mediaSource = playbackInfo?.mediaSources?.firstOrNull()
         val audioTracks = PlayerMappers.toAudioTrackOptions(mediaSource)
         val subtitleTracks = PlayerMappers.toSubtitleTrackOptions(mediaSource)
