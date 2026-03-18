@@ -291,7 +291,7 @@ fun CollectionsDetailScreen(
                                     eyebrow = item.title,
                                 )
                                 LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 12.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(20.dp),
                                 ) {
                                     items(state.moreFromCollections, key = { it.id }) { item ->

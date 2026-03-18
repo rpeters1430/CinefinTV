@@ -393,6 +393,8 @@ private fun HomeSection(
             contentPadding = PaddingValues(
                 start = spacing.gutter + 24.dp,
                 end = spacing.gutter + 64.dp,
+                top = 8.dp,
+                bottom = 8.dp,
             ),
         ) {
             itemsIndexed(items, key = { _, item -> item.id }) { index, item ->

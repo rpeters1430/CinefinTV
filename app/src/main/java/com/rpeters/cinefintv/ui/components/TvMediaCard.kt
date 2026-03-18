@@ -36,6 +36,7 @@ import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
@@ -109,12 +110,19 @@ fun TvMediaCard(
                     if (focused) onFocus()
                 },
             scale = CardDefaults.scale(focusedScale = 1.05f),
+            glow = CardDefaults.glow(
+                focusedGlow = Glow(
+                    elevation = 16.dp,
+                    elevationColor = expressiveColors.focusGlow,
+                ),
+            ),
             border = CardDefaults.border(
                 focusedBorder = Border(
                     border = androidx.compose.foundation.BorderStroke(
                         width = 3.dp,
                         color = expressiveColors.focusRing,
                     ),
+                    shape = RoundedCornerShape(spacing.cornerCard),
                 ),
             ),
             shape = CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),

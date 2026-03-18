@@ -105,6 +105,7 @@ fun TvPersonCard(
                         width = 2.dp,
                         color = expressiveColors.focusRing,
                     ),
+                    shape = CircleShape,
                 ),
             ),
             shape = CardDefaults.shape(CircleShape),

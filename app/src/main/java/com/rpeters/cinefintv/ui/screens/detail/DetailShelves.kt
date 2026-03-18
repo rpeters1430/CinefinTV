@@ -243,7 +243,7 @@ private fun <T> ShelfRow(
     ) {
         CinefinShelfTitle(title = title)
         LazyRow(
-            contentPadding = PaddingValues(horizontal = 12.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(spacing.cardGap)
         ) {
             items(items, key = key) { item ->
