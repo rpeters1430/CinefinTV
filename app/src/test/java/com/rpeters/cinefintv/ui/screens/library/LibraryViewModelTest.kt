@@ -40,6 +40,6 @@ class LibraryViewModelTest {
 
         val state = viewModel.uiState.value
         assertTrue(state is LibraryUiState.Content)
-        assertEquals("Collections", (state as LibraryUiState.Content).title)
+        assertEquals("Stuff", (state as LibraryUiState.Content).title)
     }
 }
