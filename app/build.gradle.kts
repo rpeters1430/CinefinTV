@@ -44,8 +44,8 @@ android {
         applicationId = "com.rpeters.cinefintv"
         minSdk = 26
         targetSdk = 35
-        versionCode = 26
-        versionName = "1.2.5"
+        versionCode = 27
+        versionName = "1.2.6"
     }
 
     signingConfigs {
