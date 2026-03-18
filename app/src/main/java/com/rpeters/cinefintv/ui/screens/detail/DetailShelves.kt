@@ -3,6 +3,7 @@ package com.rpeters.cinefintv.ui.screens.detail
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
@@ -28,6 +29,7 @@ fun DetailShelves(
     onFocusedDescriptionChange: (String?) -> Unit,
     onFocusedPreviewImageChange: (String?) -> Unit,
     playButtonRequester: FocusRequester,
+    topAnchorRequester: FocusRequester,
     primaryShelfRequester: FocusRequester,
     chapterShelfRequester: FocusRequester,
     castShelfRequester: FocusRequester,
@@ -37,6 +39,7 @@ fun DetailShelves(
     val spacing = LocalCinefinSpacing.current
     val episodes = state.episodesBySeasonId.values.flatten()
     val chapters = state.item.chapters
+    val isSeries = state.seasons.isNotEmpty()
 
     Column(
         modifier = modifier,
@@ -60,7 +63,7 @@ fun DetailShelves(
                             onFocusedPreviewImageChange(chapter.imageUrl)
                         },
                         aspectRatio = 16f / 9f,
-                        cardWidth = 220.dp,
+                        cardWidth = 260.dp,
                         modifier = itemModifier
                             .then(if (chapter == chapters.first()) Modifier.focusRequester(chapterShelfRequester) else Modifier)
                             .focusProperties {
@@ -98,12 +101,16 @@ fun DetailShelves(
                         watchStatus = season.watchStatus,
                         playbackProgress = season.playbackProgress,
                         unwatchedCount = season.unwatchedCount,
-                        aspectRatio = 2f / 3f,
-                        cardWidth = 168.dp,
+                        aspectRatio = 16f / 9f,
+                        cardWidth = 260.dp,
                         modifier = itemModifier
                             .then(if (season == state.seasons.first()) Modifier.focusRequester(primaryShelfRequester) else Modifier)
                             .focusProperties {
-                                up = if (chapters.isNotEmpty()) chapterShelfRequester else playButtonRequester
+                                up = when {
+                                    chapters.isNotEmpty() -> chapterShelfRequester
+                                    isSeries && state.item.subtitleOptions.isEmpty() -> topAnchorRequester
+                                    else -> playButtonRequester
+                                }
                                 if (state.cast.isNotEmpty()) {
                                     down = castShelfRequester
                                 } else if (state.related.isNotEmpty()) {
@@ -197,7 +204,7 @@ fun DetailShelves(
                     TvMediaCard(
                         title = related.title,
                         subtitle = related.subtitle,
-                        imageUrl = related.imageUrl,
+                        imageUrl = related.backdropUrl ?: related.imageUrl,
                         onClick = { onOpenItem(related.id) },
                         onFocus = {
                             onFocusedDescriptionChange(related.overview)
@@ -206,8 +213,8 @@ fun DetailShelves(
                         watchStatus = related.watchStatus,
                         playbackProgress = related.playbackProgress,
                         unwatchedCount = related.unwatchedCount,
-                        aspectRatio = 2f / 3f,
-                        cardWidth = 168.dp,
+                        aspectRatio = 16f / 9f,
+                        cardWidth = 260.dp,
                         modifier = itemModifier
                             .then(if (related == state.related.first()) Modifier.focusRequester(relatedShelfRequester) else Modifier)
                             .focusProperties {
@@ -241,9 +248,12 @@ private fun <T> ShelfRow(
         modifier = Modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        CinefinShelfTitle(title = title)
+        CinefinShelfTitle(
+            title = title,
+            modifier = Modifier.padding(start = spacing.gutter)
+        )
         LazyRow(
-            contentPadding = PaddingValues(horizontal = 12.dp),
+            contentPadding = PaddingValues(horizontal = spacing.gutter),
             horizontalArrangement = Arrangement.spacedBy(spacing.cardGap)
         ) {
             items(items, key = key) { item ->

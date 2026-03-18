@@ -148,7 +148,7 @@ fun LibraryScreen(
                             contentPadding = PaddingValues(
                                 start = spacing.gutter + 16.dp,
                                 end = spacing.gutter + 16.dp,
-                                top = 8.dp,
+                                top = spacing.safeZoneVertical,
                                 bottom = 120.dp,
                             ),
                             horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
@@ -162,14 +162,6 @@ fun LibraryScreen(
                                             gridState.animateScrollToItem(0)
                                         }
                                     }
-                                )
-                            }
-
-                            item(span = { GridItemSpan(maxLineSpan) }) {
-                                LibraryHeader(
-                                    title = state.title,
-                                    description = "A curated view of your ${category.title.lowercase()} library with fast focus navigation.",
-                                    count = pagedItems.itemCount,
                                 )
                             }
 

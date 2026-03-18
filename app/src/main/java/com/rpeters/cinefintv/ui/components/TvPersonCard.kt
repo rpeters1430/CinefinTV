@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -24,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
@@ -32,8 +32,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
-import androidx.tv.material3.SurfaceDefaults
+import androidx.tv.material3.StandardCardContainer
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -68,105 +67,86 @@ fun TvPersonCard(
         animationSpec = tween(durationMillis = 180),
         label = "PersonCardRoleColor",
     )
-    val metaContainerColor by animateColorAsState(
-        targetValue = if (isFocused) {
-            expressiveColors.elevatedSurface.copy(alpha = 0.98f)
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
-        },
-        animationSpec = tween(durationMillis = 180),
-        label = "PersonCardMetaColor",
-    )
 
-    Column(
+    StandardCardContainer(
         modifier = modifier.width(180.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Card(
-            onClick = onClick,
-            modifier = Modifier
-                .size(172.dp)
-                .onFocusChanged {
-                    val focused = it.isFocused || it.hasFocus
-                    isFocused = focused
-                    if (focused) onFocus()
-                },
-            scale = CardDefaults.scale(focusedScale = 1.08f),
-            glow = CardDefaults.glow(
-                focusedGlow = Glow(
-                    elevation = 16.dp,
-                    elevationColor = expressiveColors.focusGlow,
-                ),
-            ),
-            border = CardDefaults.border(
-                focusedBorder = Border(
-                    border = androidx.compose.foundation.BorderStroke(
-                        width = 2.dp,
-                        color = expressiveColors.focusRing,
+        imageCard = {
+            Card(
+                onClick = onClick,
+                modifier = Modifier
+                    .size(172.dp)
+                    .onFocusChanged {
+                        val focused = it.isFocused || it.hasFocus
+                        isFocused = focused
+                        if (focused) onFocus()
+                    },
+                scale = CardDefaults.scale(focusedScale = 1.08f),
+                glow = CardDefaults.glow(
+                    focusedGlow = Glow(
+                        elevation = 16.dp,
+                        elevationColor = expressiveColors.focusGlow,
                     ),
                 ),
-            ),
-            shape = CardDefaults.shape(CircleShape),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center,
+                border = CardDefaults.border(
+                    focusedBorder = Border(
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = 2.dp,
+                            color = expressiveColors.focusRing,
+                        ),
+                    ),
+                ),
+                shape = CardDefaults.shape(CircleShape),
             ) {
-                if (imageUrl != null) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                            .data(imageUrl)
-                            .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
-                            .size(344, 344)
-                            .build(),
-                        contentDescription = name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    Text(
-                        text = name.take(1).uppercase(),
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (imageUrl != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                .data(imageUrl)
+                                .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
+                                .size(344, 344)
+                                .build(),
+                            contentDescription = name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        Text(
+                            text = name.take(1).uppercase(),
+                            style = MaterialTheme.typography.headlineMedium,
+                        )
+                    }
                 }
             }
-        }
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(spacing.cornerCard),
-            colors = SurfaceDefaults.colors(containerColor = metaContainerColor),
-            tonalElevation = if (isFocused) 8.dp else 0.dp,
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp)
-                    .defaultMinSize(minHeight = 68.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
+        },
+        title = {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
+                color = nameColor,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            )
+        },
+        subtitle = {
+            if (!role.isNullOrBlank()) {
                 Text(
-                    text = name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
-                    color = nameColor,
+                    text = role,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = roleColor,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                if (!role.isNullOrBlank()) {
-                    Text(
-                        text = role,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = roleColor,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
         }
-    }
+    )
 }

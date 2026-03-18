@@ -23,7 +23,8 @@ import androidx.tv.material3.darkColorScheme as TvDarkColorScheme
 
 @Immutable
 data class CinefinSpacing(
-    val gutter: Dp = 48.dp,
+    val gutter: Dp = 48.dp, // Horizontal overscan safe zone
+    val safeZoneVertical: Dp = 27.dp, // Vertical overscan safe zone
     val rowGap: Dp = 24.dp,
     val cardGap: Dp = 16.dp,
     val elementGap: Dp = 12.dp,

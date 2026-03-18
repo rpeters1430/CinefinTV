@@ -139,22 +139,29 @@ fun DetailScreen(
                     else -> null
                 }
 
+                val isSeriesDetail = state.seasons.isNotEmpty()
+                val primaryFocusTarget = if (isSeriesDetail) {
+                    firstShelfRequester ?: playButtonRequester
+                } else {
+                    playButtonRequester
+                }
+
                 // Focus top anchor on initial load to ensure we start at the top
-                val screenFocus = remember(topAnchorRequester, playButtonRequester) {
+                val screenFocus = remember(topAnchorRequester, primaryFocusTarget) {
                     TvScreenFocusState(
                         topAnchorRequester = topAnchorRequester,
-                        primaryContentRequester = playButtonRequester,
+                        primaryContentRequester = primaryFocusTarget,
                     )
                 }
 
                 RegisterPrimaryScreenFocus(
                     route = NavRoutes.DETAIL,
-                    requester = screenFocus.primaryContentRequester,
+                    requester = screenFocus.topAnchorRequester,
                 )
 
                 RequestScreenFocus(
                     key = state.item.id,
-                    requester = screenFocus.primaryContentRequester,
+                    requester = screenFocus.topAnchorRequester,
                 )
                 LaunchedEffect(state.item.id) {
                     focusedBackdropUrl = null
@@ -169,52 +176,55 @@ fun DetailScreen(
                 val listState = rememberLazyListState()
 
                 Box(modifier = Modifier.fillMaxSize()) {
-                    // Backdrop
-                    val activeBackdropUrl = focusedBackdropUrl ?: item.backdropUrl
-                    AnimatedContent(
-                        targetState = activeBackdropUrl,
-                        transitionSpec = { fadeIn().togetherWith(fadeOut()) },
-                        label = "ImmersiveBackdrop"
-                    ) { url ->
-                        if (url != null) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(url)
-                                    .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
-                                    .allowHardware(false) // Required for Palette
-                                    .size(1920, 1080)
-                                    .build(),
-                                contentDescription = item.title,
-                                contentScale = ContentScale.Crop,
-                                onSuccess = { state ->
-                                    val bitmap = state.result.image.toBitmap()
-                                    Palette.from(bitmap).generate { palette ->
-                                        val color = palette?.vibrantSwatch?.rgb ?: palette?.dominantSwatch?.rgb
-                                        color?.let { themeController.updateSeedColor(Color(it)) }
-                                    }
-                                },
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                    // Background content (updates when focusedBackdropUrl changes)
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // Backdrop
+                        val activeBackdropUrl = focusedBackdropUrl ?: item.backdropUrl
+                        AnimatedContent(
+                            targetState = activeBackdropUrl,
+                            transitionSpec = { fadeIn().togetherWith(fadeOut()) },
+                            label = "ImmersiveBackdrop"
+                        ) { url ->
+                            if (url != null) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(url)
+                                        .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
+                                        .allowHardware(false) // Required for Palette
+                                        .size(1920, 1080)
+                                        .build(),
+                                    contentDescription = item.title,
+                                    contentScale = ContentScale.Crop,
+                                    onSuccess = { state ->
+                                        val bitmap = state.result.image.toBitmap()
+                                        Palette.from(bitmap).generate { palette ->
+                                            val color = palette?.vibrantSwatch?.rgb ?: palette?.dominantSwatch?.rgb
+                                            color?.let { themeController.updateSeedColor(Color(it)) }
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
                         }
-                    }
 
-                    Box(
-                        modifier = Modifier.fillMaxSize().background(
-                            Brush.verticalGradient(
-                                colorStops = arrayOf(
-                                    0.0f to Color.Transparent,
-                                    0.45f to Color.Black.copy(alpha = 0.55f),
-                                    0.75f to Color.Black.copy(alpha = 0.88f),
-                                    1.0f to Color.Black,
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(
+                                Brush.verticalGradient(
+                                    colorStops = arrayOf(
+                                        0.0f to Color.Transparent,
+                                        0.45f to Color.Black.copy(alpha = 0.55f),
+                                        0.75f to Color.Black.copy(alpha = 0.88f),
+                                        1.0f to Color.Black,
+                                    ),
                                 ),
                             ),
-                        ),
-                    )
+                        )
+                    }
 
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = 0.dp),
+                        contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = spacing.safeZoneVertical),
                         verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
                     ) {
                         item {
@@ -263,6 +273,7 @@ fun DetailScreen(
                                 onFocusedDescriptionChange = { focusedDescription = it },
                                 onFocusedPreviewImageChange = { focusedBackdropUrl = it },
                                 playButtonRequester = playButtonRequester,
+                                topAnchorRequester = topAnchorRequester,
                                 primaryShelfRequester = primaryShelfRequester,
                                 chapterShelfRequester = chapterShelfRequester,
                                 castShelfRequester = castShelfRequester,

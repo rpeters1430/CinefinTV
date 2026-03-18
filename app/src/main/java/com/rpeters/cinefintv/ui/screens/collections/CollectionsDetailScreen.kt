@@ -43,10 +43,12 @@ import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
+import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
 import com.rpeters.cinefintv.ui.components.RequestScreenFocus
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.TvScreenFocusState
 import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
+import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import kotlinx.coroutines.launch
 
@@ -62,6 +64,7 @@ fun CollectionsDetailScreen(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val expressiveColors = LocalCinefinExpressiveColors.current
+    val spacing = com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing.current
 
     when (val state = uiState) {
         is CollectionsDetailUiState.Loading -> Box(
@@ -79,7 +82,7 @@ fun CollectionsDetailScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(48.dp),
+                    .padding(spacing.gutter),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
@@ -111,9 +114,14 @@ fun CollectionsDetailScreen(
                 )
             }
 
+            RegisterPrimaryScreenFocus(
+                route = NavRoutes.COLLECTIONS_DETAIL,
+                requester = screenFocus.topAnchorRequester,
+            )
+
             RequestScreenFocus(
                 key = state.item.id,
-                requester = screenFocus.primaryContentRequester,
+                requester = screenFocus.topAnchorRequester,
             )
 
             androidx.compose.runtime.LaunchedEffect(state.isDeleted) {
@@ -123,33 +131,35 @@ fun CollectionsDetailScreen(
             }
 
             Box(modifier = Modifier.fillMaxSize()) {
-                if (item.backdropUrl != null) {
-                    AsyncImage(
-                        model = item.backdropUrl,
-                        contentDescription = item.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (item.backdropUrl != null) {
+                        AsyncImage(
+                            model = item.backdropUrl,
+                            contentDescription = item.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.Black.copy(alpha = 0.7f),
-                                    Color.Black,
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.7f),
+                                        Color.Black,
+                                    ),
                                 ),
                             ),
-                        ),
-                )
+                    )
+                }
 
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 48.dp, vertical = 32.dp),
+                    contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = spacing.safeZoneVertical),
                 ) {
                     item {
                         TvScreenTopFocusAnchor(
@@ -302,6 +312,8 @@ fun CollectionsDetailScreen(
                                             onClick = { onOpenItem(item.id) },
                                             watchStatus = item.watchStatus,
                                             playbackProgress = item.playbackProgress,
+                                            aspectRatio = 16f / 9f,
+                                            cardWidth = 260.dp,
                                             modifier = Modifier
                                                 .then(
                                                     if (item == state.moreFromCollections.first()) {

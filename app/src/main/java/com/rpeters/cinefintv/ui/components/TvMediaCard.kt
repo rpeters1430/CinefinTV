@@ -38,6 +38,7 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.StandardCardContainer
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
@@ -82,46 +83,36 @@ fun TvMediaCard(
         animationSpec = tween(durationMillis = 180),
         label = "MediaCardSubtitleColor",
     )
-    val metaContainerColor by animateColorAsState(
-        targetValue = if (isFocused) {
-            expressiveColors.surfaceContainerHighest.coerceAlpha(0.98f)
-        } else {
-            expressiveColors.surfaceContainerLow.coerceAlpha(0.46f)
-        },
-        animationSpec = tween(
-            durationMillis = com.rpeters.cinefintv.ui.theme.CinefinMotion.DurationMedium,
-            easing = com.rpeters.cinefintv.ui.theme.CinefinMotion.Emphasized
-        ),
-        label = "MediaCardMetaSurface",
-    )
-    Card(
-        onClick = onClick,
-        modifier = if (cardWidth != null) modifier.width(cardWidth) else modifier.fillMaxWidth()
-            .onFocusChanged {
-                val focused = it.isFocused || it.hasFocus
-                isFocused = focused
-                if (focused) onFocus()
-            },
-        scale = CardDefaults.scale(focusedScale = 1.05f),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = androidx.compose.foundation.BorderStroke(
-                    width = 3.dp,
-                    color = expressiveColors.focusRing,
+
+    val focusedScale = remember(aspectRatio, cardWidth) {
+        if (aspectRatio > 1f || (cardWidth != null && cardWidth > 200.dp)) 1.05f else 1.1f
+    }
+
+    StandardCardContainer(
+        modifier = if (cardWidth != null) modifier.width(cardWidth) else modifier.fillMaxWidth(),
+        imageCard = {
+            Card(
+                onClick = onClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(aspectRatio)
+                    .onFocusChanged {
+                        val focused = it.isFocused || it.hasFocus
+                        isFocused = focused
+                        if (focused) onFocus()
+                    },
+                scale = CardDefaults.scale(focusedScale = focusedScale),
+                border = CardDefaults.border(
+                    focusedBorder = Border(
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = 3.dp,
+                            color = expressiveColors.focusRing,
+                        ),
+                    ),
                 ),
-            ),
-        ),
-        shape = CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),
-    ) {
-        Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                shape = CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(aspectRatio)
-                ) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -194,55 +185,34 @@ fun TvMediaCard(
                         )
                     }
                 }
-
-                val isHorizontal = aspectRatio > 1f
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = SurfaceDefaults.colors(
-                        containerColor = if (isHorizontal) Color.Transparent else metaContainerColor
-                    ),
-                    tonalElevation = if (isFocused && !isHorizontal) 4.dp else 0.dp,
-                ) {
-                    val hasSubtitle = !subtitle.isNullOrBlank()
-                    val titleMaxLines = if (hasSubtitle) 2 else 1
-                    val titleFontSize = 18.sp
-                    val subtitleFontSize = 18.sp
-                    val verticalPadding = if (hasSubtitle) 8.dp else 6.dp
-                    val minHeight = if (hasSubtitle) 54.dp else 44.dp
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 6.dp, vertical = verticalPadding)
-                            .defaultMinSize(minHeight = minHeight),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                        horizontalAlignment = Alignment.Start,
-                    ) {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleSmall.copy(fontSize = titleFontSize),
-                            fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
-                            color = titleColor,
-                            maxLines = titleMaxLines,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Start,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        if (hasSubtitle) {
-                            Text(
-                                text = subtitle,
-                                style = MaterialTheme.typography.labelMedium.copy(fontSize = subtitleFontSize),
-                                color = subtitleColor,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                textAlign = TextAlign.Start,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-                }
             }
-    }
+        },
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = 18.sp),
+                fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
+                color = titleColor,
+                maxLines = if (subtitle.isNullOrBlank()) 1 else 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            )
+        },
+        subtitle = {
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 18.sp),
+                    color = subtitleColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)

@@ -155,7 +155,7 @@ private fun MusicGridContent(
     val screenFocus = rememberTvScreenFocusState()
     RegisterPrimaryScreenFocus(
         route = NavRoutes.LIBRARY_MUSIC,
-        requester = screenFocus.primaryContentRequester,
+        requester = screenFocus.topAnchorRequester,
     )
 
     RequestScreenFocus(
@@ -186,13 +186,6 @@ private fun MusicGridContent(
                 onFocused = {
                     gridState.requestScrollToItem(0)
                 },
-            )
-        }
-
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            MusicHero(
-                viewType = state.viewType,
-                count = state.items.size,
             )
         }
 
@@ -277,7 +270,7 @@ private fun AlbumDetailContent(
     val screenFocus = rememberTvScreenFocusState()
     RegisterPrimaryScreenFocus(
         route = NavRoutes.LIBRARY_MUSIC,
-        requester = screenFocus.primaryContentRequester,
+        requester = screenFocus.topAnchorRequester,
     )
 
     RequestScreenFocus(

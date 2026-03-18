@@ -79,7 +79,7 @@ fun SettingsScreen(
     val screenFocus = rememberTvScreenFocusState()
     RegisterPrimaryScreenFocus(
         route = NavRoutes.SETTINGS,
-        requester = screenFocus.primaryContentRequester,
+        requester = screenFocus.topAnchorRequester,
     )
 
     RequestScreenFocus(

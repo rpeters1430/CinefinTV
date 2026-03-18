@@ -56,6 +56,7 @@ import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
+import com.rpeters.cinefintv.ui.components.RequestScreenFocus
 import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
@@ -85,11 +86,7 @@ fun HomeScreen(
 
     RegisterPrimaryScreenFocus(
         route = NavRoutes.HOME,
-        requester = if ((uiState as? HomeUiState.Content)?.featuredItems?.isNotEmpty() == true) {
-            carouselFocusRequester
-        } else {
-            firstRowFocusRequester
-        },
+        requester = topAnchorRequester,
     )
 
     when (val state = uiState) {
@@ -135,28 +132,17 @@ fun HomeScreen(
             val sectionFocusRequesters = remember(state.sections.size) {
                 List(state.sections.size) { FocusRequester() }
             }
-            var hasAppliedInitialFocus by remember {
-                mutableStateOf(false)
-            }
 
-            // Ensure first load focus is intentional
-            LaunchedEffect(state.featuredItems.isNotEmpty(), state.sections.isNotEmpty()) {
-                if (hasAppliedInitialFocus) return@LaunchedEffect
-
-                if (state.featuredItems.isNotEmpty()) {
-                    carouselFocusRequester.requestFocus()
-                    hasAppliedInitialFocus = true
-                } else if (state.sections.isNotEmpty()) {
-                    firstRowFocusRequester.requestFocus()
-                    hasAppliedInitialFocus = true
-                }
-            }
+            RequestScreenFocus(
+                key = state.sections.size to state.featuredItems.size,
+                requester = topAnchorRequester,
+            )
 
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp),
+                    contentPadding = PaddingValues(top = 0.dp, bottom = 120.dp),
                     verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
                 ) {
                     item {
@@ -185,7 +171,7 @@ fun HomeScreen(
                                 sectionCount = state.sections.size,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 8.dp, start = spacing.gutter, end = spacing.gutter)
+                                    .padding(top = 0.dp, start = spacing.gutter, end = spacing.gutter)
                                     .focusRequester(carouselFocusRequester)
                                     .focusProperties {
                                         down = firstRowFocusRequester
@@ -236,7 +222,7 @@ private fun FeaturedCarousel(
         autoScrollDurationMillis = 15000L,
         modifier = modifier
             .fillMaxWidth()
-            .height(440.dp),
+            .height(360.dp),
     ) { index ->
         val item = items[index]
         HeroItem(
@@ -390,10 +376,7 @@ private fun HomeSection(
         )
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
-            contentPadding = PaddingValues(
-                start = spacing.gutter + 24.dp,
-                end = spacing.gutter + 64.dp,
-            ),
+            contentPadding = PaddingValues(horizontal = spacing.gutter),
         ) {
             itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
                 TvMediaCard(
@@ -405,7 +388,7 @@ private fun HomeSection(
                     unwatchedCount = item.unwatchedCount,
                     playbackProgress = item.playbackProgress,
                     aspectRatio = 16f / 9f,
-                    cardWidth = 220.dp,
+                    cardWidth = 260.dp,
                     modifier = if (index == 0) {
                         Modifier.focusRequester(firstItemFocusRequester)
                     } else {

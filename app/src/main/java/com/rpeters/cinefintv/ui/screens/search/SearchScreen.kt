@@ -63,12 +63,12 @@ fun SearchScreen(
     val screenFocus = rememberTvScreenFocusState()
     RegisterPrimaryScreenFocus(
         route = NavRoutes.SEARCH,
-        requester = screenFocus.primaryContentRequester,
+        requester = screenFocus.topAnchorRequester,
     )
 
     RequestScreenFocus(
         key = Unit,
-        requester = screenFocus.primaryContentRequester,
+        requester = screenFocus.topAnchorRequester,
     )
 
     Box(

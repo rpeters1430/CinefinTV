@@ -59,6 +59,7 @@ import com.rpeters.cinefintv.ui.components.TvScreenFocusState
 import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -69,6 +70,7 @@ fun PersonScreen(
     viewModel: PersonViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val spacing = LocalCinefinSpacing.current
     var focusedDescription by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val expressiveColors = LocalCinefinExpressiveColors.current
@@ -91,7 +93,7 @@ fun PersonScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(48.dp),
+                    .padding(spacing.gutter),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
@@ -129,7 +131,7 @@ fun PersonScreen(
 
             RegisterPrimaryScreenFocus(
                 route = NavRoutes.PERSON_DETAIL,
-                requester = screenFocus.primaryContentRequester,
+                requester = screenFocus.topAnchorRequester,
             )
             
             BackHandler(onBack = onBack)
@@ -141,45 +143,47 @@ fun PersonScreen(
             )
 
             Box(modifier = Modifier.fillMaxSize()) {
-                // Background Image (if available)
-                if (person.imageUrl != null) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                            .data(person.imageUrl)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = person.name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // Background Image (if available)
+                    if (person.imageUrl != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                .data(person.imageUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = person.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.surface),
+                        )
+                    }
+
+                    // Gradient Overlay
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surface),
-                    )
-                }
-
-                // Gradient Overlay
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colorStops = arrayOf(
-                                    0.0f to Color.Transparent,
-                                    0.3f to Color.Black.copy(alpha = 0.4f),
-                                    0.6f to Color.Black.copy(alpha = 0.8f),
-                                    1.0f to Color.Black,
+                            .background(
+                                Brush.verticalGradient(
+                                    colorStops = arrayOf(
+                                        0.0f to Color.Transparent,
+                                        0.3f to Color.Black.copy(alpha = 0.4f),
+                                        0.6f to Color.Black.copy(alpha = 0.8f),
+                                        1.0f to Color.Black,
+                                    ),
                                 ),
                             ),
-                        ),
-                )
+                    )
+                }
 
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 48.dp, vertical = 0.dp),
+                    contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = spacing.safeZoneVertical),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
                     item {
@@ -311,12 +315,12 @@ private fun PersonImmersiveSection(
                 .height(sectionHeight)
                 .background(
                     Brush.horizontalGradient(
-                        colorStops = arrayOf(
-                            0f to expressiveColors.heroStart.copy(alpha = 0.96f),
+                        colorStops = listOf(
+                            0f to (expressiveColors.heroStart as Color).copy(alpha = 0.96f),
                             0.32f to Color.Black.copy(alpha = 0.8f),
-                            0.7f to expressiveColors.heroEnd.copy(alpha = 0.35f),
+                            0.7f to (expressiveColors.heroEnd as Color).copy(alpha = 0.35f),
                             1f to Color.Transparent,
-                        ),
+                        ).toTypedArray(),
                     ),
                 ),
         )
@@ -326,11 +330,11 @@ private fun PersonImmersiveSection(
                 .height(sectionHeight)
                 .background(
                     Brush.verticalGradient(
-                        colorStops = arrayOf(
+                        colorStops = listOf(
                             0f to Color.Transparent,
                             0.72f to Color.Black.copy(alpha = 0.2f),
                             1f to Color.Black.copy(alpha = 0.72f),
-                        ),
+                        ).toTypedArray(),
                     ),
                 ),
         )
@@ -389,6 +393,8 @@ private fun PersonImmersiveSection(
                         watchStatus = item.watchStatus,
                         playbackProgress = item.playbackProgress,
                         onFocus = { onItemFocused(item) },
+                        aspectRatio = 16f / 9f,
+                        cardWidth = 240.dp,
                     )
                 }
             }
