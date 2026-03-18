@@ -37,8 +37,6 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
-import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -65,6 +63,7 @@ fun TvMediaCard(
     unwatchedCount: Int? = null,
     aspectRatio: Float = 2f / 3f,
     cardWidth: androidx.compose.ui.unit.Dp? = null,
+    compactMetadata: Boolean = false,
 ) {
     val performanceProfile = LocalPerformanceProfile.current
     val expressiveColors = LocalCinefinExpressiveColors.current
@@ -93,33 +92,41 @@ fun TvMediaCard(
         ),
         label = "MediaCardMetaSurface",
     )
+    val compactOverlayScrim by animateColorAsState(
+        targetValue = if (isFocused) {
+            Color.Black.copy(alpha = 0.58f)
+        } else {
+            Color.Black.copy(alpha = 0.68f)
+        },
+        animationSpec = tween(durationMillis = 180),
+        label = "CompactOverlayScrim",
+    )
 
-    Column(
-        modifier = if (cardWidth != null) modifier.width(cardWidth) else modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Card(
-            onClick = onClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(aspectRatio)
-                .onFocusChanged {
-                    val focused = it.isFocused || it.hasFocus
-                    isFocused = focused
-                    if (focused) onFocus()
-                },
-            scale = CardDefaults.scale(focusedScale = 1.05f),
-            border = CardDefaults.border(
-                focusedBorder = Border(
-                    border = androidx.compose.foundation.BorderStroke(
-                        width = 3.dp,
-                        color = expressiveColors.focusRing,
-                    ),
+    Card(
+        onClick = onClick,
+        modifier = if (cardWidth != null) modifier.width(cardWidth) else modifier.fillMaxWidth()
+            .onFocusChanged {
+                val focused = it.isFocused || it.hasFocus
+                isFocused = focused
+                if (focused) onFocus()
+            },
+        scale = CardDefaults.scale(focusedScale = 1.05f),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = androidx.compose.foundation.BorderStroke(
+                    width = 3.dp,
+                    color = expressiveColors.focusRing,
                 ),
             ),
-            shape = CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
+        ),
+        shape = CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),
+    ) {
+        if (compactMetadata) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(aspectRatio)
+            ) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -152,8 +159,8 @@ fun TvMediaCard(
                             Brush.verticalGradient(
                                 colors = listOf(
                                     Color.Transparent,
-                                    Color.Black.copy(alpha = 0.08f),
-                                    Color.Black.copy(alpha = 0.28f),
+                                    Color.Black.copy(alpha = 0.14f),
+                                    compactOverlayScrim,
                                 ),
                             ),
                         ),
@@ -191,47 +198,167 @@ fun TvMediaCard(
                             .zIndex(1f)
                     )
                 }
-            }
-        }
-
-        val isHorizontal = aspectRatio > 1f
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            colors = SurfaceDefaults.colors(
-                containerColor = if (isHorizontal) Color.Transparent else metaContainerColor
-            ),
-            tonalElevation = if (isFocused && !isHorizontal) 4.dp else 0.dp,
-        ) {
-            val hasSubtitle = !subtitle.isNullOrBlank()
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = if (hasSubtitle) 8.dp else 6.dp)
-                    .defaultMinSize(minHeight = if (hasSubtitle) 54.dp else 44.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                horizontalAlignment = if (isHorizontal) Alignment.CenterHorizontally else Alignment.Start,
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall.copy(fontSize = 18.sp),
-                    fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
-                    color = titleColor,
-                    maxLines = if (hasSubtitle) 2 else 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = if (isHorizontal) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                if (hasSubtitle) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .background(metaContainerColor.copy(alpha = 0.9f))
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                        .defaultMinSize(minHeight = 48.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    horizontalAlignment = Alignment.Start,
+                ) {
                     Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 18.sp),
-                        color = subtitleColor,
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall.copy(fontSize = 16.sp),
+                        fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
+                        color = titleColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        textAlign = if (isHorizontal) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Start,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    if (!subtitle.isNullOrBlank()) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.labelMedium.copy(fontSize = 16.sp),
+                            color = subtitleColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(aspectRatio)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(expressiveColors.accentSurface),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (imageUrl != null) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                    .data(imageUrl)
+                                    .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
+                                    .size(if (aspectRatio > 1f) 640 else 336, if (aspectRatio > 1f) 360 else 504)
+                                    .build(),
+                                contentDescription = title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        } else {
+                            Text(
+                                text = title.take(1).uppercase(),
+                                style = MaterialTheme.typography.headlineMedium,
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.08f),
+                                        Color.Black.copy(alpha = 0.28f),
+                                    ),
+                                ),
+                            ),
+                    )
+
+                    if (watchStatus == WatchStatus.IN_PROGRESS && playbackProgress != null && playbackProgress > 0f) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .fillMaxWidth()
+                                .height(3.dp)
+                                .background(Color.Black.copy(alpha = 0.5f))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(playbackProgress.coerceIn(0f, 1f))
+                                    .background(MaterialTheme.colorScheme.primary)
+                            )
+                        }
+                    }
+
+                    if (unwatchedCount != null && unwatchedCount > 0) {
+                        UnwatchedCountOverlay(
+                            count = unwatchedCount,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .zIndex(1f)
+                        )
+                    } else if (watchStatus == WatchStatus.WATCHED) {
+                        WatchStatusOverlay(
+                            status = watchStatus,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .zIndex(1f)
+                        )
+                    }
+                }
+
+                val isHorizontal = aspectRatio > 1f
+                androidx.tv.material3.Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = androidx.tv.material3.SurfaceDefaults.colors(
+                        containerColor = if (isHorizontal) Color.Transparent else metaContainerColor
+                    ),
+                    tonalElevation = if (isFocused && !isHorizontal) 4.dp else 0.dp,
+                ) {
+                    val hasSubtitle = !subtitle.isNullOrBlank()
+                    val titleMaxLines = if (hasSubtitle) 2 else 1
+                    val titleFontSize = 18.sp
+                    val subtitleFontSize = 18.sp
+                    val verticalPadding = if (hasSubtitle) 8.dp else 6.dp
+                    val minHeight = if (hasSubtitle) 54.dp else 44.dp
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 6.dp, vertical = verticalPadding)
+                            .defaultMinSize(minHeight = minHeight),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        horizontalAlignment = Alignment.Start,
+                    ) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = titleFontSize),
+                            fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
+                            color = titleColor,
+                            maxLines = titleMaxLines,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (hasSubtitle) {
+                            Text(
+                                text = subtitle,
+                                style = MaterialTheme.typography.labelMedium.copy(fontSize = subtitleFontSize),
+                                color = subtitleColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
                 }
             }
         }
