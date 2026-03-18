@@ -50,9 +50,11 @@ import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.toBitmap
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
+import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
 import com.rpeters.cinefintv.ui.components.RequestScreenFocus
 import com.rpeters.cinefintv.ui.components.TvScreenFocusState
 import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
+import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
@@ -122,6 +124,7 @@ fun DetailScreen(
             is DetailUiState.Content -> {
                 val item = state.item
                 val playButtonRequester = remember { FocusRequester() }
+                val subtitleButtonRequester = remember { FocusRequester() }
                 val primaryShelfRequester = remember { FocusRequester() }
                 val chapterShelfRequester = remember { FocusRequester() }
                 val castShelfRequester = remember { FocusRequester() }
@@ -144,9 +147,14 @@ fun DetailScreen(
                     )
                 }
 
+                RegisterPrimaryScreenFocus(
+                    route = NavRoutes.DETAIL,
+                    requester = screenFocus.primaryContentRequester,
+                )
+
                 RequestScreenFocus(
                     key = state.item.id,
-                    requester = screenFocus.topAnchorRequester,
+                    requester = screenFocus.primaryContentRequester,
                 )
                 LaunchedEffect(state.item.id) {
                     focusedBackdropUrl = null
@@ -237,6 +245,7 @@ fun DetailScreen(
                                 onCancelDelete = viewModel::cancelDelete,
                                 onDismissActionError = viewModel::dismissActionError,
                                 playButtonRequester = playButtonRequester,
+                                subtitleButtonRequester = subtitleButtonRequester,
                                 firstShelfRequester = firstShelfRequester,
                                 onFocusedDescriptionChange = {
                                     focusedDescription = it

@@ -97,7 +97,9 @@ class CollectionsLibraryViewModel @Inject constructor(
             id = item.id.toString(),
             title = item.getDisplayTitle(),
             subtitle = item.getYear()?.toString() ?: item.getFormattedDuration(),
-            imageUrl = repositories.stream.getSeriesImageUrl(item),
+            imageUrl = repositories.stream.getWideCardImageUrl(item)
+                ?: repositories.stream.getLandscapeImageUrl(item)
+                ?: repositories.stream.getSeriesImageUrl(item),
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,
         )

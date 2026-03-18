@@ -28,7 +28,13 @@ class TvScreenFocusRegistry {
         }
     }
 
-    fun requesterFor(route: String): FocusRequester? = primaryRequesters[route]
+    fun requesterFor(route: String?): FocusRequester? {
+        if (route.isNullOrBlank()) return null
+        return primaryRequesters[route]
+            ?: primaryRequesters.entries.firstOrNull { (registeredRoute, _) ->
+                route.startsWith("$registeredRoute/")
+            }?.value
+    }
 }
 
 val LocalTvScreenFocusRegistry = compositionLocalOf<TvScreenFocusRegistry?> { null }

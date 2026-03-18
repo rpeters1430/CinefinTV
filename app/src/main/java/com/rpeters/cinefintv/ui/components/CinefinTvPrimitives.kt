@@ -11,17 +11,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
@@ -172,11 +177,19 @@ fun <T> CinefinOptionDialog(
     onDismissRequest: () -> Unit,
     onOptionSelected: (T) -> Unit,
     supportingText: String? = null,
-) {
-    val spacing = LocalCinefinSpacing.current
+    ) {
+        val spacing = LocalCinefinSpacing.current
+        val listState = rememberLazyListState()
+        val initialFocusRequester = remember { FocusRequester() }
+        val selectedIndex = options.indexOf(selected).takeIf { it >= 0 } ?: 0
 
-    CinefinDialogSurface(onDismissRequest = onDismissRequest) {
-        Column(
+        LaunchedEffect(selectedIndex, options.size) {
+            listState.scrollToItem(selectedIndex)
+            initialFocusRequester.requestFocus()
+        }
+
+        CinefinDialogSurface(onDismissRequest = onDismissRequest) {
+            Column(
             modifier = Modifier.padding(horizontal = 28.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
         ) {
@@ -193,17 +206,23 @@ fun <T> CinefinOptionDialog(
                 )
             }
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 420.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                items(options) { option ->
+                itemsIndexed(options) { index, option ->
                     ListItem(
                         selected = option == selected,
                         onClick = {
                             onOptionSelected(option)
                             onDismissRequest()
+                        },
+                        modifier = if (index == selectedIndex) {
+                            Modifier.focusRequester(initialFocusRequester)
+                        } else {
+                            Modifier
                         },
                         headlineContent = {
                             Text(

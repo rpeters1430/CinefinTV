@@ -52,10 +52,12 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
+import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
 import com.rpeters.cinefintv.ui.components.RequestScreenFocus
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.TvScreenFocusState
 import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
+import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import kotlinx.coroutines.launch
 
@@ -124,6 +126,11 @@ fun PersonScreen(
                     primaryContentRequester = backButtonRequester,
                 )
             }
+
+            RegisterPrimaryScreenFocus(
+                route = NavRoutes.PERSON_DETAIL,
+                requester = screenFocus.primaryContentRequester,
+            )
             
             BackHandler(onBack = onBack)
 

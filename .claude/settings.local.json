@@ -19,7 +19,10 @@
       "Bash(jar tf /home/rpeters1428/.gradle/caches/9.3.1/transforms/638082a70e30b1d8bfe251264170eb46/transformed/tv-material-1.1.0-alpha01-api.jar)",
       "Bash(jar xf:*)",
       "Bash(jar tf:*)",
-      "Bash(javap:*)"
+      "Bash(javap:*)",
+      "WebFetch(domain:cs.android.com)",
+      "Bash(scripts/start-server.sh --project-dir /home/rpeters1428/CinefinTV)",
+      "Bash(./gradlew clean:*)"
     ]
   }
 }

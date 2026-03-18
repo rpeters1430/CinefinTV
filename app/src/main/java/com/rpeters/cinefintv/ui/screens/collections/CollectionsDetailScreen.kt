@@ -113,7 +113,7 @@ fun CollectionsDetailScreen(
 
             RequestScreenFocus(
                 key = state.item.id,
-                requester = screenFocus.topAnchorRequester,
+                requester = screenFocus.primaryContentRequester,
             )
 
             androidx.compose.runtime.LaunchedEffect(state.isDeleted) {

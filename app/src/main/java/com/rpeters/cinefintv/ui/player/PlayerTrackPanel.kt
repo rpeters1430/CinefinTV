@@ -136,9 +136,30 @@ internal fun PlayerTrackPanel(
 
                     val listState = rememberLazyListState()
                     val initialFocusRequester = remember { FocusRequester() }
+                    val selectedAudioIndex = audioTracks.indexOfFirst {
+                        it.id == uiState.selectedAudioTrack?.id
+                    }.takeIf { it >= 0 } ?: 0
+                    val selectedSubtitleIndex = when {
+                        uiState.selectedSubtitleTrack == null -> 0
+                        else -> subtitleTracks.indexOfFirst {
+                            it.id == uiState.selectedSubtitleTrack.id
+                        }.takeIf { it >= 0 }?.plus(1) ?: 0
+                    }
+                    val selectedQualityIndex = STREAMING_QUALITIES.indexOf(uiState.transcodingQuality)
+                        .takeIf { it >= 0 } ?: 0
+                    val selectedSpeedIndex = PLAYBACK_SPEEDS.indexOf(uiState.playbackSpeed)
+                        .takeIf { it >= 0 } ?: PLAYBACK_SPEEDS.indexOf(1.0f)
+                    val initialListIndex = when (section) {
+                        SettingsSection.ALL -> 0
+                        SettingsSection.AUDIO -> 1 + selectedAudioIndex
+                        SettingsSection.SUBTITLES -> 1 + selectedSubtitleIndex
+                        SettingsSection.QUALITY -> 1 + selectedQualityIndex
+                        SettingsSection.SPEED -> 1 + selectedSpeedIndex
+                    }
 
-                    LaunchedEffect(isVisible, section) {
+                    LaunchedEffect(isVisible, section, initialListIndex) {
                         if (isVisible) {
+                            listState.scrollToItem(initialListIndex)
                             initialFocusRequester.requestFocus()
                         }
                     }
@@ -153,7 +174,6 @@ internal fun PlayerTrackPanel(
                                 NavigationListItem(
                                     icon = Icons.AutoMirrored.Filled.ArrowBack,
                                     title = "Back to playback options",
-                                    modifier = Modifier.focusRequester(initialFocusRequester),
                                     onClick = {
                                         onInteract()
                                         onSectionSelected(SettingsSection.ALL)
@@ -220,7 +240,11 @@ internal fun PlayerTrackPanel(
                                 TrackButton(
                                     selected = uiState.selectedAudioTrack?.id == track.id,
                                     label = track.label,
-                                    modifier = if (index == 0) Modifier.focusRequester(initialFocusRequester) else Modifier,
+                                    modifier = if (index == selectedAudioIndex) {
+                                        Modifier.focusRequester(initialFocusRequester)
+                                    } else {
+                                        Modifier
+                                    },
                                     onClick = {
                                         onInteract()
                                         onAudioTrackSelected(track)
@@ -235,7 +259,11 @@ internal fun PlayerTrackPanel(
                                 TrackButton(
                                     selected = uiState.selectedSubtitleTrack == null,
                                     label = "None",
-                                    modifier = Modifier.focusRequester(initialFocusRequester),
+                                    modifier = if (selectedSubtitleIndex == 0) {
+                                        Modifier.focusRequester(initialFocusRequester)
+                                    } else {
+                                        Modifier
+                                    },
                                     onClick = {
                                         onInteract()
                                         onSubtitleTrackSelected(null)
@@ -248,6 +276,11 @@ internal fun PlayerTrackPanel(
                                 TrackButton(
                                     selected = uiState.selectedSubtitleTrack?.id == track.id,
                                     label = track.label,
+                                    modifier = if (selectedSubtitleIndex == index + 1) {
+                                        Modifier.focusRequester(initialFocusRequester)
+                                    } else {
+                                        Modifier
+                                    },
                                     onClick = {
                                         onInteract()
                                         onSubtitleTrackSelected(track)
@@ -263,7 +296,11 @@ internal fun PlayerTrackPanel(
                                 TrackButton(
                                     selected = uiState.transcodingQuality == quality,
                                     label = quality.label,
-                                    modifier = if (index == 0) Modifier.focusRequester(initialFocusRequester) else Modifier,
+                                    modifier = if (index == selectedQualityIndex) {
+                                        Modifier.focusRequester(initialFocusRequester)
+                                    } else {
+                                        Modifier
+                                    },
                                     onClick = {
                                         onInteract()
                                         onQualitySelected(quality)
@@ -280,7 +317,11 @@ internal fun PlayerTrackPanel(
                                 TrackButton(
                                     selected = uiState.playbackSpeed == speed,
                                     label = label,
-                                    modifier = if (index == 2) Modifier.focusRequester(initialFocusRequester) else Modifier,
+                                    modifier = if (index == selectedSpeedIndex) {
+                                        Modifier.focusRequester(initialFocusRequester)
+                                    } else {
+                                        Modifier
+                                    },
                                     onClick = {
                                         onInteract()
                                         onPlaybackSpeedSelected(speed)

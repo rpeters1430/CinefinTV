@@ -226,6 +226,8 @@ fun CinefinTvApp(
                 }.let { if (it == -1) navTabItems.indexOfFirst { it.route == NavRoutes.HOME } else it }
                 .coerceAtLeast(0)
                 var focusedTabIndex by remember { mutableStateOf(selectedTabIndex) }
+                val currentContentRequester = screenFocusRegistry?.requesterFor(currentRoute)
+                    ?: screenFocusRegistry?.requesterFor(navTabItems.getOrNull(selectedTabIndex)?.route)
 
                 LaunchedEffect(selectedTabIndex) {
                     focusedTabIndex = selectedTabIndex
@@ -323,7 +325,7 @@ fun CinefinTvApp(
                                                 modifier = Modifier
                                                     .focusRequester(tabRequesters[index])
                                                     .focusProperties {
-                                                        screenFocusRegistry?.requesterFor(item.route)?.let { down = it }
+                                                        currentContentRequester?.let { down = it }
                                                     },
                                                 selected = isSelected,
                                                 onFocus = { focusedTabIndex = index },

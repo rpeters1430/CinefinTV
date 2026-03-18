@@ -45,6 +45,7 @@ fun DetailActionRow(
     onCancelDelete: () -> Unit,
     onDismissActionError: () -> Unit,
     playButtonRequester: FocusRequester,
+    subtitleButtonRequester: FocusRequester,
     firstShelfRequester: FocusRequester?,
     onFocusedDescriptionChange: (String?) -> Unit,
     modifier: Modifier = Modifier
@@ -87,9 +88,10 @@ fun DetailActionRow(
                 Button(
                     onClick = { showSubtitleDialog = true },
                     modifier = Modifier
+                        .focusRequester(subtitleButtonRequester)
                         .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
                         .focusProperties {
-                            firstShelfRequester?.let { down = it }
+                            down = playButtonRequester
                         }
                 ) {
                     Icon(Icons.Default.ClosedCaption, contentDescription = null)
@@ -143,6 +145,7 @@ fun DetailActionRow(
                                 .focusRequester(playButtonRequester)
                                 .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
                                 .focusProperties {
+                                    if (item.subtitleOptions.isNotEmpty()) up = subtitleButtonRequester
                                     firstShelfRequester?.let { down = it }
                                 }
                         ) {

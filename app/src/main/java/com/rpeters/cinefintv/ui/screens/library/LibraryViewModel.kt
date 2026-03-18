@@ -108,7 +108,7 @@ class LibraryViewModel @Inject constructor(
             id = id,
             title = item.getDisplayTitle(),
             subtitle = item.getYear()?.toString() ?: item.getFormattedDuration(),
-            imageUrl = repositories.stream.getPosterCardImageUrl(item),
+            imageUrl = repositories.stream.getWideCardImageUrl(item),
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,
             unwatchedCount = unwatchedCount,
