@@ -106,12 +106,12 @@ fun CollectionsLibraryScreen(
                         ),
                 ) {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(7),
+                        columns = GridCells.Adaptive(minSize = 240.dp),
                         state = gridState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 64.dp, vertical = 8.dp),
+                        contentPadding = PaddingValues(horizontal = 64.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(20.dp),
                     ) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
                             ScrollFocusAnchor(
@@ -128,8 +128,8 @@ fun CollectionsLibraryScreen(
 
                         item(span = { GridItemSpan(maxLineSpan) }) {
                             LibraryHeader(
-                                title = "Collections",
-                                description = "Home videos and personal media with a gallery-style browsing surface.",
+                                title = "Stuff",
+                                description = "Your Stuff library with the same poster browsing density as Movies and TV Shows.",
                                 count = pagedItems.itemCount,
                             )
                         }
@@ -137,7 +137,7 @@ fun CollectionsLibraryScreen(
                         if (pagedItems.itemCount == 0) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 Text(
-                                    text = "No home videos were found in Collections.",
+                                    text = "No items were found in Stuff.",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -157,6 +157,7 @@ fun CollectionsLibraryScreen(
                                 onClick = { onOpenItem(item.id) },
                                 watchStatus = item.watchStatus,
                                 playbackProgress = item.playbackProgress,
+                                aspectRatio = 16f / 9f,
                                 modifier = if (index == 0) {
                                     Modifier
                                         .focusRequester(firstItemRequester)
@@ -197,7 +198,7 @@ private fun CollectionsLoadingState() {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             CircularProgressIndicator()
             Text(
-                text = "Loading Collections (Home Videos)...",
+                text = "Loading Stuff...",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onBackground,
             )
@@ -218,7 +219,7 @@ private fun CollectionsErrorState(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
-            text = "Collections could not load",
+            text = "Stuff could not load",
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onBackground,
         )
