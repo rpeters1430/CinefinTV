@@ -68,7 +68,7 @@ enum class LibraryCategory(
         itemTypes = listOf(BaseItemKind.SERIES),
     ),
     COLLECTIONS(
-        title = "Collections",
+        title = "Stuff",
         collectionType = "homevideos",
         itemTypes = null,
     ),
@@ -142,7 +142,7 @@ fun LibraryScreen(
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         LazyVerticalGrid(
-                            columns = GridCells.Adaptive(minSize = 150.dp),
+                            columns = GridCells.Adaptive(minSize = 240.dp),
                             state = gridState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(
@@ -152,7 +152,7 @@ fun LibraryScreen(
                                 bottom = 120.dp,
                             ),
                             horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
-                            verticalArrangement = Arrangement.spacedBy(24.dp),
+                            verticalArrangement = Arrangement.spacedBy(20.dp),
                         ) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 TvScreenTopFocusAnchor(
@@ -199,7 +199,7 @@ fun LibraryScreen(
                                     watchStatus = item.watchStatus,
                                     playbackProgress = item.playbackProgress,
                                     unwatchedCount = item.unwatchedCount,
-                                    aspectRatio = 2f / 3f,
+                                    aspectRatio = 16f / 9f,
                                     cardWidth = null,
                                     modifier = if (index == 0) {
                                         Modifier
@@ -310,9 +310,9 @@ fun LibraryHeader(
                 border = BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.65f)),
                 shape = RoundedCornerShape(spacing.cornerContainer),
             )
-            .padding(horizontal = 24.dp, vertical = 20.dp),
+            .padding(horizontal = 24.dp, vertical = 14.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(spacing.elementGap))
