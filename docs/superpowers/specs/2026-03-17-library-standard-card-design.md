@@ -37,6 +37,8 @@ textAlign = TextAlign.Start
 textAlign = TextAlign.Start
 ```
 
+The `isHorizontal` variable itself is **not removed** — it continues to drive the `Surface` `containerColor` (`Color.Transparent` for horizontal, `metaContainerColor` for portrait) and `tonalElevation` logic beneath the text column. The transparent background for horizontal (16:9) cards is intentional: text renders directly below the image with no background panel, matching the standard landscape grid style (YouTube, Prime Video).
+
 ### `LibraryScreen.kt`
 
 Remove `compactMetadata = true` from the `TvMediaCard` call in the paged items grid. The parameter defaults to `false`, so no replacement value is needed.
@@ -59,7 +61,7 @@ All other parameters (`aspectRatio = 16f / 9f`, `cardWidth = null`, grid `minSiz
 
 ### `CollectionsLibraryScreen.kt`
 
-Same change as `LibraryScreen.kt` — remove `compactMetadata = true` from the card call site.
+Same change as `LibraryScreen.kt` — remove `compactMetadata = true` from the card call site. Note: the Collections card call site does not pass `unwatchedCount`, so `UnwatchedCountOverlay` is never shown there regardless of this change.
 
 ## What Does Not Change
 
