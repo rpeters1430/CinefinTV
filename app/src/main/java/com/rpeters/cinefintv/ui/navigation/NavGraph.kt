@@ -32,16 +32,11 @@ import com.rpeters.cinefintv.ui.player.audio.AudioPlayerScreen
 import com.rpeters.cinefintv.ui.screens.auth.AuthViewModel
 import com.rpeters.cinefintv.ui.screens.auth.LoginScreen
 import com.rpeters.cinefintv.ui.screens.auth.ServerConnectionScreen
-import com.rpeters.cinefintv.ui.screens.detail.DetailScreen
 import com.rpeters.cinefintv.ui.screens.home.HomeScreen
-import com.rpeters.cinefintv.ui.screens.library.LibraryCategory
-import com.rpeters.cinefintv.ui.screens.library.LibraryScreen
 import com.rpeters.cinefintv.ui.screens.music.MusicScreen
 import com.rpeters.cinefintv.ui.screens.person.PersonScreen
 import com.rpeters.cinefintv.ui.screens.search.SearchScreen
 import com.rpeters.cinefintv.ui.screens.settings.SettingsScreen
-import com.rpeters.cinefintv.ui.screens.collections.CollectionsDetailScreen
-import com.rpeters.cinefintv.ui.screens.collections.CollectionsLibraryScreen
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @UnstableApi
@@ -134,14 +129,23 @@ fun CinefinTvNavGraph(
                                 "tvshows" -> navController.navigate(NavRoutes.LIBRARY_TVSHOWS)
                                 "music" -> navController.navigate(NavRoutes.LIBRARY_MUSIC)
                                 "homevideos" -> navController.navigate(NavRoutes.LIBRARY_COLLECTIONS)
-                                else -> navController.navigate(NavRoutes.detail(item.id))
+                                else -> navController.navigate(NavRoutes.stuffDetail(item.id))
                             }
                         }
-                        item.itemType == "Video" || item.collectionType == "homevideos" -> {
-                            navController.navigate(NavRoutes.collectionsDetail(item.id))
+                        item.itemType == "Movie" -> {
+                            navController.navigate(NavRoutes.movieDetail(item.id))
+                        }
+                        item.itemType == "Series" -> {
+                            navController.navigate(NavRoutes.tvShowDetail(item.id))
+                        }
+                        item.itemType == "Season" -> {
+                            navController.navigate(NavRoutes.seasonDetail(item.id))
+                        }
+                        item.itemType == "Episode" -> {
+                            navController.navigate(NavRoutes.episodeDetail(item.id))
                         }
                         else -> {
-                            navController.navigate(NavRoutes.detail(item.id))
+                            navController.navigate(NavRoutes.stuffDetail(item.id))
                         }
                     }
                 },
@@ -160,40 +164,44 @@ fun CinefinTvNavGraph(
                                 "tvshows" -> navController.navigate(NavRoutes.LIBRARY_TVSHOWS)
                                 "music" -> navController.navigate(NavRoutes.LIBRARY_MUSIC)
                                 "homevideos" -> navController.navigate(NavRoutes.LIBRARY_COLLECTIONS)
-                                else -> navController.navigate(NavRoutes.detail(item.id))
+                                else -> navController.navigate(NavRoutes.stuffDetail(item.id))
                             }
                         }
-                        item.itemType == "Video" || item.collectionType == "homevideos" -> {
-                            navController.navigate(NavRoutes.collectionsDetail(item.id))
+                        item.itemType == "Movie" -> {
+                            navController.navigate(NavRoutes.movieDetail(item.id))
+                        }
+                        item.itemType == "Series" -> {
+                            navController.navigate(NavRoutes.tvShowDetail(item.id))
+                        }
+                        item.itemType == "Season" -> {
+                            navController.navigate(NavRoutes.seasonDetail(item.id))
+                        }
+                        item.itemType == "Episode" -> {
+                            navController.navigate(NavRoutes.episodeDetail(item.id))
                         }
                         else -> {
-                            navController.navigate(NavRoutes.detail(item.id))
+                            navController.navigate(NavRoutes.stuffDetail(item.id))
                         }
                     }
                 },
             )
         }
         composable(NavRoutes.LIBRARY_MOVIES) {
-            LibraryScreen(
-                category = LibraryCategory.MOVIES,
-                onOpenItem = { itemId ->
-                    navController.navigate(NavRoutes.detail(itemId))
-                },
+            PlaceholderScreen(
+                name = "Movies Library",
+                onBack = { navController.popBackStack() },
             )
         }
         composable(NavRoutes.LIBRARY_TVSHOWS) {
-            LibraryScreen(
-                category = LibraryCategory.TV_SHOWS,
-                onOpenItem = { itemId ->
-                    navController.navigate(NavRoutes.detail(itemId))
-                },
+            PlaceholderScreen(
+                name = "TV Shows Library",
+                onBack = { navController.popBackStack() },
             )
         }
         composable(NavRoutes.LIBRARY_COLLECTIONS) {
-            CollectionsLibraryScreen(
-                onOpenItem = { itemId ->
-                    navController.navigate(NavRoutes.collectionsDetail(itemId))
-                },
+            PlaceholderScreen(
+                name = "Collections Library",
+                onBack = { navController.popBackStack() },
             )
         }
         composable(NavRoutes.LIBRARY_MUSIC) {
@@ -207,22 +215,48 @@ fun CinefinTvNavGraph(
             SettingsScreen()
         }
         composable(
-            NavRoutes.DETAIL,
+            NavRoutes.MOVIE_DETAIL,
             arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
         ) {
-            DetailScreen(
-                onPlay = { itemId, startPos ->
-                    navController.navigate(NavRoutes.player(itemId, startPos))
-                },
-                onOpenItem = { itemId ->
-                    navController.navigate(NavRoutes.detail(itemId))
-                },
-                onOpenPerson = { personId ->
-                    navController.navigate(NavRoutes.personDetail(personId))
-                },
-                onBack = {
-                    navController.popBackStack()
-                },
+            PlaceholderScreen(
+                name = "Movie Detail",
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(
+            NavRoutes.TV_SHOW_DETAIL,
+            arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
+        ) {
+            PlaceholderScreen(
+                name = "TV Show Detail",
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(
+            NavRoutes.SEASON_DETAIL,
+            arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
+        ) {
+            PlaceholderScreen(
+                name = "Season Detail",
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(
+            NavRoutes.EPISODE_DETAIL,
+            arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
+        ) {
+            PlaceholderScreen(
+                name = "Episode Detail",
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(
+            NavRoutes.STUFF_DETAIL,
+            arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
+        ) {
+            PlaceholderScreen(
+                name = "Stuff Detail",
+                onBack = { navController.popBackStack() },
             )
         }
         composable(
@@ -231,23 +265,7 @@ fun CinefinTvNavGraph(
         ) {
             PersonScreen(
                 onOpenItem = { itemId ->
-                    navController.navigate(NavRoutes.detail(itemId))
-                },
-                onBack = {
-                    navController.popBackStack()
-                },
-            )
-        }
-        composable(
-            NavRoutes.COLLECTIONS_DETAIL,
-            arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
-        ) {
-            CollectionsDetailScreen(
-                onPlay = { itemId ->
-                    navController.navigate(NavRoutes.player(itemId))
-                },
-                onOpenItem = { itemId ->
-                    navController.navigate(NavRoutes.collectionsDetail(itemId))
+                    navController.navigate(NavRoutes.movieDetail(itemId))
                 },
                 onBack = {
                     navController.popBackStack()

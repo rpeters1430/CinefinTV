@@ -10,17 +10,23 @@ object NavRoutes {
     const val LIBRARY_COLLECTIONS = "library/collections"
     const val LIBRARY_MUSIC = "library/music"
     const val SETTINGS = "settings"
-    const val DETAIL = "detail/{itemId}"
+    const val MOVIE_DETAIL = "movie/detail/{itemId}"
+    const val TV_SHOW_DETAIL = "tvshow/detail/{itemId}"
+    const val SEASON_DETAIL = "season/detail/{itemId}"
+    const val EPISODE_DETAIL = "episode/detail/{itemId}"
+    const val STUFF_DETAIL = "stuff/detail/{itemId}"
     const val PERSON_DETAIL = "detail/person/{personId}"
-    const val COLLECTIONS_DETAIL = "collections/detail/{itemId}"
     const val PLAYER = "player/{itemId}?start={start}"
     const val AUDIO_PLAYER = "audio-player/{itemId}?queue={queue}"
 
-    fun detail(itemId: String) = "detail/$itemId"
+    fun movieDetail(itemId: String) = "movie/detail/$itemId"
+    fun tvShowDetail(itemId: String) = "tvshow/detail/$itemId"
+    fun seasonDetail(itemId: String) = "season/detail/$itemId"
+    fun episodeDetail(itemId: String) = "episode/detail/$itemId"
+    fun stuffDetail(itemId: String) = "stuff/detail/$itemId"
     fun personDetail(personId: String) = "detail/person/$personId"
     fun player(itemId: String, startPositionMs: Long? = null) = 
         if (startPositionMs != null) "player/$itemId?start=$startPositionMs" else "player/$itemId"
-    fun collectionsDetail(itemId: String) = "collections/detail/$itemId"
     fun audioPlayer(itemId: String, queueIds: List<String>): String {
         val encodedQueue = queueIds
             .filter(String::isNotBlank)
