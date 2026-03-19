@@ -140,13 +140,19 @@ fun DetailScreen(
                 }
 
                 val isSeriesDetail = state.seasons.isNotEmpty()
-                val primaryFocusTarget = if (isSeriesDetail) {
-                    firstShelfRequester ?: playButtonRequester
-                } else {
-                    playButtonRequester
+                val actionRowPrimaryRequester = when {
+                    !isSeriesDetail && state.playableItemId != null -> playButtonRequester
+                    state.item.subtitleOptions.isNotEmpty() -> subtitleButtonRequester
+                    state.playableItemId != null || isSeriesDetail -> playButtonRequester
+                    else -> null
                 }
+                val primaryFocusTarget = when {
+                    actionRowPrimaryRequester != null -> actionRowPrimaryRequester
+                    firstShelfRequester != null -> firstShelfRequester
+                    else -> topAnchorRequester
+                }
+                val initialFocusTarget = actionRowPrimaryRequester ?: topAnchorRequester
 
-                // Focus top anchor on initial load to ensure we start at the top
                 val screenFocus = remember(topAnchorRequester, primaryFocusTarget) {
                     TvScreenFocusState(
                         topAnchorRequester = topAnchorRequester,
@@ -156,12 +162,12 @@ fun DetailScreen(
 
                 RegisterPrimaryScreenFocus(
                     route = NavRoutes.DETAIL,
-                    requester = screenFocus.topAnchorRequester,
+                    requester = screenFocus.primaryContentRequester,
                 )
 
                 RequestScreenFocus(
                     key = state.item.id,
-                    requester = screenFocus.topAnchorRequester,
+                    requester = initialFocusTarget,
                 )
                 LaunchedEffect(state.item.id) {
                     focusedBackdropUrl = null
@@ -272,7 +278,7 @@ fun DetailScreen(
                                 onChapterClick = { pos -> state.playableItemId?.let { onPlay(it, pos) } },
                                 onFocusedDescriptionChange = { focusedDescription = it },
                                 onFocusedPreviewImageChange = { focusedBackdropUrl = it },
-                                playButtonRequester = playButtonRequester,
+                                actionRowRequester = actionRowPrimaryRequester,
                                 topAnchorRequester = topAnchorRequester,
                                 primaryShelfRequester = primaryShelfRequester,
                                 chapterShelfRequester = chapterShelfRequester,

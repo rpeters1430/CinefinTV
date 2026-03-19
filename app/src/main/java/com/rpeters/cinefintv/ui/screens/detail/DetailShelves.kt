@@ -28,7 +28,7 @@ fun DetailShelves(
     onChapterClick: (Long) -> Unit,
     onFocusedDescriptionChange: (String?) -> Unit,
     onFocusedPreviewImageChange: (String?) -> Unit,
-    playButtonRequester: FocusRequester,
+    actionRowRequester: FocusRequester?,
     topAnchorRequester: FocusRequester,
     primaryShelfRequester: FocusRequester,
     chapterShelfRequester: FocusRequester,
@@ -39,7 +39,6 @@ fun DetailShelves(
     val spacing = LocalCinefinSpacing.current
     val episodes = state.episodesBySeasonId.values.flatten()
     val chapters = state.item.chapters
-    val isSeries = state.seasons.isNotEmpty()
 
     Column(
         modifier = modifier,
@@ -67,7 +66,7 @@ fun DetailShelves(
                         modifier = itemModifier
                             .then(if (chapter == chapters.first()) Modifier.focusRequester(chapterShelfRequester) else Modifier)
                             .focusProperties {
-                                up = playButtonRequester
+                                up = actionRowRequester ?: topAnchorRequester
                                 if (state.seasons.isNotEmpty() || episodes.isNotEmpty()) {
                                     down = primaryShelfRequester
                                 } else if (state.cast.isNotEmpty()) {
@@ -108,8 +107,8 @@ fun DetailShelves(
                             .focusProperties {
                                 up = when {
                                     chapters.isNotEmpty() -> chapterShelfRequester
-                                    isSeries && state.item.subtitleOptions.isEmpty() -> topAnchorRequester
-                                    else -> playButtonRequester
+                                    actionRowRequester != null -> actionRowRequester
+                                    else -> topAnchorRequester
                                 }
                                 if (state.cast.isNotEmpty()) {
                                     down = castShelfRequester
@@ -147,7 +146,11 @@ fun DetailShelves(
                         modifier = itemModifier
                             .then(if (episode == episodes.first()) Modifier.focusRequester(primaryShelfRequester) else Modifier)
                             .focusProperties {
-                                up = if (chapters.isNotEmpty()) chapterShelfRequester else playButtonRequester
+                                up = if (chapters.isNotEmpty()) {
+                                    chapterShelfRequester
+                                } else {
+                                    actionRowRequester ?: topAnchorRequester
+                                }
                                 if (state.cast.isNotEmpty()) {
                                     down = castShelfRequester
                                 } else if (state.related.isNotEmpty()) {
@@ -182,7 +185,8 @@ fun DetailShelves(
                                 up = when {
                                     state.seasons.isNotEmpty() || episodes.isNotEmpty() -> primaryShelfRequester
                                     chapters.isNotEmpty() -> chapterShelfRequester
-                                    else -> playButtonRequester
+                                    actionRowRequester != null -> actionRowRequester
+                                    else -> topAnchorRequester
                                 }
                                 if (state.related.isNotEmpty()) {
                                     down = relatedShelfRequester
@@ -222,7 +226,8 @@ fun DetailShelves(
                                     state.cast.isNotEmpty() -> castShelfRequester
                                     state.seasons.isNotEmpty() || episodes.isNotEmpty() -> primaryShelfRequester
                                     chapters.isNotEmpty() -> chapterShelfRequester
-                                    else -> playButtonRequester
+                                    actionRowRequester != null -> actionRowRequester
+                                    else -> topAnchorRequester
                                 }
                             },
                     )
