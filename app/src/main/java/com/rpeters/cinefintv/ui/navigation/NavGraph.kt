@@ -32,8 +32,10 @@ import com.rpeters.cinefintv.ui.player.audio.AudioPlayerScreen
 import com.rpeters.cinefintv.ui.screens.auth.AuthViewModel
 import com.rpeters.cinefintv.ui.screens.auth.LoginScreen
 import com.rpeters.cinefintv.ui.screens.auth.ServerConnectionScreen
+import com.rpeters.cinefintv.ui.screens.detail.EpisodeDetailScreen
 import com.rpeters.cinefintv.ui.screens.detail.MovieDetailScreen
 import com.rpeters.cinefintv.ui.screens.detail.SeasonScreen
+import com.rpeters.cinefintv.ui.screens.detail.StuffDetailScreen
 import com.rpeters.cinefintv.ui.screens.detail.TvShowDetailScreen
 import com.rpeters.cinefintv.ui.screens.home.HomeScreen
 import com.rpeters.cinefintv.ui.screens.library.MovieLibraryScreen
@@ -269,8 +271,10 @@ fun CinefinTvNavGraph(
             NavRoutes.EPISODE_DETAIL,
             arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
         ) {
-            PlaceholderScreen(
-                name = "Episode Detail",
+            EpisodeDetailScreen(
+                onPlayEpisode = { episodeId, position ->
+                    navController.navigate(NavRoutes.player(episodeId, position))
+                },
                 onBack = { navController.popBackStack() },
             )
         }
@@ -278,8 +282,19 @@ fun CinefinTvNavGraph(
             NavRoutes.STUFF_DETAIL,
             arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
         ) {
-            PlaceholderScreen(
-                name = "Stuff Detail",
+            StuffDetailScreen(
+                onOpenItem = { id, type ->
+                    when (type) {
+                        "Movie" -> navController.navigate(NavRoutes.movieDetail(id))
+                        "Series" -> navController.navigate(NavRoutes.tvShowDetail(id))
+                        "Season" -> navController.navigate(NavRoutes.seasonDetail(id))
+                        "Episode" -> navController.navigate(NavRoutes.episodeDetail(id))
+                        else -> navController.navigate(NavRoutes.stuffDetail(id))
+                    }
+                },
+                onPlayItem = { itemId ->
+                    navController.navigate(NavRoutes.player(itemId))
+                },
                 onBack = { navController.popBackStack() },
             )
         }
