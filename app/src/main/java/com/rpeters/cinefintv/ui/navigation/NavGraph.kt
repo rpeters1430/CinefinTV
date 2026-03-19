@@ -32,6 +32,7 @@ import com.rpeters.cinefintv.ui.player.audio.AudioPlayerScreen
 import com.rpeters.cinefintv.ui.screens.auth.AuthViewModel
 import com.rpeters.cinefintv.ui.screens.auth.LoginScreen
 import com.rpeters.cinefintv.ui.screens.auth.ServerConnectionScreen
+import com.rpeters.cinefintv.ui.screens.detail.MovieDetailScreen
 import com.rpeters.cinefintv.ui.screens.home.HomeScreen
 import com.rpeters.cinefintv.ui.screens.library.MovieLibraryScreen
 import com.rpeters.cinefintv.ui.screens.library.StuffLibraryScreen
@@ -224,8 +225,13 @@ fun CinefinTvNavGraph(
             NavRoutes.MOVIE_DETAIL,
             arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
         ) {
-            PlaceholderScreen(
-                name = "Movie Detail",
+            MovieDetailScreen(
+                onPlayMovie = { itemId ->
+                    navController.navigate(NavRoutes.player(itemId))
+                },
+                onOpenMovie = { itemId ->
+                    navController.navigate(NavRoutes.movieDetail(itemId))
+                },
                 onBack = { navController.popBackStack() },
             )
         }
