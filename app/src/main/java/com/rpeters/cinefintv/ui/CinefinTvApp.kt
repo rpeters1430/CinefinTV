@@ -211,13 +211,10 @@ fun CinefinTvApp(
                     )
                 }
 
-                val isPersonDetailRoute = currentRoute?.startsWith("detail/person/") == true
                 val showNav = currentRoute != null &&
                     !currentRoute.startsWith("auth/") &&
                     !currentRoute.startsWith("player/") &&
-                    !currentRoute.startsWith("audio-player/") &&
-                    (!currentRoute.startsWith("detail/") || isPersonDetailRoute) &&
-                    !currentRoute.startsWith("collections/detail/")
+                    !currentRoute.startsWith("audio-player/")
 
                 // Determine selected tab based on route prefix to keep it highlighted during sub-navigation
                 val selectedTabIndex = navTabItems.indexOfFirst { item ->

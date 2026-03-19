@@ -159,7 +159,7 @@ fun LibraryScreen(
                 if (pagedItems.itemCount > 0 || pagedItems.loadState.refresh is LoadState.NotLoading) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         LazyVerticalGrid(
-                            columns = GridCells.Adaptive(minSize = 220.dp),
+                            columns = GridCells.Adaptive(minSize = 200.dp),
                             state = gridState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(
@@ -184,59 +184,51 @@ fun LibraryScreen(
 
                             if (featuredItems.isNotEmpty()) {
                                 item(span = { GridItemSpan(maxLineSpan) }) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(bottom = 8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                                    ) {
-                                        Text(
-                                            text = "Recently Added",
-                                            style = MaterialTheme.typography.headlineSmall,
-                                            color = MaterialTheme.colorScheme.onBackground,
-                                        )
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
-                                        ) {
-                                            featuredItems.forEachIndexed { index, item ->
-                                                val rightRequester = if (index < featuredItems.lastIndex) {
-                                                    featuredSecondaryRequesters[index + 1]
-                                                } else null
-                                                val leftRequester = if (index > 0) {
-                                                    if (index == 1) screenFocus.primaryContentRequester else featuredSecondaryRequesters[index - 1]
-                                                } else null
+                                    Text(
+                                        text = "Recently Added",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                        modifier = Modifier.padding(bottom = 12.dp, top = 8.dp)
+                                    )
+                                }
 
-                                                TvMediaCard(
-                                                    title = item.title,
-                                                    subtitle = item.subtitle,
-                                                    imageUrl = item.imageUrl,
-                                                    onClick = { onOpenItem(item.id) },
-                                                    watchStatus = item.watchStatus,
-                                                    playbackProgress = item.playbackProgress,
-                                                    unwatchedCount = item.unwatchedCount,
-                                                    aspectRatio = 16f / 9f,
-                                                    modifier = Modifier
-                                                        .weight(1f)
-                                                        .focusRequester(if (index == 0) screenFocus.primaryContentRequester else featuredSecondaryRequesters[index])
-                                                        .focusProperties {
-                                                            up = screenFocus.topAnchorRequester
-                                                            leftRequester?.let { left = it }
-                                                            rightRequester?.let { right = it }
-                                                            down = firstGridItemRequester
-                                                        },
-                                                )
+                                items(
+                                    items = featuredItems,
+                                    key = { "featured-${it.id}" }
+                                ) { item ->
+                                    val index = featuredItems.indexOf(item)
+                                    TvMediaCard(
+                                        title = item.title,
+                                        subtitle = item.subtitle,
+                                        imageUrl = item.imageUrl,
+                                        onClick = { onOpenItem(item.id) },
+                                        watchStatus = item.watchStatus,
+                                        playbackProgress = item.playbackProgress,
+                                        unwatchedCount = item.unwatchedCount,
+                                        aspectRatio = 16f / 9f,
+                                        modifier = if (index == 0) {
+                                            Modifier
+                                                .focusRequester(screenFocus.primaryContentRequester)
+                                                .focusProperties {
+                                                    up = screenFocus.topAnchorRequester
+                                                    down = firstGridItemRequester
+                                                }
+                                        } else {
+                                            Modifier.focusProperties {
+                                                up = screenFocus.topAnchorRequester
+                                                down = firstGridItemRequester
                                             }
-                                            // Fill remaining space if fewer than 3 items to keep consistent sizing
-                                            repeat(3 - featuredItems.size) {
-                                                Box(modifier = Modifier.weight(1f))
-                                            }
-                                        }
-                                    }
+                                        },
+                                    )
+                                }
+
+                                // Add a spacer to separate Featured from Main Grid if needed
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    Spacer(Modifier.height(16.dp))
                                 }
                             }
 
-                            if (pagedItems.itemCount == 0) {
+                            if (pagedItems.itemCount == 0 && featuredItems.isEmpty()) {
                                 item(span = { GridItemSpan(maxLineSpan) }) {
                                     Text(
                                         text = "No ${category.title.lowercase()} found in your library.",
