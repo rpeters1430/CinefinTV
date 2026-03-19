@@ -32,7 +32,15 @@ class TvScreenFocusRegistry {
         if (route.isNullOrBlank()) return null
         return primaryRequesters[route]
             ?: primaryRequesters.entries.firstOrNull { (registeredRoute, _) ->
-                route.startsWith("$registeredRoute/")
+                val regParts = registeredRoute.split('/')
+                val routeParts = route.split('/')
+                if (routeParts.size < regParts.size) return@firstOrNull false
+
+                regParts.indices.all { i ->
+                    val regPart = regParts[i]
+                    val routePart = routeParts[i]
+                    (regPart.startsWith('{') && regPart.endsWith('}')) || regPart == routePart
+                }
             }?.value
     }
 }
