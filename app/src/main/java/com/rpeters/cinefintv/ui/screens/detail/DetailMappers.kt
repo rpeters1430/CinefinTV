@@ -101,9 +101,14 @@ object DetailMappers {
 
         val technicalDetails = DetailTechnicalDetails(
             videoQuality = toVideoQualityLabel(videoStream?.height),
+            videoCodec = videoStream?.codec?.takeIf { it.isNotBlank() }?.uppercase(),
             audioCodec = audioStream?.codec?.takeIf { it.isNotBlank() }?.uppercase(),
             audioType = toAudioTypeLabel(audioStream?.channels),
             language = audioStream?.language?.takeIf { it.isNotBlank() },
+            subtitleSummary = subtitleOptions.size.takeIf { it > 0 }?.let { count ->
+                if (count == 1) "1 track" else "$count tracks"
+            },
+            container = item.mediaSources?.firstOrNull()?.container?.takeIf { it.isNotBlank() }?.uppercase(),
             bitrate = item.mediaSources?.firstOrNull()?.bitrate?.let { "${it / 1_000_000} Mbps" },
             framerate = videoStream?.averageFrameRate?.let { "${it.toInt()} fps" } ?: videoStream?.realFrameRate?.let { "${it.toInt()} fps" },
         )

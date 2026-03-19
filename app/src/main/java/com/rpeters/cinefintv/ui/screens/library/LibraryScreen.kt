@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -25,9 +27,11 @@ import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -113,6 +117,10 @@ fun LibraryScreen(
             }
 
             is LibraryUiState.Content -> {
+                val featuredItems = state.recentlyAdded
+                val featuredSecondRequester = remember { FocusRequester() }
+                val firstGridItemRequester = remember { FocusRequester() }
+
                 when (val refreshState = pagedItems.loadState.refresh) {
                     is LoadState.Loading -> {
                         if (pagedItems.itemCount == 0) {
@@ -142,7 +150,7 @@ fun LibraryScreen(
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         LazyVerticalGrid(
-                            columns = GridCells.Adaptive(minSize = 240.dp),
+                            columns = GridCells.Fixed(3),
                             state = gridState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(
@@ -163,6 +171,62 @@ fun LibraryScreen(
                                         }
                                     }
                                 )
+                            }
+
+                            if (featuredItems.isNotEmpty()) {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    ) {
+                                        Text(
+                                            text = "Recently Added",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            color = MaterialTheme.colorScheme.onBackground,
+                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                                        ) {
+                                            featuredItems.forEachIndexed { index, item ->
+                                                TvMediaCard(
+                                                    title = item.title,
+                                                    subtitle = item.subtitle,
+                                                    imageUrl = item.imageUrl,
+                                                    onClick = { onOpenItem(item.id) },
+                                                    watchStatus = item.watchStatus,
+                                                    playbackProgress = item.playbackProgress,
+                                                    unwatchedCount = item.unwatchedCount,
+                                                    aspectRatio = 16f / 9f,
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .then(
+                                                            if (index == 0) {
+                                                                Modifier
+                                                                    .focusRequester(screenFocus.primaryContentRequester)
+                                                                    .focusProperties {
+                                                                        up = screenFocus.topAnchorRequester
+                                                                        right = featuredSecondRequester
+                                                                        down = firstGridItemRequester
+                                                                    }
+                                                            } else {
+                                                                Modifier
+                                                                    .focusRequester(featuredSecondRequester)
+                                                                    .focusProperties {
+                                                                        up = screenFocus.topAnchorRequester
+                                                                        left = screenFocus.primaryContentRequester
+                                                                        down = firstGridItemRequester
+                                                                    }
+                                                            }
+                                                        ),
+                                                )
+                                            }
+                                            if (featuredItems.size == 1) {
+                                                Box(modifier = Modifier.weight(1f))
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
                             if (pagedItems.itemCount == 0) {
@@ -195,9 +259,9 @@ fun LibraryScreen(
                                     cardWidth = null,
                                     modifier = if (index == 0) {
                                         Modifier
-                                            .focusRequester(screenFocus.primaryContentRequester)
+                                            .focusRequester(firstGridItemRequester)
                                             .focusProperties {
-                                                up = screenFocus.topAnchorRequester
+                                                up = if (featuredItems.isNotEmpty()) screenFocus.primaryContentRequester else screenFocus.topAnchorRequester
                                             }
                                     } else {
                                         Modifier

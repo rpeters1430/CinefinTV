@@ -45,9 +45,12 @@ data class DetailHeroModel(
 
 data class DetailTechnicalDetails(
     val videoQuality: String?,
+    val videoCodec: String?,
     val audioCodec: String?,
     val audioType: String?,
     val language: String?,
+    val subtitleSummary: String? = null,
+    val container: String? = null,
     val bitrate: String? = null,
     val framerate: String? = null,
 )

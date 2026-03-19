@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -36,7 +37,6 @@ import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
 import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
-import com.rpeters.cinefintv.ui.screens.library.LibraryHeader
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -51,6 +51,7 @@ fun CollectionsLibraryScreen(
     val expressiveColors = LocalCinefinExpressiveColors.current
     val topAnchorRequester = remember { FocusRequester() }
     val firstItemRequester = remember { FocusRequester() }
+    val firstGridItemRequester = remember { FocusRequester() }
 
     RegisterPrimaryScreenFocus(
         route = NavRoutes.LIBRARY_COLLECTIONS,
@@ -67,6 +68,9 @@ fun CollectionsLibraryScreen(
         }
 
         is CollectionsLibraryUiState.Content -> {
+            val featuredItems = state.recentlyAdded
+            val featuredSecondRequester = remember { FocusRequester() }
+
             when (val refreshState = pagedItems.loadState.refresh) {
                 is LoadState.Loading -> {
                     if (pagedItems.itemCount == 0) {
@@ -106,10 +110,10 @@ fun CollectionsLibraryScreen(
                         ),
                 ) {
                     LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 240.dp),
+                        columns = GridCells.Fixed(3),
                         state = gridState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 64.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(horizontal = 64.dp, vertical = 0.dp),
                         horizontalArrangement = Arrangement.spacedBy(24.dp),
                         verticalArrangement = Arrangement.spacedBy(20.dp),
                     ) {
@@ -118,7 +122,7 @@ fun CollectionsLibraryScreen(
                                 modifier = Modifier
                                     .focusRequester(topAnchorRequester)
                                     .focusProperties {
-                                        down = firstItemRequester
+                                        down = if (featuredItems.isNotEmpty()) firstItemRequester else firstGridItemRequester
                                     },
                                 onFocused = {
                                     gridState.requestScrollToItem(0)
@@ -126,12 +130,59 @@ fun CollectionsLibraryScreen(
                             )
                         }
 
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            LibraryHeader(
-                                title = "Stuff",
-                                description = "Your Stuff library with the same poster browsing density as Movies and TV Shows.",
-                                count = pagedItems.itemCount,
-                            )
+                        if (featuredItems.isNotEmpty()) {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    Text(
+                                        text = "Recently Added",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(24.dp),
+                                    ) {
+                                        featuredItems.forEachIndexed { index, item ->
+                                            TvMediaCard(
+                                                title = item.title,
+                                                subtitle = item.subtitle,
+                                                imageUrl = item.imageUrl,
+                                                onClick = { onOpenItem(item.id) },
+                                                watchStatus = item.watchStatus,
+                                                playbackProgress = item.playbackProgress,
+                                                aspectRatio = 16f / 9f,
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .then(
+                                                        if (index == 0) {
+                                                            Modifier
+                                                                .focusRequester(firstItemRequester)
+                                                                .focusProperties {
+                                                                    up = topAnchorRequester
+                                                                    right = featuredSecondRequester
+                                                                    down = firstGridItemRequester
+                                                                }
+                                                        } else {
+                                                            Modifier
+                                                                .focusRequester(featuredSecondRequester)
+                                                                .focusProperties {
+                                                                    up = topAnchorRequester
+                                                                    left = firstItemRequester
+                                                                    down = firstGridItemRequester
+                                                                }
+                                                        }
+                                                    ),
+                                            )
+                                        }
+                                        if (featuredItems.size == 1) {
+                                            Box(modifier = Modifier.weight(1f))
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         if (pagedItems.itemCount == 0) {
@@ -160,9 +211,9 @@ fun CollectionsLibraryScreen(
                                 aspectRatio = 16f / 9f,
                                 modifier = if (index == 0) {
                                     Modifier
-                                        .focusRequester(firstItemRequester)
+                                        .focusRequester(firstGridItemRequester)
                                         .focusProperties {
-                                            up = topAnchorRequester
+                                            up = if (featuredItems.isNotEmpty()) firstItemRequester else topAnchorRequester
                                         }
                                 } else {
                                     Modifier

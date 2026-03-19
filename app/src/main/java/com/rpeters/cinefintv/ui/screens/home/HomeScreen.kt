@@ -3,6 +3,7 @@ package com.rpeters.cinefintv.ui.screens.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -366,6 +367,7 @@ private fun HomeSection(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
+    val visibleItems = items.take(12)
 
     Column(modifier = modifier) {
         CinefinShelfTitle(
@@ -374,27 +376,31 @@ private fun HomeSection(
             modifier = Modifier
                 .padding(bottom = spacing.elementGap, start = spacing.gutter, end = spacing.gutter),
         )
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
-            contentPadding = PaddingValues(horizontal = spacing.gutter),
-        ) {
-            itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
-                TvMediaCard(
-                    title = item.title,
-                    subtitle = item.subtitle ?: item.year?.toString(),
-                    imageUrl = item.imageUrl,
-                    onClick = { onOpenItem(item) },
-                    watchStatus = item.watchStatus,
-                    unwatchedCount = item.unwatchedCount,
-                    playbackProgress = item.playbackProgress,
-                    aspectRatio = 16f / 9f,
-                    cardWidth = 260.dp,
-                    modifier = if (index == 0) {
-                        Modifier.focusRequester(firstItemFocusRequester)
-                    } else {
-                        Modifier
-                    }
-                )
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val cardWidth = ((maxWidth - (spacing.gutter * 2) - (spacing.cardGap * 2)) / 3f)
+                .coerceIn(220.dp, 420.dp)
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                contentPadding = PaddingValues(horizontal = spacing.gutter),
+            ) {
+                itemsIndexed(visibleItems, key = { _, item -> item.id }) { index, item ->
+                    TvMediaCard(
+                        title = item.title,
+                        subtitle = item.subtitle ?: item.year?.toString(),
+                        imageUrl = item.imageUrl,
+                        onClick = { onOpenItem(item) },
+                        watchStatus = item.watchStatus,
+                        unwatchedCount = item.unwatchedCount,
+                        playbackProgress = item.playbackProgress,
+                        aspectRatio = 16f / 9f,
+                        cardWidth = cardWidth,
+                        modifier = if (index == 0) {
+                            Modifier.focusRequester(firstItemFocusRequester)
+                        } else {
+                            Modifier
+                        }
+                    )
+                }
             }
         }
     }

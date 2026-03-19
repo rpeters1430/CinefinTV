@@ -47,6 +47,9 @@ class EnhancedPlaybackManager @Inject constructor(
 
         // Direct play bitrate thresholds (defaults, will be overridden by user prefs)
         private const val DIRECT_PLAY_MAX_BITRATE = 140_000_000 // 140 Mbps
+        private const val HDR_WIFI_DIRECT_PLAY_MAX_BITRATE = 120_000_000
+        private const val HDR_ETHERNET_DIRECT_PLAY_MAX_BITRATE = 180_000_000
+        private const val HDR_CELLULAR_DIRECT_PLAY_MAX_BITRATE = 30_000_000
 
         // Machine-readable reason codes (Phase 0)
         object ReasonCodes {
@@ -60,6 +63,7 @@ class EnhancedPlaybackManager @Inject constructor(
             const val NETWORK_BITRATE_EXCEEDED = "NETWORK_BITRATE_EXCEEDED"
             const val CONTAINER_UNSUPPORTED = "CONTAINER_UNSUPPORTED"
             const val DIRECT_STREAM_VIDEO_COPY_OK = "DIRECT_STREAM_VIDEO_COPY_OK"
+            const val HDR_PRESERVATION_MODE = "HDR_PRESERVATION_MODE"
             const val FULL_TRANSCODE_REQUIRED = "FULL_TRANSCODE_REQUIRED"
             const val DECISION_FALLBACK_TO_SERVER = "DECISION_FALLBACK_TO_SERVER"
         }
@@ -184,6 +188,7 @@ class EnhancedPlaybackManager @Inject constructor(
 
         val reasons = mutableListOf<String>()
         val anySource = mediaSources.firstOrNull() ?: return PlaybackResult.Error("Empty source list")
+        val shouldPreserveHdr = isHdrPreservationEligible(anySource, deviceCaps)
 
         // WORKAROUND: Force Direct Play if server incorrectly rejects (e.g. 10-bit HEVC).
         // IMPORTANT: Only bypass when audio passes a strict check (no stereo-downmix fallback).
@@ -197,7 +202,9 @@ class EnhancedPlaybackManager @Inject constructor(
                 deviceCapabilities.canPlayAudioCodecStrict(audioCodec, audioChannels)
             } else true
 
-            if (audioCanBeDirectPlayed && canDirectPlayMediaSource(anySource, item, reasons, bypassServerDecision = true)) {
+            if (audioCanBeDirectPlayed &&
+                canDirectPlayMediaSource(anySource, item, reasons, bypassServerDecision = true, preferHdr = shouldPreserveHdr)
+            ) {
                 // Audio is fine - server likely incorrectly rejected (e.g. 10-bit HEVC profile)
                 val container = anySource.container ?: "mkv"
                 val url = buildDirectPlayUrl(serverUrl, itemId, anySource.id, container, playSessionId)
@@ -222,11 +229,16 @@ class EnhancedPlaybackManager @Inject constructor(
 
         // Try standard Direct Play
         val directPlaySource = mediaSources.firstOrNull { it.supportsDirectPlay }
-        if (directPlaySource != null && canDirectPlayMediaSource(directPlaySource, item, reasons)) {
+        if (directPlaySource != null &&
+            canDirectPlayMediaSource(directPlaySource, item, reasons, preferHdr = shouldPreserveHdr)
+        ) {
             val container = directPlaySource.container ?: "mkv"
             val url = buildDirectPlayUrl(serverUrl, itemId, directPlaySource.id, container, playSessionId)
             
             reasons.add(ReasonCodes.SERVER_DIRECT_PLAY_OK)
+            if (shouldPreserveHdr) {
+                reasons.add(ReasonCodes.HDR_PRESERVATION_MODE)
+            }
             val trace = createTrace(sessionId, "DIRECT_PLAY", "STANDARD_DIRECT_PLAY", reasons, directPlaySource, deviceCaps, networkClass)
             
             return PlaybackResult.DirectPlay(
@@ -243,8 +255,11 @@ class EnhancedPlaybackManager @Inject constructor(
         }
 
         // Try Direct Stream (audio transcode only)
-        if (canDirectStreamMediaSource(anySource, item, reasons)) {
+        if (canDirectStreamMediaSource(anySource, item, reasons, preferHdr = shouldPreserveHdr)) {
             reasons.add(ReasonCodes.DIRECT_STREAM_VIDEO_COPY_OK)
+            if (shouldPreserveHdr) {
+                reasons.add(ReasonCodes.HDR_PRESERVATION_MODE)
+            }
             val result = getDirectStreamWithAudioTranscode(item, anySource, playbackInfo, audioStreamIndex, subtitleStreamIndex)
             
             if (result is PlaybackResult.Transcoding) {
@@ -329,6 +344,7 @@ class EnhancedPlaybackManager @Inject constructor(
         item: BaseItemDto,
         reasons: MutableList<String>? = null,
         bypassServerDecision: Boolean = false,
+        preferHdr: Boolean = false,
     ): Boolean {
         if (!bypassServerDecision) {
             if (!mediaSource.supportsDirectPlay && !mediaSource.supportsDirectStream) {
@@ -375,7 +391,7 @@ class EnhancedPlaybackManager @Inject constructor(
 
         // Check network conditions for high-bitrate content
         val bitrate = mediaSource.bitrate ?: 0
-        if (!isNetworkSuitableForDirectPlay(bitrate)) {
+        if (!isNetworkSuitableForDirectPlay(bitrate, preferHdr)) {
             SecureLogger.d(TAG, "Network conditions not suitable for Direct Play (bitrate: ${bitrate / 1_000_000} Mbps)")
             reasons?.add(ReasonCodes.NETWORK_BITRATE_EXCEEDED)
             return false
@@ -393,6 +409,7 @@ class EnhancedPlaybackManager @Inject constructor(
         mediaSource: org.jellyfin.sdk.model.api.MediaSourceInfo,
         item: BaseItemDto,
         reasons: MutableList<String>? = null,
+        preferHdr: Boolean = false,
     ): Boolean {
         // Check video codec support (REQUIRED for direct stream)
         val videoStream = mediaSource.findDefaultVideoStream()
@@ -429,7 +446,7 @@ class EnhancedPlaybackManager @Inject constructor(
 
         // Check network conditions
         val bitrate = mediaSource.bitrate ?: 0
-        if (!isNetworkSuitableForDirectPlay(bitrate)) {
+        if (!isNetworkSuitableForDirectPlay(bitrate, preferHdr)) {
             SecureLogger.d(TAG, "Network conditions not suitable for Direct Stream (bitrate: ${bitrate / 1_000_000} Mbps)")
             return false
         }
@@ -444,13 +461,13 @@ class EnhancedPlaybackManager @Inject constructor(
     /**
      * Check if network conditions are suitable for Direct Play
      */
-    private suspend fun isNetworkSuitableForDirectPlay(bitrate: Int): Boolean {
+    private suspend fun isNetworkSuitableForDirectPlay(bitrate: Int, preferHdr: Boolean = false): Boolean {
         val type = connectivityChecker.getNetworkType()
 
         return when (type) {
-            NetworkType.WIFI -> bitrate <= 80_000_000
-            NetworkType.CELLULAR -> bitrate <= 25_000_000
-            NetworkType.ETHERNET -> bitrate <= DIRECT_PLAY_MAX_BITRATE
+            NetworkType.WIFI -> bitrate <= if (preferHdr) HDR_WIFI_DIRECT_PLAY_MAX_BITRATE else 80_000_000
+            NetworkType.CELLULAR -> bitrate <= if (preferHdr) HDR_CELLULAR_DIRECT_PLAY_MAX_BITRATE else 25_000_000
+            NetworkType.ETHERNET -> bitrate <= if (preferHdr) HDR_ETHERNET_DIRECT_PLAY_MAX_BITRATE else DIRECT_PLAY_MAX_BITRATE
             else -> bitrate <= LOW_QUALITY_THRESHOLD * 1_000_000
         }
     }
@@ -547,6 +564,12 @@ class EnhancedPlaybackManager @Inject constructor(
         val sourceWidth = sourceVideoStream?.width ?: 1920
         val sourceHeight = sourceVideoStream?.height ?: 1080
         val sourceVideoCodec = sourceVideoStream?.codec?.lowercase() ?: "h264"
+        val shouldPreserveHdr = transcodingSource?.let { isHdrPreservationEligible(it, deviceCaps) } == true
+        val preferredTranscodingVideoCodec = selectTranscodingVideoCodec(
+            sourceVideoCodec = sourceVideoCodec,
+            supportedCodecs = deviceCaps.supportedVideoCodecs,
+            preserveHdr = shouldPreserveHdr,
+        )
 
         // Determine effective quality based on network AND user preference
         val networkQuality = connectivityChecker.getNetworkQuality()
@@ -567,7 +590,7 @@ class EnhancedPlaybackManager @Inject constructor(
                 maxBitrate = 60_000_000, // 60 Mbps
                 maxWidth = minOf(if (deviceCaps.supports4K) 3840 else 1920, sourceWidth),
                 maxHeight = minOf(if (deviceCaps.supports4K) 2160 else 1080, sourceHeight),
-                videoCodec = if (deviceCaps.supportedVideoCodecs.contains(sourceVideoCodec)) sourceVideoCodec else getBestVideoCodec(deviceCaps.supportedVideoCodecs),
+                videoCodec = preferredTranscodingVideoCodec,
                 audioCodec = getBestAudioCodec(deviceCaps.supportedAudioCodecs),
                 container = "ts",
             )
@@ -575,7 +598,7 @@ class EnhancedPlaybackManager @Inject constructor(
                 maxBitrate = 20_000_000, // 20 Mbps
                 maxWidth = minOf(1920, sourceWidth),
                 maxHeight = minOf(1080, sourceHeight),
-                videoCodec = if (deviceCaps.supportedVideoCodecs.contains(sourceVideoCodec)) sourceVideoCodec else "h264",
+                videoCodec = preferredTranscodingVideoCodec,
                 audioCodec = "aac",
                 container = "ts",
             )
@@ -583,7 +606,7 @@ class EnhancedPlaybackManager @Inject constructor(
                 maxBitrate = 8_000_000, // 8 Mbps
                 maxWidth = minOf(1280, sourceWidth),
                 maxHeight = minOf(720, sourceHeight),
-                videoCodec = "h264",
+                videoCodec = if (shouldPreserveHdr) preferredTranscodingVideoCodec else "h264",
                 audioCodec = "aac",
                 container = "ts",
             )
@@ -591,7 +614,7 @@ class EnhancedPlaybackManager @Inject constructor(
                 maxBitrate = 3_000_000, // 3 Mbps
                 maxWidth = minOf(854, sourceWidth),
                 maxHeight = minOf(480, sourceHeight),
-                videoCodec = "h264",
+                videoCodec = if (shouldPreserveHdr) preferredTranscodingVideoCodec else "h264",
                 audioCodec = "aac",
                 container = "ts",
             )
@@ -608,7 +631,8 @@ class EnhancedPlaybackManager @Inject constructor(
             "Transcoding params: source=${sourceWidth}x$sourceHeight, " +
                 "target=${transcodingParams.maxWidth}x${transcodingParams.maxHeight}, " +
                 "bitrate=${transcodingParams.maxBitrate / 1_000_000}Mbps, " +
-                "quality=$effectiveQuality, channels=$maxAudioChannels",
+                "quality=$effectiveQuality, channels=$maxAudioChannels, " +
+                "preserveHdr=$shouldPreserveHdr",
         )
 
         // Try primary transcoding URL
@@ -679,6 +703,26 @@ class EnhancedPlaybackManager @Inject constructor(
         }
     }
 
+    private fun selectTranscodingVideoCodec(
+        sourceVideoCodec: String,
+        supportedCodecs: List<String>,
+        preserveHdr: Boolean,
+    ): String {
+        val normalizedSupported = supportedCodecs.map { it.lowercase() }.toSet()
+        val sourceSupported = sourceVideoCodec in normalizedSupported
+        if (!preserveHdr) {
+            return if (sourceSupported) sourceVideoCodec else getBestVideoCodec(supportedCodecs)
+        }
+
+        val hevcCapable = "h265" in normalizedSupported || "hevc" in normalizedSupported
+        return when {
+            sourceSupported && (sourceVideoCodec == "h265" || sourceVideoCodec == "hevc") -> sourceVideoCodec
+            hevcCapable -> "h265"
+            sourceSupported -> sourceVideoCodec
+            else -> getBestVideoCodec(supportedCodecs)
+        }
+    }
+
     /**
      * Get the best audio codec from supported list
      */
@@ -724,6 +768,75 @@ class EnhancedPlaybackManager @Inject constructor(
         val streams = mediaStreams ?: return null
         return streams.firstOrNull { it.type == MediaStreamType.AUDIO && it.isDefault == true }
             ?: streams.firstOrNull { it.type == MediaStreamType.AUDIO }
+    }
+
+    private fun isHdrPreservationEligible(
+        mediaSource: MediaSourceInfo,
+        capabilities: com.rpeters.cinefintv.data.DirectPlayCapabilities,
+    ): Boolean {
+        if (!capabilities.supportsHdr) return false
+        if (!capabilities.hevc10BitSupported && capabilities.maxVideoBitDepth < 10) return false
+        val videoStream = mediaSource.findDefaultVideoStream() ?: return false
+        return isHdrVideoStream(videoStream)
+    }
+
+    private fun isHdrVideoStream(videoStream: org.jellyfin.sdk.model.api.MediaStream): Boolean {
+        val directTextSignals = listOf(
+            readStreamPropertyAsString(videoStream, "videoRange"),
+            readStreamPropertyAsString(videoStream, "videoRangeType"),
+            readStreamPropertyAsString(videoStream, "colorTransfer"),
+            readStreamPropertyAsString(videoStream, "colorPrimaries"),
+            readStreamPropertyAsString(videoStream, "displayTitle"),
+            readStreamPropertyAsString(videoStream, "title"),
+            readStreamPropertyAsString(videoStream, "profile"),
+            readStreamPropertyAsString(videoStream, "codecTag"),
+            readStreamPropertyAsString(videoStream, "codecTagString"),
+        )
+            .filterNotNull()
+            .joinToString(" ")
+            .lowercase()
+
+        if (
+            directTextSignals.contains("hdr") ||
+            directTextSignals.contains("hdr10") ||
+            directTextSignals.contains("hdr10+") ||
+            directTextSignals.contains("hlg") ||
+            directTextSignals.contains("pq") ||
+            directTextSignals.contains("dolby vision") ||
+            directTextSignals.contains("dovi") ||
+            directTextSignals.contains("bt2020")
+        ) {
+            return true
+        }
+
+        val bitDepth = readStreamPropertyAsInt(videoStream, "bitDepth")
+            ?: readStreamPropertyAsInt(videoStream, "videoBitDepth")
+        if (bitDepth != null && bitDepth >= 10) {
+            return true
+        }
+
+        return false
+    }
+
+    private fun readStreamPropertyAsString(
+        stream: org.jellyfin.sdk.model.api.MediaStream,
+        propertyName: String,
+    ): String? {
+        val candidateGetter = "get${propertyName.replaceFirstChar { it.uppercase() }}"
+        val value = runCatching {
+            stream.javaClass.methods
+                .firstOrNull { method -> method.name == candidateGetter && method.parameterCount == 0 }
+                ?.invoke(stream)
+        }.getOrNull() ?: return null
+        return value.toString().takeIf { it.isNotBlank() }
+    }
+
+    private fun readStreamPropertyAsInt(
+        stream: org.jellyfin.sdk.model.api.MediaStream,
+        propertyName: String,
+    ): Int? {
+        val stringValue = readStreamPropertyAsString(stream, propertyName) ?: return null
+        return stringValue.toIntOrNull()
     }
 }
 

@@ -342,31 +342,59 @@ fun PlayerScreen(
                 }
                 // Speed badge — persistent pill shown when speed is not 1×
                 val expressiveColors = LocalCinefinExpressiveColors.current
-                AnimatedVisibility(
-                    visible = uiState.playbackSpeed != 1.0f,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
+                Column(
                     modifier = Modifier
                         .zIndex(2f)
                         .align(Alignment.TopEnd)
                         .padding(horizontal = 32.dp, vertical = 28.dp),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    val speedLabel = if (uiState.playbackSpeed == 1.0f) "1×" else "${uiState.playbackSpeed}×"
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                color = expressiveColors.pillStrong,
-                                shape = RoundedCornerShape(50),
-                            )
-                            .padding(horizontal = 14.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center,
+                    AnimatedVisibility(
+                        visible = uiState.isHdrPlayback,
+                        enter = fadeIn() + slideInHorizontally { it / 2 },
+                        exit = fadeOut() + slideOutHorizontally { it / 2 },
                     ) {
-                        Text(
-                            text = speedLabel,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = RoundedCornerShape(50),
+                                )
+                                .padding(horizontal = 14.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "HDR",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                            )
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = uiState.playbackSpeed != 1.0f,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                    ) {
+                        val speedLabel = if (uiState.playbackSpeed == 1.0f) "1×" else "${uiState.playbackSpeed}×"
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = expressiveColors.pillStrong,
+                                    shape = RoundedCornerShape(50),
+                                )
+                                .padding(horizontal = 14.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = speedLabel,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
                     }
                 }
 
@@ -385,28 +413,17 @@ fun PlayerScreen(
                         enter = fadeIn() + slideInHorizontally { it },
                         exit = fadeOut() + slideOutHorizontally { it },
                     ) {
-                        Button(
-                            onClick = {
+                        SkipActionCard(
+                            label = activeSkipLabel ?: "Skip",
+                            subtitle = "Available now",
+                            onSkip = {
                                 exoPlayer.seekTo(activeSkipTargetMs)
                                 onInteract()
                             },
                             modifier = Modifier
                                 .focusRequester(skipFocusRequester)
                                 .onFocusChanged { overlayActionFocused = it.hasFocus },
-                            colors = ButtonDefaults.colors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = Color.White,
-                                focusedContainerColor = Color.White,
-                                focusedContentColor = MaterialTheme.colorScheme.primary,
-                            ),
-                            shape = ButtonDefaults.shape(shape = RoundedCornerShape(50)),
-                        ) {
-                            Text(
-                                text = activeSkipLabel ?: "",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
+                        )
                     }
 
                     // Next Up thumbnail card — slides in from right in last 15s

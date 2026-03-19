@@ -52,6 +52,7 @@ data class PlayerUiState(
     val selectedSubtitleTrack: TrackOption? = null,
     val transcodingQuality: TranscodingQuality = TranscodingQuality.AUTO,
     val playbackSpeed: Float = 1.0f,
+    val isHdrPlayback: Boolean = false,
     val chapters: List<ChapterMarker> = emptyList(),
     val introSkipRange: SkipRange? = null,
     val creditsSkipRange: SkipRange? = null,

@@ -137,7 +137,9 @@ class HomeViewModel @Inject constructor(
             add(
                 HomeSectionModel(
                     title = title,
-                    items = result.data.map(::toCardModel),
+                    items = result.data
+                        .take(12)
+                        .map(::toCardModel),
                 ),
             )
         }

@@ -124,13 +124,11 @@ internal fun PlayerControls(
     val (subtitleButtonBounds, setSubtitleButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
     val (audioButtonBounds, setAudioButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
     val (qualityButtonBounds, setQualityButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
-    val (allOptionsButtonBounds, setAllOptionsButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
 
     val backFocusRequester = remember { FocusRequester() }
     val subtitleFocusRequester = remember { FocusRequester() }
     val audioFocusRequester = remember { FocusRequester() }
     val qualityFocusRequester = remember { FocusRequester() }
-    val allOptionsFocusRequester = remember { FocusRequester() }
     val skipBackFocusRequester = remember { FocusRequester() }
     val skipForwardFocusRequester = remember { FocusRequester() }
 
@@ -346,24 +344,74 @@ internal fun PlayerControls(
                                 .focusProperties {
                                     up = seekBarFocusRequester
                                     left = subtitleFocusRequester
-                                    right = allOptionsFocusRequester
                                 }
                                 .onGloballyPositioned { setQualityButtonBounds(it.boundsInRoot()) }
                         )
-
-                        ActionIconButton(
-                            icon = Icons.Default.PlayArrow,
-                            onClick = { onInteract(); onSettingsClick(SettingsSection.ALL, allOptionsButtonBounds) },
-                            modifier = Modifier
-                                .focusRequester(allOptionsFocusRequester)
-                                .focusProperties {
-                                    up = seekBarFocusRequester
-                                    left = qualityFocusRequester
-                                }
-                                .onGloballyPositioned { setAllOptionsButtonBounds(it.boundsInRoot()) }
-                        )
                     }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+internal fun SkipActionCard(
+    label: String,
+    subtitle: String,
+    onSkip: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    Surface(
+        modifier = modifier.width(180.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = SurfaceDefaults.colors(
+            containerColor = SurfaceDark,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = "SKIP",
+                style = MaterialTheme.typography.labelMedium,
+                fontSize = 18.sp,
+                color = expressiveColors.playerContentPrimary.copy(alpha = 0.5f),
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = expressiveColors.playerContentPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelMedium,
+                fontSize = 18.sp,
+                color = expressiveColors.playerContentPrimary.copy(alpha = 0.5f),
+            )
+            Button(
+                onClick = onSkip,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp),
+                colors = ButtonDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = expressiveColors.playerContentPrimary,
+                    focusedContainerColor = expressiveColors.playerContentPrimary,
+                    focusedContentColor = MaterialTheme.colorScheme.primary,
+                ),
+            ) {
+                Text(
+                    text = label,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
         }
     }

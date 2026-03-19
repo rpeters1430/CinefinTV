@@ -19,6 +19,7 @@ class LibraryItemPagingSource(
     private val parentId: String? = null,
     private val itemTypes: List<BaseItemKind>? = null,
     private val collectionType: String? = null,
+    private val excludedItemIds: Set<String> = emptySet(),
     private val pageSize: Int = 20,
 ) : PagingSource<Int, BaseItemDto>() {
 
@@ -61,16 +62,24 @@ class LibraryItemPagingSource(
                 )
             ) {
                 is ApiResult.Success -> {
-                    val items = result.data
+                    val rawItems = result.data
+                    val items = if (excludedItemIds.isEmpty()) {
+                        rawItems
+                    } else {
+                        rawItems.filterNot { item -> excludedItemIds.contains(item.id.toString()) }
+                    }
 
                     if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "Loaded ${items.size} items for page $pageIndex")
+                        Log.d(
+                            TAG,
+                            "Loaded page $pageIndex: raw=${rawItems.size}, filtered=${items.size}, excluded=${excludedItemIds.size}",
+                        )
                     }
 
                     LoadResult.Page(
                         data = items,
                         prevKey = if (pageIndex == STARTING_PAGE_INDEX) null else pageIndex - 1,
-                        nextKey = if (items.isEmpty() || items.size < params.loadSize) null else pageIndex + 1,
+                        nextKey = if (rawItems.isEmpty() || rawItems.size < params.loadSize) null else pageIndex + 1,
                     )
                 }
                 is ApiResult.Error -> {

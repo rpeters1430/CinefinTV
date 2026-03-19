@@ -75,6 +75,11 @@ class PlayerViewModel @Inject constructor(
     private var currentItem: BaseItemDto? = null
     private var playbackStartReported = false
 
+    private data class ResolvedPlayback(
+        val url: String,
+        val isHdrPlayback: Boolean,
+    )
+
     init {
         viewModelScope.launch {
             playbackPreferencesRepository.preferences.collectLatest { prefs ->
@@ -168,12 +173,13 @@ class PlayerViewModel @Inject constructor(
         activeMediaSourceId = mediaSource?.id
         activePlaySessionId = playbackInfo?.playSessionId
 
-        val streamUrl = resolvePlaybackUrl(
+        val resolvedPlayback = resolvePlaybackUrl(
             item = item,
             audioStreamIndex = null,
             subtitleStreamIndex = null,
             startPositionMs = if (shouldShowResumeDialog) 0L else savedPlaybackPositionMs,
-        ) ?: repositories.stream.getStreamUrl(itemId)
+        )
+        val streamUrl = resolvedPlayback?.url ?: repositories.stream.getStreamUrl(itemId)
 
         if (streamUrl == null) {
             _uiState.value = _uiState.value.copy(
@@ -237,6 +243,7 @@ class PlayerViewModel @Inject constructor(
             chapters = chapters,
             introSkipRange = introSkipRange,
             creditsSkipRange = creditsSkipRange,
+            isHdrPlayback = resolvedPlayback?.isHdrPlayback ?: false,
             trickplayManifest = trickplayManifest,
             trickplayBaseUrl = trickplayBaseUrl,
             isLoading = false,
@@ -363,11 +370,12 @@ class PlayerViewModel @Inject constructor(
         if (currentItemId.isBlank()) return
 
         viewModelScope.launch {
-            val streamUrl = resolvePlaybackUrl(
+            val resolvedPlayback = resolvePlaybackUrl(
                 item = currentItem,
                 audioStreamIndex = uiState.value.selectedAudioTrack?.streamIndex,
                 subtitleStreamIndex = uiState.value.selectedSubtitleTrack?.streamIndex,
-            ) ?: repositories.stream.getTranscodedStreamUrl(
+            )
+            val streamUrl = resolvedPlayback?.url ?: repositories.stream.getTranscodedStreamUrl(
                 itemId = currentItemId,
                 mediaSourceId = activeMediaSourceId,
                 playSessionId = activePlaySessionId,
@@ -376,7 +384,10 @@ class PlayerViewModel @Inject constructor(
             ) ?: repositories.stream.getStreamUrl(currentItemId)
                 ?: return@launch
 
-            _uiState.value = _uiState.value.copy(streamUrl = streamUrl)
+            _uiState.value = _uiState.value.copy(
+                streamUrl = streamUrl,
+                isHdrPlayback = resolvedPlayback?.isHdrPlayback ?: false,
+            )
             playbackStartReported = false
             _player?.apply {
                 setMediaItem(MediaItem.fromUri(streamUrl))
@@ -535,7 +546,7 @@ class PlayerViewModel @Inject constructor(
         audioStreamIndex: Int?,
         subtitleStreamIndex: Int?,
         startPositionMs: Long = 0L,
-    ): String? {
+    ): ResolvedPlayback? {
         item ?: return null
 
         return when (
@@ -553,7 +564,10 @@ class PlayerViewModel @Inject constructor(
                     playbackStartReported = false
                 }
                 activePlaySessionId = nextSessionId
-                playbackResult.url
+                ResolvedPlayback(
+                    url = playbackResult.url,
+                    isHdrPlayback = playbackResult.reasonCodes.contains(HDR_REASON_CODE),
+                )
             }
             is PlaybackResult.Transcoding -> {
                 activePlayMethod = if (playbackResult.isDirectStream) {
@@ -566,7 +580,10 @@ class PlayerViewModel @Inject constructor(
                     playbackStartReported = false
                 }
                 activePlaySessionId = nextSessionId
-                playbackResult.url
+                ResolvedPlayback(
+                    url = playbackResult.url,
+                    isHdrPlayback = playbackResult.reasonCodes.contains(HDR_REASON_CODE),
+                )
             }
             is PlaybackResult.Error -> null
         }
@@ -595,5 +612,6 @@ class PlayerViewModel @Inject constructor(
         private const val COMPLETION_THRESHOLD_PERCENT = 0.95
         private const val TICKS_PER_MILLISECOND = 10_000L
         private const val MAX_RETRIES = 3
+        private const val HDR_REASON_CODE = "HDR_PRESERVATION_MODE"
     }
 }

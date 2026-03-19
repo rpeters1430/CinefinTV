@@ -29,13 +29,17 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.BaseItemKind
+import com.rpeters.cinefintv.data.repository.common.ApiResult
 import javax.inject.Inject
 
 sealed class LibraryUiState {
     data object Loading : LibraryUiState()
     data class Content(
         val title: String,
+        val recentlyAdded: List<HomeCardModel> = emptyList(),
     ) : LibraryUiState()
 }
 
@@ -49,13 +53,15 @@ class LibraryViewModel @Inject constructor(
 
     private val selectedCategory = MutableStateFlow<LibraryCategory?>(null)
     private val refreshGeneration = MutableStateFlow(0)
+    private val featuredItemIds = MutableStateFlow<Set<String>>(emptySet())
 
     val pagedItems: Flow<PagingData<HomeCardModel>> =
         combine(
             selectedCategory.filterNotNull(),
             refreshGeneration,
-        ) { category, _ -> category }
-            .flatMapLatest { category ->
+            featuredItemIds,
+        ) { category, _, excludedIds -> category to excludedIds }
+            .flatMapLatest { (category, excludedIds) ->
                 Pager(
                     config = PagingConfig(
                         pageSize = LIBRARY_PAGE_SIZE,
@@ -68,6 +74,7 @@ class LibraryViewModel @Inject constructor(
                         mediaRepository = repositories.media,
                         itemTypes = category.itemTypes,
                         collectionType = category.collectionType,
+                        excludedItemIds = excludedIds,
                         pageSize = LIBRARY_PAGE_SIZE,
                     )
                 }.flow
@@ -81,10 +88,34 @@ class LibraryViewModel @Inject constructor(
         }
 
         selectedCategory.value = category
-        _uiState.value = LibraryUiState.Content(title = category.title)
+        featuredItemIds.value = emptySet()
+        _uiState.value = LibraryUiState.Content(title = category.title, recentlyAdded = emptyList())
+        loadFeaturedRow(category)
 
         if (forceRefresh) {
             refreshGeneration.value += 1
+        }
+    }
+
+    private fun loadFeaturedRow(category: LibraryCategory) {
+        viewModelScope.launch {
+            val featuredItems = when (category) {
+                LibraryCategory.MOVIES -> repositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 8)
+                LibraryCategory.TV_SHOWS -> repositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 8)
+                LibraryCategory.COLLECTIONS -> repositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 8)
+            }
+            val cards = when (featuredItems) {
+                is ApiResult.Success -> featuredItems.data
+                    .distinctBy { it.id.toString() }
+                    .take(2)
+                    .map(::toCardModel)
+                else -> emptyList()
+            }
+            featuredItemIds.value = cards.map { it.id }.toSet()
+            val currentState = _uiState.value
+            if (currentState is LibraryUiState.Content) {
+                _uiState.value = currentState.copy(recentlyAdded = cards)
+            }
         }
     }
 
