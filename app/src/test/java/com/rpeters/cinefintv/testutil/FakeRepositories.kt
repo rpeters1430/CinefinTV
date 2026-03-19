@@ -13,8 +13,8 @@ class FakeAuthRepository {
 }
 
 class FakeHomeRepositories(
-    val media: JellyfinMediaRepository = mockk(),
-    val stream: JellyfinStreamRepository = mockk(),
+    val media: JellyfinMediaRepository = mockk(relaxed = true),
+    val stream: JellyfinStreamRepository = mockk(relaxed = true),
 ) {
     val coordinator: JellyfinRepositoryCoordinator = mockk {
         every { this@mockk.media } returns this@FakeHomeRepositories.media
@@ -26,8 +26,8 @@ class FakeHomeRepositories(
 }
 
 class FakePlayerRepositories(
-    val media: JellyfinMediaRepository = mockk(),
-    val stream: JellyfinStreamRepository = mockk(),
+    val media: JellyfinMediaRepository = mockk(relaxed = true),
+    val stream: JellyfinStreamRepository = mockk(relaxed = true),
 ) {
     val coordinator: JellyfinRepositoryCoordinator = mockk {
         every { this@mockk.media } returns this@FakePlayerRepositories.media
@@ -39,8 +39,8 @@ class FakePlayerRepositories(
 }
 
 class FakeMusicRepositories(
-    val media: JellyfinMediaRepository = mockk(),
-    val stream: JellyfinStreamRepository = mockk(),
+    val media: JellyfinMediaRepository = mockk(relaxed = true),
+    val stream: JellyfinStreamRepository = mockk(relaxed = true),
 ) {
     val coordinator: JellyfinRepositoryCoordinator = mockk {
         every { this@mockk.media } returns this@FakeMusicRepositories.media

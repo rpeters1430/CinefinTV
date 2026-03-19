@@ -134,11 +134,11 @@ fun SettingsScreen(
 
     RegisterPrimaryScreenFocus(
         route = NavRoutes.SETTINGS,
-        requester = screenFocus.topAnchorRequester,
+        requester = screenFocus.primaryContentRequester,
     )
     RequestScreenFocus(
         key = uiState.isLoading,
-        requester = screenFocus.topAnchorRequester,
+        requester = screenFocus.primaryContentRequester,
         enabled = !uiState.isLoading,
     )
 
@@ -301,6 +301,7 @@ fun SettingsScreen(
                                 description = "System, light, dark, or AMOLED black.",
                                 selectedLabel = uiState.appearance.themeMode.name.replace('_', ' '),
                                 onClick = { activeDialog = SettingsChoiceDialog.THEME_MODE },
+                                modifier = Modifier.focusProperties { up = screenFocus.primaryContentRequester },
                             )
                             SettingsToggleRow(
                                 icon = Icons.Default.Palette,
@@ -356,6 +357,7 @@ fun SettingsScreen(
                                 description = "Start the next episode near the end of current playback.",
                                 checked = uiState.playback.autoPlayNextEpisode,
                                 onCheckedChange = viewModel::setAutoPlayNextEpisode,
+                                modifier = Modifier.focusProperties { up = screenFocus.primaryContentRequester },
                             )
                             SettingsChoiceRow(
                                 icon = Icons.Default.PlayArrow,
@@ -390,6 +392,7 @@ fun SettingsScreen(
                                 description = "Preferred subtitle text size.",
                                 selectedLabel = uiState.subtitles.textSize.name.replace('_', ' '),
                                 onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_TEXT_SIZE },
+                                modifier = Modifier.focusProperties { up = screenFocus.primaryContentRequester },
                             )
                             SettingsChoiceRow(
                                 icon = Icons.Default.ClosedCaption,
@@ -417,6 +420,7 @@ fun SettingsScreen(
                                 description = "Allow delete/refresh actions when available.",
                                 checked = uiState.libraryActions.enableManagementActions,
                                 onCheckedChange = viewModel::setLibraryManagementActions,
+                                modifier = Modifier.focusProperties { up = screenFocus.primaryContentRequester },
                             )
                         }
                         SettingsCategory.CASTING -> SettingsSectionCard(
@@ -430,6 +434,7 @@ fun SettingsScreen(
                                 description = "Reconnect to the previous cast session when possible.",
                                 checked = uiState.cast.autoReconnect,
                                 onCheckedChange = viewModel::setCastAutoReconnect,
+                                modifier = Modifier.focusProperties { up = screenFocus.primaryContentRequester },
                             )
                             SettingsToggleRow(
                                 icon = Icons.Default.Devices,
@@ -452,6 +457,7 @@ fun SettingsScreen(
                                 description = "Require stronger device auth before credential access.",
                                 checked = uiState.credentialSecurity.requireStrongAuthForCredentials,
                                 onCheckedChange = viewModel::setRequireStrongAuthForCredentials,
+                                modifier = Modifier.focusProperties { up = screenFocus.primaryContentRequester },
                             )
                         }
                     }
@@ -546,7 +552,9 @@ private fun SettingsCategorySelector(
 ) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         itemsIndexed(SettingsCategory.entries) { index, category ->
-            val modifier = if (index == 0) initialModifier else Modifier
+            // Use the initialModifier (which has the primary requester) for the SELECTED item
+            // so that navigating from the TabBar hits the active category.
+            val modifier = if (category == selected) initialModifier else Modifier
             if (category == selected) {
                 Button(
                     onClick = { onCategorySelected(category) },
@@ -583,11 +591,12 @@ private fun SettingsSectionCard(
     title: String,
     description: String,
     icon: ImageVector,
+    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(26.dp),
         colors = SurfaceDefaults.colors(
             containerColor = expressiveColors.surfaceContainerLow.copy(alpha = 0.93f),

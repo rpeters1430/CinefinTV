@@ -122,6 +122,7 @@ fun PersonScreen(
             var focusedMedia by remember(state.media) { mutableStateOf(state.media.firstOrNull()) }
             val topAnchorRequester = remember { FocusRequester() }
             val backButtonRequester = remember { FocusRequester() }
+            val firstKnownForRequester = remember { FocusRequester() }
             val screenFocus = remember(topAnchorRequester, backButtonRequester) {
                 TvScreenFocusState(
                     topAnchorRequester = topAnchorRequester,
@@ -131,7 +132,7 @@ fun PersonScreen(
 
             RegisterPrimaryScreenFocus(
                 route = NavRoutes.PERSON_DETAIL,
-                requester = screenFocus.topAnchorRequester,
+                requester = screenFocus.primaryContentRequester,
             )
             
             BackHandler(onBack = onBack)
@@ -244,6 +245,7 @@ fun PersonScreen(
                                             .onFocusChanged { if (it.isFocused) focusedDescription = null }
                                             .focusProperties {
                                                 up = topAnchorRequester
+                                                if (state.media.isNotEmpty()) down = firstKnownForRequester
                                             }
                                     ) {
                                         Text("Back")
@@ -260,6 +262,8 @@ fun PersonScreen(
                                 items = state.media,
                                 focusedItem = focusedMedia ?: state.media.first(),
                                 onOpenItem = onOpenItem,
+                                firstItemRequester = firstKnownForRequester,
+                                upRequester = backButtonRequester,
                                 onItemFocused = {
                                     focusedMedia = it
                                     focusedDescription = it.overview
@@ -282,6 +286,8 @@ private fun PersonImmersiveSection(
     items: List<PersonMediaModel>,
     focusedItem: PersonMediaModel,
     onOpenItem: (String) -> Unit,
+    firstItemRequester: FocusRequester,
+    upRequester: FocusRequester,
     onItemFocused: (PersonMediaModel) -> Unit,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
@@ -395,6 +401,11 @@ private fun PersonImmersiveSection(
                         onFocus = { onItemFocused(item) },
                         aspectRatio = 16f / 9f,
                         cardWidth = 240.dp,
+                        modifier = Modifier
+                            .then(if (item == items.first()) Modifier.focusRequester(firstItemRequester) else Modifier)
+                            .focusProperties {
+                                up = upRequester
+                            },
                     )
                 }
             }

@@ -155,7 +155,7 @@ private fun MusicGridContent(
     val screenFocus = rememberTvScreenFocusState()
     RegisterPrimaryScreenFocus(
         route = NavRoutes.LIBRARY_MUSIC,
-        requester = screenFocus.topAnchorRequester,
+        requester = screenFocus.primaryContentRequester,
     )
 
     RequestScreenFocus(
@@ -270,7 +270,7 @@ private fun AlbumDetailContent(
     val screenFocus = rememberTvScreenFocusState()
     RegisterPrimaryScreenFocus(
         route = NavRoutes.LIBRARY_MUSIC,
-        requester = screenFocus.topAnchorRequester,
+        requester = screenFocus.primaryContentRequester,
     )
 
     RequestScreenFocus(

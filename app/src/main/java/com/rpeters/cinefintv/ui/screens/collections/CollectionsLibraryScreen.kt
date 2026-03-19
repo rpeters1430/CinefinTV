@@ -55,7 +55,7 @@ fun CollectionsLibraryScreen(
 
     RegisterPrimaryScreenFocus(
         route = NavRoutes.LIBRARY_COLLECTIONS,
-        requester = firstItemRequester,
+        requester = firstGridItemRequester,
     )
 
     LaunchedEffect(Unit) {
@@ -69,7 +69,9 @@ fun CollectionsLibraryScreen(
 
         is CollectionsLibraryUiState.Content -> {
             val featuredItems = state.recentlyAdded
-            val featuredSecondRequester = remember { FocusRequester() }
+            val featuredSecondaryRequesters = remember(featuredItems.size) {
+                List(featuredItems.size) { FocusRequester() }
+            }
 
             when (val refreshState = pagedItems.loadState.refresh) {
                 is LoadState.Loading -> {
@@ -146,6 +148,17 @@ fun CollectionsLibraryScreen(
                                         horizontalArrangement = Arrangement.spacedBy(24.dp),
                                     ) {
                                         featuredItems.forEachIndexed { index, item ->
+                                            val hasRightNeighbor = index < featuredItems.lastIndex
+                                            val leftRequester = when (index) {
+                                                0 -> null
+                                                1 -> firstItemRequester
+                                                else -> featuredSecondaryRequesters[index - 1]
+                                            }
+                                            val rightRequester = when {
+                                                !hasRightNeighbor -> null
+                                                index == 0 -> featuredSecondaryRequesters[1]
+                                                else -> featuredSecondaryRequesters[index + 1]
+                                            }
                                             TvMediaCard(
                                                 title = item.title,
                                                 subtitle = item.subtitle,
@@ -162,15 +175,16 @@ fun CollectionsLibraryScreen(
                                                                 .focusRequester(firstItemRequester)
                                                                 .focusProperties {
                                                                     up = topAnchorRequester
-                                                                    right = featuredSecondRequester
+                                                                    rightRequester?.let { right = it }
                                                                     down = firstGridItemRequester
                                                                 }
                                                         } else {
                                                             Modifier
-                                                                .focusRequester(featuredSecondRequester)
+                                                                .focusRequester(featuredSecondaryRequesters[index])
                                                                 .focusProperties {
                                                                     up = topAnchorRequester
-                                                                    left = firstItemRequester
+                                                                    leftRequester?.let { left = it }
+                                                                    rightRequester?.let { right = it }
                                                                     down = firstGridItemRequester
                                                                 }
                                                         }

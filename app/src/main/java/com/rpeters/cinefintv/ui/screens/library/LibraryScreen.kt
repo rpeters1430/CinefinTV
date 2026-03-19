@@ -93,14 +93,7 @@ fun LibraryScreen(
     
     // First focus anchor
     val screenFocus = rememberTvScreenFocusState()
-    RegisterPrimaryScreenFocus(
-        route = when (category) {
-            LibraryCategory.MOVIES -> NavRoutes.LIBRARY_MOVIES
-            LibraryCategory.TV_SHOWS -> NavRoutes.LIBRARY_TVSHOWS
-            LibraryCategory.COLLECTIONS -> NavRoutes.LIBRARY_COLLECTIONS
-        },
-        requester = screenFocus.primaryContentRequester,
-    )
+    val firstGridItemRequester = remember { FocusRequester() }
 
     androidx.compose.runtime.LaunchedEffect(category) {
         viewModel.load(category)
@@ -118,8 +111,30 @@ fun LibraryScreen(
 
             is LibraryUiState.Content -> {
                 val featuredItems = state.recentlyAdded
-                val featuredSecondRequester = remember { FocusRequester() }
-                val firstGridItemRequester = remember { FocusRequester() }
+                val featuredSecondaryRequesters = remember(featuredItems.size) {
+                    List(featuredItems.size) { FocusRequester() }
+                }
+
+                val primaryContentRequester = if (featuredItems.isNotEmpty()) {
+                    screenFocus.primaryContentRequester
+                } else {
+                    firstGridItemRequester
+                }
+
+                RegisterPrimaryScreenFocus(
+                    route = when (category) {
+                        LibraryCategory.MOVIES -> NavRoutes.LIBRARY_MOVIES
+                        LibraryCategory.TV_SHOWS -> NavRoutes.LIBRARY_TVSHOWS
+                        LibraryCategory.COLLECTIONS -> NavRoutes.LIBRARY_COLLECTIONS
+                    },
+                    requester = primaryContentRequester,
+                )
+
+                RequestScreenFocus(
+                    key = category to pagedItems.itemCount to featuredItems.size,
+                    requester = primaryContentRequester,
+                    enabled = pagedItems.itemCount > 0 || featuredItems.isNotEmpty(),
+                )
 
                 when (val refreshState = pagedItems.loadState.refresh) {
                     is LoadState.Loading -> {
@@ -188,10 +203,21 @@ fun LibraryScreen(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
                                         ) {
-                                            featuredItems.forEachIndexed { index, item ->
-                                                TvMediaCard(
-                                                    title = item.title,
-                                                    subtitle = item.subtitle,
+                                        featuredItems.forEachIndexed { index, item ->
+                                            val hasRightNeighbor = index < featuredItems.lastIndex
+                                            val leftRequester = when (index) {
+                                                0 -> null
+                                                1 -> screenFocus.primaryContentRequester
+                                                else -> featuredSecondaryRequesters[index - 1]
+                                            }
+                                            val rightRequester = when {
+                                                !hasRightNeighbor -> null
+                                                index == 0 -> featuredSecondaryRequesters[1]
+                                                else -> featuredSecondaryRequesters[index + 1]
+                                            }
+                                            TvMediaCard(
+                                                title = item.title,
+                                                subtitle = item.subtitle,
                                                     imageUrl = item.imageUrl,
                                                     onClick = { onOpenItem(item.id) },
                                                     watchStatus = item.watchStatus,
@@ -206,15 +232,16 @@ fun LibraryScreen(
                                                                     .focusRequester(screenFocus.primaryContentRequester)
                                                                     .focusProperties {
                                                                         up = screenFocus.topAnchorRequester
-                                                                        right = featuredSecondRequester
+                                                                        rightRequester?.let { right = it }
                                                                         down = firstGridItemRequester
                                                                     }
                                                             } else {
                                                                 Modifier
-                                                                    .focusRequester(featuredSecondRequester)
+                                                                    .focusRequester(featuredSecondaryRequesters[index])
                                                                     .focusProperties {
                                                                         up = screenFocus.topAnchorRequester
-                                                                        left = screenFocus.primaryContentRequester
+                                                                        leftRequester?.let { left = it }
+                                                                        rightRequester?.let { right = it }
                                                                         down = firstGridItemRequester
                                                                     }
                                                             }

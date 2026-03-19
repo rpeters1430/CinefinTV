@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -63,12 +64,12 @@ fun SearchScreen(
     val screenFocus = rememberTvScreenFocusState()
     RegisterPrimaryScreenFocus(
         route = NavRoutes.SEARCH,
-        requester = screenFocus.topAnchorRequester,
+        requester = screenFocus.primaryContentRequester,
     )
 
     RequestScreenFocus(
         key = Unit,
-        requester = screenFocus.topAnchorRequester,
+        requester = screenFocus.primaryContentRequester,
     )
 
     Box(
@@ -171,7 +172,7 @@ fun SearchScreen(
                             color = expressiveColors.titleAccent,
                         )
                     }
-                    items(uiState.results, key = { it.id }) { item ->
+                    itemsIndexed(uiState.results, key = { _, item -> item.id }) { index, item ->
                         TvMediaCard(
                             title = item.title,
                             subtitle = item.subtitle,
@@ -180,7 +181,15 @@ fun SearchScreen(
                             watchStatus = item.watchStatus,
                             playbackProgress = item.playbackProgress,
                             unwatchedCount = item.unwatchedCount,
-                        )                    }
+                            modifier = if (index < 6) {
+                                Modifier.focusProperties {
+                                    up = screenFocus.primaryContentRequester
+                                }
+                            } else {
+                                Modifier
+                            }
+                        )
+                    }
                 }
             }
         }
