@@ -58,8 +58,9 @@ import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
 import com.rpeters.cinefintv.ui.components.RequestScreenFocus
-import com.rpeters.cinefintv.ui.components.ScrollFocusAnchor
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
+import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
@@ -81,14 +82,8 @@ fun HomeScreen(
     val spacing = LocalCinefinSpacing.current
     
     // Key focus anchors for logical navigation
-    val topAnchorRequester = remember { FocusRequester() }
-    val carouselFocusRequester = remember { FocusRequester() }
+    val screenFocus = rememberTvScreenFocusState()
     val firstRowFocusRequester = remember { FocusRequester() }
-
-    RegisterPrimaryScreenFocus(
-        route = NavRoutes.HOME,
-        requester = topAnchorRequester,
-    )
 
     when (val state = uiState) {
         HomeUiState.Loading -> {
@@ -133,10 +128,20 @@ fun HomeScreen(
             val sectionFocusRequesters = remember(state.sections.size) {
                 List(state.sections.size) { FocusRequester() }
             }
+            val primaryContentRequester = when {
+                state.featuredItems.isNotEmpty() -> screenFocus.primaryContentRequester
+                state.sections.isNotEmpty() -> screenFocus.primaryContentRequester
+                else -> screenFocus.topAnchorRequester
+            }
+
+            RegisterPrimaryScreenFocus(
+                route = NavRoutes.HOME,
+                requester = primaryContentRequester,
+            )
 
             RequestScreenFocus(
                 key = state.sections.size to state.featuredItems.size,
-                requester = topAnchorRequester,
+                requester = primaryContentRequester,
             )
 
             Box(modifier = Modifier.fillMaxSize()) {
@@ -147,16 +152,8 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
                 ) {
                     item {
-                        ScrollFocusAnchor(
-                            modifier = Modifier
-                                .focusRequester(topAnchorRequester)
-                                .focusProperties {
-                                    down = if (state.featuredItems.isNotEmpty()) {
-                                        carouselFocusRequester
-                                    } else {
-                                        firstRowFocusRequester
-                                    }
-                                },
+                        TvScreenTopFocusAnchor(
+                            state = screenFocus,
                             onFocused = {
                                 coroutineScope.launch { listState.animateScrollToItem(0) }
                             },
@@ -173,9 +170,12 @@ fun HomeScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = 0.dp, start = spacing.gutter, end = spacing.gutter)
-                                    .focusRequester(carouselFocusRequester)
+                                    .focusRequester(screenFocus.primaryContentRequester)
                                     .focusProperties {
-                                        down = firstRowFocusRequester
+                                        up = screenFocus.topAnchorRequester
+                                        if (state.sections.isNotEmpty()) {
+                                            down = firstRowFocusRequester
+                                        }
                                     },
                             )
                         }
@@ -185,19 +185,26 @@ fun HomeScreen(
                         state.sections,
                         key = { _, section -> section.title }
                     ) { index, section ->
-                        val rowRequester = if (index == 0) firstRowFocusRequester else sectionFocusRequesters[index]
+                        val rowRequester = if (index == 0) {
+                            if (state.featuredItems.isEmpty()) screenFocus.primaryContentRequester else firstRowFocusRequester
+                        } else {
+                            sectionFocusRequesters[index]
+                        }
+
+                        val upRequester = when {
+                            index == 0 && state.featuredItems.isNotEmpty() -> screenFocus.primaryContentRequester
+                            index == 0 -> screenFocus.topAnchorRequester
+                            index == 1 -> if (state.featuredItems.isEmpty()) screenFocus.primaryContentRequester else firstRowFocusRequester
+                            else -> sectionFocusRequesters[index - 1]
+                        }
 
                         HomeSection(
                             title = section.title,
                             items = section.items,
                             onOpenItem = onOpenItem,
                             firstItemFocusRequester = rowRequester,
-                            modifier = Modifier
-                                .focusProperties {
-                                    if (index == 0) up = topAnchorRequester
-                                    if (index > 0) up = sectionFocusRequesters[index - 1]
-                                    if (index < state.sections.size - 1) down = sectionFocusRequesters[index + 1]
-                                },
+                            upRequester = upRequester,
+                            downRequester = sectionFocusRequesters.getOrNull(index + 1),
                         )
                     }
                 }
@@ -364,6 +371,8 @@ private fun HomeSection(
     items: List<HomeCardModel>,
     onOpenItem: (HomeCardModel) -> Unit,
     firstItemFocusRequester: FocusRequester,
+    upRequester: FocusRequester,
+    downRequester: FocusRequester?,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
@@ -395,7 +404,12 @@ private fun HomeSection(
                         aspectRatio = 16f / 9f,
                         cardWidth = cardWidth,
                         modifier = if (index == 0) {
-                            Modifier.focusRequester(firstItemFocusRequester)
+                            Modifier
+                                .focusRequester(firstItemFocusRequester)
+                                .focusProperties {
+                                    up = upRequester
+                                    downRequester?.let { down = it }
+                                }
                         } else {
                             Modifier
                         }
