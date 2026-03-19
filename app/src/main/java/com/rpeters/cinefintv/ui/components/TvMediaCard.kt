@@ -89,11 +89,11 @@ fun TvMediaCard(
     }
 
     StandardCardContainer(
-        modifier = if (cardWidth != null) modifier.width(cardWidth) else modifier.fillMaxWidth(),
+        modifier = if (cardWidth != null) Modifier.width(cardWidth) else Modifier.fillMaxWidth(),
         imageCard = {
             Card(
                 onClick = onClick,
-                modifier = Modifier
+                modifier = modifier
                     .fillMaxWidth()
                     .aspectRatio(aspectRatio)
                     .onFocusChanged {

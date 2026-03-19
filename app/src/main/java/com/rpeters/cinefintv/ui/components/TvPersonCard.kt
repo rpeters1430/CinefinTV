@@ -69,11 +69,11 @@ fun TvPersonCard(
     )
 
     StandardCardContainer(
-        modifier = modifier.width(180.dp),
+        modifier = Modifier.width(180.dp),
         imageCard = {
             Card(
                 onClick = onClick,
-                modifier = Modifier
+                modifier = modifier
                     .size(172.dp)
                     .onFocusChanged {
                         val focused = it.isFocused || it.hasFocus
