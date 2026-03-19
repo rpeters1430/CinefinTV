@@ -41,10 +41,6 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.tv.material3.WideButton
-import com.rpeters.cinefintv.ui.components.DismissImeOnDispose
-import com.rpeters.cinefintv.ui.components.RequestScreenFocus
-import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
-import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import kotlinx.coroutines.launch
 
@@ -69,8 +65,6 @@ fun LoginScreen(
     var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var showQuickConnectPanel by rememberSaveable { mutableStateOf(false) }
-    val screenFocus = rememberTvScreenFocusState()
-    DismissImeOnDispose()
 
     val canSignIn = username.isNotBlank() && password.isNotBlank() && !isAuthenticating
 
@@ -91,11 +85,6 @@ fun LoginScreen(
             },
         )
     } else {
-        RequestScreenFocus(
-            key = serverUrl,
-            requester = screenFocus.primaryContentRequester,
-        )
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -129,15 +118,6 @@ fun LoginScreen(
                         .padding(horizontal = 28.dp, vertical = 28.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp),
                 ) {
-                    TvScreenTopFocusAnchor(
-                        state = screenFocus,
-                        onFocused = {
-                            coroutineScope.launch {
-                                scrollState.scrollTo(0)
-                            }
-                        },
-                    )
-
                     AuthHero(
                         title = "Sign In",
                         description = helperText,
@@ -157,11 +137,6 @@ fun LoginScreen(
                         placeholder = "Username",
                         imeAction = ImeAction.Next,
                         keyboardType = KeyboardType.Text,
-                        modifier = Modifier
-                            .focusRequester(screenFocus.primaryContentRequester)
-                            .focusProperties {
-                                up = screenFocus.topAnchorRequester
-                            },
                     )
 
                     AuthPasswordField(
@@ -225,12 +200,6 @@ private fun QuickConnectPanel(
     val expressiveColors = LocalCinefinExpressiveColors.current
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
-    val screenFocus = rememberTvScreenFocusState()
-
-    RequestScreenFocus(
-        key = code ?: error ?: pollStatus,
-        requester = screenFocus.primaryContentRequester,
-    )
 
     Box(
         modifier = Modifier
@@ -263,15 +232,6 @@ private fun QuickConnectPanel(
                     .padding(horizontal = 28.dp, vertical = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
-                TvScreenTopFocusAnchor(
-                    state = screenFocus,
-                    onFocused = {
-                        coroutineScope.launch {
-                            scrollState.scrollTo(0)
-                        }
-                    },
-                )
-
                 AuthHero(
                     title = "Quick Connect",
                     description = "Enter this code in the Jellyfin app on your phone or computer:",
@@ -322,11 +282,7 @@ private fun QuickConnectPanel(
                     WideButton(
                         onClick = onNewCode,
                         modifier = Modifier
-                            .weight(1f)
-                            .focusRequester(screenFocus.primaryContentRequester)
-                            .focusProperties {
-                                up = screenFocus.topAnchorRequester
-                            },
+                            .weight(1f),
                         enabled = !isLoading,
                     ) {
                         Text("New Code")

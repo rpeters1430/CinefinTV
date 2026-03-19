@@ -21,9 +21,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -40,11 +42,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinTextInputField
-import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
-import com.rpeters.cinefintv.ui.components.RequestScreenFocus
 import com.rpeters.cinefintv.ui.components.TvMediaCard
-import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
-import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
@@ -61,16 +59,7 @@ fun SearchScreen(
     val spacing = LocalCinefinSpacing.current
     val gridState = rememberLazyGridState()
     val scope = rememberCoroutineScope()
-    val screenFocus = rememberTvScreenFocusState()
-    RegisterPrimaryScreenFocus(
-        route = NavRoutes.SEARCH,
-        requester = screenFocus.primaryContentRequester,
-    )
-
-    RequestScreenFocus(
-        key = Unit,
-        requester = screenFocus.primaryContentRequester,
-    )
+    val primaryContentRequester = remember { FocusRequester() }
 
     Box(
         modifier = Modifier
@@ -93,17 +82,6 @@ fun SearchScreen(
             verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                TvScreenTopFocusAnchor(
-                    state = screenFocus,
-                    onFocused = {
-                        scope.launch {
-                            gridState.animateScrollToItem(0)
-                        }
-                    },
-                )
-            }
-
-            item(span = { GridItemSpan(maxLineSpan) }) {
                 SearchHero(
                     query = uiState.query,
                     modifier = Modifier.padding(bottom = spacing.elementGap),
@@ -116,10 +94,7 @@ fun SearchScreen(
                     onValueChange = viewModel::updateQuery,
                     modifier = Modifier
                         .padding(bottom = spacing.elementGap)
-                        .focusRequester(screenFocus.primaryContentRequester)
-                        .focusProperties {
-                            up = screenFocus.topAnchorRequester
-                        }
+                        .focusRequester(primaryContentRequester)
                 )
             }
 
@@ -183,7 +158,7 @@ fun SearchScreen(
                             unwatchedCount = item.unwatchedCount,
                             modifier = if (index < 6) {
                                 Modifier.focusProperties {
-                                    up = screenFocus.primaryContentRequester
+                                    up = primaryContentRequester
                                 }
                             } else {
                                 Modifier

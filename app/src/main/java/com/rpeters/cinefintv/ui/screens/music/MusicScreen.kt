@@ -23,8 +23,10 @@ import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -40,11 +42,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
-import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
-import com.rpeters.cinefintv.ui.components.RequestScreenFocus
 import com.rpeters.cinefintv.ui.components.TvMediaCard
-import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
-import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -152,16 +150,7 @@ private fun MusicGridContent(
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     val gridState = rememberLazyGridState()
-    val screenFocus = rememberTvScreenFocusState()
-    RegisterPrimaryScreenFocus(
-        route = NavRoutes.LIBRARY_MUSIC,
-        requester = screenFocus.primaryContentRequester,
-    )
-
-    RequestScreenFocus(
-        key = state.viewType to state.items.size,
-        requester = screenFocus.topAnchorRequester,
-    )
+    val primaryContentRequester = remember { FocusRequester() }
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 160.dp),
@@ -181,24 +170,12 @@ private fun MusicGridContent(
         verticalArrangement = Arrangement.spacedBy(32.dp),
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
-            TvScreenTopFocusAnchor(
-                state = screenFocus,
-                onFocused = {
-                    gridState.requestScrollToItem(0)
-                },
-            )
-        }
-
-        item(span = { GridItemSpan(maxLineSpan) }) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (state.viewType == MusicViewType.ALBUMS) {
                     Button(
                         onClick = { onViewTypeChange(MusicViewType.ALBUMS) },
                         modifier = Modifier
-                            .focusRequester(screenFocus.primaryContentRequester)
-                            .focusProperties {
-                                up = screenFocus.topAnchorRequester
-                            }
+                            .focusRequester(primaryContentRequester)
                     ) {
                         Text("Albums")
                     }
@@ -209,10 +186,7 @@ private fun MusicGridContent(
                     OutlinedButton(
                         onClick = { onViewTypeChange(MusicViewType.ALBUMS) },
                         modifier = Modifier
-                            .focusRequester(screenFocus.primaryContentRequester)
-                            .focusProperties {
-                                up = screenFocus.topAnchorRequester
-                            }
+                            .focusRequester(primaryContentRequester)
                     ) {
                         Text("Albums")
                     }
@@ -267,16 +241,7 @@ private fun AlbumDetailContent(
     val albumYear = album.productionYear?.toString()
     val expressiveColors = LocalCinefinExpressiveColors.current
     val listState = rememberLazyListState()
-    val screenFocus = rememberTvScreenFocusState()
-    RegisterPrimaryScreenFocus(
-        route = NavRoutes.LIBRARY_MUSIC,
-        requester = screenFocus.primaryContentRequester,
-    )
-
-    RequestScreenFocus(
-        key = album.id.toString(),
-        requester = screenFocus.topAnchorRequester,
-    )
+    val primaryContentRequester = remember { FocusRequester() }
 
     LazyColumn(
         state = listState,
@@ -293,15 +258,6 @@ private fun AlbumDetailContent(
         contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item {
-            TvScreenTopFocusAnchor(
-                state = screenFocus,
-                onFocused = {
-                    listState.requestScrollToItem(0)
-                },
-            )
-        }
-
         item {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -333,10 +289,7 @@ private fun AlbumDetailContent(
                         onClick = onBack,
                         modifier = Modifier
                             .padding(top = 8.dp)
-                            .focusRequester(screenFocus.primaryContentRequester)
-                            .focusProperties {
-                                up = screenFocus.topAnchorRequester
-                            },
+                            .focusRequester(primaryContentRequester),
                     ) {
                         Text("Back")
                     }

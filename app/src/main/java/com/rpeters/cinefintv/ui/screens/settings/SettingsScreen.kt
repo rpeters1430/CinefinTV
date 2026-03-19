@@ -37,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -65,10 +66,6 @@ import com.rpeters.cinefintv.data.preferences.SubtitleTextSize
 import com.rpeters.cinefintv.data.preferences.ThemeMode
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.ui.components.CinefinOptionDialog
-import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
-import com.rpeters.cinefintv.ui.components.RequestScreenFocus
-import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
-import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
@@ -128,19 +125,9 @@ fun SettingsScreen(
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
     val expressiveColors = LocalCinefinExpressiveColors.current
     val listState = rememberLazyListState()
-    val screenFocus = rememberTvScreenFocusState()
+    val primaryContentRequester = remember { FocusRequester() }
     var activeDialog by remember { mutableStateOf<SettingsChoiceDialog?>(null) }
     var selectedCategory by remember { mutableStateOf(SettingsCategory.PLAYBACK) }
-
-    RegisterPrimaryScreenFocus(
-        route = NavRoutes.SETTINGS,
-        requester = screenFocus.primaryContentRequester,
-    )
-    RequestScreenFocus(
-        key = uiState.isLoading,
-        requester = screenFocus.primaryContentRequester,
-        enabled = !uiState.isLoading,
-    )
 
     when (activeDialog) {
         SettingsChoiceDialog.THEME_MODE -> CinefinOptionDialog(
@@ -245,28 +232,9 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
             item {
-                TvScreenTopFocusAnchor(
-                    state = screenFocus,
-                    onFocused = { listState.requestScrollToItem(0) },
-                )
-            }
-
-            item {
-                SettingsHero(
-                    title = "Settings",
-                    subtitle = "Fast, focused controls for playback, appearance, and account behavior.",
-                    primaryValue = "Quality: ${uiState.playback.transcodingQuality.label}",
-                    secondaryValue = "Theme: ${uiState.appearance.themeMode.name.replace('_', ' ')}",
-                )
-            }
-
-            item {
                 SettingsCategorySelector(
                     selected = selectedCategory,
                     onCategorySelected = { selectedCategory = it },
-                    initialModifier = Modifier
-                        .focusRequester(screenFocus.primaryContentRequester)
-                        .focusProperties { up = screenFocus.topAnchorRequester },
                 )
             }
 
@@ -301,7 +269,7 @@ fun SettingsScreen(
                                 description = "System, light, dark, or AMOLED black.",
                                 selectedLabel = uiState.appearance.themeMode.name.replace('_', ' '),
                                 onClick = { activeDialog = SettingsChoiceDialog.THEME_MODE },
-                                modifier = Modifier.focusProperties { up = screenFocus.primaryContentRequester },
+                                
                             )
                             SettingsToggleRow(
                                 icon = Icons.Default.Palette,
@@ -357,7 +325,7 @@ fun SettingsScreen(
                                 description = "Start the next episode near the end of current playback.",
                                 checked = uiState.playback.autoPlayNextEpisode,
                                 onCheckedChange = viewModel::setAutoPlayNextEpisode,
-                                modifier = Modifier.focusProperties { up = screenFocus.primaryContentRequester },
+                                
                             )
                             SettingsChoiceRow(
                                 icon = Icons.Default.PlayArrow,
@@ -392,7 +360,7 @@ fun SettingsScreen(
                                 description = "Preferred subtitle text size.",
                                 selectedLabel = uiState.subtitles.textSize.name.replace('_', ' '),
                                 onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_TEXT_SIZE },
-                                modifier = Modifier.focusProperties { up = screenFocus.primaryContentRequester },
+                                
                             )
                             SettingsChoiceRow(
                                 icon = Icons.Default.ClosedCaption,
@@ -420,7 +388,7 @@ fun SettingsScreen(
                                 description = "Allow delete/refresh actions when available.",
                                 checked = uiState.libraryActions.enableManagementActions,
                                 onCheckedChange = viewModel::setLibraryManagementActions,
-                                modifier = Modifier.focusProperties { up = screenFocus.primaryContentRequester },
+                                
                             )
                         }
                         SettingsCategory.CASTING -> SettingsSectionCard(
@@ -434,7 +402,7 @@ fun SettingsScreen(
                                 description = "Reconnect to the previous cast session when possible.",
                                 checked = uiState.cast.autoReconnect,
                                 onCheckedChange = viewModel::setCastAutoReconnect,
-                                modifier = Modifier.focusProperties { up = screenFocus.primaryContentRequester },
+                                
                             )
                             SettingsToggleRow(
                                 icon = Icons.Default.Devices,
@@ -457,7 +425,7 @@ fun SettingsScreen(
                                 description = "Require stronger device auth before credential access.",
                                 checked = uiState.credentialSecurity.requireStrongAuthForCredentials,
                                 onCheckedChange = viewModel::setRequireStrongAuthForCredentials,
-                                modifier = Modifier.focusProperties { up = screenFocus.primaryContentRequester },
+                                
                             )
                         }
                     }

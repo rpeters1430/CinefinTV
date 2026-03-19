@@ -33,6 +33,9 @@ import com.rpeters.cinefintv.ui.screens.auth.AuthViewModel
 import com.rpeters.cinefintv.ui.screens.auth.LoginScreen
 import com.rpeters.cinefintv.ui.screens.auth.ServerConnectionScreen
 import com.rpeters.cinefintv.ui.screens.home.HomeScreen
+import com.rpeters.cinefintv.ui.screens.library.MovieLibraryScreen
+import com.rpeters.cinefintv.ui.screens.library.StuffLibraryScreen
+import com.rpeters.cinefintv.ui.screens.library.TvShowLibraryScreen
 import com.rpeters.cinefintv.ui.screens.music.MusicScreen
 import com.rpeters.cinefintv.ui.screens.person.PersonScreen
 import com.rpeters.cinefintv.ui.screens.search.SearchScreen
@@ -187,21 +190,24 @@ fun CinefinTvNavGraph(
             )
         }
         composable(NavRoutes.LIBRARY_MOVIES) {
-            PlaceholderScreen(
-                name = "Movies Library",
-                onBack = { navController.popBackStack() },
+            MovieLibraryScreen(
+                onOpenItem = { item ->
+                    navController.navigate(NavRoutes.movieDetail(item.id))
+                }
             )
         }
         composable(NavRoutes.LIBRARY_TVSHOWS) {
-            PlaceholderScreen(
-                name = "TV Shows Library",
-                onBack = { navController.popBackStack() },
+            TvShowLibraryScreen(
+                onOpenItem = { item ->
+                    navController.navigate(NavRoutes.tvShowDetail(item.id))
+                }
             )
         }
         composable(NavRoutes.LIBRARY_COLLECTIONS) {
-            PlaceholderScreen(
-                name = "Collections Library",
-                onBack = { navController.popBackStack() },
+            StuffLibraryScreen(
+                onOpenItem = { item ->
+                    navController.navigate(NavRoutes.stuffDetail(item.id))
+                }
             )
         }
         composable(NavRoutes.LIBRARY_MUSIC) {

@@ -35,10 +35,6 @@ import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.tv.material3.WideButton
 import com.rpeters.cinefintv.ui.components.CinefinTextInputField
-import com.rpeters.cinefintv.ui.components.DismissImeOnDispose
-import com.rpeters.cinefintv.ui.components.RequestScreenFocus
-import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
-import com.rpeters.cinefintv.ui.components.rememberTvScreenFocusState
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import kotlinx.coroutines.launch
 
@@ -52,13 +48,6 @@ fun ServerConnectionScreen(
     onContinue: () -> Unit,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
-    val screenFocus = rememberTvScreenFocusState()
-    DismissImeOnDispose()
-
-    RequestScreenFocus(
-        key = serverUrl,
-        requester = screenFocus.primaryContentRequester,
-    )
 
     Box(
         modifier = Modifier
@@ -93,15 +82,6 @@ fun ServerConnectionScreen(
                     .padding(horizontal = 28.dp, vertical = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
-                TvScreenTopFocusAnchor(
-                    state = screenFocus,
-                    onFocused = {
-                        coroutineScope.launch {
-                            scrollState.scrollTo(0)
-                        }
-                    },
-                )
-
                 AuthHero(
                     title = "Connect to Jellyfin",
                     description = "Enter your server URL. Local IPs and reverse-proxy URLs are supported.",
@@ -121,11 +101,6 @@ fun ServerConnectionScreen(
                     placeholder = "https://media.example.com",
                     imeAction = ImeAction.Done,
                     keyboardType = KeyboardType.Uri,
-                    modifier = Modifier
-                        .focusRequester(screenFocus.primaryContentRequester)
-                        .focusProperties {
-                            up = screenFocus.topAnchorRequester
-                        },
                 )
 
                 if (errorMessage != null) {

@@ -52,11 +52,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
-import com.rpeters.cinefintv.ui.components.RegisterPrimaryScreenFocus
-import com.rpeters.cinefintv.ui.components.RequestScreenFocus
 import com.rpeters.cinefintv.ui.components.TvMediaCard
-import com.rpeters.cinefintv.ui.components.TvScreenFocusState
-import com.rpeters.cinefintv.ui.components.TvScreenTopFocusAnchor
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
@@ -120,28 +116,12 @@ fun PersonScreen(
         is PersonUiState.Content -> {
             val person = state.person
             var focusedMedia by remember(state.media) { mutableStateOf(state.media.firstOrNull()) }
-            val topAnchorRequester = remember { FocusRequester() }
             val backButtonRequester = remember { FocusRequester() }
             val firstKnownForRequester = remember { FocusRequester() }
-            val screenFocus = remember(topAnchorRequester, backButtonRequester) {
-                TvScreenFocusState(
-                    topAnchorRequester = topAnchorRequester,
-                    primaryContentRequester = backButtonRequester,
-                )
-            }
 
-            RegisterPrimaryScreenFocus(
-                route = NavRoutes.PERSON_DETAIL,
-                requester = screenFocus.primaryContentRequester,
-            )
-            
             BackHandler(onBack = onBack)
 
             val listState = rememberLazyListState()
-            RequestScreenFocus(
-                key = person.id,
-                requester = screenFocus.topAnchorRequester,
-            )
 
             Box(modifier = Modifier.fillMaxSize()) {
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -187,17 +167,6 @@ fun PersonScreen(
                     contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = spacing.safeZoneVertical),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
-                    item {
-                        TvScreenTopFocusAnchor(
-                            state = screenFocus,
-                            onFocused = {
-                                coroutineScope.launch {
-                                    listState.animateScrollToItem(0)
-                                }
-                            },
-                        )
-                    }
-
                     item { Spacer(Modifier.fillParentMaxHeight(0.24f)) }
 
                     item {
@@ -244,7 +213,6 @@ fun PersonScreen(
                                             .focusRequester(backButtonRequester)
                                             .onFocusChanged { if (it.isFocused) focusedDescription = null }
                                             .focusProperties {
-                                                up = topAnchorRequester
                                                 if (state.media.isNotEmpty()) down = firstKnownForRequester
                                             }
                                     ) {
