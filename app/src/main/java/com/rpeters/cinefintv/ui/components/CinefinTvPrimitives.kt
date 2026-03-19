@@ -336,7 +336,7 @@ fun CinefinTextInputField(
     val shape = RoundedCornerShape(16.dp)
 
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         shape = shape,
         colors = SurfaceDefaults.colors(
             containerColor = if (isFocused) {
@@ -377,7 +377,8 @@ fun CinefinTextInputField(
                 visualTransformation = visualTransformation,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .onFocusChanged { isFocused = it.isFocused || it.hasFocus },
+                    .onFocusChanged { isFocused = it.isFocused || it.hasFocus }
+                    .then(modifier),
                 decorationBox = { innerTextField ->
                     Box(
                         modifier = Modifier
