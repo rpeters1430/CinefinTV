@@ -525,6 +525,22 @@ class JellyfinMediaRepository @Inject constructor(
             response.content.items
         }
 
+    suspend fun getNextUpForSeries(seriesId: String): ApiResult<BaseItemDto?> =
+        withServerClient("getNextUpForSeries") { server, client ->
+            val userUuid = parseUuid(server.userId ?: "", "user")
+            val seriesUuid = parseUuid(seriesId, "series")
+
+            val response = client.tvShowsApi.getNextUp(
+                userId = userUuid,
+                seriesId = seriesUuid,
+                limit = 1,
+                fields = listOf(ItemFields.MEDIA_SOURCES, ItemFields.OVERVIEW),
+                enableUserData = true,
+            )
+
+            response.content.items.firstOrNull()
+        }
+
     suspend fun getNextEpisode(episodeId: String): ApiResult<BaseItemDto?> =
         withServerClient("getNextEpisode") { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")

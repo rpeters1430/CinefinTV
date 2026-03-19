@@ -33,6 +33,8 @@ import com.rpeters.cinefintv.ui.screens.auth.AuthViewModel
 import com.rpeters.cinefintv.ui.screens.auth.LoginScreen
 import com.rpeters.cinefintv.ui.screens.auth.ServerConnectionScreen
 import com.rpeters.cinefintv.ui.screens.detail.MovieDetailScreen
+import com.rpeters.cinefintv.ui.screens.detail.SeasonScreen
+import com.rpeters.cinefintv.ui.screens.detail.TvShowDetailScreen
 import com.rpeters.cinefintv.ui.screens.home.HomeScreen
 import com.rpeters.cinefintv.ui.screens.library.MovieLibraryScreen
 import com.rpeters.cinefintv.ui.screens.library.StuffLibraryScreen
@@ -239,8 +241,16 @@ fun CinefinTvNavGraph(
             NavRoutes.TV_SHOW_DETAIL,
             arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
         ) {
-            PlaceholderScreen(
-                name = "TV Show Detail",
+            TvShowDetailScreen(
+                onPlayEpisode = { episodeId ->
+                    navController.navigate(NavRoutes.player(episodeId))
+                },
+                onOpenSeason = { seasonId ->
+                    navController.navigate(NavRoutes.seasonDetail(seasonId))
+                },
+                onOpenShow = { seriesId ->
+                    navController.navigate(NavRoutes.tvShowDetail(seriesId))
+                },
                 onBack = { navController.popBackStack() },
             )
         }
@@ -248,8 +258,10 @@ fun CinefinTvNavGraph(
             NavRoutes.SEASON_DETAIL,
             arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
         ) {
-            PlaceholderScreen(
-                name = "Season Detail",
+            SeasonScreen(
+                onOpenEpisode = { episodeId ->
+                    navController.navigate(NavRoutes.episodeDetail(episodeId))
+                },
                 onBack = { navController.popBackStack() },
             )
         }
