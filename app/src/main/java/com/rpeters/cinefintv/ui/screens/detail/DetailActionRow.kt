@@ -47,6 +47,7 @@ fun DetailActionRow(
     playButtonRequester: FocusRequester,
     subtitleButtonRequester: FocusRequester,
     firstShelfRequester: FocusRequester?,
+    topAnchorRequester: FocusRequester,
     onFocusedDescriptionChange: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -55,7 +56,10 @@ fun DetailActionRow(
     val item = state.item
     val isSeriesDetail = state.seasons.isNotEmpty()
     val hideSecondaryActions = isSeriesDetail || state.episodesBySeasonId.isNotEmpty()
-    val hasVisibleButtons = !isSeriesDetail || (!hideSecondaryActions && state.playableItemId != null)
+    val hasPlayAction = !isSeriesDetail && state.playableItemId != null
+    val hasDeleteAction = !hideSecondaryActions && state.playableItemId != null
+    val hasBackAction = state.playableItemId != null || isSeriesDetail
+    val hasVisibleButtons = hasPlayAction || hasDeleteAction || hasBackAction
 
     if (!hasVisibleButtons && item.subtitleOptions.isEmpty()) {
         // Entire row is empty, nothing to render or focus
@@ -97,7 +101,12 @@ fun DetailActionRow(
                         .focusRequester(subtitleButtonRequester)
                         .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
                         .focusProperties {
-                            down = playButtonRequester
+                            up = topAnchorRequester
+                            down = when {
+                                hasPlayAction || hasBackAction -> playButtonRequester
+                                firstShelfRequester != null -> firstShelfRequester
+                                else -> FocusRequester.Default
+                            }
                         }
                 ) {
                     Icon(Icons.Default.ClosedCaption, contentDescription = null)
@@ -144,24 +153,22 @@ fun DetailActionRow(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    if (!isSeriesDetail) {
-                        state.playableItemId?.let { playableItemId ->
-                            Button(
-                                onClick = { onPlay(playableItemId, null) },
-                                modifier = Modifier
-                                    .focusRequester(playButtonRequester)
-                                    .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
-                                    .focusProperties {
-                                        if (item.subtitleOptions.isNotEmpty()) up = subtitleButtonRequester
-                                        firstShelfRequester?.let { down = it }
-                                    }
-                            ) {
-                                Text(state.playButtonLabel)
-                            }
+                    if (hasPlayAction) {
+                        Button(
+                            onClick = { onPlay(requireNotNull(state.playableItemId), null) },
+                            modifier = Modifier
+                                .focusRequester(playButtonRequester)
+                                .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
+                                .focusProperties {
+                                    up = if (item.subtitleOptions.isNotEmpty()) subtitleButtonRequester else topAnchorRequester
+                                    firstShelfRequester?.let { down = it }
+                                }
+                        ) {
+                            Text(state.playButtonLabel)
                         }
                     }
 
-                    if (!hideSecondaryActions && state.playableItemId != null) {
+                    if (hasDeleteAction) {
                         if (state.isDeleting) {
                             Surface(shape = RoundedCornerShape(12.dp)) {
                                 Text(
@@ -175,13 +182,21 @@ fun DetailActionRow(
                         } else if (state.isDeleteConfirmationVisible) {
                             Button(
                                 onClick = onConfirmDelete,
-                                modifier = Modifier.onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
+                                modifier = Modifier
+                                    .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
+                                    .focusProperties {
+                                        up = if (item.subtitleOptions.isNotEmpty()) subtitleButtonRequester else topAnchorRequester
+                                    }
                             ) {
                                 Text("Confirm Delete")
                             }
                             OutlinedButton(
                                 onClick = onCancelDelete,
-                                modifier = Modifier.onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
+                                modifier = Modifier
+                                    .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
+                                    .focusProperties {
+                                        up = if (item.subtitleOptions.isNotEmpty()) subtitleButtonRequester else topAnchorRequester
+                                    }
                             ) {
                                 Text("Cancel")
                             }
@@ -191,6 +206,7 @@ fun DetailActionRow(
                                 modifier = Modifier
                                     .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
                                     .focusProperties {
+                                        up = if (item.subtitleOptions.isNotEmpty()) subtitleButtonRequester else topAnchorRequester
                                         firstShelfRequester?.let { down = it }
                                     }
                             ) {
@@ -200,7 +216,7 @@ fun DetailActionRow(
                     }
 
                     // Always show Back button if playableItemId exists or it is a series
-                    if (state.playableItemId != null || isSeriesDetail) {
+                    if (hasBackAction) {
                         OutlinedButton(
                             onClick = {
                                 onDismissActionError()
@@ -210,6 +226,7 @@ fun DetailActionRow(
                                 .focusRequester(if (isSeriesDetail) playButtonRequester else FocusRequester.Default) // Use playButtonRequester as primary for series if needed
                                 .onFocusChanged { if (it.isFocused) onFocusedDescriptionChange(null) }
                                 .focusProperties {
+                                    up = if (item.subtitleOptions.isNotEmpty()) subtitleButtonRequester else topAnchorRequester
                                     firstShelfRequester?.let { down = it }
                                 }
                         ) {

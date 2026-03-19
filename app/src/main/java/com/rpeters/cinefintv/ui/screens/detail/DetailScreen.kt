@@ -140,10 +140,13 @@ fun DetailScreen(
                 }
 
                 val isSeriesDetail = state.seasons.isNotEmpty()
+                val hasSubtitleAction = state.item.subtitleOptions.isNotEmpty()
+                val hasPrimaryPlayAction = !isSeriesDetail && state.playableItemId != null
+                val hasBackAction = state.playableItemId != null || isSeriesDetail
                 val actionRowPrimaryRequester = when {
-                    !isSeriesDetail && state.playableItemId != null -> playButtonRequester
-                    state.item.subtitleOptions.isNotEmpty() -> subtitleButtonRequester
-                    state.playableItemId != null || isSeriesDetail -> playButtonRequester
+                    hasSubtitleAction -> subtitleButtonRequester
+                    hasPrimaryPlayAction -> playButtonRequester
+                    hasBackAction -> playButtonRequester
                     else -> null
                 }
                 val primaryFocusTarget = when {
@@ -151,7 +154,6 @@ fun DetailScreen(
                     firstShelfRequester != null -> firstShelfRequester
                     else -> topAnchorRequester
                 }
-                val initialFocusTarget = actionRowPrimaryRequester ?: topAnchorRequester
 
                 val screenFocus = remember(topAnchorRequester, primaryFocusTarget) {
                     TvScreenFocusState(
@@ -162,12 +164,12 @@ fun DetailScreen(
 
                 RegisterPrimaryScreenFocus(
                     route = NavRoutes.DETAIL,
-                    requester = screenFocus.primaryContentRequester,
+                    requester = screenFocus.topAnchorRequester,
                 )
 
                 RequestScreenFocus(
                     key = state.item.id,
-                    requester = initialFocusTarget,
+                    requester = topAnchorRequester,
                 )
                 LaunchedEffect(state.item.id) {
                     focusedBackdropUrl = null
@@ -242,7 +244,7 @@ fun DetailScreen(
                             )
                         }
 
-                        item { Spacer(Modifier.fillParentMaxHeight(0.22f)) }
+                        item { Spacer(Modifier.fillParentMaxHeight(0.14f)) }
 
                         item {
                             DetailHeroSection(
@@ -263,6 +265,7 @@ fun DetailScreen(
                                 playButtonRequester = playButtonRequester,
                                 subtitleButtonRequester = subtitleButtonRequester,
                                 firstShelfRequester = firstShelfRequester,
+                                topAnchorRequester = topAnchorRequester,
                                 onFocusedDescriptionChange = {
                                     focusedDescription = it
                                     focusedBackdropUrl = null
