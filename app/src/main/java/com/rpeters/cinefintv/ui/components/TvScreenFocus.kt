@@ -30,18 +30,26 @@ class TvScreenFocusRegistry {
 
     fun requesterFor(route: String?): FocusRequester? {
         if (route.isNullOrBlank()) return null
-        return primaryRequesters[route]
-            ?: primaryRequesters.entries.firstOrNull { (registeredRoute, _) ->
-                val regParts = registeredRoute.split('/')
-                val routeParts = route.split('/')
-                if (routeParts.size < regParts.size) return@firstOrNull false
+        
+        // 1. Exact match priority
+        primaryRequesters[route]?.let { return it }
 
-                regParts.indices.all { i ->
-                    val regPart = regParts[i]
-                    val routePart = routeParts[i]
-                    (regPart.startsWith('{') && regPart.endsWith('}')) || regPart == routePart
-                }
-            }?.value
+        // 2. Pattern matching (e.g. detail/123 matches detail/{itemId})
+        val routeParts = route.split('/')
+        
+        return primaryRequesters.entries.firstOrNull { (registeredRoute, _) ->
+            val regParts = registeredRoute.split('/')
+            if (routeParts.size != regParts.size) return@firstOrNull false
+
+            regParts.indices.all { i ->
+                val regPart = regParts[i]
+                val routePart = routeParts[i]
+                (regPart.startsWith('{') && regPart.endsWith('}')) || regPart == routePart
+            }
+        }?.value ?: primaryRequesters.entries.firstOrNull { (registeredRoute, _) ->
+            // Fallback for prefix matching
+            route.startsWith("$registeredRoute/")
+        }?.value
     }
 }
 

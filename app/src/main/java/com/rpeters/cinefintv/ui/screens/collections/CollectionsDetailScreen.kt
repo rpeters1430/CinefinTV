@@ -116,7 +116,7 @@ fun CollectionsDetailScreen(
 
             RegisterPrimaryScreenFocus(
                 route = NavRoutes.COLLECTIONS_DETAIL,
-                requester = screenFocus.topAnchorRequester,
+                requester = screenFocus.primaryContentRequester,
             )
 
             RequestScreenFocus(
@@ -219,6 +219,7 @@ fun CollectionsDetailScreen(
                                     modifier = Modifier
                                         .focusRequester(playButtonRequester)
                                         .focusProperties {
+                                            up = screenFocus.topAnchorRequester
                                             if (state.moreFromCollections.isNotEmpty()) {
                                                 down = moreShelfRequester
                                             }
@@ -242,6 +243,7 @@ fun CollectionsDetailScreen(
                                     Button(
                                         onClick = viewModel::confirmDelete,
                                         modifier = Modifier.focusProperties {
+                                            up = screenFocus.topAnchorRequester
                                             if (state.moreFromCollections.isNotEmpty()) {
                                                 down = moreShelfRequester
                                             }
@@ -252,6 +254,7 @@ fun CollectionsDetailScreen(
                                     OutlinedButton(
                                         onClick = viewModel::cancelDelete,
                                         modifier = Modifier.focusProperties {
+                                            up = screenFocus.topAnchorRequester
                                             if (state.moreFromCollections.isNotEmpty()) {
                                                 down = moreShelfRequester
                                             }
@@ -263,6 +266,7 @@ fun CollectionsDetailScreen(
                                     OutlinedButton(
                                         onClick = viewModel::requestDelete,
                                         modifier = Modifier.focusProperties {
+                                            up = screenFocus.topAnchorRequester
                                             if (state.moreFromCollections.isNotEmpty()) {
                                                 down = moreShelfRequester
                                             }
@@ -274,6 +278,7 @@ fun CollectionsDetailScreen(
                                 OutlinedButton(
                                     onClick = onBack,
                                     modifier = Modifier.focusProperties {
+                                        up = screenFocus.topAnchorRequester
                                         if (state.moreFromCollections.isNotEmpty()) {
                                             down = moreShelfRequester
                                         }

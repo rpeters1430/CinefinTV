@@ -90,18 +90,17 @@ fun TvMediaCard(
 
     StandardCardContainer(
         modifier = if (cardWidth != null) Modifier.width(cardWidth) else Modifier.fillMaxWidth(),
-        imageCard = {
-            Card(
-                onClick = onClick,
-                modifier = modifier
-                    .fillMaxWidth()
-                    .aspectRatio(aspectRatio)
-                    .onFocusChanged {
-                        val focused = it.isFocused || it.hasFocus
-                        isFocused = focused
-                        if (focused) onFocus()
-                    },
-                scale = CardDefaults.scale(focusedScale = focusedScale),
+        Card(
+            onClick = onClick,
+            modifier = modifier
+                .fillMaxWidth()
+                .aspectRatio(aspectRatio)
+                .onFocusChanged {
+                    val focused = it.isFocused || it.hasFocus
+                    isFocused = focused
+                    if (focused) onFocus()
+                },
+            scale = CardDefaults.scale(focusedScale = focusedScale),
                 border = CardDefaults.border(
                     focusedBorder = Border(
                         border = androidx.compose.foundation.BorderStroke(

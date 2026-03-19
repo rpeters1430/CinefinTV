@@ -375,10 +375,9 @@ fun CinefinTextInputField(
                     keyboardType = keyboardType,
                 ),
                 visualTransformation = visualTransformation,
-                modifier = Modifier
+                modifier = modifier
                     .fillMaxWidth()
-                    .onFocusChanged { isFocused = it.isFocused || it.hasFocus }
-                    .then(modifier),
+                    .onFocusChanged { isFocused = it.isFocused || it.hasFocus },
                 decorationBox = { innerTextField ->
                     Box(
                         modifier = Modifier

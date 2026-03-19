@@ -70,17 +70,16 @@ fun TvPersonCard(
 
     StandardCardContainer(
         modifier = Modifier.width(180.dp),
-        imageCard = {
-            Card(
-                onClick = onClick,
-                modifier = modifier
-                    .size(172.dp)
-                    .onFocusChanged {
-                        val focused = it.isFocused || it.hasFocus
-                        isFocused = focused
-                        if (focused) onFocus()
-                    },
-                scale = CardDefaults.scale(focusedScale = 1.08f),
+        Card(
+            onClick = onClick,
+            modifier = modifier
+                .size(172.dp)
+                .onFocusChanged {
+                    val focused = it.isFocused || it.hasFocus
+                    isFocused = focused
+                    if (focused) onFocus()
+                },
+            scale = CardDefaults.scale(focusedScale = 1.08f),
                 glow = CardDefaults.glow(
                     focusedGlow = Glow(
                         elevation = 16.dp,
