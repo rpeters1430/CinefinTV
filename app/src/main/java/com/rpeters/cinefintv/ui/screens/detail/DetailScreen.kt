@@ -164,7 +164,7 @@ fun DetailScreen(
 
                 RegisterPrimaryScreenFocus(
                     route = NavRoutes.DETAIL,
-                    requester = screenFocus.topAnchorRequester,
+                    requester = screenFocus.primaryContentRequester,
                 )
 
                 RequestScreenFocus(
