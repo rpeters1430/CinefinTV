@@ -1,228 +1,184 @@
+@file:OptIn(ExperimentalTvMaterial3Api::class)
+
 package com.rpeters.cinefintv.ui.screens.detail
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.material3.*
-import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import coil3.request.crossfade
+import androidx.tv.material3.Button
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.TvMediaCard
-import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
-import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun StuffDetailScreen(
     onOpenItem: (String, String?) -> Unit,
     onPlayItem: (String) -> Unit,
     onBack: () -> Unit,
-    viewModel: StuffDetailViewModel = hiltViewModel()
+    viewModel: StuffDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    BackHandler(onBack = onBack)
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
-            is StuffDetailUiState.Loading -> {
-                LoadingState()
-            }
-            is StuffDetailUiState.Error -> {
-                ErrorState(message = state.message, onRetry = { viewModel.load() }, onBack = onBack)
-            }
+            is StuffDetailUiState.Loading -> DetailLoadingState()
+            is StuffDetailUiState.Error -> DetailErrorState(
+                message = state.message,
+                onRetry = { viewModel.load() },
+            )
             is StuffDetailUiState.Content -> {
-                StuffDetailContent(
-                    stuff = state.stuff,
-                    items = state.items,
-                    onOpenItem = onOpenItem,
-                    onPlayItem = onPlayItem,
-                    onBack = onBack
-                )
+                if (state.stuff.isCollection) {
+                    StuffCollectionContent(
+                        stuff = state.stuff,
+                        items = state.items,
+                        onOpenItem = onOpenItem,
+                    )
+                } else {
+                    StuffVideoContent(
+                        stuff = state.stuff,
+                        onPlayItem = onPlayItem,
+                    )
+                }
             }
         }
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun StuffDetailContent(
+private fun StuffVideoContent(
+    stuff: StuffDetailModel,
+    onPlayItem: (String) -> Unit,
+) {
+    val playFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { playFocusRequester.requestFocus() }
+
+    DetailHeroBox(backdropUrl = stuff.backdropUrl, modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth(0.55f)
+                .padding(horizontal = 56.dp, vertical = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stuff.title,
+                style = MaterialTheme.typography.displayMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+            )
+            stuff.overview?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                )
+            }
+            Button(
+                onClick = { onPlayItem(stuff.id) },
+                modifier = Modifier.focusRequester(playFocusRequester),
+            ) {
+                Text("Play")
+            }
+        }
+    }
+}
+
+@Composable
+private fun StuffCollectionContent(
     stuff: StuffDetailModel,
     items: List<StuffItemModel>,
     onOpenItem: (String, String?) -> Unit,
-    onPlayItem: (String) -> Unit,
-    onBack: () -> Unit
 ) {
-    val spacing = LocalCinefinSpacing.current
-    val performanceProfile = LocalPerformanceProfile.current
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Backdrop Image
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(stuff.backdropUrl)
-                .crossfade(true)
-                .build(),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-
-        // Gradient Overlay
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            MaterialTheme.colorScheme.background.copy(alpha = 0.5f),
-                            MaterialTheme.colorScheme.background
-                        ),
-                        startY = 0f,
-                        endY = 1000f
-                    )
-                )
-        )
-        
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.background,
-                            MaterialTheme.colorScheme.background.copy(alpha = 0.8f),
-                            Color.Transparent
-                        ),
-                        startX = 0f,
-                        endX = 1500f
-                    )
-                )
-        )
-
-        // Content
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 56.dp)
-                .padding(top = 80.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            // Title and Metadata
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        DetailHeroBox(backdropUrl = stuff.backdropUrl) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth(0.55f)
+                    .padding(horizontal = 56.dp, vertical = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 Text(
                     text = stuff.title,
                     style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
                 )
+                stuff.overview?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                    )
+                }
             }
+        }
 
-            // Overview
-            stuff.overview?.let {
+        Text(
+            text = "Items",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 56.dp, vertical = 16.dp),
+        )
+
+        if (items.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
                 Text(
-                    text = it,
+                    text = "No items found in this collection",
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.fillMaxWidth(0.6f),
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 24.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-
-            // Buttons
-            if (!stuff.isCollection) {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Button(
-                        onClick = { onPlayItem(stuff.id) },
-                        contentPadding = ButtonDefaults.ContentPadding
-                    ) {
-                        Text("Play")
-                    }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentPadding = PaddingValues(start = 56.dp, end = 56.dp, bottom = 48.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
+                items(items, key = { it.id }) { item ->
+                    TvMediaCard(
+                        title = item.title,
+                        imageUrl = item.imageUrl,
+                        aspectRatio = 16f / 9f,
+                        watchStatus = item.watchStatus,
+                        playbackProgress = item.playbackProgress,
+                        onClick = { onOpenItem(item.id, item.itemType) },
+                    )
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Grid of items
-            if (stuff.isCollection) {
-                Text(
-                    text = "Items",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                
-                if (items.isNotEmpty()) {
-                    LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 160.dp),
-                        contentPadding = PaddingValues(bottom = 48.dp),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(24.dp),
-                        modifier = Modifier.weight(1f).fillMaxWidth()
-                    ) {
-                        items(items, key = { it.id }) { item ->
-                            TvMediaCard(
-                                title = item.title,
-                                imageUrl = item.imageUrl,
-                                watchStatus = item.watchStatus,
-                                playbackProgress = item.playbackProgress,
-                                onClick = { onOpenItem(item.id, item.itemType) }
-                            )
-                        }
-                    }
-                } else {
-                    Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "No items found in this collection",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LoadingState() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun ErrorState(message: String, onRetry: () -> Unit, onBack: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = message, color = MaterialTheme.colorScheme.error)
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRetry) {
-            Text("Retry")
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedButton(onClick = onBack) {
-            Text("Back")
         }
     }
 }
