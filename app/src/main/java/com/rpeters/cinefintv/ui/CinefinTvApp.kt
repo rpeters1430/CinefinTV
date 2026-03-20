@@ -198,7 +198,13 @@ fun CinefinTvApp(
             val showNav = currentRoute != null &&
                 !currentRoute.startsWith("auth/") &&
                 !currentRoute.startsWith("player/") &&
-                !currentRoute.startsWith("audio-player/")
+                !currentRoute.startsWith("audio-player/") &&
+                !currentRoute.startsWith("movie/detail/") &&
+                !currentRoute.startsWith("tvshow/detail/") &&
+                !currentRoute.startsWith("season/detail/") &&
+                !currentRoute.startsWith("episode/detail/") &&
+                !currentRoute.startsWith("stuff/detail/") &&
+                !currentRoute.startsWith("detail/person/")
 
             val selectedTabIndex = navTabItems.indexOfFirst { item ->
                 currentRoute != null && (currentRoute == item.route || 

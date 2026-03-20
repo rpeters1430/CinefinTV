@@ -86,7 +86,7 @@ abstract class BaseLibraryViewModel(
             id = id,
             title = item.getDisplayTitle(),
             subtitle = subtitle,
-            imageUrl = repositories.stream.getPosterCardImageUrl(item),
+            imageUrl = repositories.stream.getLandscapeImageUrl(item),
             itemType = item.type.toString(),
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,
