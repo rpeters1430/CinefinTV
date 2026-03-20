@@ -139,7 +139,7 @@ class TvShowDetailViewModel @Inject constructor(
         return SeasonModel(
             id = id.toString(),
             title = getDisplayTitle(),
-            imageUrl = repositories.stream.getPosterCardImageUrl(this),
+            imageUrl = repositories.stream.getWideCardImageUrl(this),
             episodeCount = childCount,
             unwatchedCount = userData?.unplayedItemCount ?: 0
         )

@@ -106,7 +106,7 @@ fun TvMediaCard(
                     focusedBorder = Border(
                         border = androidx.compose.foundation.BorderStroke(
                             width = 3.dp,
-                            color = expressiveColors.focusRing,
+                            color = Color.White,
                         ),
                     ),
                 ),
@@ -151,6 +151,15 @@ fun TvMediaCard(
                                 ),
                             ),
                     )
+
+                    // White brightness overlay when focused — makes card visually "pop"
+                    if (isFocused) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.White.copy(alpha = 0.12f))
+                        )
+                    }
 
                     if (watchStatus == WatchStatus.IN_PROGRESS && playbackProgress != null && playbackProgress > 0f) {
                         Box(
