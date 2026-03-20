@@ -45,6 +45,7 @@ class ThemeViewModel @Inject constructor(
      * Typically called when a movie detail or hero section is focused.
      */
     fun updateSeedColor(color: Color?) {
+        if (currentSeedColor == color) return
         currentSeedColor = color
     }
 }

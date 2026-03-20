@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.ui.components.WatchStatus
+import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
+import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,6 +34,7 @@ data class MovieDetailModel(
     val genres: List<String>,
     val studios: List<String>,
     val isWatched: Boolean,
+    val playbackProgress: Float?,
 )
 
 data class CastModel(
@@ -128,6 +131,7 @@ class MovieDetailViewModel @Inject constructor(
             genres = genres ?: emptyList(),
             studios = studios?.mapNotNull { it.name } ?: emptyList(),
             isWatched = isWatched(),
+            playbackProgress = if (canResume()) (getWatchedPercentage() / 100.0).toFloat() else null,
         )
     }
 

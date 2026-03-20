@@ -26,6 +26,7 @@ data class StuffDetailModel(
     val backdropUrl: String?,
     val isCollection: Boolean,
     val type: String?,
+    val playbackProgress: Float?,
 )
 
 data class StuffItemModel(
@@ -105,7 +106,8 @@ class StuffDetailViewModel @Inject constructor(
             overview = overview,
             backdropUrl = repositories.stream.getBackdropUrl(this),
             isCollection = isCollection,
-            type = type?.toString()
+            type = type?.toString(),
+            playbackProgress = if (canResume()) (getWatchedPercentage() / 100f).toFloat() else null,
         )
     }
 

@@ -8,8 +8,10 @@ import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getEpisodeCode
+import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.isWatched
 import com.rpeters.cinefintv.utils.getYear
+import com.rpeters.cinefintv.utils.canResume
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +32,7 @@ data class EpisodeDetailModel(
     val overview: String?,
     val backdropUrl: String?,
     val isWatched: Boolean,
+    val playbackProgress: Float?,
 )
 
 data class ChapterModel(
@@ -112,6 +115,7 @@ class EpisodeDetailViewModel @Inject constructor(
             overview = overview,
             backdropUrl = repositories.stream.getBackdropUrl(this),
             isWatched = isWatched(),
+            playbackProgress = if (canResume()) (getWatchedPercentage() / 100.0).toFloat() else null,
         )
     }
 }

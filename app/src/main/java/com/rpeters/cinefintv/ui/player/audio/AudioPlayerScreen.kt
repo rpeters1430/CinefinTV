@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -60,10 +61,14 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import com.rpeters.cinefintv.utils.DevicePerformanceProfile
+import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -72,8 +77,20 @@ fun AudioPlayerScreen(
     viewModel: AudioPlayerViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val spacing = LocalCinefinSpacing.current
     val expressiveColors = LocalCinefinExpressiveColors.current
+    val performanceProfile = LocalPerformanceProfile.current
+    val backdropBlurRadius = when (performanceProfile.tier) {
+        DevicePerformanceProfile.Tier.HIGH -> 28.dp
+        DevicePerformanceProfile.Tier.MID -> 16.dp
+        DevicePerformanceProfile.Tier.LOW -> 0.dp
+    }
+    val backdropAlpha = when (performanceProfile.tier) {
+        DevicePerformanceProfile.Tier.HIGH -> 0.42f
+        DevicePerformanceProfile.Tier.MID -> 0.32f
+        DevicePerformanceProfile.Tier.LOW -> 0.22f
+    }
     
     val playPauseFocusRequester = remember { FocusRequester() }
     val queueFocusRequester = remember { FocusRequester() }
@@ -112,16 +129,26 @@ fun AudioPlayerScreen(
 
     LaunchedEffect(uiState.currentIndex, uiState.queueItems.size) {
         if (uiState.queueItems.isNotEmpty() && uiState.currentIndex in uiState.queueItems.indices) {
-            queueListState.animateScrollToItem(uiState.currentIndex)
+            if (performanceProfile.tier == DevicePerformanceProfile.Tier.LOW) {
+                queueListState.scrollToItem(uiState.currentIndex)
+            } else {
+                queueListState.animateScrollToItem(uiState.currentIndex)
+            }
         }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        // Blurred Backdrop
         AsyncImage(
-            model = uiState.currentTrackImageUrl,
+            model = ImageRequest.Builder(context)
+                .data(uiState.currentTrackImageUrl)
+                .size(960, 540)
+                .crossfade(performanceProfile.tier == DevicePerformanceProfile.Tier.HIGH)
+                .build(),
             contentDescription = null,
-            modifier = Modifier.fillMaxSize().blur(40.dp).graphicsLayer(alpha = 0.45f),
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (backdropBlurRadius > 0.dp) Modifier.blur(backdropBlurRadius) else Modifier)
+                .graphicsLayer(alpha = backdropAlpha),
             contentScale = ContentScale.Crop
         )
         

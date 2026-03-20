@@ -77,8 +77,10 @@ fun TvPersonCard(
                     .size(172.dp)
                     .onFocusChanged {
                         val focused = it.isFocused || it.hasFocus
-                        isFocused = focused
-                        if (focused) onFocus()
+                        if (focused != isFocused) {
+                            isFocused = focused
+                            if (focused) onFocus()
+                        }
                     },
                 scale = CardDefaults.scale(focusedScale = 1.08f),
                 glow = CardDefaults.glow(

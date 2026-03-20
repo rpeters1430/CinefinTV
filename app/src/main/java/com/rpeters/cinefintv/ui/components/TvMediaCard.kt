@@ -98,8 +98,10 @@ fun TvMediaCard(
                     .aspectRatio(aspectRatio)
                     .onFocusChanged {
                         val focused = it.isFocused || it.hasFocus
-                        isFocused = focused
-                        if (focused) onFocus()
+                        if (focused != isFocused) {
+                            isFocused = focused
+                            if (focused) onFocus()
+                        }
                     },
                 scale = CardDefaults.scale(focusedScale = focusedScale),
                 border = CardDefaults.border(

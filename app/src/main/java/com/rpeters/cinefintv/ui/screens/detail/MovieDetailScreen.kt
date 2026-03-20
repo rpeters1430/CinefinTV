@@ -10,30 +10,35 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import kotlinx.coroutines.launch
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.OutlinedButton
-import androidx.tv.material3.Surface
-import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.components.TvPersonCard
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 
 @Composable
@@ -74,6 +79,16 @@ private fun MovieDetailContent(
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val primaryActionFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
+    val castEntryFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
+    val similarEntryFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
+    var lastFocusedCastId by rememberSaveable { mutableStateOf<String?>(cast.firstOrNull()?.id) }
+    var lastFocusedSimilarId by rememberSaveable { mutableStateOf<String?>(similarMovies.firstOrNull()?.id) }
+
+    LaunchedEffect(movie.id) {
+        listState.scrollToItem(0)
+        primaryActionFocusRequester.requestFocus()
+    }
 
     LazyColumn(
         state = listState,
@@ -85,67 +100,81 @@ private fun MovieDetailContent(
                 backdropUrl = movie.backdropUrl,
                 modifier = Modifier.onFocusChanged { if (it.hasFocus) scope.launch { listState.scrollToItem(0) } },
             ) {
-                Column(
+                Row(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .fillMaxWidth(0.55f)
+                        .fillMaxWidth()
                         .padding(horizontal = 56.dp, vertical = 32.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    verticalAlignment = Alignment.Bottom,
                 ) {
-                    Text(
-                        text = movie.title,
-                        style = MaterialTheme.typography.displayMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
+                    DetailPosterArt(
+                        imageUrl = movie.posterUrl,
+                        title = movie.title,
+                        modifier = Modifier
+                            .width(196.dp)
+                            .height(294.dp),
                     )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    DetailGlassPanel(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
                     ) {
-                        movie.year?.let {
-                            Text(text = "$it", style = MaterialTheme.typography.bodyLarge)
-                        }
-                        movie.officialRating?.let {
-                            Surface(
-                                shape = MaterialTheme.shapes.small,
-                                colors = SurfaceDefaults.colors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                ),
-                            ) {
-                                Text(
-                                    text = it,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
+                        DetailChipRow(
+                            labels = buildList {
+                                add("Movie")
+                                movie.year?.let { add("$it") }
+                                movie.officialRating?.let { add(it) }
+                                movie.duration?.let { add(it) }
+                                movie.rating?.let { add("★ $it") }
+                                if (movie.isWatched) add("Watched")
                             }
-                        }
-                        movie.duration?.let {
-                            Text(text = it, style = MaterialTheme.typography.bodyLarge)
-                        }
-                        movie.rating?.let {
+                        )
+                        Text(
+                            text = movie.title,
+                            style = MaterialTheme.typography.displayMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                        )
+                        movie.overview?.let {
                             Text(
-                                text = "★ $it",
+                                text = it,
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = Color(0xFFFFD700),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 4,
                             )
                         }
-                    }
-                    movie.overview?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 3,
+                        if (movie.genres.isNotEmpty()) {
+                            DetailChipRow(labels = movie.genres.take(4))
+                        }
+                        if (movie.studios.isNotEmpty()) {
+                            Text(
+                                text = "Studio: ${movie.studios.take(2).joinToString(" • ")}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        movie.playbackProgress?.let {
+                            DetailProgressLabel(progress = it)
+                        }
+                        DetailActionRow(
+                            primaryLabel = when {
+                                movie.playbackProgress != null -> "Resume Movie"
+                                movie.isWatched -> "Play Again"
+                                else -> "Play Movie"
+                            },
+                            onPrimaryClick = { onPlayMovie(movie.id) },
+                            secondaryLabel = "More Like This",
+                            onSecondaryClick = {
+                                similarMovies.firstOrNull()?.let { onOpenMovie(it.id) }
+                            },
+                            primaryFocusRequester = primaryActionFocusRequester,
+                            primaryDownFocusRequester = if (cast.isNotEmpty() || similarMovies.isNotEmpty()) {
+                                if (cast.isNotEmpty()) castEntryFocusRequester else similarEntryFocusRequester
+                            } else {
+                                null
+                            },
                         )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Button(onClick = { onPlayMovie(movie.id) }) {
-                            Text("Play")
-                        }
-                        OutlinedButton(onClick = {}) {
-                            Text("Trailer")
-                        }
                     }
                 }
             }
@@ -153,18 +182,31 @@ private fun MovieDetailContent(
 
         if (cast.isNotEmpty()) {
             item {
-                DetailContentSection(title = "Cast & Crew") {
+                DetailContentSection(title = "Cast & Crew", eyebrow = "${cast.size} people") {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 56.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         items(cast) { person ->
-                            TvMediaCard(
-                                title = person.name,
-                                subtitle = person.role,
+                            TvPersonCard(
+                                name = person.name,
+                                role = person.role,
                                 imageUrl = person.imageUrl,
-                                aspectRatio = 2f / 3f,
-                                cardWidth = 120.dp,
+                                modifier = Modifier
+                                    .then(
+                                        if (person.id == lastFocusedCastId) Modifier.focusRequester(castEntryFocusRequester) else Modifier
+                                    )
+                                    .then(
+                                        if (person.id == cast.firstOrNull()?.id) {
+                                            Modifier.focusProperties {
+                                                up = primaryActionFocusRequester
+                                                if (similarMovies.isNotEmpty()) down = similarEntryFocusRequester
+                                            }
+                                        } else {
+                                            Modifier
+                                        }
+                                    ),
+                                onFocus = { lastFocusedCastId = person.id },
                                 onClick = {},
                             )
                         }
@@ -175,7 +217,7 @@ private fun MovieDetailContent(
 
         if (similarMovies.isNotEmpty()) {
             item {
-                DetailContentSection(title = "Similar Movies") {
+                DetailContentSection(title = "Similar Movies", eyebrow = "Keep Watching") {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 56.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -186,6 +228,24 @@ private fun MovieDetailContent(
                                 imageUrl = item.imageUrl,
                                 aspectRatio = 16f / 9f,
                                 cardWidth = 200.dp,
+                                modifier = Modifier
+                                    .then(
+                                        if (item.id == lastFocusedSimilarId) {
+                                            Modifier.focusRequester(similarEntryFocusRequester)
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
+                                    .then(
+                                        if (item.id == similarMovies.firstOrNull()?.id) {
+                                            Modifier.focusProperties {
+                                                up = if (cast.isNotEmpty()) castEntryFocusRequester else primaryActionFocusRequester
+                                            }
+                                        } else {
+                                            Modifier
+                                        }
+                                    ),
+                                onFocus = { lastFocusedSimilarId = item.id },
                                 onClick = { onOpenMovie(item.id) },
                             )
                         }

@@ -21,6 +21,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -194,6 +195,7 @@ private fun FeaturedCarousel(
     modifier: Modifier = Modifier,
 ) {
     val carouselState = rememberCarouselState()
+    val seedColorCache = remember { mutableStateMapOf<String, Color>() }
     
     Carousel(
         itemCount = items.size,
@@ -207,6 +209,7 @@ private fun FeaturedCarousel(
         HeroItem(
             item = item,
             sectionCount = sectionCount,
+            seedColorCache = seedColorCache,
             onMoreInfo = { onMoreInfo(item) },
             onPlay = { onPlay(item.id) },
             modifier = Modifier.fillMaxSize()
@@ -219,6 +222,7 @@ private fun FeaturedCarousel(
 private fun HeroItem(
     item: HomeCardModel,
     sectionCount: Int,
+    seedColorCache: MutableMap<String, Color>,
     onMoreInfo: () -> Unit,
     onPlay: () -> Unit,
     modifier: Modifier = Modifier,
@@ -229,22 +233,39 @@ private fun HeroItem(
     val spacing = LocalCinefinSpacing.current
     val themeController = LocalCinefinThemeController.current
     val playButtonRequester = remember { FocusRequester() }
+    val heroImageUrl = item.backdropUrl ?: item.imageUrl
+    val shouldExtractPalette = performanceProfile.tier == DevicePerformanceProfile.Tier.HIGH
+    val cachedSeedColor = heroImageUrl?.let(seedColorCache::get)
+
+    LaunchedEffect(heroImageUrl, cachedSeedColor) {
+        if (cachedSeedColor != null) {
+            themeController.updateSeedColor(cachedSeedColor)
+        }
+    }
 
     Box(modifier = modifier.clip(RoundedCornerShape(spacing.cornerContainer))) {
         AsyncImage(
             model = ImageRequest.Builder(context)
-                .data(item.backdropUrl ?: item.imageUrl)
+                .data(heroImageUrl)
                 .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
-                .allowHardware(false) // Required for Palette extraction
+                .allowHardware(!shouldExtractPalette)
                 .size(1280, 720)
                 .build(),
             contentDescription = item.title,
             contentScale = ContentScale.Crop,
             onSuccess = { state ->
+                if (!shouldExtractPalette || heroImageUrl == null || seedColorCache.containsKey(heroImageUrl)) {
+                    return@AsyncImage
+                }
+
                 val bitmap = state.result.image.toBitmap()
                 Palette.from(bitmap).generate { palette ->
                     val color = palette?.vibrantSwatch?.rgb ?: palette?.dominantSwatch?.rgb
-                    color?.let { themeController.updateSeedColor(androidx.compose.ui.graphics.Color(it)) }
+                    color?.let {
+                        val seedColor = androidx.compose.ui.graphics.Color(it)
+                        seedColorCache[heroImageUrl] = seedColor
+                        themeController.updateSeedColor(seedColor)
+                    }
                 }
             },
             modifier = Modifier.fillMaxSize(),

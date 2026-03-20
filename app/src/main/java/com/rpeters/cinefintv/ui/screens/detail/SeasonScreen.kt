@@ -8,33 +8,34 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.WatchStatus
 
@@ -69,103 +70,93 @@ private fun SeasonContent(
     episodes: List<EpisodeModel>,
     onOpenEpisode: (String) -> Unit,
 ) {
-    val background = MaterialTheme.colorScheme.background
-
+    val primaryActionFocusRequester = remember { FocusRequester() }
+    val episodeGridEntryRequester = remember { FocusRequester() }
     val nextEpisodeId = remember(episodes) {
         episodes.firstOrNull { !it.isWatched }?.id ?: episodes.firstOrNull()?.id
     }
+    val resumableEpisode = remember(episodes) {
+        episodes.firstOrNull { (it.playbackProgress ?: 0f) > 0f && !it.isWatched }
+    }
+    var lastFocusedEpisodeId by rememberSaveable { mutableStateOf<String?>(episodes.firstOrNull()?.id) }
+
+    LaunchedEffect(season.id) {
+        primaryActionFocusRequester.requestFocus()
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
-
-        // Mini hero strip
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-        ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(season.backdropUrl)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0f to Color.Transparent,
-                                0.5f to background.copy(alpha = 0.7f),
-                                1f to background,
-                            )
-                        )
-                    )
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.horizontalGradient(
-                            colorStops = arrayOf(
-                                0f to background,
-                                0.4f to background.copy(alpha = 0.6f),
-                                1f to Color.Transparent,
-                            )
-                        )
-                    )
-            )
-            Column(
+        DetailHeroBox(backdropUrl = season.backdropUrl) {
+            Row(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(horizontal = 56.dp, vertical = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                    .fillMaxWidth()
+                    .padding(horizontal = 56.dp, vertical = 28.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp),
+                verticalAlignment = Alignment.Bottom,
             ) {
-                season.seriesName?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.secondary,
-                    )
-                }
-                Text(
-                    text = season.title,
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
+                DetailPosterArt(
+                    imageUrl = season.posterUrl,
+                    title = season.title,
+                    modifier = Modifier
+                        .width(172.dp)
+                        .height(258.dp),
                 )
-                Text(
-                    text = "${episodes.size} Episodes",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                season.overview?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
+                DetailGlassPanel(
+                    modifier = Modifier.fillMaxWidth(0.66f)
+                ) {
+                    DetailChipRow(
+                        labels = buildList {
+                            add("Season")
+                            add("${episodes.size} episodes")
+                            if (nextEpisodeId != null) add("Ready to continue")
+                        }
                     )
-                }
-                if (nextEpisodeId != null) {
-                    Button(
-                        onClick = { onOpenEpisode(nextEpisodeId) },
-                        modifier = Modifier.padding(top = 4.dp),
-                    ) {
-                        Text("Play Next")
+                    season.seriesName?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                    Text(
+                        text = season.title,
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    season.overview?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 3,
+                        )
+                    }
+                    resumableEpisode?.playbackProgress?.let {
+                        DetailProgressLabel(progress = it)
+                    }
+                    if (nextEpisodeId != null) {
+                        DetailActionRow(
+                            primaryLabel = if (resumableEpisode != null) "Resume Episode" else "Continue Watching",
+                            onPrimaryClick = {
+                                onOpenEpisode(resumableEpisode?.id ?: nextEpisodeId)
+                            },
+                            secondaryLabel = episodes.firstOrNull()?.let { "Start From Episode 1" },
+                            onSecondaryClick = episodes.firstOrNull()?.let { firstEpisode ->
+                                { onOpenEpisode(firstEpisode.id) }
+                            },
+                            primaryFocusRequester = primaryActionFocusRequester,
+                            primaryDownFocusRequester = if (episodes.isNotEmpty()) episodeGridEntryRequester else null,
+                        )
                     }
                 }
             }
         }
 
-        Text(
-            text = "Episodes",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 56.dp, vertical = 12.dp),
-        )
+        DetailContentSection(
+            title = "Episodes",
+            eyebrow = "${episodes.count { !it.isWatched }} unwatched",
+            modifier = Modifier.padding(top = 0.dp),
+        ) {}
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(4),
@@ -182,12 +173,24 @@ private fun SeasonContent(
                     subtitle = episode.episodeCode ?: episode.number?.let { "Episode $it" },
                     imageUrl = episode.imageUrl,
                     aspectRatio = 16f / 9f,
+                    modifier = Modifier
+                        .then(
+                            if (episode.id == lastFocusedEpisodeId) Modifier.focusRequester(episodeGridEntryRequester) else Modifier
+                        )
+                        .then(
+                            if (episode.id == episodes.firstOrNull()?.id) {
+                                Modifier.focusProperties { up = primaryActionFocusRequester }
+                            } else {
+                                Modifier
+                            }
+                        ),
                     watchStatus = when {
                         episode.isWatched -> WatchStatus.WATCHED
                         (episode.playbackProgress ?: 0f) > 0f -> WatchStatus.IN_PROGRESS
                         else -> WatchStatus.NONE
                     },
                     playbackProgress = episode.playbackProgress,
+                    onFocus = { lastFocusedEpisodeId = episode.id },
                     onClick = { onOpenEpisode(episode.id) },
                 )
             }
