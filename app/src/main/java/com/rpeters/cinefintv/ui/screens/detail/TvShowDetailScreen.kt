@@ -14,15 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -77,15 +72,7 @@ private fun TvShowDetailContent(
     onOpenSeason: (String) -> Unit,
     onOpenShow: (String) -> Unit,
 ) {
-    val playFocusRequester = remember { FocusRequester() }
-    val listState = rememberLazyListState()
-    LaunchedEffect(Unit) {
-        playFocusRequester.requestFocus()
-        listState.scrollToItem(0)
-    }
-
     LazyColumn(
-        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 48.dp),
     ) {
@@ -147,16 +134,12 @@ private fun TvShowDetailContent(
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         if (show.nextUpEpisodeId != null) {
-                            Button(
-                                onClick = { onPlayEpisode(show.nextUpEpisodeId) },
-                                modifier = Modifier.focusRequester(playFocusRequester),
-                            ) {
+                            Button(onClick = { onPlayEpisode(show.nextUpEpisodeId) }) {
                                 Text("Play Next Up: ${show.nextUpTitle}")
                             }
                         } else {
                             Button(
                                 onClick = { seasons.firstOrNull()?.let { onOpenSeason(it.id) } },
-                                modifier = Modifier.focusRequester(playFocusRequester),
                                 enabled = seasons.isNotEmpty(),
                             ) {
                                 Text("Browse Seasons")

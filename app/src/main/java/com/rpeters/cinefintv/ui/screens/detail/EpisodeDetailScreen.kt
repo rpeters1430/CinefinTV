@@ -14,15 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -67,15 +62,7 @@ private fun EpisodeDetailContent(
     chapters: List<ChapterModel>,
     onPlayEpisode: (String, Long?) -> Unit,
 ) {
-    val playFocusRequester = remember { FocusRequester() }
-    val listState = rememberLazyListState()
-    LaunchedEffect(Unit) {
-        playFocusRequester.requestFocus()
-        listState.scrollToItem(0)
-    }
-
     LazyColumn(
-        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 48.dp),
     ) {
@@ -139,10 +126,7 @@ private fun EpisodeDetailContent(
                             maxLines = 3,
                         )
                     }
-                    Button(
-                        onClick = { onPlayEpisode(episode.id, null) },
-                        modifier = Modifier.focusRequester(playFocusRequester),
-                    ) {
+                    Button(onClick = { onPlayEpisode(episode.id, null) }) {
                         Text("Play")
                     }
                 }

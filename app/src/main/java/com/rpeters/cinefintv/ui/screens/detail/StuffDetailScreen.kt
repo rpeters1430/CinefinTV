@@ -14,13 +14,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -71,9 +67,6 @@ private fun StuffVideoContent(
     stuff: StuffDetailModel,
     onPlayItem: (String) -> Unit,
 ) {
-    val playFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { playFocusRequester.requestFocus() }
-
     DetailHeroBox(backdropUrl = stuff.backdropUrl, modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -96,10 +89,7 @@ private fun StuffVideoContent(
                     maxLines = 3,
                 )
             }
-            Button(
-                onClick = { onPlayItem(stuff.id) },
-                modifier = Modifier.focusRequester(playFocusRequester),
-            ) {
+            Button(onClick = { onPlayItem(stuff.id) }) {
                 Text("Play")
             }
         }
