@@ -19,9 +19,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,6 +65,14 @@ import com.rpeters.cinefintv.ui.player.PlayerConstants.NEXT_EPISODE_COUNTDOWN_TH
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private data class PlayerRenderState(
+    val isPlaying: Boolean = false,
+    val isBuffering: Boolean = false,
+    val position: Long = 0L,
+    val duration: Long = 0L,
+    val bufferedFraction: Float = 0f,
+)
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @UnstableApi
@@ -156,21 +164,39 @@ fun PlayerScreen(
                 var overlayActionFocused by remember { mutableStateOf(false) }
                 var controlsVisible by remember { mutableStateOf(true) }
 
-                // Playback state — poll more aggressively with controls visible and back off while hidden
-                var isPlaying by remember { mutableStateOf(true) }
-                var isBuffering by remember { mutableStateOf(false) }
-                var position by remember { mutableLongStateOf(0L) }
-                var duration by remember { mutableLongStateOf(0L) }
-                var bufferedFraction by remember { mutableFloatStateOf(0f) }
+                var renderState by remember(exoPlayer) {
+                    mutableStateOf(
+                        PlayerRenderState(
+                            isPlaying = exoPlayer.isPlaying,
+                            isBuffering = exoPlayer.playbackState == Player.STATE_BUFFERING,
+                            position = exoPlayer.currentPosition.coerceAtLeast(0L),
+                            duration = exoPlayer.duration.coerceAtLeast(0L),
+                            bufferedFraction = exoPlayer.bufferedPercentage / 100f,
+                        )
+                    )
+                }
 
-                LaunchedEffect(exoPlayer, controlsVisible) {
-                    while (true) {
-                        isPlaying = exoPlayer.isPlaying
-                        isBuffering = exoPlayer.playbackState == Player.STATE_BUFFERING
-                        position = exoPlayer.currentPosition.coerceAtLeast(0L)
-                        duration = exoPlayer.duration.coerceAtLeast(0L)
-                        bufferedFraction = exoPlayer.bufferedPercentage / 100f
-                        delay(if (controlsVisible) 250L else 1000L)
+                DisposableEffect(exoPlayer) {
+                    fun captureState() {
+                        renderState = PlayerRenderState(
+                            isPlaying = exoPlayer.isPlaying,
+                            isBuffering = exoPlayer.playbackState == Player.STATE_BUFFERING,
+                            position = exoPlayer.currentPosition.coerceAtLeast(0L),
+                            duration = exoPlayer.duration.coerceAtLeast(0L),
+                            bufferedFraction = exoPlayer.bufferedPercentage / 100f,
+                        )
+                    }
+
+                    val listener = object : Player.Listener {
+                        override fun onEvents(player: Player, events: Player.Events) {
+                            captureState()
+                        }
+                    }
+
+                    captureState()
+                    exoPlayer.addListener(listener)
+                    onDispose {
+                        exoPlayer.removeListener(listener)
                     }
                 }
 
@@ -178,7 +204,7 @@ fun PlayerScreen(
                     player = exoPlayer,
                     viewModel = viewModel,
                     uiState = uiState,
-                    isPlaying = isPlaying,
+                    isPlaying = renderState.isPlaying,
                     onNextEpisodeRequest = { nextId ->
                         coroutineScope.launch {
                             if (nextId.isNotBlank()) onOpenItem(nextId)
@@ -192,14 +218,14 @@ fun PlayerScreen(
                 // Controls visibility — auto-hide logic
                 var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
-                LaunchedEffect(isPlaying) {
-                    if (!isPlaying) {
+                LaunchedEffect(renderState.isPlaying) {
+                    if (!renderState.isPlaying) {
                         controlsVisible = true
                     }
                 }
 
-                LaunchedEffect(lastInteraction, isPlaying) {
-                    if (isPlaying && !isTrackPanelVisible) {
+                LaunchedEffect(lastInteraction, renderState.isPlaying) {
+                    if (renderState.isPlaying && !isTrackPanelVisible) {
                         delay(CONTROLS_HIDE_DELAY_MS)
                         controlsVisible = false
                     }
@@ -247,7 +273,7 @@ fun PlayerScreen(
                                     if (!controlsVisible) {
                                         controlsVisible = true
                                     } else {
-                                        if (isPlaying) exoPlayer.pause() else exoPlayer.play()
+                                        if (renderState.isPlaying) exoPlayer.pause() else exoPlayer.play()
                                     }
                                     true
                                 }
@@ -285,10 +311,10 @@ fun PlayerScreen(
 
                 PlayerControls(
                     isVisible = controlsVisible,
-                    isPlaying = isPlaying,
-                    position = position,
-                    duration = duration,
-                    bufferedFraction = bufferedFraction,
+                    isPlaying = renderState.isPlaying,
+                    position = renderState.position,
+                    duration = renderState.duration,
+                    bufferedFraction = renderState.bufferedFraction,
                     uiState = uiState,
                     player = exoPlayer,
                     playPauseFocusRequester = playPauseFocusRequester,
@@ -303,7 +329,7 @@ fun PlayerScreen(
                 )
 
                 // Buffering spinner — shown when player is rebuffering mid-playback
-                if (isBuffering) {
+                if (renderState.isBuffering) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
@@ -321,16 +347,16 @@ fun PlayerScreen(
                 val creditsRange = uiState.creditsSkipRange
                 val activeSkipLabel = when {
                     introRange != null &&
-                        position >= introRange.startMs &&
-                        position <= (introRange.endMs ?: Long.MAX_VALUE) -> "Skip Intro"
+                        renderState.position >= introRange.startMs &&
+                        renderState.position <= (introRange.endMs ?: Long.MAX_VALUE) -> "Skip Intro"
                     creditsRange != null &&
-                        position >= creditsRange.startMs &&
-                        position <= (creditsRange.endMs ?: Long.MAX_VALUE) -> "Skip Credits"
+                        renderState.position >= creditsRange.startMs &&
+                        renderState.position <= (creditsRange.endMs ?: Long.MAX_VALUE) -> "Skip Credits"
                     else -> null
                 }
                 val activeSkipTargetMs = when (activeSkipLabel) {
-                    "Skip Intro" -> introRange?.endMs?.coerceAtMost(duration) ?: duration
-                    "Skip Credits" -> creditsRange?.endMs?.coerceAtMost(duration) ?: duration
+                    "Skip Intro" -> introRange?.endMs?.coerceAtMost(renderState.duration) ?: renderState.duration
+                    "Skip Credits" -> creditsRange?.endMs?.coerceAtMost(renderState.duration) ?: renderState.duration
                     else -> 0L
                 }
                 LaunchedEffect(activeSkipLabel) {
@@ -425,7 +451,11 @@ fun PlayerScreen(
                     }
 
                     // Next Up thumbnail card — slides in from right in last 15s
-                    val remaining = if (duration > 0L) (duration - position) else -1L
+                    val remaining = if (renderState.duration > 0L) {
+                        renderState.duration - renderState.position
+                    } else {
+                        -1L
+                    }
                     val showNextUp = remaining in 0L..NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS
                         && uiState.isEpisodicContent
                         && uiState.nextEpisodeId != null
@@ -463,10 +493,16 @@ fun PlayerScreen(
                     uiState = uiState,
                     audioTracks = uiState.audioTracks,
                     subtitleTracks = uiState.subtitleTracks,
-                    onAudioTrackSelected = { viewModel.selectAudioTrack(it, position, isPlaying) },
-                    onSubtitleTrackSelected = { viewModel.selectSubtitleTrack(it, position, isPlaying) },
+                    onAudioTrackSelected = {
+                        viewModel.selectAudioTrack(it, renderState.position, renderState.isPlaying)
+                    },
+                    onSubtitleTrackSelected = {
+                        viewModel.selectSubtitleTrack(it, renderState.position, renderState.isPlaying)
+                    },
                     onSectionSelected = { trackPanelSection = it },
-                    onQualitySelected = { viewModel.setTranscodingQuality(it, position, isPlaying) },
+                    onQualitySelected = {
+                        viewModel.setTranscodingQuality(it, renderState.position, renderState.isPlaying)
+                    },
                     onPlaybackSpeedSelected = { viewModel.setPlaybackSpeed(it) },
                     onAutoPlayChange = { viewModel.setAutoPlayNextEpisode(it) },
                     onClose = {

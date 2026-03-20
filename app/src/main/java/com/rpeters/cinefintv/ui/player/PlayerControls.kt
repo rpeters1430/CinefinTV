@@ -185,14 +185,25 @@ internal fun PlayerControls(
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = uiState.title,
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = expressiveColors.playerContentPrimary,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        if (uiState.logoUrl != null) {
+                            AsyncImage(
+                                model = uiState.logoUrl,
+                                contentDescription = uiState.title,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier
+                                    .width(220.dp)
+                                    .height(56.dp),
+                            )
+                        } else {
+                            Text(
+                                text = uiState.title,
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = expressiveColors.playerContentPrimary,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                         val episodeInfo = buildString {
                             uiState.seasonNumber?.let { append("S$it") }
                             uiState.episodeNumber?.let {
@@ -200,13 +211,17 @@ internal fun PlayerControls(
                                 else append("E$it")
                             }
                         }
-                        if (episodeInfo.isNotEmpty()) {
-                            Text(
-                                text = episodeInfo,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = expressiveColors.playerContentSecondary,
-                            )
-                        }
+                        Text(
+                            text = if (episodeInfo.isNotEmpty()) {
+                                "${uiState.title}  •  $episodeInfo"
+                            } else {
+                                uiState.title
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            color = expressiveColors.playerContentSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 }
             }

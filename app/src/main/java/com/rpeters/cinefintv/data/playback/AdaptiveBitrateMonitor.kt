@@ -3,7 +3,6 @@ package com.rpeters.cinefintv.data.playback
 import androidx.media3.exoplayer.ExoPlayer
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
-import com.rpeters.cinefintv.network.ConnectivityChecker
 import com.rpeters.cinefintv.utils.SecureLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -23,11 +22,11 @@ import javax.inject.Singleton
  */
 @Singleton
 class AdaptiveBitrateMonitor @Inject constructor(
-    private val connectivityChecker: ConnectivityChecker,
     private val playbackPreferencesRepository: PlaybackPreferencesRepository,
 ) {
     private val _qualityRecommendation = MutableStateFlow<QualityRecommendation?>(null)
     val qualityRecommendation: StateFlow<QualityRecommendation?> = _qualityRecommendation.asStateFlow()
+    private val playbackContext = MutableStateFlow(PlaybackMonitoringContext())
 
     private var monitoringJob: Job? = null
     private var bufferingStartTime: Long? = null
@@ -56,21 +55,19 @@ class AdaptiveBitrateMonitor @Inject constructor(
     fun startMonitoring(
         exoPlayer: ExoPlayer,
         scope: CoroutineScope,
-        currentQuality: TranscodingQuality,
-        isTranscoding: Boolean,
     ) {
         stopMonitoring()
 
         monitoringJob = scope.launch {
-            SecureLogger.d(TAG, "Started adaptive bitrate monitoring (quality=$currentQuality, transcoding=$isTranscoding)")
+            SecureLogger.d(TAG, "Started adaptive bitrate monitoring")
 
             var previousPlaybackState = exoPlayer.playbackState
-            var bufferingDuration = 0L
 
             while (isActive) {
                 try {
                     val currentState = exoPlayer.playbackState
                     val currentTime = System.currentTimeMillis()
+                    val context = playbackContext.value
 
                     // Track buffering events
                     if (currentState == androidx.media3.common.Player.STATE_BUFFERING &&
@@ -84,7 +81,7 @@ class AdaptiveBitrateMonitor @Inject constructor(
                         bufferingStartTime != null
                     ) {
                         // Recovered from buffering
-                        bufferingDuration = currentTime - (bufferingStartTime ?: currentTime)
+                        val bufferingDuration = currentTime - (bufferingStartTime ?: currentTime)
                         SecureLogger.v(TAG, "Buffering ended after ${bufferingDuration}ms")
                         bufferingStartTime = null
                     }
@@ -103,17 +100,17 @@ class AdaptiveBitrateMonitor @Inject constructor(
                     // 4. Not already at lowest quality
                     val prefs = playbackPreferencesRepository.preferences.first()
                     val canDowngrade = prefs.transcodingQuality == TranscodingQuality.AUTO &&
-                        isTranscoding &&
+                        context.isTranscoding &&
                         (currentTime - lastQualityDowngrade) > MIN_TIME_BETWEEN_DOWNGRADES_MS &&
-                        currentQuality != TranscodingQuality.LOW
+                        context.currentQuality != TranscodingQuality.LOW
 
                     if (canDowngrade) {
                         // Check for sustained buffering
                         if (currentBufferingDuration >= SUSTAINED_BUFFERING_THRESHOLD_MS) {
-                            val newQuality = getDowngradedQuality(currentQuality)
+                            val newQuality = getDowngradedQuality(context.currentQuality)
                             SecureLogger.w(
                                 TAG,
-                                "Sustained buffering detected (${currentBufferingDuration}ms). Recommending quality downgrade: $currentQuality -> $newQuality",
+                                "Sustained buffering detected (${currentBufferingDuration}ms). Recommending quality downgrade: ${context.currentQuality} -> $newQuality",
                             )
                             _qualityRecommendation.value = QualityRecommendation(
                                 recommendedQuality = newQuality,
@@ -124,10 +121,10 @@ class AdaptiveBitrateMonitor @Inject constructor(
                         }
                         // Check for multiple buffering events in a short window
                         else if (consecutiveBufferingEvents >= 3) {
-                            val newQuality = getDowngradedQuality(currentQuality)
+                            val newQuality = getDowngradedQuality(context.currentQuality)
                             SecureLogger.w(
                                 TAG,
-                                "Multiple buffering events detected ($consecutiveBufferingEvents). Recommending quality downgrade: $currentQuality -> $newQuality",
+                                "Multiple buffering events detected ($consecutiveBufferingEvents). Recommending quality downgrade: ${context.currentQuality} -> $newQuality",
                             )
                             _qualityRecommendation.value = QualityRecommendation(
                                 recommendedQuality = newQuality,
@@ -153,6 +150,16 @@ class AdaptiveBitrateMonitor @Inject constructor(
         }
     }
 
+    fun updatePlaybackContext(
+        currentQuality: TranscodingQuality,
+        isTranscoding: Boolean,
+    ) {
+        playbackContext.value = PlaybackMonitoringContext(
+            currentQuality = currentQuality,
+            isTranscoding = isTranscoding,
+        )
+    }
+
     /**
      * Stops monitoring.
      */
@@ -161,6 +168,7 @@ class AdaptiveBitrateMonitor @Inject constructor(
         monitoringJob = null
         bufferingStartTime = null
         consecutiveBufferingEvents = 0
+        playbackContext.value = PlaybackMonitoringContext()
         _qualityRecommendation.value = null
         SecureLogger.d(TAG, "Stopped adaptive bitrate monitoring")
     }
@@ -208,3 +216,8 @@ enum class RecommendationSeverity {
     MEDIUM, // Recommended
     HIGH, // Strongly recommended (buffering/bandwidth issues)
 }
+
+private data class PlaybackMonitoringContext(
+    val currentQuality: TranscodingQuality = TranscodingQuality.AUTO,
+    val isTranscoding: Boolean = false,
+)

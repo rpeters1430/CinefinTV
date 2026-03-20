@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
@@ -21,7 +22,6 @@ import com.rpeters.cinefintv.data.playback.RecommendationSeverity
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.ResumePlaybackMode
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
-import com.rpeters.cinefintv.data.repository.JellyfinRepository
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.utils.getDisplayTitle
@@ -48,7 +48,6 @@ import kotlin.math.pow
 class PlayerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repositories: JellyfinRepositoryCoordinator,
-    private val jellyfinRepository: JellyfinRepository,
     private val enhancedPlaybackManager: EnhancedPlaybackManager,
     private val adaptiveBitrateMonitor: AdaptiveBitrateMonitor,
     private val playbackPreferencesRepository: PlaybackPreferencesRepository,
@@ -74,11 +73,19 @@ class PlayerViewModel @Inject constructor(
     private var activePlayMethod: PlayMethod = PlayMethod.DIRECT_PLAY
     private var currentItem: BaseItemDto? = null
     private var playbackStartReported = false
+    private var pendingPlaybackStartPositionMs: Long? = null
 
     private data class ResolvedPlayback(
         val url: String,
         val isHdrPlayback: Boolean,
     )
+
+    private fun syncAdaptiveBitrateMonitorContext(quality: TranscodingQuality = uiState.value.transcodingQuality) {
+        adaptiveBitrateMonitor.updatePlaybackContext(
+            currentQuality = quality,
+            isTranscoding = activePlayMethod != PlayMethod.DIRECT_PLAY,
+        )
+    }
 
     init {
         viewModelScope.launch {
@@ -166,7 +173,12 @@ class PlayerViewModel @Inject constructor(
         }
 
         val title = item?.getDisplayTitle() ?: "Now Playing"
-        val playbackInfo = runCatching { jellyfinRepository.getPlaybackInfo(itemId) }.getOrNull()
+        val playbackInfo = runCatching {
+            repositories.stream.getPlaybackInfo(
+                itemId = itemId,
+                startPositionMs = if (shouldShowResumeDialog) 0L else savedPlaybackPositionMs,
+            )
+        }.getOrNull()
         val mediaSource = playbackInfo?.mediaSources?.firstOrNull()
         val audioTracks = PlayerMappers.toAudioTrackOptions(mediaSource)
         val subtitleTracks = PlayerMappers.toSubtitleTrackOptions(mediaSource)
@@ -175,6 +187,7 @@ class PlayerViewModel @Inject constructor(
 
         val resolvedPlayback = resolvePlaybackUrl(
             item = item,
+            playbackInfo = playbackInfo,
             audioStreamIndex = null,
             subtitleStreamIndex = null,
             startPositionMs = if (shouldShowResumeDialog) 0L else savedPlaybackPositionMs,
@@ -278,12 +291,20 @@ class PlayerViewModel @Inject constructor(
                         if (resumePositionMs > 0L) {
                             seekTo(resumePositionMs)
                         }
-                        reportPlaybackStart(resumePositionMs)
+                        queuePlaybackStartReport(resumePositionMs)
                         prepare()
                         playWhenReady = true
                     }
                 }
             }
+
+        newPlayer.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY && newPlayer.playWhenReady) {
+                    flushPendingPlaybackStart()
+                }
+            }
+        })
         
         newPlayer.addAnalyticsListener(object : AnalyticsListener {
             override fun onPlayerError(eventTime: AnalyticsListener.EventTime, error: PlaybackException) {
@@ -300,11 +321,10 @@ class PlayerViewModel @Inject constructor(
         _player = newPlayer
         viewModelScope.launch {
             val prefs = playbackPreferencesRepository.preferences.first()
+            syncAdaptiveBitrateMonitorContext(prefs.transcodingQuality)
             adaptiveBitrateMonitor.startMonitoring(
                 exoPlayer = newPlayer,
                 scope = viewModelScope,
-                currentQuality = prefs.transcodingQuality,
-                isTranscoding = activePlayMethod != PlayMethod.DIRECT_PLAY,
             )
         }
         return newPlayer
@@ -318,7 +338,7 @@ class PlayerViewModel @Inject constructor(
             if (position > 0L) {
                 seekTo(position)
             }
-            reportPlaybackStart(position)
+            queuePlaybackStartReport(position)
             prepare()
             playWhenReady = true
         }
@@ -388,13 +408,14 @@ class PlayerViewModel @Inject constructor(
                 streamUrl = streamUrl,
                 isHdrPlayback = resolvedPlayback?.isHdrPlayback ?: false,
             )
-            playbackStartReported = false
+            syncAdaptiveBitrateMonitorContext()
+            clearPlaybackStartState()
             _player?.apply {
                 setMediaItem(MediaItem.fromUri(streamUrl))
                 if (positionMs > 0L) {
                     seekTo(positionMs)
                 }
-                reportPlaybackStart(positionMs)
+                queuePlaybackStartReport(positionMs)
                 prepare()
                 applyTrackSelection(uiState.value.selectedAudioTrack, uiState.value.selectedSubtitleTrack)
                 this.playWhenReady = playWhenReady
@@ -424,6 +445,7 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             playbackPreferencesRepository.setTranscodingQuality(quality)
             _uiState.value = _uiState.value.copy(transcodingQuality = quality)
+            syncAdaptiveBitrateMonitorContext(quality)
             reloadStream(positionMs = positionMs, playWhenReady = playWhenReady)
         }
     }
@@ -543,6 +565,7 @@ class PlayerViewModel @Inject constructor(
 
     private suspend fun resolvePlaybackUrl(
         item: BaseItemDto?,
+        playbackInfo: org.jellyfin.sdk.model.api.PlaybackInfoResponse? = null,
         audioStreamIndex: Int?,
         subtitleStreamIndex: Int?,
         startPositionMs: Long = 0L,
@@ -552,6 +575,7 @@ class PlayerViewModel @Inject constructor(
         return when (
             val playbackResult = enhancedPlaybackManager.getOptimalPlaybackUrl(
                 item = item,
+                playbackInfo = playbackInfo,
                 audioStreamIndex = audioStreamIndex,
                 subtitleStreamIndex = subtitleStreamIndex,
                 startPositionMs = startPositionMs,
@@ -561,9 +585,11 @@ class PlayerViewModel @Inject constructor(
                 activePlayMethod = PlayMethod.DIRECT_PLAY
                 val nextSessionId = playbackResult.playSessionId ?: activePlaySessionId ?: playbackSessionId
                 if (nextSessionId != activePlaySessionId) {
-                    playbackStartReported = false
+                    clearPlaybackStartState()
                 }
                 activePlaySessionId = nextSessionId
+                activeMediaSourceId = playbackResult.mediaSourceId ?: activeMediaSourceId
+                syncAdaptiveBitrateMonitorContext()
                 ResolvedPlayback(
                     url = playbackResult.url,
                     isHdrPlayback = playbackResult.reasonCodes.contains(HDR_REASON_CODE),
@@ -577,9 +603,11 @@ class PlayerViewModel @Inject constructor(
                 }
                 val nextSessionId = playbackResult.playSessionId ?: activePlaySessionId ?: playbackSessionId
                 if (nextSessionId != activePlaySessionId) {
-                    playbackStartReported = false
+                    clearPlaybackStartState()
                 }
                 activePlaySessionId = nextSessionId
+                activeMediaSourceId = playbackResult.mediaSourceId ?: activeMediaSourceId
+                syncAdaptiveBitrateMonitorContext()
                 ResolvedPlayback(
                     url = playbackResult.url,
                     isHdrPlayback = playbackResult.reasonCodes.contains(HDR_REASON_CODE),
@@ -589,10 +617,26 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    private fun clearPlaybackStartState() {
+        playbackStartReported = false
+        pendingPlaybackStartPositionMs = null
+    }
+
+    private fun queuePlaybackStartReport(positionMs: Long) {
+        if (itemId.isBlank()) return
+        pendingPlaybackStartPositionMs = positionMs.coerceAtLeast(0L)
+    }
+
+    private fun flushPendingPlaybackStart() {
+        val positionMs = pendingPlaybackStartPositionMs ?: return
+        reportPlaybackStart(positionMs)
+    }
+
     private fun reportPlaybackStart(positionMs: Long) {
         if (playbackStartReported || itemId.isBlank()) return
 
         playbackStartReported = true
+        pendingPlaybackStartPositionMs = null
         val sessionId = activePlaySessionId?.takeIf { it.isNotBlank() } ?: playbackSessionId
         val positionTicks = positionMs.takeIf { it > 0L }?.times(TICKS_PER_MILLISECOND)
 

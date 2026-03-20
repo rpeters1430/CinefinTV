@@ -74,6 +74,7 @@ class EnhancedPlaybackManager @Inject constructor(
      */
     suspend fun getOptimalPlaybackUrl(
         item: BaseItemDto,
+        playbackInfo: PlaybackInfoResponse? = null,
         audioStreamIndex: Int? = null,
         subtitleStreamIndex: Int? = null,
         startPositionMs: Long = 0L,
@@ -86,13 +87,14 @@ class EnhancedPlaybackManager @Inject constructor(
                 }
 
                 // Get detailed playback info from server
-                val playbackInfo = getPlaybackInfo(itemId, audioStreamIndex, subtitleStreamIndex, startPositionMs)
-                if (playbackInfo == null) {
+                val resolvedPlaybackInfo = playbackInfo
+                    ?: getPlaybackInfo(itemId, audioStreamIndex, subtitleStreamIndex, startPositionMs)
+                if (resolvedPlaybackInfo == null) {
                     return@withContext PlaybackResult.Error("Failed to get playback info")
                 }
 
                 // CENTRALIZED DECISION (Phase 2)
-                val decision = computePlaybackDecision(item, playbackInfo, audioStreamIndex, subtitleStreamIndex)
+                val decision = computePlaybackDecision(item, resolvedPlaybackInfo, audioStreamIndex, subtitleStreamIndex)
                 
                 if (decision is PlaybackResult.Error) {
                     SecureLogger.e(TAG, "Playback decision failed: ${decision.message}")
@@ -218,6 +220,7 @@ class EnhancedPlaybackManager @Inject constructor(
                     videoCodec = getVideoCodec(anySource),
                     audioCodec = getAudioCodec(anySource),
                     bitrate = anySource.bitrate ?: 0,
+                    mediaSourceId = anySource.id,
                     reason = "Forcing direct play: server rejection bypassed",
                     reasonCodes = reasons,
                     playSessionId = playSessionId,
@@ -247,6 +250,7 @@ class EnhancedPlaybackManager @Inject constructor(
                 videoCodec = getVideoCodec(directPlaySource),
                 audioCodec = getAudioCodec(directPlaySource),
                 bitrate = directPlaySource.bitrate ?: 0,
+                mediaSourceId = directPlaySource.id,
                 reason = "Direct Play supported by server and device",
                 reasonCodes = reasons,
                 playSessionId = playSessionId,
@@ -534,6 +538,7 @@ class EnhancedPlaybackManager @Inject constructor(
             targetVideoCodec = sourceVideoStream?.codec ?: "h264", // Original codec (video is copied)
             targetAudioCodec = "aac",
             targetContainer = "ts",
+            mediaSourceId = mediaSourceId,
             reason = "Direct Stream: Original video (${sourceVideoStream?.codec}), audio transcoded (${sourceAudioStream?.codec} -> aac)",
             playSessionId = playSessionId,
             isDirectStream = true,
@@ -667,6 +672,7 @@ class EnhancedPlaybackManager @Inject constructor(
             targetVideoCodec = transcodingParams.videoCodec,
             targetAudioCodec = transcodingParams.audioCodec,
             targetContainer = transcodingParams.container,
+            mediaSourceId = mediaSourceId,
             reason = "Optimized for $qualityName quality",
             playSessionId = playSessionId,
         )
@@ -895,6 +901,7 @@ sealed class PlaybackResult {
         val videoCodec: String?,
         val audioCodec: String?,
         val bitrate: Int,
+        val mediaSourceId: String? = null,
         val reason: String,
         val reasonCodes: List<String> = emptyList(),
         val playSessionId: String? = null,
@@ -908,6 +915,7 @@ sealed class PlaybackResult {
         val targetVideoCodec: String,
         val targetAudioCodec: String,
         val targetContainer: String,
+        val mediaSourceId: String? = null,
         val reason: String,
         val reasonCodes: List<String> = emptyList(),
         val playSessionId: String? = null,
