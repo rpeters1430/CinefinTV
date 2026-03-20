@@ -1,279 +1,196 @@
+@file:OptIn(ExperimentalTvMaterial3Api::class)
+
 package com.rpeters.cinefintv.ui.screens.detail
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.material3.*
-import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import coil3.request.crossfade
+import androidx.tv.material3.Button
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.OutlinedButton
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
+import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.TvMediaCard
-import com.rpeters.cinefintv.ui.components.TvPersonCard
-import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
-import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun MovieDetailScreen(
     onPlayMovie: (String) -> Unit,
     onOpenMovie: (String) -> Unit,
     onBack: () -> Unit,
-    viewModel: MovieDetailViewModel = hiltViewModel()
+    viewModel: MovieDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    BackHandler(onBack = onBack)
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
-            is MovieDetailUiState.Loading -> {
-                LoadingState()
-            }
-            is MovieDetailUiState.Error -> {
-                ErrorState(message = state.message, onRetry = { viewModel.load() }, onBack = onBack)
-            }
-            is MovieDetailUiState.Content -> {
-                MovieDetailContent(
-                    movie = state.movie,
-                    cast = state.cast,
-                    similarMovies = state.similarMovies,
-                    onPlayMovie = onPlayMovie,
-                    onOpenMovie = onOpenMovie
-                )
-            }
+            is MovieDetailUiState.Loading -> DetailLoadingState()
+            is MovieDetailUiState.Error -> DetailErrorState(
+                message = state.message,
+                onRetry = { viewModel.load() },
+            )
+            is MovieDetailUiState.Content -> MovieDetailContent(
+                movie = state.movie,
+                cast = state.cast,
+                similarMovies = state.similarMovies,
+                onPlayMovie = onPlayMovie,
+                onOpenMovie = onOpenMovie,
+            )
         }
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun MovieDetailContent(
     movie: MovieDetailModel,
     cast: List<CastModel>,
     similarMovies: List<SimilarMovieModel>,
     onPlayMovie: (String) -> Unit,
-    onOpenMovie: (String) -> Unit
+    onOpenMovie: (String) -> Unit,
 ) {
-    val spacing = LocalCinefinSpacing.current
-    val performanceProfile = LocalPerformanceProfile.current
+    val playFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { playFocusRequester.requestFocus() }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Backdrop Image
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(movie.backdropUrl)
-                .crossfade(true)
-                .build(),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-
-        // Gradient Overlay
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            MaterialTheme.colorScheme.background.copy(alpha = 0.5f),
-                            MaterialTheme.colorScheme.background
-                        ),
-                        startY = 0f,
-                        endY = 1000f // Adjust as needed
-                    )
-                )
-        )
-        
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.background,
-                            MaterialTheme.colorScheme.background.copy(alpha = 0.8f),
-                            Color.Transparent
-                        ),
-                        startX = 0f,
-                        endX = 1500f
-                    )
-                )
-        )
-
-        // Content
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 56.dp)
-                .padding(top = 80.dp, bottom = 48.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            // Title and Metadata
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = movie.title,
-                    style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 48.dp),
+    ) {
+        item {
+            DetailHeroBox(backdropUrl = movie.backdropUrl) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth(0.55f)
+                        .padding(horizontal = 56.dp, vertical = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    movie.year?.let {
-                        Text(text = it.toString(), style = MaterialTheme.typography.bodyLarge)
-                    }
-                    movie.officialRating?.let {
-                        Surface(
-                            shape = MaterialTheme.shapes.small,
-                            colors = SurfaceDefaults.colors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        ) {
+                    Text(
+                        text = movie.title,
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        movie.year?.let {
+                            Text(text = "$it", style = MaterialTheme.typography.bodyLarge)
+                        }
+                        movie.officialRating?.let {
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                colors = SurfaceDefaults.colors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                ),
+                            ) {
+                                Text(
+                                    text = it,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            }
+                        }
+                        movie.duration?.let {
+                            Text(text = it, style = MaterialTheme.typography.bodyLarge)
+                        }
+                        movie.rating?.let {
                             Text(
-                                text = it,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelMedium
+                                text = "★ $it",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color(0xFFFFD700),
                             )
                         }
                     }
-                    movie.duration?.let {
-                        Text(text = it, style = MaterialTheme.typography.bodyLarge)
+                    movie.overview?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 3,
+                        )
                     }
-                    movie.rating?.let {
-                        Text(text = "★ $it", style = MaterialTheme.typography.bodyLarge, color = Color(0xFFFFD700))
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Button(
+                            onClick = { onPlayMovie(movie.id) },
+                            modifier = Modifier.focusRequester(playFocusRequester),
+                        ) {
+                            Text("Play")
+                        }
+                        OutlinedButton(onClick = {}) {
+                            Text("Trailer")
+                        }
                     }
                 }
             }
+        }
 
-            // Overview
-            movie.overview?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.fillMaxWidth(0.6f),
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 24.sp
-                )
-            }
-
-            // Buttons
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Button(
-                    onClick = { onPlayMovie(movie.id) },
-                    contentPadding = ButtonDefaults.ContentPadding
-                ) {
-                    Text("Play")
-                }
-                
-                // Assuming Trailer functionality might be added later, for now just a placeholder button if needed
-                // The task mentioned: "Trailer" (if available). 
-                // MovieDetailModel doesn't have a hasTrailer flag yet, but we can add one or just show it for now.
-                OutlinedButton(
-                    onClick = { /* TODO: Trailer */ },
-                    contentPadding = ButtonDefaults.ContentPadding
-                ) {
-                    Text("Trailer")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Cast & Crew
-            if (cast.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(
-                        text = "Cast & Crew",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
+        if (cast.isNotEmpty()) {
+            item {
+                DetailContentSection(title = "Cast & Crew") {
                     LazyRow(
+                        contentPadding = PaddingValues(horizontal = 56.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp)
                     ) {
                         items(cast) { person ->
-                            TvPersonCard(
-                                name = person.name,
-                                role = person.role,
+                            TvMediaCard(
+                                title = person.name,
+                                subtitle = person.role,
                                 imageUrl = person.imageUrl,
-                                onClick = { /* TODO: Navigate to Person */ }
+                                aspectRatio = 2f / 3f,
+                                cardWidth = 120.dp,
+                                onClick = {},
                             )
                         }
                     }
                 }
             }
+        }
 
-            // Similar Movies
-            if (similarMovies.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(
-                        text = "Similar Movies",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
+        if (similarMovies.isNotEmpty()) {
+            item {
+                DetailContentSection(title = "Similar Movies") {
                     LazyRow(
+                        contentPadding = PaddingValues(horizontal = 56.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp)
                     ) {
                         items(similarMovies) { item ->
                             TvMediaCard(
                                 title = item.title,
                                 imageUrl = item.imageUrl,
-                                onClick = { onOpenMovie(item.id) }
+                                aspectRatio = 16f / 9f,
+                                cardWidth = 200.dp,
+                                onClick = { onOpenMovie(item.id) },
                             )
                         }
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun LoadingState() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun ErrorState(message: String, onRetry: () -> Unit, onBack: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = message, color = MaterialTheme.colorScheme.error)
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRetry) {
-            Text("Retry")
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedButton(onClick = onBack) {
-            Text("Back")
         }
     }
 }
