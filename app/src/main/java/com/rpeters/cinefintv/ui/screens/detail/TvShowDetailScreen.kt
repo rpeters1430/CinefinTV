@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -77,9 +78,14 @@ private fun TvShowDetailContent(
     onOpenShow: (String) -> Unit,
 ) {
     val playFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { playFocusRequester.requestFocus() }
+    val listState = rememberLazyListState()
+    LaunchedEffect(Unit) {
+        playFocusRequester.requestFocus()
+        listState.scrollToItem(0)
+    }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 48.dp),
     ) {
