@@ -77,7 +77,7 @@ fun TvShowLibraryScreen(
                     }
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
+                        columns = GridCells.Fixed(4),
                         contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
                         horizontalArrangement = Arrangement.spacedBy(24.dp),
                         verticalArrangement = Arrangement.spacedBy(32.dp),
@@ -90,7 +90,7 @@ fun TvShowLibraryScreen(
                                     title = item.title,
                                     subtitle = item.subtitle,
                                     imageUrl = item.imageUrl,
-                                    aspectRatio = 16f / 9f,
+                                    aspectRatio = 2f / 3f,
                                     watchStatus = item.watchStatus,
                                     playbackProgress = item.playbackProgress,
                                     unwatchedCount = item.unwatchedCount,

@@ -9,19 +9,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -29,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -38,6 +43,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.WatchStatus
+import kotlinx.coroutines.launch
 
 @Composable
 fun SeasonScreen(
@@ -70,6 +76,8 @@ private fun SeasonContent(
     episodes: List<EpisodeModel>,
     onOpenEpisode: (String) -> Unit,
 ) {
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
     val primaryActionFocusRequester = remember { FocusRequester() }
     val episodeGridEntryRequester = remember { FocusRequester() }
     val nextEpisodeId = remember(episodes) {
@@ -81,118 +89,147 @@ private fun SeasonContent(
     var lastFocusedEpisodeId by rememberSaveable { mutableStateOf<String?>(episodes.firstOrNull()?.id) }
 
     LaunchedEffect(season.id) {
+        listState.scrollToItem(0)
         primaryActionFocusRequester.requestFocus()
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        DetailHeroBox(backdropUrl = season.backdropUrl) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth()
-                    .padding(horizontal = 56.dp, vertical = 28.dp),
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
-                verticalAlignment = Alignment.Bottom,
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 48.dp),
+    ) {
+        item {
+            DetailHeroBox(
+                backdropUrl = season.backdropUrl,
+                modifier = Modifier.onFocusChanged { 
+                    if (it.hasFocus && listState.firstVisibleItemIndex == 0) {
+                        scope.launch { listState.animateScrollToItem(0) }
+                    }
+                },
             ) {
-                DetailPosterArt(
-                    imageUrl = season.posterUrl,
-                    title = season.title,
+                Row(
                     modifier = Modifier
-                        .width(172.dp)
-                        .height(258.dp),
-                )
-                DetailGlassPanel(
-                    modifier = Modifier.fillMaxWidth(0.66f)
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .padding(horizontal = 56.dp, vertical = 28.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    verticalAlignment = Alignment.Bottom,
                 ) {
-                    DetailChipRow(
-                        labels = buildList {
-                            add("Season")
-                            add("${episodes.size} episodes")
-                            if (nextEpisodeId != null) add("Ready to continue")
+                    DetailPosterArt(
+                        imageUrl = season.posterUrl,
+                        title = season.title,
+                        modifier = Modifier
+                            .width(172.dp)
+                            .height(258.dp),
+                    )
+                    DetailGlassPanel(
+                        modifier = Modifier.fillMaxWidth(0.66f)
+                    ) {
+                        DetailChipRow(
+                            labels = buildList {
+                                add("Season")
+                                add("${episodes.size} episodes")
+                                if (nextEpisodeId != null) add("Ready to continue")
+                            }
+                        )
+                        season.seriesName?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.secondary,
+                            )
                         }
-                    )
-                    season.seriesName?.let {
                         Text(
-                            text = it,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.secondary,
+                            text = season.title,
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.Bold,
                         )
-                    }
-                    Text(
-                        text = season.title,
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    season.overview?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 3,
-                        )
-                    }
-                    resumableEpisode?.playbackProgress?.let {
-                        DetailProgressLabel(progress = it)
-                    }
-                    if (nextEpisodeId != null) {
-                        DetailActionRow(
-                            primaryLabel = if (resumableEpisode != null) "Resume Episode" else "Continue Watching",
-                            onPrimaryClick = {
-                                onOpenEpisode(resumableEpisode?.id ?: nextEpisodeId)
-                            },
-                            secondaryLabel = episodes.firstOrNull()?.let { "Start From Episode 1" },
-                            onSecondaryClick = episodes.firstOrNull()?.let { firstEpisode ->
-                                { onOpenEpisode(firstEpisode.id) }
-                            },
-                            primaryFocusRequester = primaryActionFocusRequester,
-                            primaryDownFocusRequester = if (episodes.isNotEmpty()) episodeGridEntryRequester else null,
-                        )
+                        season.overview?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 3,
+                            )
+                        }
+                        resumableEpisode?.playbackProgress?.let {
+                            DetailProgressLabel(progress = it)
+                        }
+                        if (nextEpisodeId != null) {
+                            DetailActionRow(
+                                primaryLabel = if (resumableEpisode != null) "Resume Episode" else "Continue Watching",
+                                onPrimaryClick = {
+                                    onOpenEpisode(resumableEpisode?.id ?: nextEpisodeId)
+                                },
+                                secondaryLabel = episodes.firstOrNull()?.let { "Start From Episode 1" },
+                                onSecondaryClick = episodes.firstOrNull()?.let { firstEpisode ->
+                                    { onOpenEpisode(firstEpisode.id) }
+                                },
+                                primaryFocusRequester = primaryActionFocusRequester,
+                                primaryDownFocusRequester = if (episodes.isNotEmpty()) episodeGridEntryRequester else null,
+                            )
+                        }
                     }
                 }
             }
         }
 
-        DetailContentSection(
-            title = "Episodes",
-            eyebrow = "${episodes.count { !it.isWatched }} unwatched",
-            modifier = Modifier.padding(top = 0.dp),
-        ) {}
+        item {
+            DetailContentSection(
+                title = "Episodes",
+                eyebrow = "${episodes.count { !it.isWatched }} unwatched",
+                modifier = Modifier.padding(top = 0.dp),
+            ) {}
+        }
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            contentPadding = PaddingValues(start = 48.dp, end = 48.dp, bottom = 48.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-        ) {
-            items(episodes) { episode ->
-                TvMediaCard(
-                    title = episode.title,
-                    subtitle = episode.episodeCode ?: episode.number?.let { "Episode $it" },
-                    imageUrl = episode.imageUrl,
-                    aspectRatio = 16f / 9f,
-                    modifier = Modifier
-                        .then(
-                            if (episode.id == lastFocusedEpisodeId) Modifier.focusRequester(episodeGridEntryRequester) else Modifier
+        // Chunk episodes into rows for LazyColumn to simulate a grid while keeping unified scrolling
+        val columns = 4
+        val rows = (episodes.size + columns - 1) / columns
+        items(rows) { rowIndex ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 48.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                for (columnIndex in 0 until columns) {
+                    val episodeIndex = rowIndex * columns + columnIndex
+                    if (episodeIndex < episodes.size) {
+                        val episode = episodes[episodeIndex]
+                        TvMediaCard(
+                            title = episode.title,
+                            subtitle = episode.episodeCode ?: episode.number?.let { "Episode $it" },
+                            imageUrl = episode.imageUrl,
+                            aspectRatio = 16f / 9f,
+                            modifier = Modifier
+                                .weight(1f)
+                                .then(
+                                    if (episode.id == lastFocusedEpisodeId) Modifier.focusRequester(episodeGridEntryRequester) else Modifier
+                                )
+                                .then(
+                                    if (episode.id == episodes.getOrNull(0)?.id) {
+                                        Modifier.focusProperties { up = primaryActionFocusRequester }
+                                    } else if (episodeIndex < columns) {
+                                        // Ensure first row focuses up correctly
+                                        Modifier.focusProperties { up = primaryActionFocusRequester }
+                                    } else {
+                                        Modifier
+                                    }
+                                ),
+                            watchStatus = when {
+                                episode.isWatched -> WatchStatus.WATCHED
+                                (episode.playbackProgress ?: 0f) > 0f -> WatchStatus.IN_PROGRESS
+                                else -> WatchStatus.NONE
+                            },
+                            playbackProgress = episode.playbackProgress,
+                            onFocus = { lastFocusedEpisodeId = episode.id },
+                            onClick = { onOpenEpisode(episode.id) },
                         )
-                        .then(
-                            if (episode.id == episodes.firstOrNull()?.id) {
-                                Modifier.focusProperties { up = primaryActionFocusRequester }
-                            } else {
-                                Modifier
-                            }
-                        ),
-                    watchStatus = when {
-                        episode.isWatched -> WatchStatus.WATCHED
-                        (episode.playbackProgress ?: 0f) > 0f -> WatchStatus.IN_PROGRESS
-                        else -> WatchStatus.NONE
-                    },
-                    playbackProgress = episode.playbackProgress,
-                    onFocus = { lastFocusedEpisodeId = episode.id },
-                    onClick = { onOpenEpisode(episode.id) },
-                )
+                    } else {
+                        // Spacer for empty grid cells in the last row
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
             }
         }
     }

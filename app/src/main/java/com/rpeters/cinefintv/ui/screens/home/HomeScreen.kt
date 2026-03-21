@@ -336,7 +336,7 @@ private fun HeroItem(
                 )
             }
             Text(
-                text = item.description ?: "Browse featured titles from your library.",
+                text = item.mediaQuality ?: item.description ?: "Featured title from your library",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 4,

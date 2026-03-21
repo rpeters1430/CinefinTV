@@ -72,6 +72,13 @@ class SeasonViewModel @Inject constructor(
 
             if (seasonResult is ApiResult.Success) {
                 val seasonDto = seasonResult.data
+                val seriesDto = seasonDto.seriesId?.let { 
+                    when (val seriesResult = repositories.media.getSeriesDetails(it.toString())) {
+                        is ApiResult.Success -> seriesResult.data
+                        else -> null
+                    }
+                }
+                
                 val episodes = if (episodesResult is ApiResult.Success) {
                     episodesResult.data.map { it.toEpisodeModel() }
                 } else {
@@ -79,7 +86,7 @@ class SeasonViewModel @Inject constructor(
                 }
 
                 _uiState.value = SeasonUiState.Content(
-                    season = seasonDto.toSeasonDetailModel(),
+                    season = seasonDto.toSeasonDetailModel(seriesDto),
                     episodes = episodes
                 )
             } else if (seasonResult is ApiResult.Error) {
@@ -88,14 +95,14 @@ class SeasonViewModel @Inject constructor(
         }
     }
 
-    private fun BaseItemDto.toSeasonDetailModel(): SeasonDetailModel {
+    private fun BaseItemDto.toSeasonDetailModel(seriesDto: BaseItemDto?): SeasonDetailModel {
         return SeasonDetailModel(
             id = id.toString(),
             title = getDisplayTitle(),
             seriesName = seriesName,
             overview = overview,
             posterUrl = repositories.stream.getPosterCardImageUrl(this),
-            backdropUrl = repositories.stream.getBackdropUrl(this)
+            backdropUrl = repositories.stream.getBackdropUrlWithFallback(this, seriesDto)
         )
     }
 

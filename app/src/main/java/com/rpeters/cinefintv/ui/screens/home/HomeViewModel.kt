@@ -10,6 +10,7 @@ import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getEpisodeCardDetailLine
 import com.rpeters.cinefintv.utils.getEpisodeCode
 import com.rpeters.cinefintv.utils.getFormattedDuration
+import com.rpeters.cinefintv.utils.getMediaQualityLabel
 import com.rpeters.cinefintv.utils.getSeriesCardDetailLine
 import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
 import com.rpeters.cinefintv.utils.getWatchedPercentage
@@ -45,6 +46,7 @@ data class HomeCardModel(
     val watchStatus: WatchStatus = WatchStatus.NONE,
     val playbackProgress: Float? = null,
     val unwatchedCount: Int? = null,
+    val mediaQuality: String? = null,
 )
 
 data class HomeSectionModel(
@@ -99,7 +101,21 @@ class HomeViewModel @Inject constructor(
             val nextEpisodesSectionItems = buildNextEpisodeSectionItems(continueWatchingResult)
 
             val sections = buildList {
-                addSection("My Libraries", results[0])
+                val librariesResult = results[0]
+                if (librariesResult is ApiResult.Success) {
+                    val filteredLibraries = librariesResult.data.filter { 
+                        it.collectionType?.toString() != "playlists" && it.name?.contains("Playlists", ignoreCase = true) != true
+                    }
+                    if (filteredLibraries.isNotEmpty()) {
+                        add(
+                            HomeSectionModel(
+                                title = "My Libraries",
+                                items = filteredLibraries.take(12).map(::toCardModel),
+                            )
+                        )
+                    }
+                }
+                
                 addSection("Continue Watching", results[1])
                 if (nextEpisodesSectionItems.isNotEmpty()) {
                     add(HomeSectionModel(title = "Next Episodes", items = nextEpisodesSectionItems))
@@ -190,6 +206,7 @@ class HomeViewModel @Inject constructor(
         val unwatchedCount = if (item.isSeries()) item.getUnwatchedEpisodeCount().takeIf { it > 0 } else null
 
         val subtitle = when {
+            item.type == org.jellyfin.sdk.model.api.BaseItemKind.COLLECTION_FOLDER -> null
             isResumable -> {
                 val pct = watchedPercentage
                 val ticks = item.runTimeTicks
@@ -218,8 +235,6 @@ class HomeViewModel @Inject constructor(
             item.getYear() != null -> item.getYear().toString()
             item.getFormattedDuration() != null -> item.getFormattedDuration()
             else -> item.type.toString().replace('_', ' ')
-        }.let { subtitle ->
-            if (subtitle?.contains("Collections", ignoreCase = true) == true) null else subtitle
         }
 
         return HomeCardModel(
@@ -240,6 +255,7 @@ class HomeViewModel @Inject constructor(
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,
             unwatchedCount = unwatchedCount,
+            mediaQuality = item.getMediaQualityLabel(),
         )
     }
 }

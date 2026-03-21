@@ -86,6 +86,7 @@ private fun MovieDetailContent(
     var lastFocusedSimilarId by rememberSaveable { mutableStateOf<String?>(similarMovies.firstOrNull()?.id) }
 
     LaunchedEffect(movie.id) {
+        // Anchor to top on load
         listState.scrollToItem(0)
         primaryActionFocusRequester.requestFocus()
     }
@@ -98,7 +99,12 @@ private fun MovieDetailContent(
         item {
             DetailHeroBox(
                 backdropUrl = movie.backdropUrl,
-                modifier = Modifier.onFocusChanged { if (it.hasFocus) scope.launch { listState.scrollToItem(0) } },
+                modifier = Modifier.onFocusChanged { 
+                    if (it.hasFocus && listState.firstVisibleItemIndex == 0) {
+                        // Keep top visible when buttons in hero are focused
+                        scope.launch { listState.animateScrollToItem(0) }
+                    }
+                },
             ) {
                 Row(
                     modifier = Modifier
@@ -226,8 +232,8 @@ private fun MovieDetailContent(
                             TvMediaCard(
                                 title = item.title,
                                 imageUrl = item.imageUrl,
-                                aspectRatio = 16f / 9f,
-                                cardWidth = 200.dp,
+                                aspectRatio = 2f / 3f,
+                                cardWidth = 140.dp,
                                 modifier = Modifier
                                     .then(
                                         if (item.id == lastFocusedSimilarId) {

@@ -358,6 +358,7 @@ fun DetailContentSection(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Box(

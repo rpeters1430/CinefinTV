@@ -93,6 +93,7 @@ private fun TvShowDetailContent(
     var lastFocusedSimilarId by rememberSaveable { mutableStateOf<String?>(similarShows.firstOrNull()?.id) }
 
     LaunchedEffect(show.id) {
+        // Anchor to top on load
         listState.scrollToItem(0)
         primaryActionFocusRequester.requestFocus()
     }
@@ -105,7 +106,12 @@ private fun TvShowDetailContent(
         item {
             DetailHeroBox(
                 backdropUrl = show.backdropUrl,
-                modifier = Modifier.onFocusChanged { if (it.hasFocus) scope.launch { listState.scrollToItem(0) } },
+                modifier = Modifier.onFocusChanged { 
+                    if (it.hasFocus && listState.firstVisibleItemIndex == 0) {
+                        // Keep top visible when buttons in hero are focused
+                        scope.launch { listState.animateScrollToItem(0) }
+                    }
+                },
             ) {
                 Row(
                     modifier = Modifier
@@ -201,8 +207,8 @@ private fun TvShowDetailContent(
                                 title = season.title,
                                 subtitle = season.episodeCount?.let { "$it Episodes" },
                                 imageUrl = season.imageUrl,
-                                aspectRatio = 16f / 9f,
-                                cardWidth = 200.dp,
+                                aspectRatio = 2f / 3f,
+                                cardWidth = 140.dp,
                                 unwatchedCount = season.unwatchedCount,
                                 modifier = Modifier
                                     .then(
@@ -278,8 +284,8 @@ private fun TvShowDetailContent(
                             TvMediaCard(
                                 title = item.title,
                                 imageUrl = item.imageUrl,
-                                aspectRatio = 16f / 9f,
-                                cardWidth = 200.dp,
+                                aspectRatio = 2f / 3f,
+                                cardWidth = 140.dp,
                                 modifier = Modifier
                                     .then(
                                         if (item.id == lastFocusedSimilarId) {
