@@ -45,11 +45,22 @@ enum class ResumePlaybackMode(val label: String) {
     NEVER("Always start from beginning"),
 }
 
+/**
+ * Seek duration options for the skip forward/backward buttons.
+ */
+enum class SeekDuration(val label: String, val durationMs: Long) {
+    FIVE_SECONDS("5 seconds", 5_000L),
+    TEN_SECONDS("10 seconds", 10_000L),
+    FIFTEEN_SECONDS("15 seconds", 15_000L),
+    THIRTY_SECONDS("30 seconds", 30_000L),
+}
+
 data class PlaybackPreferences(
     val transcodingQuality: TranscodingQuality,
     val audioChannels: AudioChannelPreference,
     val autoPlayNextEpisode: Boolean,
     val resumePlaybackMode: ResumePlaybackMode,
+    val seekDuration: SeekDuration,
 ) {
     companion object {
         val DEFAULT = PlaybackPreferences(
@@ -57,6 +68,7 @@ data class PlaybackPreferences(
             audioChannels = AudioChannelPreference.AUTO,
             autoPlayNextEpisode = true, // enabled by default
             resumePlaybackMode = ResumePlaybackMode.ALWAYS, // always resume by default
+            seekDuration = SeekDuration.TEN_SECONDS, // 10 seconds by default
         )
     }
 }
@@ -91,6 +103,9 @@ class PlaybackPreferencesRepository @Inject constructor(
                 resumePlaybackMode = runCatching {
                     ResumePlaybackMode.valueOf(prefs[PreferencesKeys.RESUME_PLAYBACK_MODE] ?: "")
                 }.getOrDefault(PlaybackPreferences.DEFAULT.resumePlaybackMode),
+                seekDuration = runCatching {
+                    SeekDuration.valueOf(prefs[PreferencesKeys.SEEK_DURATION] ?: "")
+                }.getOrDefault(PlaybackPreferences.DEFAULT.seekDuration),
             )
         }
 
@@ -110,11 +125,16 @@ class PlaybackPreferencesRepository @Inject constructor(
         dataStore.edit { it[PreferencesKeys.RESUME_PLAYBACK_MODE] = mode.name }
     }
 
+    suspend fun setSeekDuration(seekDuration: SeekDuration) {
+        dataStore.edit { it[PreferencesKeys.SEEK_DURATION] = seekDuration.name }
+    }
+
     private object PreferencesKeys {
         val TRANSCODING_QUALITY = stringPreferencesKey("transcoding_quality")
         val AUDIO_CHANNELS = stringPreferencesKey("audio_channels")
         val AUTO_PLAY_NEXT_EPISODE = booleanPreferencesKey("auto_play_next_episode")
         val RESUME_PLAYBACK_MODE = stringPreferencesKey("resume_playback_mode")
+        val SEEK_DURATION = stringPreferencesKey("seek_duration")
     }
 
     companion object {

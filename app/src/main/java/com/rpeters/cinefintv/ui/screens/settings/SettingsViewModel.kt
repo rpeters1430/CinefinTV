@@ -14,6 +14,7 @@ import com.rpeters.cinefintv.data.preferences.LibraryActionsPreferencesRepositor
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferences
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.ResumePlaybackMode
+import com.rpeters.cinefintv.data.preferences.SeekDuration
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferencesRepository
 import com.rpeters.cinefintv.data.preferences.SubtitleBackground
@@ -138,6 +139,11 @@ class SettingsViewModel @Inject constructor(
     fun setAudioChannels(preference: AudioChannelPreference) {
         updatePreference { playbackPreferencesRepository.setAudioChannels(preference) }
         _uiState.update { it.copy(playback = it.playback.copy(audioChannels = preference)) }
+    }
+
+    fun setSeekDuration(seekDuration: SeekDuration) {
+        updatePreference { playbackPreferencesRepository.setSeekDuration(seekDuration) }
+        _uiState.update { it.copy(playback = it.playback.copy(seekDuration = seekDuration)) }
     }
 
     fun setSubtitleTextSize(textSize: SubtitleTextSize) {

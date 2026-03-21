@@ -33,11 +33,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Forward10
+import androidx.compose.material.icons.filled.Forward30
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.material.icons.filled.Replay30
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -273,8 +275,9 @@ internal fun PlayerControls(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     ActionIconButton(
-                        icon = Icons.Default.Replay10,
-                        onClick = { onInteract(); player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L)) },
+                        // Replay10 for ≤15s, Replay30 for 30s (no Replay15/Replay5 icons in Material)
+                        icon = if (uiState.seekDurationMs >= 30_000L) Icons.Default.Replay30 else Icons.Default.Replay10,
+                        onClick = { onInteract(); player.seekTo((player.currentPosition - uiState.seekDurationMs).coerceAtLeast(0L)) },
                         modifier = Modifier
                             .align(Alignment.CenterStart)
                             .focusRequester(skipBackFocusRequester)
@@ -306,8 +309,9 @@ internal fun PlayerControls(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         ActionIconButton(
-                            icon = Icons.Default.Forward10,
-                            onClick = { onInteract(); player.seekTo((player.currentPosition + 10_000L).coerceIn(0L, duration)) },
+                            // Forward10 for ≤15s, Forward30 for 30s (no Forward15/Forward5 icons in Material)
+                            icon = if (uiState.seekDurationMs >= 30_000L) Icons.Default.Forward30 else Icons.Default.Forward10,
+                            onClick = { onInteract(); player.seekTo((player.currentPosition + uiState.seekDurationMs).coerceIn(0L, duration)) },
                             modifier = Modifier
                                 .focusRequester(skipForwardFocusRequester)
                                 .focusProperties {

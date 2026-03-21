@@ -60,6 +60,7 @@ import com.rpeters.cinefintv.data.preferences.AccentColor
 import com.rpeters.cinefintv.data.preferences.AudioChannelPreference
 import com.rpeters.cinefintv.data.preferences.ContrastLevel
 import com.rpeters.cinefintv.data.preferences.ResumePlaybackMode
+import com.rpeters.cinefintv.data.preferences.SeekDuration
 import com.rpeters.cinefintv.data.preferences.SubtitleBackground
 import com.rpeters.cinefintv.data.preferences.SubtitleFont
 import com.rpeters.cinefintv.data.preferences.SubtitleTextSize
@@ -76,6 +77,7 @@ private enum class SettingsChoiceDialog {
     RESUME_PLAYBACK,
     STREAMING_QUALITY,
     AUDIO_CHANNELS,
+    SEEK_DURATION,
     SUBTITLE_TEXT_SIZE,
     SUBTITLE_FONT,
     SUBTITLE_BACKGROUND,
@@ -183,6 +185,15 @@ fun SettingsScreen(
             labelFor = { it.label },
             onDismissRequest = { activeDialog = null },
             onOptionSelected = viewModel::setAudioChannels,
+        )
+        SettingsChoiceDialog.SEEK_DURATION -> CinefinOptionDialog(
+            title = "Skip duration",
+            supportingText = "Duration for the skip forward and backward buttons.",
+            options = SeekDuration.entries,
+            selected = uiState.playback.seekDuration,
+            labelFor = { it.label },
+            onDismissRequest = { activeDialog = null },
+            onOptionSelected = viewModel::setSeekDuration,
         )
         SettingsChoiceDialog.SUBTITLE_TEXT_SIZE -> CinefinOptionDialog(
             title = "Subtitle text size",
@@ -347,6 +358,13 @@ fun SettingsScreen(
                                 description = "Limit maximum playback channel count.",
                                 selectedLabel = uiState.playback.audioChannels.label,
                                 onClick = { activeDialog = SettingsChoiceDialog.AUDIO_CHANNELS },
+                            )
+                            SettingsChoiceRow(
+                                icon = Icons.Default.PlayArrow,
+                                title = "Skip duration",
+                                description = "Duration for the skip forward and backward buttons.",
+                                selectedLabel = uiState.playback.seekDuration.label,
+                                onClick = { activeDialog = SettingsChoiceDialog.SEEK_DURATION },
                             )
                         }
                         SettingsCategory.SUBTITLES -> SettingsSectionCard(

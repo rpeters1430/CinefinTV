@@ -51,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -58,6 +59,9 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
+import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
+import com.rpeters.cinefintv.data.preferences.SubtitleBackground
+import com.rpeters.cinefintv.data.preferences.SubtitleFont
 import com.rpeters.cinefintv.ui.components.CinefinDialogActions
 import com.rpeters.cinefintv.ui.components.CinefinDialogSurface
 import com.rpeters.cinefintv.ui.player.PlayerConstants.CONTROLS_HIDE_DELAY_MS
@@ -295,6 +299,7 @@ fun PlayerScreen(
                         .focusable()
                 ) {
                 // PlayerView (full screen)
+                val subtitleAppearance = uiState.subtitleAppearance
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
                     factory = { ctx ->
@@ -306,7 +311,10 @@ fun PlayerScreen(
                             isFocusableInTouchMode = false
                         }
                     },
-                    update = { pv -> pv.player = exoPlayer },
+                    update = { pv ->
+                        pv.player = exoPlayer
+                        pv.subtitleView?.applySubtitleAppearance(subtitleAppearance)
+                    },
                 )
 
                 PlayerControls(
@@ -563,4 +571,36 @@ private fun ResumeDialog(
             )
         }
     }
+}
+
+@androidx.media3.common.util.UnstableApi
+private fun androidx.media3.ui.SubtitleView.applySubtitleAppearance(
+    prefs: SubtitleAppearancePreferences,
+) {
+    val bgColor = when (prefs.background) {
+        SubtitleBackground.NONE -> android.graphics.Color.TRANSPARENT
+        SubtitleBackground.BLACK -> android.graphics.Color.BLACK
+        SubtitleBackground.SEMI_TRANSPARENT -> android.graphics.Color.argb(128, 0, 0, 0)
+    }
+    val typeface = when (prefs.font) {
+        SubtitleFont.SANS_SERIF -> android.graphics.Typeface.SANS_SERIF
+        SubtitleFont.SERIF -> android.graphics.Typeface.SERIF
+        SubtitleFont.MONOSPACE -> android.graphics.Typeface.MONOSPACE
+        SubtitleFont.DEFAULT,
+        SubtitleFont.ROBOTO,
+        SubtitleFont.ROBOTO_FLEX,
+        SubtitleFont.ROBOTO_SERIF,
+        SubtitleFont.ROBOTO_MONO -> android.graphics.Typeface.DEFAULT
+    }
+    setStyle(
+        CaptionStyleCompat(
+            android.graphics.Color.WHITE,
+            bgColor,
+            android.graphics.Color.TRANSPARENT,
+            CaptionStyleCompat.EDGE_TYPE_DROP_SHADOW,
+            android.graphics.Color.BLACK,
+            typeface,
+        )
+    )
+    setFixedTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, prefs.textSize.sizeSp)
 }

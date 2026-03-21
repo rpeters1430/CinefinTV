@@ -1,5 +1,6 @@
 package com.rpeters.cinefintv.ui.player
 
+import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 
 import kotlinx.serialization.SerialName
@@ -52,7 +53,9 @@ data class PlayerUiState(
     val selectedSubtitleTrack: TrackOption? = null,
     val transcodingQuality: TranscodingQuality = TranscodingQuality.AUTO,
     val playbackSpeed: Float = 1.0f,
+    val seekDurationMs: Long = 10_000L,
     val isHdrPlayback: Boolean = false,
+    val subtitleAppearance: SubtitleAppearancePreferences = SubtitleAppearancePreferences.DEFAULT,
     val chapters: List<ChapterMarker> = emptyList(),
     val introSkipRange: SkipRange? = null,
     val creditsSkipRange: SkipRange? = null,
