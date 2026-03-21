@@ -117,9 +117,8 @@ private fun TvShowDetailContent(
         item {
             DetailHeroBox(
                 backdropUrl = show.backdropUrl,
-                modifier = Modifier.onFocusChanged { 
-                    if (it.hasFocus && listState.firstVisibleItemIndex == 0) {
-                        // Keep top visible when buttons in hero are focused
+                modifier = Modifier.onFocusChanged {
+                    if (it.hasFocus) {
                         scope.launch { listState.animateScrollToItem(0) }
                     }
                 },
