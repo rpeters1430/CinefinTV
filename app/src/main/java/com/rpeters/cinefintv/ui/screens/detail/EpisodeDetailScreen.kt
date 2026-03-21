@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -77,7 +78,7 @@ private fun EpisodeDetailContent(
     var lastFocusedChapterId by rememberSaveable { mutableStateOf<String?>(chapters.firstOrNull()?.id) }
 
     LaunchedEffect(episode.id) {
-        // Request initial focus on the top anchor
+        withFrameMillis {}   // wait one frame for layout to attach the anchor node
         anchorFocusRequester.requestFocus()
     }
 
