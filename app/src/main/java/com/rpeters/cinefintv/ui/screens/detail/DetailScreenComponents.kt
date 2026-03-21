@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -424,10 +425,172 @@ fun DetailAnchor(
             .size(1.dp)
             .focusRequester(focusRequester)
             .onFocusChanged { if (it.isFocused) onFocused() }
-            .focusProperties { 
+            .focusProperties {
                 // Don't allow manual navigation to this anchor
-                canFocus = true 
+                canFocus = true
             }
             .background(Color.Transparent)
     )
+}
+
+/**
+ * Full-width horizontal episode row for season episode lists.
+ * Left: 16:9 thumbnail with watch status overlay and progress bar.
+ * Right: episode code + duration, title, overview.
+ */
+@Composable
+fun EpisodeListRow(
+    episode: com.rpeters.cinefintv.ui.screens.detail.EpisodeModel,
+    modifier: Modifier = Modifier,
+    onFocus: () -> Unit = {},
+    onClick: () -> Unit,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    val spacing = LocalCinefinSpacing.current
+    var isFocused by remember { mutableStateOf(false) }
+
+    androidx.tv.material3.Card(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 48.dp, vertical = 6.dp)
+            .onFocusChanged {
+                val focused = it.isFocused || it.hasFocus
+                if (focused != isFocused) {
+                    isFocused = focused
+                    if (focused) onFocus()
+                }
+            },
+        scale = androidx.tv.material3.CardDefaults.scale(focusedScale = 1.02f),
+        border = androidx.tv.material3.CardDefaults.border(
+            focusedBorder = androidx.tv.material3.Border(
+                border = androidx.compose.foundation.BorderStroke(2.dp, Color.White),
+            ),
+        ),
+        shape = androidx.tv.material3.CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),
+        colors = androidx.tv.material3.CardDefaults.colors(
+            containerColor = if (isFocused) expressiveColors.accentSurface else expressiveColors.chromeSurface.copy(alpha = 0.45f),
+            focusedContainerColor = expressiveColors.accentSurface,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(96.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Thumbnail
+            Box(
+                modifier = Modifier
+                    .width(160.dp)
+                    .fillMaxHeight()
+            ) {
+                if (episode.imageUrl != null) {
+                    AsyncImage(
+                        model = coil3.request.ImageRequest.Builder(LocalContext.current)
+                            .data(episode.imageUrl)
+                            .crossfade(true)
+                            .size(320, 180)
+                            .build(),
+                        contentDescription = episode.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(expressiveColors.accentSurface),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = episode.number?.toString() ?: "?",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                // Watch status overlay
+                val watchStatus = when {
+                    episode.isWatched -> com.rpeters.cinefintv.ui.components.WatchStatus.WATCHED
+                    (episode.playbackProgress ?: 0f) > 0f -> com.rpeters.cinefintv.ui.components.WatchStatus.IN_PROGRESS
+                    else -> com.rpeters.cinefintv.ui.components.WatchStatus.NONE
+                }
+                if (watchStatus == com.rpeters.cinefintv.ui.components.WatchStatus.WATCHED) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp)
+                            .size(24.dp)
+                            .background(Color(0xFF2E7D32).copy(alpha = 0.95f), RoundedCornerShape(999.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "✓",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
+                }
+                // Progress bar
+                val progress = episode.playbackProgress ?: 0f
+                if (progress > 0f && !episode.isWatched) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .background(Color.Black.copy(alpha = 0.5f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+                    }
+                }
+            }
+
+            // Metadata
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(start = 16.dp, end = 24.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.Start,
+            ) {
+                // Episode code + duration row
+                val metaLine = listOfNotNull(episode.episodeCode, episode.duration).joinToString("  •  ")
+                if (metaLine.isNotBlank()) {
+                    Text(
+                        text = metaLine,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = episode.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    color = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+                episode.overview?.let {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
 }
