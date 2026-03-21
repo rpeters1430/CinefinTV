@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.MediaStreamType
 import javax.inject.Inject
 
 data class EpisodeDetailModel(
@@ -42,12 +43,33 @@ data class ChapterModel(
     val imageUrl: String?,
 )
 
+data class VideoStreamInfo(
+    val resolution: String?,
+    val codec: String?,
+    val hdr: String?,
+    val bitrateKbps: Int?,
+)
+
+data class AudioStreamInfo(
+    val codec: String,
+    val channels: String?,
+    val language: String?,
+    val isDefault: Boolean,
+)
+
+data class MediaDetailModel(
+    val container: String?,
+    val video: VideoStreamInfo?,
+    val audioStreams: List<AudioStreamInfo>,
+)
+
 sealed class EpisodeDetailUiState {
     data object Loading : EpisodeDetailUiState()
     data class Error(val message: String) : EpisodeDetailUiState()
     data class Content(
         val episode: EpisodeDetailModel,
         val chapters: List<ChapterModel>,
+        val mediaDetail: MediaDetailModel?,
     ) : EpisodeDetailUiState()
 }
 
@@ -94,7 +116,8 @@ class EpisodeDetailViewModel @Inject constructor(
 
                 _uiState.value = EpisodeDetailUiState.Content(
                     episode = episodeDto.toEpisodeDetailModel(),
-                    chapters = chapters
+                    chapters = chapters,
+                    mediaDetail = episodeDto.toMediaDetailModel(),
                 )
             } else if (episodeResult is ApiResult.Error) {
                 _uiState.value = EpisodeDetailUiState.Error(episodeResult.message)
@@ -116,6 +139,87 @@ class EpisodeDetailViewModel @Inject constructor(
             backdropUrl = repositories.stream.getBackdropUrl(this),
             isWatched = isWatched(),
             playbackProgress = if (canResume()) (getWatchedPercentage() / 100.0).toFloat() else null,
+        )
+    }
+
+    private fun BaseItemDto.toMediaDetailModel(): MediaDetailModel? {
+        val source = mediaSources?.firstOrNull() ?: return null
+        val streams = source.mediaStreams ?: return null
+
+        val videoStream = streams.firstOrNull { it.type == MediaStreamType.VIDEO }
+        val audioStreams = streams.filter { it.type == MediaStreamType.AUDIO }
+
+        val video = videoStream?.let { vs ->
+            val width = vs.width ?: 0
+            val height = vs.height ?: 0
+            val resolution = when {
+                width >= 3840 || height >= 2160 -> "4K"
+                width >= 1920 || height >= 1080 -> "1080p"
+                width >= 1280 || height >= 720 -> "720p"
+                width > 0 -> "${height}p"
+                else -> null
+            }
+            val codecRaw = vs.codec?.uppercase()
+            val codec = when (codecRaw) {
+                "HEVC", "H265" -> "HEVC"
+                "AVC", "H264" -> "AVC"
+                "VP9" -> "VP9"
+                "AV1" -> "AV1"
+                else -> null
+            }
+            val videoRange = vs.videoRange?.toString()?.lowercase()
+            val videoRangeType = vs.videoRangeType?.toString()?.lowercase()
+            val hdr = when {
+                videoRange?.contains("dolby vision") == true || videoRangeType?.contains("dv") == true -> "Dolby Vision"
+                videoRange?.contains("hdr10+") == true -> "HDR10+"
+                videoRange?.contains("hdr10") == true -> "HDR10"
+                videoRange?.contains("hdr") == true || videoRangeType?.contains("hdr") == true -> "HDR"
+                else -> null
+            }
+            VideoStreamInfo(
+                resolution = resolution,
+                codec = codec,
+                hdr = hdr,
+                bitrateKbps = vs.bitRate?.div(1000),
+            )
+        }
+
+        val audios = audioStreams.map { ast ->
+            val codecRaw = ast.codec?.uppercase() ?: "AUDIO"
+            val codecDisplay = when {
+                ast.profile?.lowercase()?.contains("atmos") == true -> "TrueHD Atmos"
+                else -> when (codecRaw) {
+                    "EAC3", "E-AC3" -> "EAC3"
+                    "AC3" -> "AC3"
+                    "TRUEHD" -> "TrueHD"
+                    "DTS" -> "DTS"
+                    "AAC" -> "AAC"
+                    "FLAC" -> "FLAC"
+                    "MP3" -> "MP3"
+                    "OPUS" -> "Opus"
+                    "VORBIS" -> "Vorbis"
+                    else -> codecRaw
+                }
+            }
+            val channels = when (ast.channels) {
+                2 -> "Stereo"
+                6 -> "5.1"
+                8 -> "7.1"
+                else -> ast.channels?.let { "$it ch" }
+            }
+            AudioStreamInfo(
+                codec = codecDisplay,
+                channels = channels,
+                language = ast.language?.uppercase()?.take(3),
+                isDefault = ast.isDefault == true,
+            )
+        }.sortedByDescending { it.isDefault }
+
+        if (video == null && audios.isEmpty()) return null
+        return MediaDetailModel(
+            container = source.container?.uppercase(),
+            video = video,
+            audioStreams = audios,
         )
     }
 }
