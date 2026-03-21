@@ -58,6 +58,7 @@ fun EpisodeDetailScreen(
             is EpisodeDetailUiState.Content -> EpisodeDetailContent(
                 episode = state.episode,
                 chapters = state.chapters,
+                mediaDetail = state.mediaDetail,
                 onPlayEpisode = onPlayEpisode,
             )
         }
@@ -68,6 +69,7 @@ fun EpisodeDetailScreen(
 private fun EpisodeDetailContent(
     episode: EpisodeDetailModel,
     chapters: List<ChapterModel>,
+    mediaDetail: MediaDetailModel?,
     onPlayEpisode: (String, Long?) -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -190,6 +192,43 @@ private fun EpisodeDetailContent(
                                     ),
                                 onFocus = { lastFocusedChapterId = chapter.id },
                                 onClick = { onPlayEpisode(episode.id, chapter.positionMs) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (mediaDetail != null && (mediaDetail.video != null || mediaDetail.audioStreams.isNotEmpty())) {
+            item {
+                DetailContentSection(title = "Media Details") {
+                    // Video row
+                    mediaDetail.video?.let { video ->
+                        val videoChips = listOfNotNull(
+                            video.resolution,
+                            video.codec,
+                            video.hdr,
+                            video.bitrateKbps?.let { "${it} kbps" },
+                            mediaDetail.container,
+                        )
+                        if (videoChips.isNotEmpty()) {
+                            DetailChipRow(
+                                labels = videoChips,
+                                modifier = Modifier.padding(horizontal = 56.dp),
+                            )
+                        }
+                    }
+                    // Audio rows (one per stream)
+                    mediaDetail.audioStreams.forEach { audio ->
+                        val audioLabel = listOfNotNull(
+                            audio.codec,
+                            audio.channels,
+                            audio.language,
+                        ).joinToString("  ")
+                        if (audioLabel.isNotBlank()) {
+                            DetailChipRow(
+                                labels = listOf(audioLabel),
+                                modifier = Modifier.padding(horizontal = 56.dp),
                             )
                         }
                     }
