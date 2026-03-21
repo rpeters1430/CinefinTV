@@ -32,17 +32,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ClosedCaption
-import androidx.compose.material.icons.filled.Forward10
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -120,6 +121,7 @@ internal fun PlayerControls(
     val chapters = uiState.chapters
     val trickplayManifest = uiState.trickplayManifest
     val trickplayBaseUrl = uiState.trickplayBaseUrl
+    val seekIncrement = uiState.videoSeekIncrement
 
     val (subtitleButtonBounds, setSubtitleButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
     val (audioButtonBounds, setAudioButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
@@ -253,6 +255,7 @@ internal fun PlayerControls(
                         chapters = uiState.chapters,
                         trickplayManifest = trickplayManifest,
                         trickplayBaseUrl = trickplayBaseUrl,
+                        seekIncrementMs = seekIncrement.millis,
                         onSeek = { player.seekTo(it) },
                         onInteract = onInteract,
                         focusRequester = seekBarFocusRequester,
@@ -273,8 +276,9 @@ internal fun PlayerControls(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     ActionIconButton(
-                        icon = Icons.Default.Replay10,
-                        onClick = { onInteract(); player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L)) },
+                        icon = Icons.Default.FastRewind,
+                        label = seekIncrement.shortLabel,
+                        onClick = { onInteract(); player.seekTo((player.currentPosition - seekIncrement.millis).coerceAtLeast(0L)) },
                         modifier = Modifier
                             .align(Alignment.CenterStart)
                             .focusRequester(skipBackFocusRequester)
@@ -306,8 +310,9 @@ internal fun PlayerControls(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         ActionIconButton(
-                            icon = Icons.Default.Forward10,
-                            onClick = { onInteract(); player.seekTo((player.currentPosition + 10_000L).coerceIn(0L, duration)) },
+                            icon = Icons.Default.FastForward,
+                            label = seekIncrement.shortLabel,
+                            onClick = { onInteract(); player.seekTo((player.currentPosition + seekIncrement.millis).coerceIn(0L, duration)) },
                             modifier = Modifier
                                 .focusRequester(skipForwardFocusRequester)
                                 .focusProperties {
@@ -573,6 +578,7 @@ private fun PlayPauseButton(
 @Composable
 private fun ActionIconButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String? = null,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -588,7 +594,20 @@ private fun ActionIconButton(
             focusedContentColor = expressiveColors.playerContentPrimary
         )
     ) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(26.dp))
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(26.dp))
+            if (label != null) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = expressiveColors.playerContentPrimary.copy(alpha = 0.8f),
+                    maxLines = 1,
+                )
+            }
+        }
     }
 }
 
@@ -660,6 +679,7 @@ private fun SeekBarControl(
     chapters: List<ChapterMarker>,
     trickplayManifest: TrickplayManifest?,
     trickplayBaseUrl: String?,
+    seekIncrementMs: Long,
     onSeek: (Long) -> Unit,
     onInteract: () -> Unit,
     focusRequester: FocusRequester,
@@ -669,9 +689,8 @@ private fun SeekBarControl(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     var isSeeking by remember { mutableStateOf(false) }
-    var seekDirection by remember { mutableStateOf(0) }
-    // Tracks the live seek position during a hold-seek without being overwritten by polling ticks.
     var seekPosition by remember { mutableLongStateOf(position) }
+    var seekInteractionVersion by remember { mutableIntStateOf(0) }
     val expressiveColors = LocalCinefinExpressiveColors.current
 
     LaunchedEffect(position, isSeeking) {
@@ -680,41 +699,17 @@ private fun SeekBarControl(
         }
     }
 
+    LaunchedEffect(seekInteractionVersion) {
+        if (seekInteractionVersion == 0) return@LaunchedEffect
+        val versionAtLaunch = seekInteractionVersion
+        delay(700L)
+        if (seekInteractionVersion == versionAtLaunch) {
+            isSeeking = false
+        }
+    }
+
     val barHeight by animateDpAsState(if (isFocused) 8.dp else 3.dp, label = "BarHeight")
     val thumbScale by animateFloatAsState(if (isFocused) 1f else 0f, label = "ThumbScale")
-
-    // Smooth seeking logic with acceleration
-    LaunchedEffect(seekDirection, duration) {
-        if (seekDirection == 0 || duration <= 0L) return@LaunchedEffect
-        isSeeking = true
-        var holdDuration = 0L
-        while (seekDirection != 0) {
-            // Acceleration: starts at 5s per second of real time, ramps up to 60s/sec
-            val baseIncrementPerSec = when {
-                holdDuration < 1000L -> 5_000L  // 5s/sec
-                holdDuration < 3000L -> 15_000L // 15s/sec
-                else -> 60_000L                 // 60s/sec
-            }
-            
-            // Interval is 32ms (~30fps) for smooth visual updates
-            val intervalMs = 32L
-            val increment = (baseIncrementPerSec * intervalMs) / 1000L
-            
-            seekPosition = (seekPosition + seekDirection * increment).coerceIn(0L, duration)
-            
-            // Only update player occasionally to avoid lag, but update UI (seekPosition) constantly
-            if (holdDuration % 128L < intervalMs) {
-                onSeek(seekPosition)
-            }
-            
-            onInteract()
-            delay(intervalMs)
-            holdDuration += intervalMs
-        }
-        // Final seek when button is released
-        onSeek(seekPosition)
-        isSeeking = false
-    }
 
     // Visual progress animation for smooth bar/thumb movement
     val progressFractionRaw = if (duration > 0L) (seekPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
@@ -739,7 +734,6 @@ private fun SeekBarControl(
             .onFocusChanged {
                 isFocused = it.isFocused || it.hasFocus
                 if (!isFocused) {
-                    seekDirection = 0
                     isSeeking = false
                     seekPosition = position
                 }
@@ -747,14 +741,28 @@ private fun SeekBarControl(
             .onPreviewKeyEvent { keyEvent ->
                 when {
                     keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.DirectionLeft -> {
-                        seekDirection = -1; true
+                        if (duration <= 0L) return@onPreviewKeyEvent true
+                        val basePosition = if (isSeeking) seekPosition else position
+                        seekPosition = (basePosition - seekIncrementMs).coerceAtLeast(0L)
+                        isSeeking = true
+                        seekInteractionVersion += 1
+                        onSeek(seekPosition)
+                        onInteract()
+                        true
                     }
                     keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.DirectionRight -> {
-                        seekDirection = 1; true
+                        if (duration <= 0L) return@onPreviewKeyEvent true
+                        val basePosition = if (isSeeking) seekPosition else position
+                        seekPosition = (basePosition + seekIncrementMs).coerceIn(0L, duration)
+                        isSeeking = true
+                        seekInteractionVersion += 1
+                        onSeek(seekPosition)
+                        onInteract()
+                        true
                     }
                     keyEvent.type == KeyEventType.KeyUp &&
                         (keyEvent.key == Key.DirectionLeft || keyEvent.key == Key.DirectionRight) -> {
-                        seekDirection = 0; true
+                        true
                     }
                     else -> false
                 }

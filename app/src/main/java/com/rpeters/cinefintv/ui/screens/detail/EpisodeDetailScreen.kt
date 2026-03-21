@@ -21,7 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameMillis
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -80,7 +80,8 @@ private fun EpisodeDetailContent(
     var lastFocusedChapterId by rememberSaveable { mutableStateOf<String?>(chapters.firstOrNull()?.id) }
 
     LaunchedEffect(episode.id) {
-        withFrameMillis {}   // wait one frame for layout to attach the anchor node
+        listState.scrollToItem(0)
+        withFrameNanos {}   // wait one frame for layout to attach the anchor node
         anchorFocusRequester.requestFocus()
     }
 
@@ -103,7 +104,11 @@ private fun EpisodeDetailContent(
         item {
             DetailHeroBox(
                 backdropUrl = episode.backdropUrl,
-                modifier = Modifier.onFocusChanged { if (it.hasFocus) scope.launch { listState.scrollToItem(0) } },
+                modifier = Modifier.onFocusChanged {
+                    if (it.hasFocus) {
+                        scope.launch { listState.animateScrollToItem(0) }
+                    }
+                },
             ) {
                 DetailGlassPanel(
                     modifier = Modifier

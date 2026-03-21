@@ -21,6 +21,7 @@ import com.rpeters.cinefintv.data.playback.PlaybackResult
 import com.rpeters.cinefintv.data.playback.RecommendationSeverity
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.ResumePlaybackMode
+import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferencesRepository
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
@@ -51,6 +52,7 @@ class PlayerViewModel @Inject constructor(
     private val enhancedPlaybackManager: EnhancedPlaybackManager,
     private val adaptiveBitrateMonitor: AdaptiveBitrateMonitor,
     private val playbackPreferencesRepository: PlaybackPreferencesRepository,
+    private val subtitleAppearancePreferencesRepository: SubtitleAppearancePreferencesRepository,
     @param:ApplicationContext private val appContext: Context,
     private val okHttpClient: OkHttpClient,
 ) : ViewModel() {
@@ -93,7 +95,13 @@ class PlayerViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     autoPlayNextEpisode = prefs.autoPlayNextEpisode,
                     transcodingQuality = prefs.transcodingQuality,
+                    videoSeekIncrement = prefs.videoSeekIncrement,
                 )
+            }
+        }
+        viewModelScope.launch {
+            subtitleAppearancePreferencesRepository.preferencesFlow.collectLatest { preferences ->
+                _uiState.value = _uiState.value.copy(subtitleAppearance = preferences)
             }
         }
         viewModelScope.launch {

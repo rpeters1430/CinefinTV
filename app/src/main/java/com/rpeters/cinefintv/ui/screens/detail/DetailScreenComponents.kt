@@ -182,30 +182,11 @@ fun DetailGlassPanel(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val spacing = LocalCinefinSpacing.current
-    val expressiveColors = LocalCinefinExpressiveColors.current
-
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(spacing.cornerContainer),
-        colors = SurfaceDefaults.colors(
-            containerColor = expressiveColors.chromeSurface.copy(alpha = 0.9f),
-            contentColor = MaterialTheme.colorScheme.onBackground,
-        ),
-        tonalElevation = 12.dp,
-    ) {
-        Column(
-            modifier = Modifier
-                .border(
-                    width = 1.dp,
-                    color = expressiveColors.borderSubtle.copy(alpha = 0.52f),
-                    shape = RoundedCornerShape(spacing.cornerContainer),
-                )
-                .padding(horizontal = 24.dp, vertical = 22.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-            content = content,
-        )
-    }
+    Column(
+        modifier = modifier.padding(horizontal = 24.dp, vertical = 22.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        content = content,
+    )
 }
 
 @Composable
@@ -247,6 +228,38 @@ fun DetailProgressLabel(
 }
 
 @Composable
+fun DetailMetaLine(
+    values: List<String>,
+    modifier: Modifier = Modifier,
+) {
+    val filtered = values.map { it.trim() }.filter { it.isNotBlank() }
+    if (filtered.isEmpty()) return
+
+    Text(
+        text = filtered.joinToString("  •  "),
+        modifier = modifier,
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.onBackground,
+    )
+}
+
+@Composable
+fun DetailMetaLabelLine(
+    values: List<Pair<String, String>>,
+    modifier: Modifier = Modifier,
+) {
+    val filtered = values.filter { it.second.isNotBlank() }
+    if (filtered.isEmpty()) return
+
+    Text(
+        text = filtered.joinToString("  •  ") { (label, value) -> "$label $value" },
+        modifier = modifier,
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
 fun DetailActionRow(
     primaryLabel: String,
     onPrimaryClick: () -> Unit,
@@ -257,6 +270,8 @@ fun DetailActionRow(
     primaryDownFocusRequester: FocusRequester? = null,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
+    val secondaryFocusRequester = remember { FocusRequester() }
+    val hasSecondaryAction = !secondaryLabel.isNullOrBlank() && onSecondaryClick != null
 
     Row(
         modifier = modifier,
@@ -274,11 +289,27 @@ fun DetailActionRow(
                             Modifier
                         }
                     )
+                    .then(
+                        if (hasSecondaryAction) {
+                            Modifier.focusProperties { right = secondaryFocusRequester }
+                        } else {
+                            Modifier
+                        }
+                    )
             } else {
                 if (primaryDownFocusRequester != null) {
-                    Modifier.focusProperties { down = primaryDownFocusRequester }
+                    Modifier.focusProperties {
+                        down = primaryDownFocusRequester
+                        if (hasSecondaryAction) {
+                            right = secondaryFocusRequester
+                        }
+                    }
                 } else {
-                    Modifier
+                    if (hasSecondaryAction) {
+                        Modifier.focusProperties { right = secondaryFocusRequester }
+                    } else {
+                        Modifier
+                    }
                 }
             },
             scale = ButtonDefaults.scale(focusedScale = 1.06f),
@@ -291,9 +322,17 @@ fun DetailActionRow(
         ) {
             Text(primaryLabel)
         }
-        if (!secondaryLabel.isNullOrBlank() && onSecondaryClick != null) {
+        if (hasSecondaryAction) {
             OutlinedButton(
                 onClick = onSecondaryClick,
+                modifier = Modifier
+                    .focusRequester(secondaryFocusRequester)
+                    .focusProperties {
+                        left = primaryFocusRequester ?: FocusRequester.Default
+                        if (primaryDownFocusRequester != null) {
+                            down = primaryDownFocusRequester
+                        }
+                    },
                 scale = ButtonDefaults.scale(focusedScale = 1.05f),
                 colors = ButtonDefaults.colors(
                     containerColor = expressiveColors.chromeSurface.copy(alpha = 0.7f),

@@ -65,6 +65,7 @@ import com.rpeters.cinefintv.data.preferences.SubtitleFont
 import com.rpeters.cinefintv.data.preferences.SubtitleTextSize
 import com.rpeters.cinefintv.data.preferences.ThemeMode
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
+import com.rpeters.cinefintv.data.preferences.VideoSeekIncrement
 import com.rpeters.cinefintv.ui.components.CinefinOptionDialog
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
@@ -74,6 +75,7 @@ private enum class SettingsChoiceDialog {
     ACCENT_COLOR,
     CONTRAST_LEVEL,
     RESUME_PLAYBACK,
+    VIDEO_SEEK_INCREMENT,
     STREAMING_QUALITY,
     AUDIO_CHANNELS,
     SUBTITLE_TEXT_SIZE,
@@ -165,6 +167,15 @@ fun SettingsScreen(
             labelFor = { it.label },
             onDismissRequest = { activeDialog = null },
             onOptionSelected = viewModel::setResumePlaybackMode,
+        )
+        SettingsChoiceDialog.VIDEO_SEEK_INCREMENT -> CinefinOptionDialog(
+            title = "Seek step",
+            supportingText = "How far left and right skip during video playback.",
+            options = VideoSeekIncrement.entries,
+            selected = uiState.playback.videoSeekIncrement,
+            labelFor = { it.label },
+            onDismissRequest = { activeDialog = null },
+            onOptionSelected = viewModel::setVideoSeekIncrement,
         )
         SettingsChoiceDialog.STREAMING_QUALITY -> CinefinOptionDialog(
             title = "Streaming quality",
@@ -333,6 +344,13 @@ fun SettingsScreen(
                                 description = "Control how saved progress is handled.",
                                 selectedLabel = uiState.playback.resumePlaybackMode.label,
                                 onClick = { activeDialog = SettingsChoiceDialog.RESUME_PLAYBACK },
+                            )
+                            SettingsChoiceRow(
+                                icon = Icons.Default.Tune,
+                                title = "Seek step",
+                                description = "Choose how far forward and back playback jumps.",
+                                selectedLabel = uiState.playback.videoSeekIncrement.label,
+                                onClick = { activeDialog = SettingsChoiceDialog.VIDEO_SEEK_INCREMENT },
                             )
                             SettingsChoiceRow(
                                 icon = Icons.Default.HighQuality,

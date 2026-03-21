@@ -143,21 +143,31 @@ private fun TvShowDetailContent(
                             .weight(1f)
                             .fillMaxWidth(),
                     ) {
-                        DetailChipRow(
-                            labels = buildList {
-                                add("Series")
-                                show.yearRange?.let { add(it) }
-                                show.status?.let { add(it) }
-                                show.officialRating?.let { add(it) }
-                                show.rating?.let { add("★ $it") }
-                                if (show.seasonCount > 0) add("${show.seasonCount} seasons")
-                            }
-                        )
                         Text(
                             text = show.title,
                             style = MaterialTheme.typography.displayMedium,
                             fontWeight = FontWeight.Bold,
                             maxLines = 2,
+                        )
+                        DetailMetaLine(
+                            values = buildList {
+                                show.rating?.let { add("IMDb $it") }
+                                show.secondaryRating?.let { add("Critic $it") }
+                                show.airedDate?.let { add(it) } ?: show.yearRange?.let { add(it) }
+                                show.officialRating?.let { add(it) }
+                                show.videoQuality?.let { add(it) }
+                                show.audioLabel?.let { add(it) }
+                            }
+                        )
+                        DetailMetaLabelLine(
+                            values = buildList {
+                                if (show.genres.isNotEmpty()) add("Tags" to show.genres.take(4).joinToString(", "))
+                                if (show.seasonCount > 0) add("Seasons" to show.seasonCount.toString())
+                                show.endedDate?.let { add("Ends" to it) }
+                                show.status?.let { add("Status" to it) }
+                                if (show.creators.isNotEmpty()) add("Created by" to show.creators.take(2).joinToString(", "))
+                                if (show.networks.isNotEmpty()) add("Network" to show.networks.take(2).joinToString(", "))
+                            }
                         )
                         show.overview?.let {
                             Text(
@@ -166,9 +176,6 @@ private fun TvShowDetailContent(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 4,
                             )
-                        }
-                        if (show.genres.isNotEmpty()) {
-                            DetailChipRow(labels = show.genres.take(4))
                         }
                         DetailActionRow(
                             primaryLabel = if (show.nextUpEpisodeId != null) {

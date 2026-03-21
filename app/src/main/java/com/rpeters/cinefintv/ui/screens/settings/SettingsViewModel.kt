@@ -23,6 +23,7 @@ import com.rpeters.cinefintv.data.preferences.ThemeMode
 import com.rpeters.cinefintv.data.preferences.ThemePreferences
 import com.rpeters.cinefintv.data.preferences.ThemePreferencesRepository
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
+import com.rpeters.cinefintv.data.preferences.VideoSeekIncrement
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -138,6 +139,11 @@ class SettingsViewModel @Inject constructor(
     fun setAudioChannels(preference: AudioChannelPreference) {
         updatePreference { playbackPreferencesRepository.setAudioChannels(preference) }
         _uiState.update { it.copy(playback = it.playback.copy(audioChannels = preference)) }
+    }
+
+    fun setVideoSeekIncrement(increment: VideoSeekIncrement) {
+        updatePreference { playbackPreferencesRepository.setVideoSeekIncrement(increment) }
+        _uiState.update { it.copy(playback = it.playback.copy(videoSeekIncrement = increment)) }
     }
 
     fun setSubtitleTextSize(textSize: SubtitleTextSize) {

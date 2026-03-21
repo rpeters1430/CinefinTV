@@ -1,5 +1,8 @@
 package com.rpeters.cinefintv.ui.player
 
+import android.graphics.Color as AndroidColor
+import android.graphics.Typeface
+import android.util.TypedValue
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -51,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -60,6 +64,9 @@ import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinDialogActions
 import com.rpeters.cinefintv.ui.components.CinefinDialogSurface
+import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
+import com.rpeters.cinefintv.data.preferences.SubtitleBackground
+import com.rpeters.cinefintv.data.preferences.SubtitleFont
 import com.rpeters.cinefintv.ui.player.PlayerConstants.CONTROLS_HIDE_DELAY_MS
 import com.rpeters.cinefintv.ui.player.PlayerConstants.NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
@@ -73,6 +80,41 @@ private data class PlayerRenderState(
     val duration: Long = 0L,
     val bufferedFraction: Float = 0f,
 )
+
+private fun PlayerView.applySubtitleAppearance(preferences: SubtitleAppearancePreferences) {
+    subtitleView?.apply {
+        setApplyEmbeddedStyles(false)
+        setApplyEmbeddedFontSizes(false)
+        setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, preferences.textSize.sizeSp)
+        setStyle(
+            CaptionStyleCompat(
+                AndroidColor.WHITE,
+                backgroundColorFor(preferences.background),
+                AndroidColor.TRANSPARENT,
+                CaptionStyleCompat.EDGE_TYPE_DROP_SHADOW,
+                AndroidColor.BLACK,
+                typefaceFor(preferences.font),
+            )
+        )
+    }
+}
+
+private fun backgroundColorFor(background: SubtitleBackground): Int = when (background) {
+    SubtitleBackground.NONE -> AndroidColor.TRANSPARENT
+    SubtitleBackground.BLACK -> AndroidColor.BLACK
+    SubtitleBackground.SEMI_TRANSPARENT -> AndroidColor.argb(160, 0, 0, 0)
+}
+
+private fun typefaceFor(font: SubtitleFont): Typeface? = when (font) {
+    SubtitleFont.DEFAULT -> null
+    SubtitleFont.SANS_SERIF -> Typeface.SANS_SERIF
+    SubtitleFont.SERIF -> Typeface.SERIF
+    SubtitleFont.MONOSPACE -> Typeface.MONOSPACE
+    SubtitleFont.ROBOTO -> Typeface.create("sans-serif", Typeface.NORMAL)
+    SubtitleFont.ROBOTO_FLEX -> Typeface.create("sans-serif", Typeface.NORMAL)
+    SubtitleFont.ROBOTO_SERIF -> Typeface.create("serif", Typeface.NORMAL)
+    SubtitleFont.ROBOTO_MONO -> Typeface.create("monospace", Typeface.NORMAL)
+}
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @UnstableApi
@@ -304,9 +346,13 @@ fun PlayerScreen(
                             this.player = exoPlayer
                             isFocusable = false
                             isFocusableInTouchMode = false
+                            applySubtitleAppearance(uiState.subtitleAppearance)
                         }
                     },
-                    update = { pv -> pv.player = exoPlayer },
+                    update = { pv ->
+                        pv.player = exoPlayer
+                        pv.applySubtitleAppearance(uiState.subtitleAppearance)
+                    },
                 )
 
                 PlayerControls(

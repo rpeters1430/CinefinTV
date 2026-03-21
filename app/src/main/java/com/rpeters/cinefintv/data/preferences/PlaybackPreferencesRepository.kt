@@ -45,11 +45,23 @@ enum class ResumePlaybackMode(val label: String) {
     NEVER("Always start from beginning"),
 }
 
+/**
+ * Fixed seek step used by video playback controls.
+ */
+enum class VideoSeekIncrement(val label: String, val shortLabel: String, val millis: Long) {
+    TWO_POINT_FIVE_SECONDS("2.5 seconds", "2.5s", 2_500L),
+    FIVE_SECONDS("5 seconds", "5s", 5_000L),
+    TEN_SECONDS("10 seconds", "10s", 10_000L),
+    FIFTEEN_SECONDS("15 seconds", "15s", 15_000L),
+    THIRTY_SECONDS("30 seconds", "30s", 30_000L),
+}
+
 data class PlaybackPreferences(
     val transcodingQuality: TranscodingQuality,
     val audioChannels: AudioChannelPreference,
     val autoPlayNextEpisode: Boolean,
     val resumePlaybackMode: ResumePlaybackMode,
+    val videoSeekIncrement: VideoSeekIncrement,
 ) {
     companion object {
         val DEFAULT = PlaybackPreferences(
@@ -57,6 +69,7 @@ data class PlaybackPreferences(
             audioChannels = AudioChannelPreference.AUTO,
             autoPlayNextEpisode = true, // enabled by default
             resumePlaybackMode = ResumePlaybackMode.ALWAYS, // always resume by default
+            videoSeekIncrement = VideoSeekIncrement.TEN_SECONDS,
         )
     }
 }
@@ -91,6 +104,9 @@ class PlaybackPreferencesRepository @Inject constructor(
                 resumePlaybackMode = runCatching {
                     ResumePlaybackMode.valueOf(prefs[PreferencesKeys.RESUME_PLAYBACK_MODE] ?: "")
                 }.getOrDefault(PlaybackPreferences.DEFAULT.resumePlaybackMode),
+                videoSeekIncrement = runCatching {
+                    VideoSeekIncrement.valueOf(prefs[PreferencesKeys.VIDEO_SEEK_INCREMENT] ?: "")
+                }.getOrDefault(PlaybackPreferences.DEFAULT.videoSeekIncrement),
             )
         }
 
@@ -110,11 +126,16 @@ class PlaybackPreferencesRepository @Inject constructor(
         dataStore.edit { it[PreferencesKeys.RESUME_PLAYBACK_MODE] = mode.name }
     }
 
+    suspend fun setVideoSeekIncrement(increment: VideoSeekIncrement) {
+        dataStore.edit { it[PreferencesKeys.VIDEO_SEEK_INCREMENT] = increment.name }
+    }
+
     private object PreferencesKeys {
         val TRANSCODING_QUALITY = stringPreferencesKey("transcoding_quality")
         val AUDIO_CHANNELS = stringPreferencesKey("audio_channels")
         val AUTO_PLAY_NEXT_EPISODE = booleanPreferencesKey("auto_play_next_episode")
         val RESUME_PLAYBACK_MODE = stringPreferencesKey("resume_playback_mode")
+        val VIDEO_SEEK_INCREMENT = stringPreferencesKey("video_seek_increment")
     }
 
     companion object {

@@ -5,6 +5,8 @@ import androidx.lifecycle.SavedStateHandle
 import com.rpeters.cinefintv.data.PlaybackPositionStore
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferences
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
+import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
+import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferencesRepository
 import com.rpeters.cinefintv.data.repository.JellyfinRepository
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.testutil.FakePlayerRepositories
@@ -37,6 +39,9 @@ class PlayerViewModelTest {
     private val playbackPreferencesRepository: PlaybackPreferencesRepository = mockk {
         every { preferences } returns flowOf(PlaybackPreferences.DEFAULT)
     }
+    private val subtitleAppearancePreferencesRepository: SubtitleAppearancePreferencesRepository = mockk {
+        every { preferencesFlow } returns flowOf(SubtitleAppearancePreferences.DEFAULT)
+    }
     private val jellyfinRepository: JellyfinRepository = mockk(relaxed = true)
     private val enhancedPlaybackManager: com.rpeters.cinefintv.data.playback.EnhancedPlaybackManager = mockk {
         coEvery { getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.Error("mock error")
@@ -55,6 +60,7 @@ class PlayerViewModelTest {
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
         )
@@ -80,6 +86,7 @@ class PlayerViewModelTest {
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
         )
@@ -105,6 +112,7 @@ class PlayerViewModelTest {
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
         )
@@ -149,6 +157,7 @@ class PlayerViewModelTest {
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
         )
@@ -191,6 +200,7 @@ class PlayerViewModelTest {
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
         )
@@ -220,6 +230,7 @@ class PlayerViewModelTest {
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
         )
@@ -249,6 +260,7 @@ class PlayerViewModelTest {
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
         )
@@ -278,6 +290,7 @@ class PlayerViewModelTest {
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
         )
@@ -303,6 +316,7 @@ class PlayerViewModelTest {
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
         )

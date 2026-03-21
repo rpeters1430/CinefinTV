@@ -6,12 +6,14 @@ import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.ui.components.WatchStatus
+import com.rpeters.cinefintv.utils.getMediaQualityLabel
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.isWatched
+import com.rpeters.cinefintv.utils.normalizeOfficialRating
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +27,9 @@ data class MovieDetailModel(
     val id: String,
     val title: String,
     val year: Int?,
+    val premieredDate: String?,
     val rating: String?,
+    val secondaryRating: String?,
     val officialRating: String?,
     val duration: String?,
     val overview: String?,
@@ -33,6 +37,9 @@ data class MovieDetailModel(
     val posterUrl: String?,
     val genres: List<String>,
     val studios: List<String>,
+    val videoQuality: String?,
+    val audioLabel: String?,
+    val directors: List<String>,
     val isWatched: Boolean,
     val playbackProgress: Float?,
 )
@@ -98,7 +105,7 @@ class MovieDetailViewModel @Inject constructor(
                     CastModel(
                         id = person.id.toString(),
                         name = person.name ?: "Unknown",
-                        role = person.role ?: person.type?.toString(),
+                        role = person.role ?: person.type.toString(),
                         imageUrl = repositories.stream.getImageUrl(
                             itemId = person.id.toString(),
                             tag = person.primaryImageTag
@@ -122,14 +129,45 @@ class MovieDetailViewModel @Inject constructor(
             id = id.toString(),
             title = getDisplayTitle(),
             year = getYear(),
+            premieredDate = premiereDate?.toString()?.substringBefore("T"),
             rating = communityRating?.let { String.format(java.util.Locale.US, "%.1f", it) },
-            officialRating = officialRating,
+            secondaryRating = criticRating?.takeIf { it > 0 }?.toString(),
+            officialRating = normalizeOfficialRating(officialRating),
             duration = getFormattedDuration(),
             overview = overview,
             backdropUrl = repositories.stream.getBackdropUrl(this),
             posterUrl = repositories.stream.getPosterCardImageUrl(this),
             genres = genres ?: emptyList(),
             studios = studios?.mapNotNull { it.name } ?: emptyList(),
+            videoQuality = getMediaQualityLabel(),
+            audioLabel = mediaSources
+                ?.firstOrNull()
+                ?.mediaStreams
+                ?.filter { it.type == org.jellyfin.sdk.model.api.MediaStreamType.AUDIO }
+                ?.firstOrNull()
+                ?.let { stream ->
+                    val codec = when (stream.codec?.uppercase()) {
+                        "EAC3", "E-AC3" -> "EAC3"
+                        "AC3" -> "AC3"
+                        "TRUEHD" -> "TrueHD"
+                        "DTS" -> "DTS"
+                        "AAC" -> "AAC"
+                        "FLAC" -> "FLAC"
+                        "OPUS" -> "Opus"
+                        else -> stream.codec?.uppercase()
+                    }
+                    val channels = when (stream.channels) {
+                        2 -> "Stereo"
+                        6 -> "5.1"
+                        8 -> "7.1"
+                        else -> stream.channels?.let { "$it ch" }
+                    }
+                    listOfNotNull(codec, channels).joinToString(" ").ifBlank { null }
+                },
+            directors = people
+                ?.filter { it.type.toString().equals("Director", ignoreCase = true) }
+                ?.mapNotNull { it.name }
+                ?: emptyList(),
             isWatched = isWatched(),
             playbackProgress = if (canResume()) (getWatchedPercentage() / 100.0).toFloat() else null,
         )

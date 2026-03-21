@@ -12,14 +12,17 @@ import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferencesRepository
 import com.rpeters.cinefintv.data.preferences.ThemePreferences
 import com.rpeters.cinefintv.data.preferences.ThemePreferencesRepository
+import com.rpeters.cinefintv.data.preferences.VideoSeekIncrement
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.coVerify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
@@ -57,5 +60,38 @@ class SettingsViewModelTest {
 
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
+    }
+
+    @Test
+    fun setVideoSeekIncrement_updatesUiStateAndRepository() = runTest {
+        val themeRepo = mockk<ThemePreferencesRepository>(relaxed = true)
+        val playbackRepo = mockk<PlaybackPreferencesRepository>(relaxed = true)
+        val subtitleRepo = mockk<SubtitleAppearancePreferencesRepository>(relaxed = true)
+        val libraryRepo = mockk<LibraryActionsPreferencesRepository>(relaxed = true)
+        val castRepo = mockk<CastPreferencesRepository>(relaxed = true)
+        val securityRepo = mockk<CredentialSecurityPreferencesRepository>(relaxed = true)
+
+        every { themeRepo.themePreferencesFlow } returns flowOf(ThemePreferences.DEFAULT)
+        every { playbackRepo.preferences } returns flowOf(PlaybackPreferences.DEFAULT)
+        every { subtitleRepo.preferencesFlow } returns flowOf(SubtitleAppearancePreferences.DEFAULT)
+        every { libraryRepo.preferences } returns flowOf(LibraryActionsPreferences.DEFAULT)
+        every { castRepo.castPreferencesFlow } returns flowOf(CastPreferences.DEFAULT)
+        every { securityRepo.preferences } returns flowOf(CredentialSecurityPreferences.DEFAULT)
+
+        val viewModel = SettingsViewModel(
+            themeRepo,
+            playbackRepo,
+            subtitleRepo,
+            libraryRepo,
+            castRepo,
+            securityRepo
+        )
+        advanceUntilIdle()
+
+        viewModel.setVideoSeekIncrement(VideoSeekIncrement.FIVE_SECONDS)
+        advanceUntilIdle()
+
+        assertEquals(VideoSeekIncrement.FIVE_SECONDS, viewModel.uiState.value.playback.videoSeekIncrement)
+        coVerify { playbackRepo.setVideoSeekIncrement(VideoSeekIncrement.FIVE_SECONDS) }
     }
 }

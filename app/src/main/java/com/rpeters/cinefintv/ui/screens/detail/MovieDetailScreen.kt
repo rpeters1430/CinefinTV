@@ -136,21 +136,30 @@ private fun MovieDetailContent(
                             .weight(1f)
                             .fillMaxWidth(),
                     ) {
-                        DetailChipRow(
-                            labels = buildList {
-                                add("Movie")
-                                movie.year?.let { add("$it") }
-                                movie.officialRating?.let { add(it) }
-                                movie.duration?.let { add(it) }
-                                movie.rating?.let { add("★ $it") }
-                                if (movie.isWatched) add("Watched")
-                            }
-                        )
                         Text(
                             text = movie.title,
                             style = MaterialTheme.typography.displayMedium,
                             fontWeight = FontWeight.Bold,
                             maxLines = 2,
+                        )
+                        DetailMetaLine(
+                            values = buildList {
+                                movie.rating?.let { add("IMDb $it") }
+                                movie.secondaryRating?.let { add("Critic $it") }
+                                movie.premieredDate?.let { add(it) } ?: movie.year?.let { add("$it") }
+                                movie.officialRating?.let { add(it) }
+                                movie.videoQuality?.let { add(it) }
+                                movie.audioLabel?.let { add(it) }
+                                if (movie.isWatched) add("Watched")
+                            }
+                        )
+                        DetailMetaLabelLine(
+                            values = buildList {
+                                if (movie.genres.isNotEmpty()) add("Tags" to movie.genres.take(4).joinToString(", "))
+                                movie.duration?.let { add("Runtime" to it) }
+                                if (movie.directors.isNotEmpty()) add("Directed by" to movie.directors.take(2).joinToString(", "))
+                                if (movie.studios.isNotEmpty()) add("Studio" to movie.studios.take(2).joinToString(", "))
+                            }
                         )
                         movie.overview?.let {
                             Text(
@@ -158,16 +167,6 @@ private fun MovieDetailContent(
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 4,
-                            )
-                        }
-                        if (movie.genres.isNotEmpty()) {
-                            DetailChipRow(labels = movie.genres.take(4))
-                        }
-                        if (movie.studios.isNotEmpty()) {
-                            Text(
-                                text = "Studio: ${movie.studios.take(2).joinToString(" • ")}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                         movie.playbackProgress?.let {

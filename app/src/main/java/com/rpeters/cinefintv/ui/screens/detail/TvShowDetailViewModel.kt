@@ -18,13 +18,20 @@ data class TvShowDetailModel(
     val id: String,
     val title: String,
     val yearRange: String?,
+    val airedDate: String?,
+    val endedDate: String?,
     val rating: String?,
+    val secondaryRating: String?,
     val officialRating: String?,
     val status: String?,
     val overview: String?,
     val backdropUrl: String?,
     val posterUrl: String?,
     val genres: List<String>,
+    val videoQuality: String?,
+    val audioLabel: String?,
+    val creators: List<String>,
+    val networks: List<String>,
     val nextUpEpisodeId: String?,
     val nextUpTitle: String?,
     val seasonCount: Int,
@@ -97,7 +104,7 @@ class TvShowDetailViewModel @Inject constructor(
                     CastModel(
                         id = person.id.toString(),
                         name = person.name ?: "Unknown",
-                        role = person.role ?: person.type?.toString(),
+                        role = person.role ?: person.type.toString(),
                         imageUrl = repositories.stream.getImageUrl(
                             itemId = person.id.toString(),
                             tag = person.primaryImageTag
@@ -122,13 +129,50 @@ class TvShowDetailViewModel @Inject constructor(
             id = id.toString(),
             title = getDisplayTitle(),
             yearRange = getYearRange(),
+            airedDate = premiereDate?.toString()?.substringBefore("T"),
+            endedDate = endDate?.toString()?.substringBefore("T"),
             rating = communityRating?.let { String.format(java.util.Locale.US, "%.1f", it) },
-            officialRating = officialRating,
+            secondaryRating = criticRating?.takeIf { it > 0 }?.toString(),
+            officialRating = normalizeOfficialRating(officialRating),
             status = status,
             overview = overview,
             backdropUrl = repositories.stream.getBackdropUrl(this),
             posterUrl = repositories.stream.getPosterCardImageUrl(this),
             genres = genres ?: emptyList(),
+            videoQuality = getMediaQualityLabel(),
+            audioLabel = mediaSources
+                ?.firstOrNull()
+                ?.mediaStreams
+                ?.filter { it.type == org.jellyfin.sdk.model.api.MediaStreamType.AUDIO }
+                ?.firstOrNull()
+                ?.let { stream ->
+                    val codec = when (stream.codec?.uppercase()) {
+                        "EAC3", "E-AC3" -> "EAC3"
+                        "AC3" -> "AC3"
+                        "TRUEHD" -> "TrueHD"
+                        "DTS" -> "DTS"
+                        "AAC" -> "AAC"
+                        "FLAC" -> "FLAC"
+                        "OPUS" -> "Opus"
+                        else -> stream.codec?.uppercase()
+                    }
+                    val channels = when (stream.channels) {
+                        2 -> "Stereo"
+                        6 -> "5.1"
+                        8 -> "7.1"
+                        else -> stream.channels?.let { "$it ch" }
+                    }
+                    listOfNotNull(codec, channels).joinToString(" ").ifBlank { null }
+                },
+            creators = people
+                ?.filter {
+                    it.type.toString().equals("Director", ignoreCase = true) ||
+                        it.type.toString().equals("Writer", ignoreCase = true)
+                }
+                ?.mapNotNull { it.name }
+                ?.distinct()
+                ?: emptyList(),
+            networks = studios?.mapNotNull { it.name } ?: emptyList(),
             nextUpEpisodeId = nextUp?.id?.toString(),
             nextUpTitle = nextUp?.getDisplayTitle(),
             seasonCount = childCount ?: 0
