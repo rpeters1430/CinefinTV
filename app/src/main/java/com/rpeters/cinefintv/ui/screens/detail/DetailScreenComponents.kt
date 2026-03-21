@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
@@ -72,7 +73,7 @@ fun DetailHeroBox(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(420.dp)
+            .heightIn(min = 420.dp)
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
@@ -407,4 +408,26 @@ fun DetailLoadingState() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
     }
+}
+
+/**
+ * An invisible focus anchor that ensures the screen content is scrolled to the top
+ * before transferring focus to the primary action.
+ */
+@Composable
+fun DetailAnchor(
+    focusRequester: FocusRequester,
+    onFocused: () -> Unit,
+) {
+    Spacer(
+        modifier = Modifier
+            .size(1.dp)
+            .focusRequester(focusRequester)
+            .onFocusChanged { if (it.isFocused) onFocused() }
+            .focusProperties { 
+                // Don't allow manual navigation to this anchor
+                canFocus = true 
+            }
+            .background(Color.Transparent)
+    )
 }

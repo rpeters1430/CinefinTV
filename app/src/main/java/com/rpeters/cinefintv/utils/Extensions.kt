@@ -61,6 +61,26 @@ fun BaseItemDto.isPhoto(): Boolean = type == org.jellyfin.sdk.model.api.BaseItem
 fun BaseItemDto.isPerson(): Boolean = type == org.jellyfin.sdk.model.api.BaseItemKind.PERSON
 
 /**
+ * Maps BaseItemKind to the standard CamelCase strings used for navigation in NavGraph.
+ */
+fun BaseItemDto.getItemTypeString(): String {
+    return when (type) {
+        org.jellyfin.sdk.model.api.BaseItemKind.MOVIE -> "Movie"
+        org.jellyfin.sdk.model.api.BaseItemKind.SERIES -> "Series"
+        org.jellyfin.sdk.model.api.BaseItemKind.SEASON -> "Season"
+        org.jellyfin.sdk.model.api.BaseItemKind.EPISODE -> "Episode"
+        org.jellyfin.sdk.model.api.BaseItemKind.COLLECTION_FOLDER -> "CollectionFolder"
+        org.jellyfin.sdk.model.api.BaseItemKind.VIDEO -> "Video"
+        org.jellyfin.sdk.model.api.BaseItemKind.BOX_SET -> "BoxSet"
+        org.jellyfin.sdk.model.api.BaseItemKind.USER_VIEW -> "UserView"
+        org.jellyfin.sdk.model.api.BaseItemKind.AUDIO -> "Audio"
+        org.jellyfin.sdk.model.api.BaseItemKind.MUSIC_ALBUM -> "MusicAlbum"
+        org.jellyfin.sdk.model.api.BaseItemKind.MUSIC_ARTIST -> "MusicArtist"
+        else -> type?.toString() ?: "Unknown"
+    }
+}
+
+/**
  * ✅ PHASE 3: Enhanced display utilities
  */
 fun BaseItemDto.getDisplayTitle(): String = name ?: AppResources.getString(R.string.unknown)

@@ -10,6 +10,7 @@ import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getEpisodeCardDetailLine
 import com.rpeters.cinefintv.utils.getEpisodeCode
 import com.rpeters.cinefintv.utils.getFormattedDuration
+import com.rpeters.cinefintv.utils.getItemTypeString
 import com.rpeters.cinefintv.utils.getMediaQualityLabel
 import com.rpeters.cinefintv.utils.getSeriesCardDetailLine
 import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
@@ -250,7 +251,7 @@ class HomeViewModel @Inject constructor(
                 ?.takeIf { it > 0.0 }
                 ?.let { String.format(java.util.Locale.US, "%.1f", it) },
             officialRating = item.officialRating?.takeIf { it.isNotBlank() },
-            itemType = item.type.toString(),
+            itemType = item.getItemTypeString(),
             collectionType = item.collectionType?.toString(),
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,

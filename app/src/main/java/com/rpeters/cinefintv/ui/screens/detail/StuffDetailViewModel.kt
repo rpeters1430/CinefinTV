@@ -8,6 +8,7 @@ import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
+import com.rpeters.cinefintv.utils.getItemTypeString
 import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -106,7 +107,7 @@ class StuffDetailViewModel @Inject constructor(
             overview = overview,
             backdropUrl = repositories.stream.getBackdropUrl(this),
             isCollection = isCollection,
-            type = type?.toString(),
+            type = getItemTypeString(),
             playbackProgress = if (canResume()) (getWatchedPercentage() / 100f).toFloat() else null,
         )
     }
@@ -124,7 +125,7 @@ class StuffDetailViewModel @Inject constructor(
             id = id.toString(),
             title = getDisplayTitle(),
             imageUrl = repositories.stream.getPosterCardImageUrl(this),
-            itemType = type?.toString(),
+            itemType = getItemTypeString(),
             watchStatus = watchStatus,
             playbackProgress = playbackProgress
         )

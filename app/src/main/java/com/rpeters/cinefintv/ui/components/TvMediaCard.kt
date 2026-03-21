@@ -67,6 +67,7 @@ fun TvMediaCard(
     unwatchedCount: Int? = null,
     aspectRatio: Float = 2f / 3f,
     cardWidth: androidx.compose.ui.unit.Dp? = null,
+    compactMetadata: Boolean = false,
 ) {
     val performanceProfile = LocalPerformanceProfile.current
     val expressiveColors = LocalCinefinExpressiveColors.current
@@ -84,8 +85,10 @@ fun TvMediaCard(
         label = "MediaCardSubtitleColor",
     )
 
-    val focusedScale = remember(aspectRatio, cardWidth) {
-        if (aspectRatio > 1f || (cardWidth != null && cardWidth > 200.dp)) 1.05f else 1.1f
+    val focusedScale = remember(aspectRatio, cardWidth, compactMetadata) {
+        if (compactMetadata) 1.0f 
+        else if (aspectRatio > 1f || (cardWidth != null && cardWidth > 200.dp)) 1.05f 
+        else 1.1f
     }
 
     StandardCardContainer(
@@ -155,7 +158,7 @@ fun TvMediaCard(
                     )
 
                     // White brightness overlay when focused — makes card visually "pop"
-                    if (isFocused) {
+                    if (isFocused && !compactMetadata) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -206,7 +209,7 @@ fun TvMediaCard(
                 color = titleColor,
                 maxLines = if (subtitle.isNullOrBlank()) 1 else 2,
                 overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Start,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
             )
         },
@@ -218,7 +221,7 @@ fun TvMediaCard(
                     color = subtitleColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
+                    textAlign = TextAlign.Start,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

@@ -52,7 +52,6 @@ class PlayerViewModelTest {
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "")),
             repositories = FakePlayerRepositories().coordinator,
-            jellyfinRepository = jellyfinRepository,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
@@ -78,7 +77,6 @@ class PlayerViewModelTest {
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
-            jellyfinRepository = jellyfinRepository,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
@@ -104,7 +102,6 @@ class PlayerViewModelTest {
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
-            jellyfinRepository = jellyfinRepository,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
@@ -149,7 +146,6 @@ class PlayerViewModelTest {
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "ep-1")),
             repositories = fakeRepositories.coordinator,
-            jellyfinRepository = jellyfinRepository,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
@@ -192,7 +188,6 @@ class PlayerViewModelTest {
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "movie-1")),
             repositories = fakeRepositories.coordinator,
-            jellyfinRepository = jellyfinRepository,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
@@ -222,7 +217,6 @@ class PlayerViewModelTest {
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
-            jellyfinRepository = jellyfinRepository,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
@@ -252,7 +246,6 @@ class PlayerViewModelTest {
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
-            jellyfinRepository = jellyfinRepository,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
@@ -282,7 +275,6 @@ class PlayerViewModelTest {
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
-            jellyfinRepository = jellyfinRepository,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,
@@ -308,7 +300,6 @@ class PlayerViewModelTest {
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
-            jellyfinRepository = jellyfinRepository,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
             playbackPreferencesRepository = playbackPreferencesRepository,

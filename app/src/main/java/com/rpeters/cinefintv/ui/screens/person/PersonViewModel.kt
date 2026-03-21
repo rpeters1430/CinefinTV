@@ -8,6 +8,7 @@ import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
+import com.rpeters.cinefintv.utils.getItemTypeString
 import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCardLabel
 import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getYear
@@ -34,6 +35,7 @@ data class PersonMediaModel(
     val subtitle: String?,
     val overview: String?,
     val imageUrl: String?,
+    val itemType: String?,
     val watchStatus: WatchStatus = WatchStatus.NONE,
     val playbackProgress: Float? = null,
 )
@@ -136,6 +138,7 @@ class PersonViewModel @Inject constructor(
             subtitle = subtitle.ifBlank { null },
             overview = overview,
             imageUrl = repositories.stream.getPosterCardImageUrl(this),
+            itemType = getItemTypeString(),
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,
         )

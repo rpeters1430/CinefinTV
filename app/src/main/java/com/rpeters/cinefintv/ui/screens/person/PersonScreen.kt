@@ -61,7 +61,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun PersonScreen(
-    onOpenItem: (String) -> Unit,
+    onOpenItem: (String, String?) -> Unit,
     onBack: () -> Unit,
     viewModel: PersonViewModel = hiltViewModel(),
 ) {
@@ -253,7 +253,7 @@ private fun PersonImmersiveSection(
     personName: String,
     items: List<PersonMediaModel>,
     focusedItem: PersonMediaModel,
-    onOpenItem: (String) -> Unit,
+    onOpenItem: (String, String?) -> Unit,
     firstItemRequester: FocusRequester,
     upRequester: FocusRequester,
     onItemFocused: (PersonMediaModel) -> Unit,
@@ -363,7 +363,7 @@ private fun PersonImmersiveSection(
                         title = item.title,
                         subtitle = item.subtitle,
                         imageUrl = item.imageUrl,
-                        onClick = { onOpenItem(item.id) },
+                        onClick = { onOpenItem(item.id, item.itemType) },
                         watchStatus = item.watchStatus,
                         playbackProgress = item.playbackProgress,
                         onFocus = { onItemFocused(item) },

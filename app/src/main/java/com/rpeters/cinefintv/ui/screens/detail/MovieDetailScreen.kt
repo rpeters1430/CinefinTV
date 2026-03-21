@@ -79,6 +79,7 @@ private fun MovieDetailContent(
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val anchorFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
     val primaryActionFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
     val castEntryFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
     val similarEntryFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
@@ -86,9 +87,8 @@ private fun MovieDetailContent(
     var lastFocusedSimilarId by rememberSaveable { mutableStateOf<String?>(similarMovies.firstOrNull()?.id) }
 
     LaunchedEffect(movie.id) {
-        // Anchor to top on load
-        listState.scrollToItem(0)
-        primaryActionFocusRequester.requestFocus()
+        // Request initial focus on the top anchor
+        anchorFocusRequester.requestFocus()
     }
 
     LazyColumn(
@@ -96,6 +96,17 @@ private fun MovieDetailContent(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 48.dp),
     ) {
+        item {
+            DetailAnchor(
+                focusRequester = anchorFocusRequester,
+                onFocused = {
+                    scope.launch {
+                        listState.scrollToItem(0)
+                        primaryActionFocusRequester.requestFocus()
+                    }
+                }
+            )
+        }
         item {
             DetailHeroBox(
                 backdropUrl = movie.backdropUrl,

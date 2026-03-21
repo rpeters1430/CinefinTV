@@ -77,47 +77,56 @@ private fun StuffVideoContent(
     stuff: StuffDetailModel,
     onPlayItem: (String) -> Unit,
 ) {
+    val anchorFocusRequester = remember { FocusRequester() }
     val primaryActionFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(stuff.id) {
-        primaryActionFocusRequester.requestFocus()
+        anchorFocusRequester.requestFocus()
     }
 
-    DetailHeroBox(backdropUrl = stuff.backdropUrl, modifier = Modifier.fillMaxSize()) {
-        DetailGlassPanel(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .fillMaxWidth(0.55f)
-                .padding(horizontal = 56.dp, vertical = 32.dp),
-        ) {
-            DetailChipRow(
-                labels = buildList {
-                    add(stuff.type ?: "Video")
-                    if (!stuff.isCollection) add("Ready to play")
-                }
-            )
-            Text(
-                text = stuff.title,
-                style = MaterialTheme.typography.displayMedium,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-            )
-            stuff.overview?.let {
+    Box(modifier = Modifier.fillMaxSize()) {
+        DetailAnchor(
+            focusRequester = anchorFocusRequester,
+            onFocused = {
+                primaryActionFocusRequester.requestFocus()
+            }
+        )
+        DetailHeroBox(backdropUrl = stuff.backdropUrl, modifier = Modifier.fillMaxSize()) {
+            DetailGlassPanel(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth(0.55f)
+                    .padding(horizontal = 56.dp, vertical = 32.dp),
+            ) {
+                DetailChipRow(
+                    labels = buildList {
+                        add(stuff.type ?: "Video")
+                        if (!stuff.isCollection) add("Ready to play")
+                    }
+                )
                 Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 3,
+                    text = stuff.title,
+                    style = MaterialTheme.typography.displayMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                )
+                stuff.overview?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                    )
+                }
+                stuff.playbackProgress?.let {
+                    DetailProgressLabel(progress = it)
+                }
+                DetailActionRow(
+                    primaryLabel = if (stuff.playbackProgress != null) "Resume Now" else "Play Now",
+                    onPrimaryClick = { onPlayItem(stuff.id) },
+                    primaryFocusRequester = primaryActionFocusRequester,
                 )
             }
-            stuff.playbackProgress?.let {
-                DetailProgressLabel(progress = it)
-            }
-            DetailActionRow(
-                primaryLabel = if (stuff.playbackProgress != null) "Resume Now" else "Play Now",
-                onPrimaryClick = { onPlayItem(stuff.id) },
-                primaryFocusRequester = primaryActionFocusRequester,
-            )
         }
     }
 }
@@ -128,15 +137,22 @@ private fun StuffCollectionContent(
     items: List<StuffItemModel>,
     onOpenItem: (String, String?) -> Unit,
 ) {
+    val anchorFocusRequester = remember { FocusRequester() }
     val primaryActionFocusRequester = remember { FocusRequester() }
     val gridEntryFocusRequester = remember { FocusRequester() }
     var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(items.firstOrNull()?.id) }
 
     LaunchedEffect(stuff.id) {
-        primaryActionFocusRequester.requestFocus()
+        anchorFocusRequester.requestFocus()
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        DetailAnchor(
+            focusRequester = anchorFocusRequester,
+            onFocused = {
+                primaryActionFocusRequester.requestFocus()
+            }
+        )
         DetailHeroBox(backdropUrl = stuff.backdropUrl) {
             Row(
                 modifier = Modifier

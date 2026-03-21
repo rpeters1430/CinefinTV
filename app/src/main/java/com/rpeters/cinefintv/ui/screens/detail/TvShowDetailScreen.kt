@@ -84,6 +84,7 @@ private fun TvShowDetailContent(
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val anchorFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
     val primaryActionFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
     val seasonsEntryFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
     val castEntryFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
@@ -93,9 +94,8 @@ private fun TvShowDetailContent(
     var lastFocusedSimilarId by rememberSaveable { mutableStateOf<String?>(similarShows.firstOrNull()?.id) }
 
     LaunchedEffect(show.id) {
-        // Anchor to top on load
-        listState.scrollToItem(0)
-        primaryActionFocusRequester.requestFocus()
+        // Request initial focus on the top anchor
+        anchorFocusRequester.requestFocus()
     }
 
     LazyColumn(
@@ -103,6 +103,17 @@ private fun TvShowDetailContent(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 48.dp),
     ) {
+        item {
+            DetailAnchor(
+                focusRequester = anchorFocusRequester,
+                onFocused = {
+                    scope.launch {
+                        listState.scrollToItem(0)
+                        primaryActionFocusRequester.requestFocus()
+                    }
+                }
+            )
+        }
         item {
             DetailHeroBox(
                 backdropUrl = show.backdropUrl,

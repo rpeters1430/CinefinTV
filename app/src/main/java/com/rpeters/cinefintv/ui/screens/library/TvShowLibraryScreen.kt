@@ -77,10 +77,10 @@ fun TvShowLibraryScreen(
                     }
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(4),
+                        columns = GridCells.Fixed(6),
                         contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(32.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(pagedItems.itemCount) { index ->
@@ -94,7 +94,8 @@ fun TvShowLibraryScreen(
                                     watchStatus = item.watchStatus,
                                     playbackProgress = item.playbackProgress,
                                     unwatchedCount = item.unwatchedCount,
-                                    onClick = { onOpenItem(item) }
+                                    onClick = { onOpenItem(item) },
+                                    compactMetadata = true,
                                 )
                             }
                         }

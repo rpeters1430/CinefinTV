@@ -13,6 +13,7 @@ import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
+import com.rpeters.cinefintv.utils.getItemTypeString
 import com.rpeters.cinefintv.utils.getSeriesCardDetailLine
 import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
 import com.rpeters.cinefintv.utils.getWatchedPercentage
@@ -86,8 +87,8 @@ abstract class BaseLibraryViewModel(
             id = id,
             title = item.getDisplayTitle(),
             subtitle = subtitle,
-            imageUrl = repositories.stream.getLandscapeImageUrl(item),
-            itemType = item.type.toString(),
+            imageUrl = repositories.stream.getPosterCardImageUrl(item),
+            itemType = item.getItemTypeString(),
             watchStatus = watchStatus,
             playbackProgress = playbackProgress,
             unwatchedCount = unwatchedCount,

@@ -71,13 +71,14 @@ private fun EpisodeDetailContent(
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val anchorFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
     val primaryActionFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
     val firstContentFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
     var lastFocusedChapterId by rememberSaveable { mutableStateOf<String?>(chapters.firstOrNull()?.id) }
 
     LaunchedEffect(episode.id) {
-        listState.scrollToItem(0)
-        primaryActionFocusRequester.requestFocus()
+        // Request initial focus on the top anchor
+        anchorFocusRequester.requestFocus()
     }
 
     LazyColumn(
@@ -85,6 +86,17 @@ private fun EpisodeDetailContent(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 48.dp),
     ) {
+        item {
+            DetailAnchor(
+                focusRequester = anchorFocusRequester,
+                onFocused = {
+                    scope.launch {
+                        listState.scrollToItem(0)
+                        primaryActionFocusRequester.requestFocus()
+                    }
+                }
+            )
+        }
         item {
             DetailHeroBox(
                 backdropUrl = episode.backdropUrl,

@@ -16,9 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -78,19 +75,22 @@ private fun SeasonContent(
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val anchorFocusRequester = remember { FocusRequester() }
     val primaryActionFocusRequester = remember { FocusRequester() }
     val episodeGridEntryRequester = remember { FocusRequester() }
-    val nextEpisodeId = remember(episodes) {
-        episodes.firstOrNull { !it.isWatched }?.id ?: episodes.firstOrNull()?.id
+    
+    val nextEpisode = remember(episodes) {
+        episodes.firstOrNull { !it.isWatched } ?: episodes.firstOrNull()
     }
     val resumableEpisode = remember(episodes) {
         episodes.firstOrNull { (it.playbackProgress ?: 0f) > 0f && !it.isWatched }
     }
+    
+    var focusedEpisode by remember { mutableStateOf<EpisodeModel?>(null) }
     var lastFocusedEpisodeId by rememberSaveable { mutableStateOf<String?>(episodes.firstOrNull()?.id) }
 
     LaunchedEffect(season.id) {
-        listState.scrollToItem(0)
-        primaryActionFocusRequester.requestFocus()
+        anchorFocusRequester.requestFocus()
     }
 
     LazyColumn(
@@ -99,8 +99,30 @@ private fun SeasonContent(
         contentPadding = PaddingValues(bottom = 48.dp),
     ) {
         item {
+            DetailAnchor(
+                focusRequester = anchorFocusRequester,
+                onFocused = {
+                    scope.launch {
+                        listState.scrollToItem(0)
+                        primaryActionFocusRequester.requestFocus()
+                        focusedEpisode = null
+                    }
+                }
+            )
+        }
+
+        item {
+            val displayBackdrop = focusedEpisode?.imageUrl ?: season.backdropUrl
+            val displayTitle = focusedEpisode?.title ?: season.title
+            val displayOverview = focusedEpisode?.overview ?: season.overview
+            val displayEyebrow = if (focusedEpisode != null) {
+                focusedEpisode?.episodeCode ?: "Episode ${focusedEpisode?.number}"
+            } else {
+                season.seriesName ?: "Season"
+            }
+
             DetailHeroBox(
-                backdropUrl = season.backdropUrl,
+                backdropUrl = displayBackdrop,
                 modifier = Modifier.onFocusChanged { 
                     if (it.hasFocus && listState.firstVisibleItemIndex == 0) {
                         scope.launch { listState.animateScrollToItem(0) }
@@ -116,8 +138,8 @@ private fun SeasonContent(
                     verticalAlignment = Alignment.Bottom,
                 ) {
                     DetailPosterArt(
-                        imageUrl = season.posterUrl,
-                        title = season.title,
+                        imageUrl = if (focusedEpisode != null) null else season.posterUrl,
+                        title = displayTitle,
                         modifier = Modifier
                             .width(172.dp)
                             .height(258.dp),
@@ -127,24 +149,29 @@ private fun SeasonContent(
                     ) {
                         DetailChipRow(
                             labels = buildList {
-                                add("Season")
-                                add("${episodes.size} episodes")
-                                if (nextEpisodeId != null) add("Ready to continue")
+                                if (focusedEpisode != null) {
+                                    add("Episode")
+                                    focusedEpisode?.duration?.let { add(it) }
+                                } else {
+                                    add("Season")
+                                    add("${episodes.size} episodes")
+                                }
                             }
                         )
-                        season.seriesName?.let {
-                            Text(
-                                text = it,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.secondary,
-                            )
-                        }
+                        
                         Text(
-                            text = season.title,
+                            text = displayEyebrow,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
+                        
+                        Text(
+                            text = displayTitle,
                             style = MaterialTheme.typography.displaySmall,
                             fontWeight = FontWeight.Bold,
                         )
-                        season.overview?.let {
+                        
+                        displayOverview?.let {
                             Text(
                                 text = it,
                                 style = MaterialTheme.typography.bodyLarge,
@@ -152,21 +179,30 @@ private fun SeasonContent(
                                 maxLines = 3,
                             )
                         }
-                        resumableEpisode?.playbackProgress?.let {
-                            DetailProgressLabel(progress = it)
-                        }
-                        if (nextEpisodeId != null) {
+                        
+                        if (focusedEpisode == null) {
+                            resumableEpisode?.playbackProgress?.let {
+                                DetailProgressLabel(progress = it)
+                            }
+                            if (nextEpisode != null) {
+                                DetailActionRow(
+                                    primaryLabel = if (resumableEpisode != null) "Resume Episode" else "Continue Watching",
+                                    onPrimaryClick = {
+                                        onOpenEpisode(resumableEpisode?.id ?: nextEpisode.id)
+                                    },
+                                    secondaryLabel = episodes.firstOrNull()?.let { "Start From Episode 1" },
+                                    onSecondaryClick = episodes.firstOrNull()?.let { firstEpisode ->
+                                        { onOpenEpisode(firstEpisode.id) }
+                                    },
+                                    primaryFocusRequester = primaryActionFocusRequester,
+                                    primaryDownFocusRequester = if (episodes.isNotEmpty()) episodeGridEntryRequester else null,
+                                )
+                            }
+                        } else {
                             DetailActionRow(
-                                primaryLabel = if (resumableEpisode != null) "Resume Episode" else "Continue Watching",
-                                onPrimaryClick = {
-                                    onOpenEpisode(resumableEpisode?.id ?: nextEpisodeId)
-                                },
-                                secondaryLabel = episodes.firstOrNull()?.let { "Start From Episode 1" },
-                                onSecondaryClick = episodes.firstOrNull()?.let { firstEpisode ->
-                                    { onOpenEpisode(firstEpisode.id) }
-                                },
-                                primaryFocusRequester = primaryActionFocusRequester,
-                                primaryDownFocusRequester = if (episodes.isNotEmpty()) episodeGridEntryRequester else null,
+                                primaryLabel = if ((focusedEpisode?.playbackProgress ?: 0f) > 0f) "Resume Episode" else "Play Episode",
+                                onPrimaryClick = { onOpenEpisode(focusedEpisode!!.id) },
+                                primaryFocusRequester = null, // Handled by grid focus
                             )
                         }
                     }
@@ -182,15 +218,15 @@ private fun SeasonContent(
             ) {}
         }
 
-        // Chunk episodes into rows for LazyColumn to simulate a grid while keeping unified scrolling
-        val columns = 4
+        // 5-column grid for smaller cards
+        val columns = 5
         val rows = (episodes.size + columns - 1) / columns
         items(rows) { rowIndex ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 48.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(horizontal = 48.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 for (columnIndex in 0 until columns) {
                     val episodeIndex = rowIndex * columns + columnIndex
@@ -198,7 +234,7 @@ private fun SeasonContent(
                         val episode = episodes[episodeIndex]
                         TvMediaCard(
                             title = episode.title,
-                            subtitle = episode.episodeCode ?: episode.number?.let { "Episode $it" },
+                            subtitle = episode.episodeCode ?: "E${episode.number}",
                             imageUrl = episode.imageUrl,
                             aspectRatio = 16f / 9f,
                             modifier = Modifier
@@ -207,10 +243,7 @@ private fun SeasonContent(
                                     if (episode.id == lastFocusedEpisodeId) Modifier.focusRequester(episodeGridEntryRequester) else Modifier
                                 )
                                 .then(
-                                    if (episode.id == episodes.getOrNull(0)?.id) {
-                                        Modifier.focusProperties { up = primaryActionFocusRequester }
-                                    } else if (episodeIndex < columns) {
-                                        // Ensure first row focuses up correctly
+                                    if (episodeIndex < columns) {
                                         Modifier.focusProperties { up = primaryActionFocusRequester }
                                     } else {
                                         Modifier
@@ -222,11 +255,13 @@ private fun SeasonContent(
                                 else -> WatchStatus.NONE
                             },
                             playbackProgress = episode.playbackProgress,
-                            onFocus = { lastFocusedEpisodeId = episode.id },
+                            onFocus = { 
+                                lastFocusedEpisodeId = episode.id 
+                                focusedEpisode = episode
+                            },
                             onClick = { onOpenEpisode(episode.id) },
                         )
                     } else {
-                        // Spacer for empty grid cells in the last row
                         Spacer(modifier = Modifier.weight(1f))
                     }
                 }
