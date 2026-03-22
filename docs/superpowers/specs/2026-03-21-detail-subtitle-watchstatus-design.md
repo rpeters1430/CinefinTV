@@ -27,7 +27,8 @@ Four related improvements to CinefinTV:
 Wrap the `Column` in a `Box` with:
 - `background(expressiveColors.chromeSurface.copy(alpha = 0.82f), shape = RoundedCornerShape(spacing.cornerContainer))`
 - A 1dp border: `borderSubtle.copy(alpha = 0.14f)`
-- Retain existing `padding(horizontal = 24.dp, vertical = 22.dp)`
+- Retain existing `padding(horizontal = 24.dp, vertical = 22.dp)` on the inner `Column`
+- The caller's `modifier` (e.g. `weight(1f).fillMaxWidth()`) must be applied to the outer `Box`, not the `Column`, so layout constraints from call sites are respected
 
 No backdrop blur — it is expensive on TV hardware and the semi-transparent fill provides sufficient contrast.
 
@@ -45,12 +46,12 @@ The title `Text` composable in each detail screen (movie, TV show, episode) has 
 
 ### Solution
 
-Add `color = MaterialTheme.colorScheme.onSurface` to the title `Text` call in each detail screen's content composable.
+Add `color = MaterialTheme.colorScheme.onSurface` to the title `Text` in each detail screen's content composable. Use the existing `androidx.tv.material3.MaterialTheme` import already present at the top of each file — do not add a new `androidx.compose.material3.MaterialTheme` import, as that would create an ambiguous reference conflict.
 
 ### Files Changed
 
-- `ui/screens/detail/MovieDetailScreen.kt` — `MovieDetailContent`
-- `ui/screens/detail/TvShowDetailScreen.kt` — `TvShowDetailContent`
+- `ui/screens/detail/MovieDetailScreen.kt` — title `Text` in `MovieDetailContent`
+- `ui/screens/detail/TvShowDetailScreen.kt` — title `Text` in `TvShowDetailContent`
 - `ui/screens/detail/EpisodeDetailScreen.kt` — episode title `Text`
 
 ---
@@ -67,15 +68,15 @@ Add `color = MaterialTheme.colorScheme.onSurface` to the title `Text` call in ea
 
 Update `applyTrackSelection` in `PlayerViewModel`:
 
-1. **Always clear stale overrides first:** call `builder.clearOverridesOfType(C.TRACK_TYPE_TEXT)` before applying any new subtitle selection.
+1. **Always clear stale overrides first:** call `builder.clearOverridesOfType(C.TRACK_TYPE_TEXT)` before any subtitle logic.
 
-2. **Use `TrackSelectionOverride` for reliable selection:** scan `player.currentTracks.groups`, filter for `C.TRACK_TYPE_TEXT` groups, find the track whose `format.language` matches `subtitleTrack.language`, and apply `builder.addOverride(TrackSelectionOverride(group.mediaTrackGroup, trackIndex))`.
+2. **Use `TrackSelectionOverride` for reliable selection:** scan `player.currentTracks.groups`, filter for `C.TRACK_TYPE_TEXT` groups. For each group, scan its tracks for one whose `format.language` matches `subtitleTrack.language`. Apply `builder.addOverride(TrackSelectionOverride(group.mediaTrackGroup, trackIndex))`.
 
-3. **Fallback:** if no language match is found (null or unrecognized), fall back to `setPreferredTextLanguage(subtitleTrack.language)` + `setSelectUndeterminedTextLanguage(true)`.
+3. **Same-language and null-language collision:** when multiple text track groups share the same language (including null), match by position — the N-th subtitle `TrackOption` produced by `PlayerMappers.toSubtitleTrackOptions` corresponds to the N-th text group in ExoPlayer's `currentTracks` because both enumerate streams in the same order from the media source. Use the `TrackOption`'s position in `uiState.subtitleTracks` (its list index) to select the correct group when there is a language collision. This position-based match is only valid inside `applyTrackSelection`, which is only called from the `DIRECT_PLAY` branch of `selectSubtitleTrack`; do not apply it in any future transcoding path.
 
-4. **Disabling subtitles:** clear overrides with `clearOverridesOfType` before calling `setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)`.
+4. **Empty `currentTracks` fallback:** if no text groups are found at all (e.g., tracks not yet demuxed at selection time), log a warning and fall back to `setPreferredTextLanguage(subtitleTrack.language)` + `setSelectUndeterminedTextLanguage(true)`. Do not silently no-op.
 
-This approach is reliable because `currentTracks` is populated by the time the user can open the track panel (player is in `STATE_READY`).
+5. **Disabling subtitles:** the up-front `clearOverridesOfType` call from point 1 already covers this path. No second `clearOverridesOfType` call is needed. Just call `setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)` and `setPreferredTextLanguage(null)`.
 
 ### Files Changed
 
@@ -101,21 +102,41 @@ Add `refreshWatchStatus()` to:
 
 Each method:
 - Guards: only runs if current `_uiState.value` is `Content` (no-ops on `Loading`/`Error`)
-- Re-fetches the minimal data needed for watch state:
-  - Detail ViewModels: re-fetch the item details, update only `isWatched` and `playbackProgress` fields within the existing `Content` state (no full reload)
-  - `HomeViewModel`: re-fetch continue-watching and recently-watched rows and update the corresponding sections in the existing content state
 - Does **not** set `Loading` state — the screen never flickers or resets scroll position
+
+**`MovieDetailViewModel.refreshWatchStatus()`:** re-fetch the item via `repositories.media.getMovieDetails(movieId)`. On success, update only `movie.isWatched` and `movie.playbackProgress` within the existing `Content` state.
+
+**`EpisodeDetailViewModel.refreshWatchStatus()`:** re-fetch the episode item details. On success, update only `episode.isWatched` and `episode.playbackProgress` within the existing `Content` state.
+
+**`TvShowDetailViewModel.refreshWatchStatus()`:** re-fetch both the series item (for top-level watch state) and the seasons list via `repositories.media.getSeasonsForSeries(seriesId)`. Update `SeasonModel.unwatchedCount` for each season in addition to any top-level fields. Season unwatched counts are the primary watch-state indicator for this screen and must not be left stale.
+
+**`HomeViewModel.refreshWatchStatus()`:** re-issue only the `getContinueWatching` repository call. On success, update only the continue-watching section within the existing `Content` state and recompute the derived "next episodes" items by calling the existing `buildNextEpisodeSectionItems` method (it uses a `coroutineScope` async fan-out — reuse it rather than inlining new logic). Do **not** re-fetch the libraries, recently-added-movies, recently-added-episodes, recently-added-music, or recently-added-videos calls — those sections are not affected by playback.
 
 #### Screen Layer
 
-In `MovieDetailScreen`, `TvShowDetailScreen`, `EpisodeDetailScreen`, and `HomeScreen`, add a `DisposableEffect(lifecycleOwner)` using `LifecycleEventObserver`:
+In `MovieDetailScreen`, `TvShowDetailScreen`, `EpisodeDetailScreen`, and `HomeScreen`, add lifecycle observation. Use `remember { mutableStateOf(false) }` (not `rememberSaveable`) for the `hasBeenPaused` flag — it should reset on config change since a config change recomposes the full destination and the ViewModel's current state is already up-to-date.
 
 ```
-ON_PAUSE  → set hasBeenPaused = true
-ON_RESUME → if hasBeenPaused: call viewModel.refreshWatchStatus(); hasBeenPaused = false
+val lifecycleOwner = LocalLifecycleOwner.current
+var hasBeenPaused by remember { mutableStateOf(false) }
+
+DisposableEffect(lifecycleOwner) {
+    val observer = LifecycleEventObserver { _, event ->
+        when (event) {
+            Lifecycle.Event.ON_PAUSE  -> hasBeenPaused = true
+            Lifecycle.Event.ON_RESUME -> if (hasBeenPaused) {
+                hasBeenPaused = false
+                viewModel.refreshWatchStatus()
+            }
+            else -> {}
+        }
+    }
+    lifecycleOwner.lifecycle.addObserver(observer)
+    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+}
 ```
 
-`LocalLifecycleOwner` in a Compose Navigation destination is the `NavBackStackEntry`'s lifecycle owner. This means the effect fires precisely when the backstack entry resumes — i.e., when you press back from the player to a detail screen, or from detail back to home. No SharedViewModel, no event bus, no `savedStateHandle` results needed.
+`LocalLifecycleOwner` in a Compose Navigation destination is the `NavBackStackEntry`'s lifecycle owner. This fires precisely when the backstack entry resumes — i.e., when pressing back from the player to a detail screen, or from detail back to home. No SharedViewModel, no event bus, no `savedStateHandle` results needed.
 
 ### Files Changed
 
@@ -124,9 +145,9 @@ ON_RESUME → if hasBeenPaused: call viewModel.refreshWatchStatus(); hasBeenPaus
 - `ui/screens/detail/EpisodeDetailScreen.kt` — add `DisposableEffect` lifecycle observer
 - `ui/screens/home/HomeScreen.kt` — add `DisposableEffect` lifecycle observer
 - `ui/screens/detail/MovieDetailViewModel.kt` — add `refreshWatchStatus()`
-- `ui/screens/detail/TvShowDetailViewModel.kt` — add `refreshWatchStatus()`
+- `ui/screens/detail/TvShowDetailViewModel.kt` — add `refreshWatchStatus()` (re-fetches seasons too)
 - `ui/screens/detail/EpisodeDetailViewModel.kt` — add `refreshWatchStatus()`
-- `ui/screens/home/HomeViewModel.kt` — add `refreshWatchStatus()`
+- `ui/screens/home/HomeViewModel.kt` — add `refreshWatchStatus()` (continue-watching only)
 
 ---
 
