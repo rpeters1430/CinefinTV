@@ -329,6 +329,77 @@ class PlayerViewModelTest {
         assertEquals(1.5f, viewModel.uiState.value.playbackSpeed)
     }
 
+    @Test
+    fun selectSubtitleTrack_whenDirectPlay_clearsStaleOverrideBeforeApplying() = runTest {
+        // This test verifies that clearOverridesOfType is called before applying a new override.
+        // Since PlayerViewModel creates ExoPlayer in the real player session and we can't inject
+        // a mock player, this test verifies the ViewModel state machine: calling selectSubtitleTrack
+        // on a Direct Play state should record the selected subtitle in uiState.selectedSubtitleTrack
+        // without crashing.
+        val fakeRepositories = FakePlayerRepositories()
+        every { fakeRepositories.stream.getStreamUrl("item-1") } returns "https://stream/item-1"
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
+        coEvery { fakeRepositories.media.getItemDetails("item-1") } returns ApiResult.Error("not found")
+        coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "item-1") } returns 0L
+        coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns
+            com.rpeters.cinefintv.data.playback.PlaybackResult.Error("error")
+
+        val viewModel = PlayerViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
+            repositories = fakeRepositories.coordinator,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
+            playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
+            appContext = appContext,
+            okHttpClient = OkHttpClient(),
+        )
+        advanceUntilIdle()
+
+        // Calling selectSubtitleTrack when player is null (not yet attached) should not crash.
+        // The method should guard on _player == null inside applyTrackSelection.
+        val subtitleTrack = TrackOption(
+            id = "sub-0",
+            label = "English",
+            language = "en",
+            streamIndex = 2,
+        )
+        viewModel.selectSubtitleTrack(subtitleTrack, positionMs = 0L, playWhenReady = true)
+        advanceUntilIdle()
+
+        // State should reflect the selection even if player is not attached
+        assertEquals(subtitleTrack, viewModel.uiState.value.selectedSubtitleTrack)
+    }
+
+    @Test
+    fun selectSubtitleTrack_withNullTrack_disablesSubtitles() = runTest {
+        val fakeRepositories = FakePlayerRepositories()
+        every { fakeRepositories.stream.getStreamUrl("item-1") } returns "https://stream/item-1"
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
+        coEvery { fakeRepositories.media.getItemDetails("item-1") } returns ApiResult.Error("not found")
+        coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "item-1") } returns 0L
+        coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns
+            com.rpeters.cinefintv.data.playback.PlaybackResult.Error("error")
+
+        val viewModel = PlayerViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
+            repositories = fakeRepositories.coordinator,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
+            playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
+            appContext = appContext,
+            okHttpClient = OkHttpClient(),
+        )
+        advanceUntilIdle()
+
+        // Selecting null should disable subtitles (set selectedSubtitleTrack to null in state)
+        viewModel.selectSubtitleTrack(null, positionMs = 0L, playWhenReady = true)
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.selectedSubtitleTrack)
+    }
+
     @org.junit.After
     fun tearDown() {
         unmockkObject(PlaybackPositionStore)

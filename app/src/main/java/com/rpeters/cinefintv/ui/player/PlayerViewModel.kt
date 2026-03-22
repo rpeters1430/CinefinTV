@@ -5,9 +5,11 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -372,24 +374,54 @@ class PlayerViewModel @Inject constructor(
 
     private fun applyTrackSelection(audioTrack: TrackOption?, subtitleTrack: TrackOption?) {
         val player = _player ?: return
-        
         val builder = player.trackSelectionParameters.buildUpon()
-        
-        // Audio selection
+
+        // Audio selection (unchanged)
         if (audioTrack != null) {
             builder.setPreferredAudioLanguage(audioTrack.language)
         }
-        
-        // Subtitle selection
+
+        // Always clear stale subtitle overrides first
+        builder.clearOverridesOfType(C.TRACK_TYPE_TEXT)
+
         if (subtitleTrack != null) {
-            builder.setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, false)
-            builder.setPreferredTextLanguage(subtitleTrack.language)
-            builder.setSelectUndeterminedTextLanguage(true)
+            builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+
+            val subtitleIndex = _uiState.value.subtitleTracks.indexOf(subtitleTrack)
+            val textGroups = player.currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+
+            val override: TrackSelectionOverride? = when {
+                textGroups.isEmpty() -> {
+                    Log.w("PlayerViewModel", "applyTrackSelection: no text groups in currentTracks, falling back to language preference")
+                    null
+                }
+                subtitleIndex >= 0 && subtitleIndex < textGroups.size -> {
+                    // Position-based match (valid for DIRECT_PLAY where order is stable)
+                    TrackSelectionOverride(textGroups[subtitleIndex].mediaTrackGroup, 0)
+                }
+                else -> {
+                    // Language-based match fallback
+                    textGroups.firstNotNullOfOrNull { group ->
+                        (0 until group.length)
+                            .firstOrNull { i -> group.getTrackFormat(i).language == subtitleTrack.language }
+                            ?.let { TrackSelectionOverride(group.mediaTrackGroup, listOf(it)) }
+                    }
+                }
+            }
+
+            if (override != null) {
+                builder.addOverride(override)
+            } else {
+                // Fallback when no text groups found
+                builder.setPreferredTextLanguage(subtitleTrack.language)
+                builder.setSelectUndeterminedTextLanguage(true)
+            }
         } else {
-            builder.setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, true)
+            // Disable subtitles (clearOverridesOfType already called above)
+            builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
             builder.setPreferredTextLanguage(null)
         }
-        
+
         player.trackSelectionParameters = builder.build()
     }
 
