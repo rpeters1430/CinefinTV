@@ -148,6 +148,7 @@ private fun TvShowDetailContent(
                             style = MaterialTheme.typography.displayMedium,
                             fontWeight = FontWeight.Bold,
                             maxLines = 2,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         DetailMetaLine(
                             values = buildList {

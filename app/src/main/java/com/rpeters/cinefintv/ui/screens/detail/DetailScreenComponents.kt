@@ -182,11 +182,26 @@ fun DetailGlassPanel(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier = modifier.padding(horizontal = 24.dp, vertical = 22.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-        content = content,
-    )
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    val spacing = LocalCinefinSpacing.current
+    Box(
+        modifier = modifier
+            .background(
+                color = expressiveColors.chromeSurface.copy(alpha = 0.82f),
+                shape = RoundedCornerShape(spacing.cornerContainer),
+            )
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.border.copy(alpha = 0.14f),
+                shape = RoundedCornerShape(spacing.cornerContainer),
+            ),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 22.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            content = content,
+        )
+    }
 }
 
 @Composable

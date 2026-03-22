@@ -138,6 +138,7 @@ private fun EpisodeDetailContent(
                         style = MaterialTheme.typography.displayMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 2,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     episode.overview?.let {
                         Text(
