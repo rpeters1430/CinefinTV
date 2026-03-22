@@ -174,13 +174,15 @@ class MovieDetailViewModel @Inject constructor(
     }
 
     fun refreshWatchStatus() {
-        val currentState = _uiState.value as? MovieDetailUiState.Content ?: return
+        _uiState.value as? MovieDetailUiState.Content ?: return
         viewModelScope.launch {
             when (val result = repositories.media.getMovieDetails(movieId)) {
                 is ApiResult.Success -> {
                     val dto = result.data
-                    _uiState.value = currentState.copy(
-                        movie = currentState.movie.copy(
+                    // Re-read state after the suspension point to avoid overwriting concurrent mutations
+                    val latestState = _uiState.value as? MovieDetailUiState.Content ?: return@launch
+                    _uiState.value = latestState.copy(
+                        movie = latestState.movie.copy(
                             isWatched = dto.isWatched(),
                             playbackProgress = if (dto.canResume()) (dto.getWatchedPercentage() / 100.0).toFloat() else null,
                         )

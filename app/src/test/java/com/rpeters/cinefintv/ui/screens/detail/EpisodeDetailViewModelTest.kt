@@ -15,9 +15,11 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.MediaSourceInfo
 import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamType
+import org.jellyfin.sdk.model.api.UserItemDataDto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -138,5 +140,62 @@ class EpisodeDetailViewModelTest {
 
         val state = vm.uiState.value as EpisodeDetailUiState.Content
         assertNull(state.mediaDetail)
+    }
+
+    @Test
+    fun refreshWatchStatus_whenContent_updatesWatchFields() = runTest {
+        val fakeRepos = FakeEpisodeDetailRepositories()
+        val episodeId = UUID.randomUUID().toString()
+        val unwatchedDto = makeBaseItem(id = episodeId)
+        val watchedUserData = mockk<UserItemDataDto>(relaxed = true) {
+            every { played } returns true
+            every { playedPercentage } returns 0.0
+            every { playbackPositionTicks } returns 0L
+        }
+        val watchedDto = mockk<BaseItemDto>(relaxed = true) {
+            every { this@mockk.id } returns UUID.fromString(episodeId)
+            every { mediaSources } returns null
+            every { chapters } returns null
+            every { userData } returns watchedUserData
+        }
+
+        coEvery { fakeRepos.media.getEpisodeDetails(episodeId) } returns ApiResult.Success(unwatchedDto)
+        every { fakeRepos.stream.getBackdropUrl(any()) } returns null
+        every { fakeRepos.stream.getImageUrl(any(), any(), any()) } returns null
+
+        val vm = EpisodeDetailViewModel(fakeRepos.coordinator, makeSavedStateHandle(episodeId))
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value is EpisodeDetailUiState.Content)
+
+        // Simulate the episode being watched
+        coEvery { fakeRepos.media.getEpisodeDetails(episodeId) } returns ApiResult.Success(watchedDto)
+
+        vm.refreshWatchStatus()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue(state is EpisodeDetailUiState.Content)
+        assertTrue((state as EpisodeDetailUiState.Content).episode.isWatched)
+    }
+
+    @Test
+    fun refreshWatchStatus_whenNotContent_doesNothing() = runTest {
+        val fakeRepos = FakeEpisodeDetailRepositories()
+        val episodeId = UUID.randomUUID().toString()
+
+        coEvery { fakeRepos.media.getEpisodeDetails(episodeId) } returns ApiResult.Error("not found")
+
+        val vm = EpisodeDetailViewModel(fakeRepos.coordinator, makeSavedStateHandle(episodeId))
+        advanceUntilIdle()
+
+        // State is Error; refreshWatchStatus should no-op
+        assertTrue(vm.uiState.value is EpisodeDetailUiState.Error)
+
+        vm.refreshWatchStatus()
+        advanceUntilIdle()
+
+        // Still Error, no crash
+        assertTrue(vm.uiState.value is EpisodeDetailUiState.Error)
     }
 }

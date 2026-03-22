@@ -147,13 +147,15 @@ class HomeViewModel @Inject constructor(
     }
 
     fun refreshWatchStatus() {
-        val currentState = _uiState.value as? HomeUiState.Content ?: return
+        _uiState.value as? HomeUiState.Content ?: return
         viewModelScope.launch {
             when (val result = repositories.media.getContinueWatching(limit = 12)) {
                 is ApiResult.Success -> {
+                    // Re-read state after the suspension point to avoid overwriting concurrent mutations
+                    val latestState = _uiState.value as? HomeUiState.Content ?: return@launch
                     val nextEpisodeItems = buildNextEpisodeSectionItems(result)
                     val updatedSections = buildList {
-                        for (section in currentState.sections) {
+                        for (section in latestState.sections) {
                             when (section.title) {
                                 "Continue Watching" -> {
                                     if (result.data.isNotEmpty()) {
@@ -198,7 +200,7 @@ class HomeViewModel @Inject constructor(
                         withoutCW
                     }
 
-                    _uiState.value = currentState.copy(sections = finalSections)
+                    _uiState.value = latestState.copy(sections = finalSections)
                 }
                 else -> { /* no-op on error — stale data is better than a flicker */ }
             }
