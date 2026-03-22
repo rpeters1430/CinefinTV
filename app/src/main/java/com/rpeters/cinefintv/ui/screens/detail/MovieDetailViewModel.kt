@@ -173,6 +173,24 @@ class MovieDetailViewModel @Inject constructor(
         )
     }
 
+    fun refreshWatchStatus() {
+        val currentState = _uiState.value as? MovieDetailUiState.Content ?: return
+        viewModelScope.launch {
+            when (val result = repositories.media.getMovieDetails(movieId)) {
+                is ApiResult.Success -> {
+                    val dto = result.data
+                    _uiState.value = currentState.copy(
+                        movie = currentState.movie.copy(
+                            isWatched = dto.isWatched(),
+                            playbackProgress = if (dto.canResume()) (dto.getWatchedPercentage() / 100.0).toFloat() else null,
+                        )
+                    )
+                }
+                else -> { /* no-op on error — stale data is better than a flicker */ }
+            }
+        }
+    }
+
     private fun BaseItemDto.toSimilarModel(): SimilarMovieModel {
         return SimilarMovieModel(
             id = id.toString(),

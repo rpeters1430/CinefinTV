@@ -125,6 +125,24 @@ class EpisodeDetailViewModel @Inject constructor(
         }
     }
 
+    fun refreshWatchStatus() {
+        val currentState = _uiState.value as? EpisodeDetailUiState.Content ?: return
+        viewModelScope.launch {
+            when (val result = repositories.media.getEpisodeDetails(episodeId)) {
+                is ApiResult.Success -> {
+                    val dto = result.data
+                    _uiState.value = currentState.copy(
+                        episode = currentState.episode.copy(
+                            isWatched = dto.isWatched(),
+                            playbackProgress = if (dto.canResume()) (dto.getWatchedPercentage() / 100.0).toFloat() else null,
+                        )
+                    )
+                }
+                else -> { /* no-op on error — stale data is better than a flicker */ }
+            }
+        }
+    }
+
     private fun BaseItemDto.toEpisodeDetailModel(): EpisodeDetailModel {
         return EpisodeDetailModel(
             id = id.toString(),

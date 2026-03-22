@@ -124,6 +124,18 @@ class TvShowDetailViewModel @Inject constructor(
         }
     }
 
+    fun refreshWatchStatus() {
+        val currentState = _uiState.value as? TvShowDetailUiState.Content ?: return
+        viewModelScope.launch {
+            val seasonsResult = repositories.media.getSeasonsForSeries(seriesId)
+            if (seasonsResult is ApiResult.Success) {
+                val updatedSeasons = seasonsResult.data.map { it.toSeasonModel() }
+                _uiState.value = currentState.copy(seasons = updatedSeasons)
+            }
+            // no-op on error — stale data is better than a flicker
+        }
+    }
+
     private fun BaseItemDto.toDetailModel(nextUp: BaseItemDto?): TvShowDetailModel {
         return TvShowDetailModel(
             id = id.toString(),

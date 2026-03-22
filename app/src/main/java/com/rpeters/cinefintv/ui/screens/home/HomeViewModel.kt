@@ -146,6 +146,65 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun refreshWatchStatus() {
+        val currentState = _uiState.value as? HomeUiState.Content ?: return
+        viewModelScope.launch {
+            when (val result = repositories.media.getContinueWatching(limit = 12)) {
+                is ApiResult.Success -> {
+                    val nextEpisodeItems = buildNextEpisodeSectionItems(result)
+                    val updatedSections = buildList {
+                        for (section in currentState.sections) {
+                            when (section.title) {
+                                "Continue Watching" -> {
+                                    if (result.data.isNotEmpty()) {
+                                        add(section.copy(items = result.data.take(12).map(::toCardModel)))
+                                    }
+                                    // If empty, omit the section (nothing to continue watching)
+                                }
+                                "Next Episodes" -> {
+                                    // Will be re-added after the loop if non-empty
+                                }
+                                else -> add(section)
+                            }
+                        }
+                    }.toMutableList()
+
+                    // Insert Continue Watching + Next Episodes at correct positions
+                    // They were not added inside the loop if section didn't exist before;
+                    // find the insertion index (after "My Libraries" if present)
+                    val continueWatchingItems = result.data.take(12).map(::toCardModel)
+                    val myLibrariesIdx = updatedSections.indexOfFirst { it.title == "My Libraries" }
+                    val insertAfter = if (myLibrariesIdx >= 0) myLibrariesIdx else -1
+
+                    // Remove any existing Continue Watching / Next Episodes (shouldn't be there but just in case)
+                    val withoutCW = updatedSections.filter {
+                        it.title != "Continue Watching" && it.title != "Next Episodes"
+                    }.toMutableList()
+
+                    val toInsert = buildList {
+                        if (continueWatchingItems.isNotEmpty()) {
+                            add(HomeSectionModel(title = "Continue Watching", items = continueWatchingItems))
+                        }
+                        if (nextEpisodeItems.isNotEmpty()) {
+                            add(HomeSectionModel(title = "Next Episodes", items = nextEpisodeItems))
+                        }
+                    }
+
+                    val finalSections = if (toInsert.isNotEmpty()) {
+                        withoutCW.toMutableList().apply {
+                            addAll(insertAfter + 1, toInsert)
+                        }
+                    } else {
+                        withoutCW
+                    }
+
+                    _uiState.value = currentState.copy(sections = finalSections)
+                }
+                else -> { /* no-op on error — stale data is better than a flicker */ }
+            }
+        }
+    }
+
     private fun MutableList<HomeSectionModel>.addSection(
         title: String,
         result: ApiResult<List<BaseItemDto>>,

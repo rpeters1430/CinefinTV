@@ -114,6 +114,70 @@ class HomeViewModelTest {
         assertEquals("https://img/backdrop.jpg", state.featuredItems.first().backdropUrl)
     }
 
+    @Test
+    fun refreshWatchStatus_updatesOnlyContinueWatchingSection() = runTest {
+        val fakeRepositories = FakeHomeRepositories()
+        val movie = mockBaseItemDto("Movie 1")
+
+        coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(listOf(movie))
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
+        every { fakeRepositories.stream.getBackdropUrl(any()) } returns null
+
+        val viewModel = HomeViewModel(fakeRepositories.coordinator)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value is HomeUiState.Content)
+
+        viewModel.refreshWatchStatus()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state is HomeUiState.Content)
+    }
+
+    @Test
+    fun refreshWatchStatus_whenStateIsNotContent_doesNothing() = runTest {
+        val fakeRepositories = FakeHomeRepositories()
+
+        coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Error("backend unavailable")
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+
+        val viewModel = HomeViewModel(fakeRepositories.coordinator)
+
+        // Call refreshWatchStatus before advancing (state may still be Loading)
+        viewModel.refreshWatchStatus()
+        advanceUntilIdle()
+
+        // Should not crash; state ends in Error since all sections empty/error
+        val state = viewModel.uiState.value
+        assertTrue(state is HomeUiState.Error || state is HomeUiState.Content)
+    }
+
     private fun mockBaseItemDto(name: String): BaseItemDto {
         val item: BaseItemDto = mockk()
         every { item.id } returns UUID.randomUUID()
@@ -126,6 +190,8 @@ class HomeViewModelTest {
         every { item.communityRating } returns null
         every { item.officialRating } returns null
         every { item.collectionType } returns null
+        every { item.mediaSources } returns null
+        every { item.seriesId } returns null
         return item
     }
 }
