@@ -63,6 +63,19 @@ class SeasonViewModel @Inject constructor(
         }
     }
 
+    fun refreshWatchStatus() {
+        _uiState.value as? SeasonUiState.Content ?: return
+        viewModelScope.launch {
+            val episodesResult = repositories.media.getEpisodesForSeason(seasonId)
+            if (episodesResult is ApiResult.Success) {
+                val latestState = _uiState.value as? SeasonUiState.Content ?: return@launch
+                _uiState.value = latestState.copy(
+                    episodes = episodesResult.data.map { it.toEpisodeModel() }
+                )
+            }
+        }
+    }
+
     fun load() {
         viewModelScope.launch {
             _uiState.value = SeasonUiState.Loading
