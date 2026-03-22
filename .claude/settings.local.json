@@ -23,7 +23,8 @@
       "WebFetch(domain:cs.android.com)",
       "Bash(scripts/start-server.sh --project-dir /home/rpeters1428/CinefinTV)",
       "Bash(./gradlew clean:*)",
-      "Bash(bash /home/rpeters1428/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.5/skills/brainstorming/scripts/start-server.sh --project-dir /home/rpeters1428/CinefinTV 2>&1)"
+      "Bash(bash /home/rpeters1428/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.5/skills/brainstorming/scripts/start-server.sh --project-dir /home/rpeters1428/CinefinTV 2>&1)",
+      "Bash(/home/rpeters1428/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.5/skills/brainstorming/scripts/start-server.sh --project-dir /home/rpeters1428/CinefinTV)"
     ]
   }
 }
