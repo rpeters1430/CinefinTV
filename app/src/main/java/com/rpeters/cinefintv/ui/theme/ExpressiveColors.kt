@@ -21,6 +21,7 @@ data class CinefinExpressiveColors(
     val pillMuted: Color,
     val pillStrong: Color,
     val titleAccent: Color,
+    val watchedGreen: Color,
     
     // M3 Expressive Tokens
     val surfaceContainerLowest: Color = SurfaceContainerLowest,
@@ -68,6 +69,7 @@ val LocalCinefinExpressiveColors = staticCompositionLocalOf {
         pillMuted = ProgressGray,
         pillStrong = CinefinRed.copy(alpha = 0.7f),
         titleAccent = CinefinGold,
+        watchedGreen = WatchedGreen,
     )
 }
 

@@ -24,6 +24,7 @@ val OnBackground = Color(0xFFF0F6FC)
 val OnSurfaceMuted = Color(0xFF8B949E)
 val ProgressGray = Color(0xFF30363D)
 val BorderSubtle = Color(0xFF30363D)
+val WatchedGreen = Color(0xFF2E7D32)
 
 // Material 3 Expressive Tones (Surface Containers)
 val SurfaceContainerLowest = Color(0xFF0D1117)
