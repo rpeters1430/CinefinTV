@@ -29,6 +29,7 @@ data class CinefinSpacing(
     val cardGap: Dp = 16.dp,
     val elementGap: Dp = 12.dp,
     val chipGap: Dp = 8.dp,
+    val labelGap: Dp = 4.dp,
     val gridContentPadding: Dp = 56.dp, // Grid edge padding — larger than gutter to give focus-scaled cards room at edges
     val cornerCard: Dp = 16.dp,
     val cornerContainer: Dp = 24.dp,

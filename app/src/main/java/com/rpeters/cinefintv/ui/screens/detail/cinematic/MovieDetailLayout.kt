@@ -19,7 +19,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -64,7 +63,7 @@ fun MovieDetailLayout(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(bottom = 48.dp),
+        contentPadding = PaddingValues(bottom = spacing.gutter),
     ) {
         item {
             CinematicHero(
@@ -92,6 +91,7 @@ fun MovieDetailLayout(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = if (descriptionExpanded) Int.MAX_VALUE else 4,
+                    modifier = Modifier.clickable { descriptionExpanded = !descriptionExpanded },
                 )
                 if (description.length > 200) {
                     Text(
@@ -99,7 +99,7 @@ fun MovieDetailLayout(
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
-                            .padding(top = 4.dp)
+                            .padding(top = spacing.labelGap)
                             .clickable { descriptionExpanded = !descriptionExpanded },
                     )
                 }
@@ -130,26 +130,26 @@ fun MovieDetailLayout(
 
         if (castItems.isNotEmpty()) {
             item {
-                CinefinShelfTitle(
-                    title = "Cast",
-                    modifier = Modifier.padding(
-                        horizontal = spacing.gutter,
-                        vertical = spacing.elementGap,
-                    ),
-                )
-            }
-            item {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = spacing.gutter),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
-                ) {
-                    items(castItems) { person ->
-                        TvPersonCard(
-                            name = person.name,
-                            role = person.role,
-                            imageUrl = person.imageUrl,
-                            onClick = { onCastClick(person.id) },
-                        )
+                Column {
+                    CinefinShelfTitle(
+                        title = "Cast",
+                        modifier = Modifier.padding(
+                            horizontal = spacing.gutter,
+                            vertical = spacing.elementGap,
+                        ),
+                    )
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = spacing.gutter),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                    ) {
+                        items(castItems) { person ->
+                            TvPersonCard(
+                                name = person.name,
+                                role = person.role,
+                                imageUrl = person.imageUrl,
+                                onClick = { onCastClick(person.id) },
+                            )
+                        }
                     }
                 }
             }
@@ -157,26 +157,26 @@ fun MovieDetailLayout(
 
         if (similarItems.isNotEmpty()) {
             item {
-                CinefinShelfTitle(
-                    title = "More Like This",
-                    modifier = Modifier.padding(
-                        horizontal = spacing.gutter,
-                        vertical = spacing.elementGap,
-                    ),
-                )
-            }
-            item {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = spacing.gutter),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
-                ) {
-                    items(similarItems) { mediaItem ->
-                        TvMediaCard(
-                            title = mediaItem.title,
-                            imageUrl = mediaItem.imageUrl,
-                            aspectRatio = 16f / 9f,
-                            onClick = { onSimilarClick(mediaItem.id) },
-                        )
+                Column {
+                    CinefinShelfTitle(
+                        title = "More Like This",
+                        modifier = Modifier.padding(
+                            horizontal = spacing.gutter,
+                            vertical = spacing.elementGap,
+                        ),
+                    )
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = spacing.gutter),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                    ) {
+                        items(similarItems) { mediaItem ->
+                            TvMediaCard(
+                                title = mediaItem.title,
+                                imageUrl = mediaItem.imageUrl,
+                                aspectRatio = 16f / 9f,
+                                onClick = { onSimilarClick(mediaItem.id) },
+                            )
+                        }
                     }
                 }
             }
