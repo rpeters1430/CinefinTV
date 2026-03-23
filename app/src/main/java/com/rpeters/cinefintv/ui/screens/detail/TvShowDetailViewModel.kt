@@ -54,7 +54,6 @@ sealed class TvShowDetailUiState {
         val seasons: List<SeasonModel>,
         val cast: List<CastModel>,
         val similarShows: List<SimilarMovieModel>, // Reusing SimilarMovieModel for simplicity
-        val selectedSeasonIndex: Int = 0,
         val episodes: List<EpisodeModel> = emptyList(),
         val resumeEpisodeIndex: Int = -1,
     ) : TvShowDetailUiState()
@@ -121,14 +120,13 @@ class TvShowDetailViewModel @Inject constructor(
                     seasons = seasons,
                     cast = cast,
                     similarShows = similarShows,
-                    selectedSeasonIndex = 0,
                     episodes = emptyList(),
                     resumeEpisodeIndex = -1,
                 )
                 _uiState.value = initialContent
                 // Load episodes for the first season
                 if (seasons.isNotEmpty()) {
-                    loadEpisodesForSeason(seasons[0].id, 0)
+                    loadEpisodesForSeason(seasons[0].id)
                 }
             } else if (seriesResult is ApiResult.Error) {
                 _uiState.value = TvShowDetailUiState.Error(seriesResult.message)
@@ -136,24 +134,13 @@ class TvShowDetailViewModel @Inject constructor(
         }
     }
 
-    fun selectSeason(index: Int) {
-        val content = _uiState.value as? TvShowDetailUiState.Content ?: return
-        if (index < 0 || index >= content.seasons.size) return
-        if (index == content.selectedSeasonIndex) return
-        _uiState.value = content.copy(selectedSeasonIndex = index, episodes = emptyList())
+    fun loadEpisodesForSeason(seasonId: String) {
         viewModelScope.launch {
-            loadEpisodesForSeason(content.seasons[index].id, index)
-        }
-    }
-
-    private suspend fun loadEpisodesForSeason(seasonId: String, seasonIndex: Int) {
-        val result = repositories.media.getEpisodesForSeason(seasonId)
-        if (result is ApiResult.Success) {
-            val episodes = result.data.map { it.toEpisodeModel() }
-            val resumeIndex = episodes.indexOfFirst { it.playbackProgress != null && (it.playbackProgress ?: 0f) > 0f }
-            val latestContent = _uiState.value as? TvShowDetailUiState.Content ?: return
-            // Only update if still viewing the same season
-            if (latestContent.selectedSeasonIndex == seasonIndex) {
+            val result = repositories.media.getEpisodesForSeason(seasonId)
+            if (result is ApiResult.Success) {
+                val episodes = result.data.map { it.toEpisodeModel() }
+                val resumeIndex = episodes.indexOfFirst { it.playbackProgress != null && (it.playbackProgress ?: 0f) > 0f }
+                val latestContent = _uiState.value as? TvShowDetailUiState.Content ?: return@launch
                 _uiState.value = latestContent.copy(
                     episodes = episodes,
                     resumeEpisodeIndex = resumeIndex,
@@ -244,6 +231,7 @@ class TvShowDetailViewModel @Inject constructor(
         )
     }
 
+    // TODO: unify with SeasonViewModel.toEpisodeModel() — identical mapping
     private fun BaseItemDto.toEpisodeModel(): EpisodeModel {
         return EpisodeModel(
             id = id.toString(),

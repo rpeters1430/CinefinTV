@@ -68,9 +68,11 @@ fun TvShowDetailScreen(
     val similarGridState = rememberLazyGridState()
     val primaryActionFocus = remember { FocusRequester() }
     var selectedTab by rememberSaveable { mutableStateOf(TvShowTab.Episodes) }
+    var selectedSeasonIndex by rememberSaveable { mutableStateOf(0) }
 
     LaunchedEffect((uiState as? TvShowDetailUiState.Content)?.show?.id) {
         selectedTab = TvShowTab.Episodes
+        selectedSeasonIndex = 0
         episodeListState.scrollToItem(0)
         castGridState.scrollToItem(0)
         similarGridState.scrollToItem(0)
@@ -167,8 +169,12 @@ fun TvShowDetailScreen(
                     secondaryActions = emptyList(),
                     primaryActionFocusRequester = primaryActionFocus,
                     seasons = state.seasons,
-                    selectedSeasonIndex = state.selectedSeasonIndex,
-                    onSeasonSelected = { index -> viewModel.selectSeason(index) },
+                    selectedSeasonIndex = selectedSeasonIndex,
+                    onSeasonSelected = { index ->
+                        selectedSeasonIndex = index
+                        val seasonId = state.seasons.getOrNull(index)?.id
+                        if (seasonId != null) viewModel.loadEpisodesForSeason(seasonId)
+                    },
                     episodes = state.episodes,
                     resumeEpisodeIndex = state.resumeEpisodeIndex,
                     onEpisodeClick = { episode -> onPlayEpisode(episode.id) },
