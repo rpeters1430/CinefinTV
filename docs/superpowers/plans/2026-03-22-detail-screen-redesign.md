@@ -520,6 +520,7 @@ This is the most complex new composable. Read `HomeScreen.kt` lines 247–295 fo
   import androidx.compose.foundation.layout.heightIn
   import androidx.compose.foundation.layout.padding
   import androidx.compose.foundation.layout.size
+  import androidx.compose.ui.graphics.RectangleShape
   import androidx.compose.foundation.layout.wrapContentWidth
   import androidx.compose.foundation.lazy.LazyRow
   import androidx.compose.foundation.lazy.items
@@ -708,6 +709,11 @@ This is the most complex new composable. Read `HomeScreen.kt` lines 247–295 fo
                   modifier = Modifier
                       .fillMaxWidth()
                       .background(expressiveColors.chromeSurface.copy(alpha = 0.85f))
+                      .border(
+                          width = 1.dp,
+                          color = MaterialTheme.colorScheme.border,
+                          shape = RectangleShape,
+                      )
                       .padding(horizontal = spacing.gutter, vertical = 16.dp),
                   horizontalArrangement = Arrangement.spacedBy(spacing.elementGap),
                   verticalAlignment = Alignment.CenterVertically,
@@ -1076,6 +1082,9 @@ This is the most complex new composable. Read `HomeScreen.kt` lines 247–295 fo
       description: String,
       factItems: List<DetailLabeledMetaItem>,
       factSummary: String,
+      // Tab state — hoisted to caller so LaunchedEffect(itemId) in screen can reset it
+      selectedTab: TvShowTab,
+      onTabSelected: (TvShowTab) -> Unit,
       // Scroll states (owned by caller for anchor fix)
       episodeListState: LazyListState,
       castGridState: LazyGridState,
@@ -1083,7 +1092,6 @@ This is the most complex new composable. Read `HomeScreen.kt` lines 247–295 fo
       modifier: Modifier = Modifier,
   ) {
       val spacing = LocalCinefinSpacing.current
-      var selectedTab by rememberSaveable { mutableStateOf(TvShowTab.Episodes) }
       val panelFocusRequester = remember { FocusRequester() }
 
       Column(modifier = modifier.fillMaxSize()) {
@@ -1129,7 +1137,7 @@ This is the most complex new composable. Read `HomeScreen.kt` lines 247–295 fo
                               }
                               .onFocusChanged { railItemFocused = it.isFocused }
                               .focusProperties { right = panelFocusRequester }
-                              .clickable { selectedTab = tab }
+                              .clickable { onTabSelected(tab) }
                               .padding(horizontal = 16.dp, vertical = 12.dp),
                           verticalAlignment = Alignment.CenterVertically,
                       ) {
@@ -1411,13 +1419,22 @@ Before editing, read the full current `TvShowDetailScreen.kt` to understand exis
   val castGridState = rememberLazyGridState()
   val similarGridState = rememberLazyGridState()
   val primaryActionFocus = remember { FocusRequester() }
+  var selectedTab by rememberSaveable { mutableStateOf(TvShowTab.Episodes) }
 
   LaunchedEffect(itemId) {
+      selectedTab = TvShowTab.Episodes   // reset tab on new item
       episodeListState.scrollToItem(0)
       castGridState.scrollToItem(0)
       similarGridState.scrollToItem(0)
       try { primaryActionFocus.requestFocus() } catch (_: Exception) {}
   }
+  ```
+
+  Required additional imports:
+  ```kotlin
+  import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+  import androidx.compose.runtime.saveable.rememberSaveable
+  import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowTab
   ```
 
   Required imports:
@@ -1431,6 +1448,7 @@ Before editing, read the full current `TvShowDetailScreen.kt` to understand exis
   Wire all parameters from the screen's `UiState.Content`. Read the current screen to confirm exact field names. Key mappings:
   - `eyebrow`: `"TV SERIES · ${content.seasonCount} SEASONS"`
   - `primaryActionLabel`: `"▶ Resume S${content.resumeSeason}E${content.resumeEpisode}"` or `"▶ Play"`
+  - Pass `selectedTab = selectedTab` and `onTabSelected = { selectedTab = it }`
   - Pass `episodeListState`, `castGridState`, `similarGridState`
   - Pass `primaryActionFocusRequester = primaryActionFocus`
 
