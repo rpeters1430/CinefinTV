@@ -9,12 +9,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -30,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -38,6 +34,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
 
 @Composable
 fun StuffDetailScreen(
@@ -79,58 +76,23 @@ private fun StuffVideoContent(
     stuff: StuffDetailModel,
     onPlayItem: (String) -> Unit,
 ) {
-    val anchorFocusRequester = remember { FocusRequester() }
     val primaryActionFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(stuff.id) {
-        anchorFocusRequester.requestFocus()
+        primaryActionFocusRequester.requestFocus()
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        DetailAnchor(
-            focusRequester = anchorFocusRequester,
-            onFocused = {
-                primaryActionFocusRequester.requestFocus()
-            }
-        )
-        DetailHeroBox(backdropUrl = stuff.backdropUrl, modifier = Modifier.fillMaxSize()) {
-            DetailGlassPanel(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth(0.55f)
-                    .padding(horizontal = 56.dp, vertical = 32.dp),
-            ) {
-                DetailChipRow(
-                    labels = buildList {
-                        add(stuff.type ?: "Video")
-                        if (!stuff.isCollection) add("Ready to play")
-                    }
-                )
-                Text(
-                    text = stuff.title,
-                    style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                )
-                stuff.overview?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3,
-                    )
-                }
-                stuff.playbackProgress?.let {
-                    DetailProgressLabel(progress = it)
-                }
-                DetailActionRow(
-                    primaryLabel = if (stuff.playbackProgress != null) "Resume Now" else "Play Now",
-                    onPrimaryClick = { onPlayItem(stuff.id) },
-                    primaryFocusRequester = primaryActionFocusRequester,
-                )
-            }
-        }
-    }
+    CinematicHero(
+        backdropUrl = stuff.backdropUrl,
+        logoUrl = null,
+        title = stuff.title,
+        eyebrow = (stuff.type ?: "Video").uppercase(),
+        ratingText = null,
+        genres = emptyList(),
+        primaryActionLabel = if (stuff.playbackProgress != null) "▶ Resume" else "▶ Play",
+        onPrimaryAction = { onPlayItem(stuff.id) },
+        primaryActionFocusRequester = primaryActionFocusRequester,
+    )
 }
 
 @Composable
@@ -139,70 +101,26 @@ private fun StuffCollectionContent(
     items: List<StuffItemModel>,
     onOpenItem: (String, String?) -> Unit,
 ) {
-    val anchorFocusRequester = remember { FocusRequester() }
     val primaryActionFocusRequester = remember { FocusRequester() }
     val gridEntryFocusRequester = remember { FocusRequester() }
     var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(items.firstOrNull()?.id) }
 
     LaunchedEffect(stuff.id) {
-        anchorFocusRequester.requestFocus()
+        primaryActionFocusRequester.requestFocus()
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        DetailAnchor(
-            focusRequester = anchorFocusRequester,
-            onFocused = {
-                primaryActionFocusRequester.requestFocus()
-            }
+        CinematicHero(
+            backdropUrl = stuff.backdropUrl,
+            logoUrl = null,
+            title = stuff.title,
+            eyebrow = "Collection · ${items.size} items",
+            ratingText = null,
+            genres = emptyList(),
+            primaryActionLabel = "Browse",
+            onPrimaryAction = { /* no-op, collection browsing is the content below */ },
+            primaryActionFocusRequester = primaryActionFocusRequester,
         )
-        DetailHeroBox(backdropUrl = stuff.backdropUrl) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth()
-                    .padding(horizontal = 56.dp, vertical = 32.dp),
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                DetailPosterArt(
-                    imageUrl = null,
-                    title = stuff.title,
-                    modifier = Modifier
-                        .width(172.dp)
-                        .height(258.dp),
-                )
-                DetailGlassPanel(
-                    modifier = Modifier.fillMaxWidth(0.66f)
-                ) {
-                    DetailChipRow(
-                        labels = buildList {
-                            add(stuff.type ?: "Collection")
-                            add("${items.size} items")
-                        }
-                    )
-                    Text(
-                        text = stuff.title,
-                        style = MaterialTheme.typography.displayMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                    )
-                    stuff.overview?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 3,
-                        )
-                    }
-                    DetailActionRow(
-                        primaryLabel = "Browse Items",
-                        onPrimaryClick = {},
-                        primaryFocusRequester = primaryActionFocusRequester,
-                        primaryDownFocusRequester = if (items.isNotEmpty()) gridEntryFocusRequester else null,
-                    )
-                }
-            }
-        }
 
         DetailContentSection(
             title = "Items",

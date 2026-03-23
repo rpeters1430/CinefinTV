@@ -4,21 +4,14 @@ package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.HighQuality
-import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Subtitles
-import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -30,28 +23,22 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import kotlinx.coroutines.launch
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
 import com.rpeters.cinefintv.utils.formatMs
 
 @Composable
@@ -106,16 +93,14 @@ private fun EpisodeDetailContent(
     onPlayEpisode: (String, Long?) -> Unit,
 ) {
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    val anchorFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
     val primaryActionFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
     val firstContentFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
     var lastFocusedChapterId by rememberSaveable { mutableStateOf<String?>(chapters.firstOrNull()?.id) }
 
     LaunchedEffect(episode.id) {
         listState.scrollToItem(0)
-        withFrameNanos {}   // wait one frame for layout to attach the anchor node
-        anchorFocusRequester.requestFocus()
+        withFrameNanos {}   // wait one frame for layout to attach the node
+        primaryActionFocusRequester.requestFocus()
     }
 
     LazyColumn(
@@ -124,84 +109,24 @@ private fun EpisodeDetailContent(
         contentPadding = PaddingValues(bottom = 48.dp),
     ) {
         item {
-            DetailAnchor(
-                focusRequester = anchorFocusRequester,
-                onFocused = {
-                    scope.launch {
-                        listState.scrollToItem(0)
-                        primaryActionFocusRequester.requestFocus()
-                    }
-                }
-            )
-        }
-        item {
-            DetailHeroBox(
+            CinematicHero(
                 backdropUrl = episode.backdropUrl,
-                modifier = Modifier.onFocusChanged {
-                    if (it.hasFocus) {
-                        scope.launch { listState.animateScrollToItem(0) }
-                    }
+                logoUrl = null,
+                title = episode.title,
+                eyebrow = listOfNotNull(episode.seriesName, episode.episodeCode).joinToString(" · "),
+                ratingText = null,
+                genres = emptyList(),
+                primaryActionLabel = when {
+                    episode.playbackProgress != null -> "▶ Resume Episode"
+                    episode.isWatched -> "▶ Play Again"
+                    else -> "▶ Play Episode"
                 },
-            ) {
-                DetailGlassPanel(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .fillMaxWidth(0.55f)
-                        .padding(horizontal = 56.dp, vertical = 32.dp),
-                ) {
-                    DetailMetaLine(
-                        items = buildList {
-                            add(DetailMetaItem(Icons.Default.PlayCircle, "Episode"))
-                            episode.episodeCode?.let { add(DetailMetaItem(Icons.Default.Tv, it)) }
-                            episode.year?.let { add(DetailMetaItem(Icons.Default.CalendarToday, "$it")) }
-                            episode.duration?.let { add(DetailMetaItem(Icons.Default.Schedule, it)) }
-                            if (episode.isWatched) add(DetailMetaItem(Icons.Default.Visibility, "Watched"))
-                        }
-                    )
-                    episode.seriesName?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.secondary,
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
-                    Text(
-                        text = episode.title,
-                        style = MaterialTheme.typography.displayMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    episode.overview?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 4,
-                        )
-                    }
-                    episode.playbackProgress?.let {
-                        DetailProgressLabel(progress = it)
-                    }
-                    DetailActionRow(
-                        primaryLabel = when {
-                            episode.playbackProgress != null -> "Resume Episode"
-                            episode.isWatched -> "Play Again"
-                            else -> "Play Episode"
-                        },
-                        onPrimaryClick = { onPlayEpisode(episode.id, null) },
-                        secondaryLabel = if (chapters.isNotEmpty()) "Jump to Chapter" else null,
-                        onSecondaryClick = if (chapters.isNotEmpty()) {
-                            { onPlayEpisode(episode.id, chapters.first().positionMs) }
-                        } else {
-                            null
-                        },
-                        primaryFocusRequester = primaryActionFocusRequester,
-                        primaryDownFocusRequester = if (chapters.isNotEmpty()) firstContentFocusRequester else null,
-                    )
-                }
-            }
+                onPrimaryAction = { onPlayEpisode(episode.id, null) },
+                secondaryActions = if (chapters.isNotEmpty())
+                    listOf("Jump to Chapter" to { onPlayEpisode(episode.id, chapters.first().positionMs) })
+                else emptyList(),
+                primaryActionFocusRequester = primaryActionFocusRequester,
+            )
         }
 
         if (chapters.isNotEmpty()) {
