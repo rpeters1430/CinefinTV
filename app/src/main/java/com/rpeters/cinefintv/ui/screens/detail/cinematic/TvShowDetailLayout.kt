@@ -143,7 +143,7 @@ fun TvShowDetailLayout(
                         Text(
                             text = tab.name,
                             style = MaterialTheme.typography.labelLarge,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            fontWeight = if (isSelected || railItemFocused) FontWeight.Bold else FontWeight.Normal,
                             color = if (isSelected || railItemFocused)
                                 MaterialTheme.colorScheme.onSurface
                             else
@@ -241,16 +241,21 @@ private fun EpisodesPanel(
             contentPadding = PaddingValues(horizontal = spacing.cardGap, vertical = spacing.elementGap),
             horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
         ) {
-            itemsIndexed(seasons) { index, _ ->
+            itemsIndexed(seasons) { index, season ->
                 CinefinChip(
-                    label = "Season ${index + 1}",
+                    label = season.title,
                     strong = index == selectedSeasonIndex,
                     modifier = Modifier.clickable { onSeasonSelected(index) },
                 )
             }
         }
-        LazyColumn(state = listState) {
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(bottom = spacing.gutter),
+        ) {
             items(episodes) { episode ->
+                // TODO: pass isNext = index == resumeEpisodeIndex once EpisodeListRow gains a
+                // "next episode" indicator parameter.
                 EpisodeListRow(
                     episode = episode,
                     onClick = { onEpisodeClick(episode) },
