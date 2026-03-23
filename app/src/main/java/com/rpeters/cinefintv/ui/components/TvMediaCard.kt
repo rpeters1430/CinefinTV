@@ -157,7 +157,7 @@ fun TvMediaCard(
                             ),
                     )
 
-                    // White brightness overlay when focused — makes card visually "pop"
+                    // Focus glow overlay — subtle red tint when focused for brand-aligned visual feedback
                     if (isFocused && !compactMetadata) {
                         Box(
                             modifier = Modifier
