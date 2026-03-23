@@ -69,6 +69,7 @@ import com.rpeters.cinefintv.data.preferences.SubtitleBackground
 import com.rpeters.cinefintv.data.preferences.SubtitleFont
 import com.rpeters.cinefintv.ui.player.PlayerConstants.CONTROLS_HIDE_DELAY_MS
 import com.rpeters.cinefintv.ui.player.PlayerConstants.NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS
+import com.rpeters.cinefintv.ui.player.PlayerConstants.PROGRESS_UPDATE_INTERVAL_MS
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -239,6 +240,22 @@ fun PlayerScreen(
                     exoPlayer.addListener(listener)
                     onDispose {
                         exoPlayer.removeListener(listener)
+                    }
+                }
+
+                // Periodic progress updates to keep seeker and time in sync
+                LaunchedEffect(exoPlayer, renderState.isPlaying) {
+                    if (renderState.isPlaying) {
+                        while (true) {
+                            renderState = PlayerRenderState(
+                                isPlaying = exoPlayer.isPlaying,
+                                isBuffering = exoPlayer.playbackState == Player.STATE_BUFFERING,
+                                position = exoPlayer.currentPosition.coerceAtLeast(0L),
+                                duration = exoPlayer.duration.coerceAtLeast(0L),
+                                bufferedFraction = exoPlayer.bufferedPercentage / 100f,
+                            )
+                            delay(PROGRESS_UPDATE_INTERVAL_MS)
+                        }
                     }
                 }
 
