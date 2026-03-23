@@ -95,6 +95,7 @@ fun TvShowDetailLayout(
 ) {
     val spacing = LocalCinefinSpacing.current
     val panelFocusRequester = remember { FocusRequester() }
+    val railFocusRequester = remember { FocusRequester() }
 
     Column(modifier = modifier.fillMaxSize()) {
         CinematicHero(
@@ -108,6 +109,7 @@ fun TvShowDetailLayout(
             onPrimaryAction = onPrimaryAction,
             secondaryActions = secondaryActions,
             primaryActionFocusRequester = primaryActionFocusRequester,
+            focusProperties = { down = railFocusRequester },
         )
 
         val dividerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
@@ -119,7 +121,7 @@ fun TvShowDetailLayout(
                     .fillMaxHeight()
                     .padding(top = spacing.rowGap),
             ) {
-                items(TvShowTab.entries) { tab ->
+                itemsIndexed(TvShowTab.entries) { index, tab ->
                     var railItemFocused by remember { mutableStateOf(false) }
                     val isSelected = selectedTab == tab
 
@@ -127,6 +129,9 @@ fun TvShowDetailLayout(
                         modifier = Modifier
                             .fillMaxWidth()
                             .defaultMinSize(minHeight = 48.dp)
+                            .then(
+                                if (index == 0) Modifier.focusRequester(railFocusRequester) else Modifier
+                            )
                             .drawBehind {
                                 if (isSelected) {
                                     drawRect(
@@ -170,7 +175,8 @@ fun TvShowDetailLayout(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .focusRequester(panelFocusRequester),
+                    .focusRequester(panelFocusRequester)
+                    .focusProperties { left = railFocusRequester },
             ) { tab ->
                 when (tab) {
                     TvShowTab.Episodes -> EpisodesPanel(

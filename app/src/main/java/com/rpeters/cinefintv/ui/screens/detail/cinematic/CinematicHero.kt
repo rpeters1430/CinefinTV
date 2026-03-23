@@ -26,7 +26,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusProperties
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -69,6 +71,7 @@ fun CinematicHero(
     onPrimaryAction: () -> Unit,
     secondaryActions: List<Pair<String, () -> Unit>> = emptyList(),
     primaryActionFocusRequester: FocusRequester = remember { FocusRequester() },
+    focusProperties: FocusProperties.() -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
@@ -219,7 +222,9 @@ fun CinematicHero(
                         focusedContainerColor = CinefinRed,
                         focusedContentColor = Color.White,
                     ),
-                    modifier = Modifier.focusRequester(primaryActionFocusRequester),
+                    modifier = Modifier
+                        .focusRequester(primaryActionFocusRequester)
+                        .focusProperties(focusProperties),
                 ) {
                     Text(primaryActionLabel, fontWeight = FontWeight.Bold)
                 }

@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -59,6 +60,7 @@ fun MovieDetailLayout(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
+    val descriptionFocusRequester = remember { FocusRequester() }
     var descriptionExpanded by remember { mutableStateOf(false) }
 
     LazyColumn(
@@ -78,6 +80,7 @@ fun MovieDetailLayout(
                 onPrimaryAction = onPrimaryAction,
                 secondaryActions = secondaryActions,
                 primaryActionFocusRequester = primaryActionFocusRequester,
+                focusProperties = { down = descriptionFocusRequester },
             )
         }
 
@@ -86,6 +89,7 @@ fun MovieDetailLayout(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .focusRequester(descriptionFocusRequester)
                     .onFocusChanged { isDescriptionFocused = it.isFocused }
                     .clickable { descriptionExpanded = !descriptionExpanded }
                     .padding(horizontal = spacing.gutter, vertical = spacing.rowGap),
