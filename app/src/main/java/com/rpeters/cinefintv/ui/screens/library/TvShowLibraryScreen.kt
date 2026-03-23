@@ -21,6 +21,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -77,8 +78,8 @@ fun TvShowLibraryScreen(
                     }
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(4),
-                        contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
+                        columns = GridCells.Fixed(5),
+                        contentPadding = PaddingValues(horizontal = LocalCinefinSpacing.current.gridContentPadding, vertical = 32.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(24.dp),
                         modifier = Modifier.fillMaxSize()
