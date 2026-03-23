@@ -79,6 +79,88 @@ data class DetailLabeledMetaItem(
     val value: String,
 )
 
+enum class MetaFactStyle { Card, Inline }
+
+@Composable
+fun MetaFactItem(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    style: MetaFactStyle = MetaFactStyle.Card,
+    modifier: Modifier = Modifier,
+) {
+    when (style) {
+        MetaFactStyle.Card -> {
+            Column(
+                modifier = modifier
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(18.dp),
+                    )
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Text(
+                        text = label.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        maxLines = 1,
+                    )
+                }
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        MetaFactStyle.Inline -> {
+            Row(
+                modifier = modifier
+                    .background(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.18f),
+                        shape = RoundedCornerShape(20.dp),
+                    )
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp),
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
+            }
+        }
+    }
+}
+
 /**
  * Full-width hero box with backdrop image and gradient overlays.
  * Content is placed via [content] slot; anchor to [Alignment.BottomStart] for standard detail layout.
@@ -367,7 +449,12 @@ fun DetailMetaLabelLine(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         filtered.forEach { item ->
-            DetailLabeledMetaItemView(item = item)
+            MetaFactItem(
+                icon = item.icon,
+                label = item.label,
+                value = item.value,
+                style = MetaFactStyle.Inline,
+            )
         }
     }
 }
@@ -387,7 +474,12 @@ fun DetailFactsColumn(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         filtered.forEach { item ->
-            DetailFactCard(item = item)
+            MetaFactItem(
+                icon = item.icon,
+                label = item.label,
+                value = item.value,
+                style = MetaFactStyle.Card,
+            )
         }
     }
 }
@@ -418,86 +510,6 @@ private fun DetailMetaItemView(
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
-    }
-}
-
-@Composable
-private fun DetailLabeledMetaItemView(
-    item: DetailLabeledMetaItem,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .background(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.18f),
-                shape = RoundedCornerShape(20.dp),
-            )
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Icon(
-            imageVector = item.icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp),
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = item.label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = item.value,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun DetailFactCard(
-    item: DetailLabeledMetaItem,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(18.dp),
-            )
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.border.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(18.dp),
-            )
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(
-            imageVector = item.icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp),
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = item.label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = item.value,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
     }
 }
 
