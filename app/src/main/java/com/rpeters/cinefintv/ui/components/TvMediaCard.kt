@@ -162,7 +162,7 @@ fun TvMediaCard(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color.White.copy(alpha = 0.12f))
+                                .background(expressiveColors.focusGlow.copy(alpha = 0.12f))
                         )
                     }
 
@@ -233,6 +233,7 @@ fun TvMediaCard(
 @Composable
 private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifier) {
     val spacing = LocalCinefinSpacing.current
+    val expressiveColors = LocalCinefinExpressiveColors.current
     Box(modifier = modifier.padding(spacing.chipGap.coerceAtLeast(0.dp).div(1.5f))) {
         when (status) {
             WatchStatus.WATCHED -> {
@@ -240,7 +241,7 @@ private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifie
                     modifier = Modifier
                         .size(28.dp)
                         .background(
-                            color = Color(0xFF2E7D32).copy(alpha = 0.95f),
+                            color = expressiveColors.watchedGreen.copy(alpha = 0.95f),
                             shape = RoundedCornerShape(999.dp),
                         ),
                     contentAlignment = Alignment.Center,

@@ -95,7 +95,7 @@ fun DetailHeroBox(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 500.dp)
+            .heightIn(min = 430.dp)
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
@@ -263,8 +263,8 @@ fun DetailGlassPanel(
                         )
                     )
                 )
-                .padding(horizontal = 28.dp, vertical = 26.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(horizontal = 22.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             content = content,
         )
     }
@@ -288,7 +288,7 @@ fun DetailTitleLogo(
         contentScale = ContentScale.Fit,
         modifier = modifier
             .widthIn(max = 420.dp)
-            .heightIn(max = 108.dp),
+            .heightIn(max = 84.dp),
     )
 }
 
@@ -373,6 +373,26 @@ fun DetailMetaLabelLine(
 }
 
 @Composable
+fun DetailFactsColumn(
+    items: List<DetailLabeledMetaItem>,
+    modifier: Modifier = Modifier,
+) {
+    val filtered = items.mapNotNull { item ->
+        item.value.trim().takeIf { it.isNotBlank() }?.let { item.copy(value = it) }
+    }
+    if (filtered.isEmpty()) return
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        filtered.forEach { item ->
+            DetailFactCard(item = item)
+        }
+    }
+}
+
+@Composable
 private fun DetailMetaItemView(
     item: DetailMetaItem,
     modifier: Modifier = Modifier,
@@ -438,6 +458,50 @@ private fun DetailLabeledMetaItemView(
 }
 
 @Composable
+private fun DetailFactCard(
+    item: DetailLabeledMetaItem,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.2f),
+                shape = RoundedCornerShape(18.dp),
+            )
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.border.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(18.dp),
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(
+            imageVector = item.icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp),
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = item.label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = item.value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
 fun DetailActionRow(
     primaryLabel: String,
     onPrimaryClick: () -> Unit,
@@ -474,9 +538,9 @@ fun DetailActionRow(
                         right = secondaryFocusRequester
                     }
                 }
-                .defaultMinSize(minWidth = 220.dp, minHeight = 56.dp),
+                .defaultMinSize(minWidth = 200.dp, minHeight = 50.dp),
             scale = ButtonDefaults.scale(focusedScale = 1.03f),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
             colors = ButtonDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -491,7 +555,7 @@ fun DetailActionRow(
                 onClick = onSecondaryClick,
                 modifier = Modifier
                     .focusRequester(secondaryFocusRequester)
-                    .defaultMinSize(minWidth = 220.dp, minHeight = 56.dp)
+                    .defaultMinSize(minWidth = 200.dp, minHeight = 50.dp)
                     .focusProperties {
                         left = primaryFocusRequester ?: FocusRequester.Default
                         if (primaryDownFocusRequester != null) {
@@ -499,7 +563,7 @@ fun DetailActionRow(
                         }
                     },
                 scale = ButtonDefaults.scale(focusedScale = 1.03f),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
                 colors = ButtonDefaults.colors(
                     containerColor = expressiveColors.chromeSurface.copy(alpha = 0.7f),
                     contentColor = MaterialTheme.colorScheme.onBackground,
@@ -771,7 +835,7 @@ fun EpisodeListRow(
                             .align(Alignment.TopEnd)
                             .padding(6.dp)
                             .size(24.dp)
-                            .background(Color(0xFF2E7D32).copy(alpha = 0.95f), RoundedCornerShape(999.dp)),
+                            .background(expressiveColors.watchedGreen.copy(alpha = 0.95f), RoundedCornerShape(999.dp)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
