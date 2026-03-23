@@ -133,7 +133,7 @@ enum class TvShowTab { Episodes, Cast, Similar, Details }
 - Each item: `Row` with `Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp).padding(horizontal = 16.dp, vertical = 12.dp)`
 - Selected: left-edge accent drawn via `Modifier.drawBehind { drawRect(color = CinefinRed, size = Size(4.dp.toPx(), size.height)) }` + `onSurface` color text + `fontWeight = Bold`
 - Unselected: `onSurface.copy(alpha = 0.45f)` text
-- Right edge: `Divider(modifier = Modifier.fillMaxHeight().width(1.dp), color = onSurface.copy(alpha = 0.08f))`
+- Right edge: `VerticalDivider(modifier = Modifier.fillMaxHeight(), color = onSurface.copy(alpha = 0.08f))`
 - D-pad: `focusProperties { right = rightPanelFirstItemFocusRequester }` on each rail item
 
 **Right Panel** (`Modifier.weight(1f).fillMaxHeight()`):
