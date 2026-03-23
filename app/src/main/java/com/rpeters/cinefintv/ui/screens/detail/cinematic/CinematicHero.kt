@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -78,6 +79,7 @@ fun CinematicHero(
 
     // logoLoaded: start true if there's no logo (show text immediately)
     var logoLoaded by remember { mutableStateOf(logoUrl == null) }
+    var logoFailed by remember { mutableStateOf(false) }
 
     // Clear seed color when leaving this screen
     DisposableEffect(Unit) {
@@ -138,20 +140,31 @@ fun CinematicHero(
                 modifier = Modifier.padding(bottom = spacing.elementGap),
             )
 
+            // Pre-load the logo image outside AnimatedVisibility so loading starts immediately
+            if (logoUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(logoUrl)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier.size(0.dp),
+                    onSuccess = { logoLoaded = true },
+                    onError = { logoFailed = true; logoLoaded = true },
+                )
+            }
+
             // Logo or title
             AnimatedVisibility(
                 visible = logoLoaded,
                 enter = fadeIn(tween(300)),
             ) {
-                if (logoUrl != null) {
+                if (logoUrl != null && !logoFailed) {
                     AsyncImage(
                         model = logoUrl,
                         contentDescription = title,
                         modifier = Modifier
                             .heightIn(max = 120.dp)
                             .wrapContentWidth(),
-                        onSuccess = { logoLoaded = true },
-                        onError = { logoLoaded = true },
                     )
                 } else {
                     Text(
