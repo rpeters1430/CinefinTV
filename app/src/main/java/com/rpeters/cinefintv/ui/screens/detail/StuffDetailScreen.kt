@@ -3,6 +3,8 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -205,6 +207,7 @@ private fun StuffCollectionContent(
         DetailContentSection(
             title = "Items",
             eyebrow = "${items.size} in collection",
+            icon = Icons.Default.VideoLibrary,
             modifier = Modifier.padding(top = 0.dp),
         ) {}
 

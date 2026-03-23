@@ -3,6 +3,18 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Apartment
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.LocalOffer
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.SurroundSound
+import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -143,46 +155,85 @@ private fun MovieDetailContent(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .fillMaxWidth()
-                        .padding(horizontal = 56.dp, vertical = 32.dp),
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                        .padding(horizontal = 56.dp, vertical = 36.dp),
+                    horizontalArrangement = Arrangement.spacedBy(28.dp),
                     verticalAlignment = Alignment.Bottom,
                 ) {
                     DetailPosterArt(
                         imageUrl = movie.posterUrl,
                         title = movie.title,
                         modifier = Modifier
-                            .width(196.dp)
-                            .height(294.dp),
+                            .width(210.dp)
+                            .height(315.dp),
                     )
                     DetailGlassPanel(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth(),
                     ) {
+                        DetailTitleLogo(
+                            logoUrl = movie.logoUrl,
+                            title = movie.title,
+                        )
                         Text(
                             text = movie.title,
-                            style = MaterialTheme.typography.displayMedium,
+                            style = if (movie.logoUrl != null) {
+                                MaterialTheme.typography.headlineLarge
+                            } else {
+                                MaterialTheme.typography.displayMedium
+                            },
                             fontWeight = FontWeight.Bold,
                             maxLines = 2,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = if (movie.logoUrl != null) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
                         )
                         DetailMetaLine(
-                            values = buildList {
-                                movie.rating?.let { add("IMDb $it") }
-                                movie.secondaryRating?.let { add("Critic $it") }
-                                movie.premieredDate?.let { add(it) } ?: movie.year?.let { add("$it") }
-                                movie.officialRating?.let { add(it) }
-                                movie.videoQuality?.let { add(it) }
-                                movie.audioLabel?.let { add(it) }
-                                if (movie.isWatched) add("Watched")
+                            items = buildList {
+                                movie.rating?.let { add(DetailMetaItem(Icons.Default.Star, "IMDb $it")) }
+                                movie.secondaryRating?.let { add(DetailMetaItem(Icons.Default.Movie, "Critic $it")) }
+                                movie.premieredDate?.let { add(DetailMetaItem(Icons.Default.CalendarToday, it)) }
+                                    ?: movie.year?.let { add(DetailMetaItem(Icons.Default.CalendarToday, "$it")) }
+                                movie.officialRating?.let { add(DetailMetaItem(Icons.Default.Verified, it)) }
+                                movie.videoQuality?.let { add(DetailMetaItem(Icons.Default.HighQuality, it)) }
+                                movie.audioLabel?.let { add(DetailMetaItem(Icons.Default.SurroundSound, it)) }
+                                if (movie.isWatched) add(DetailMetaItem(Icons.Default.Visibility, "Watched"))
                             }
                         )
                         DetailMetaLabelLine(
-                            values = buildList {
-                                if (movie.genres.isNotEmpty()) add("Tags" to movie.genres.take(4).joinToString(", "))
-                                movie.duration?.let { add("Runtime" to it) }
-                                if (movie.directors.isNotEmpty()) add("Directed by" to movie.directors.take(2).joinToString(", "))
-                                if (movie.studios.isNotEmpty()) add("Studio" to movie.studios.take(2).joinToString(", "))
+                            items = buildList {
+                                if (movie.genres.isNotEmpty()) {
+                                    add(
+                                        DetailLabeledMetaItem(
+                                            Icons.Default.LocalOffer,
+                                            "Tags",
+                                            movie.genres.take(4).joinToString(", "),
+                                        )
+                                    )
+                                }
+                                movie.duration?.let {
+                                    add(DetailLabeledMetaItem(Icons.Default.Schedule, "Runtime", it))
+                                }
+                                if (movie.directors.isNotEmpty()) {
+                                    add(
+                                        DetailLabeledMetaItem(
+                                            Icons.Default.Movie,
+                                            "Directed by",
+                                            movie.directors.take(2).joinToString(", "),
+                                        )
+                                    )
+                                }
+                                if (movie.studios.isNotEmpty()) {
+                                    add(
+                                        DetailLabeledMetaItem(
+                                            Icons.Default.Apartment,
+                                            "Studio",
+                                            movie.studios.take(2).joinToString(", "),
+                                        )
+                                    )
+                                }
                             }
                         )
                         movie.overview?.let {
@@ -221,10 +272,14 @@ private fun MovieDetailContent(
 
         if (cast.isNotEmpty()) {
             item {
-                DetailContentSection(title = "Cast & Crew", eyebrow = "${cast.size} people") {
+                DetailContentSection(
+                    title = "Cast & Crew",
+                    eyebrow = "${cast.size} people",
+                    icon = Icons.Default.Groups,
+                ) {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 56.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
                     ) {
                         items(cast) { person ->
                             TvPersonCard(
@@ -256,17 +311,21 @@ private fun MovieDetailContent(
 
         if (similarMovies.isNotEmpty()) {
             item {
-                DetailContentSection(title = "Similar Movies", eyebrow = "Keep Watching") {
+                DetailContentSection(
+                    title = "Similar Movies",
+                    eyebrow = "Keep Watching",
+                    icon = Icons.Default.Movie,
+                ) {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 56.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
                     ) {
                         items(similarMovies) { item ->
                             TvMediaCard(
                                 title = item.title,
                                 imageUrl = item.imageUrl,
                                 aspectRatio = 2f / 3f,
-                                cardWidth = 140.dp,
+                                cardWidth = 152.dp,
                                 modifier = Modifier
                                     .then(
                                         if (item.id == lastFocusedSimilarId) {

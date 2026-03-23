@@ -77,7 +77,7 @@ fun TvShowLibraryScreen(
                     }
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(6),
+                        columns = GridCells.Fixed(4),
                         contentPadding = PaddingValues(horizontal = 56.dp, vertical = 32.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(24.dp),

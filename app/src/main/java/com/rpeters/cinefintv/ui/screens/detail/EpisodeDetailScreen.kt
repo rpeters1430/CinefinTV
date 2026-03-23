@@ -3,6 +3,16 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -139,13 +149,13 @@ private fun EpisodeDetailContent(
                         .fillMaxWidth(0.55f)
                         .padding(horizontal = 56.dp, vertical = 32.dp),
                 ) {
-                    DetailChipRow(
-                        labels = buildList {
-                            add("Episode")
-                            episode.episodeCode?.let { add(it) }
-                            episode.year?.let { add("$it") }
-                            episode.duration?.let { add(it) }
-                            if (episode.isWatched) add("Watched")
+                    DetailMetaLine(
+                        items = buildList {
+                            add(DetailMetaItem(Icons.Default.PlayCircle, "Episode"))
+                            episode.episodeCode?.let { add(DetailMetaItem(Icons.Default.Tv, it)) }
+                            episode.year?.let { add(DetailMetaItem(Icons.Default.CalendarToday, "$it")) }
+                            episode.duration?.let { add(DetailMetaItem(Icons.Default.Schedule, it)) }
+                            if (episode.isWatched) add(DetailMetaItem(Icons.Default.Visibility, "Watched"))
                         }
                     )
                     episode.seriesName?.let {
@@ -196,7 +206,11 @@ private fun EpisodeDetailContent(
 
         if (chapters.isNotEmpty()) {
             item {
-                DetailContentSection(title = "Chapters", eyebrow = "${chapters.size} markers") {
+                DetailContentSection(
+                    title = "Chapters",
+                    eyebrow = "${chapters.size} markers",
+                    icon = Icons.Default.Subtitles,
+                ) {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 56.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -230,7 +244,10 @@ private fun EpisodeDetailContent(
 
         if (mediaDetail != null && (mediaDetail.video != null || mediaDetail.audioStreams.isNotEmpty())) {
             item {
-                DetailContentSection(title = "Media Details") {
+                DetailContentSection(
+                    title = "Media Details",
+                    icon = Icons.Default.VideoLibrary,
+                ) {
                     // Video row
                     mediaDetail.video?.let { video ->
                         val videoChips = listOfNotNull(
@@ -241,8 +258,8 @@ private fun EpisodeDetailContent(
                             mediaDetail.container,
                         )
                         if (videoChips.isNotEmpty()) {
-                            DetailChipRow(
-                                labels = videoChips,
+                            DetailMetaLine(
+                                items = videoChips.map { DetailMetaItem(Icons.Default.HighQuality, it) },
                                 modifier = Modifier.padding(horizontal = 56.dp),
                             )
                         }
@@ -255,8 +272,8 @@ private fun EpisodeDetailContent(
                             audio.language,
                         ).joinToString("  ")
                         if (audioLabel.isNotBlank()) {
-                            DetailChipRow(
-                                labels = listOf(audioLabel),
+                            DetailMetaLine(
+                                items = listOf(DetailMetaItem(Icons.Default.GraphicEq, audioLabel)),
                                 modifier = Modifier.padding(horizontal = 56.dp),
                             )
                         }

@@ -30,6 +30,8 @@ data class EpisodeModel(
     val overview: String?,
     val imageUrl: String?,
     val duration: String?,
+    val videoQuality: String?,
+    val audioLabel: String?,
     val isWatched: Boolean,
     val playbackProgress: Float?,
     val episodeCode: String?,
@@ -127,6 +129,31 @@ class SeasonViewModel @Inject constructor(
             overview = overview,
             imageUrl = repositories.stream.getBackdropUrl(this),
             duration = getFormattedDuration(),
+            videoQuality = getMediaQualityLabel(),
+            audioLabel = mediaSources
+                ?.firstOrNull()
+                ?.mediaStreams
+                ?.filter { it.type == org.jellyfin.sdk.model.api.MediaStreamType.AUDIO }
+                ?.firstOrNull()
+                ?.let { stream ->
+                    val codec = when (stream.codec?.uppercase()) {
+                        "EAC3", "E-AC3" -> "EAC3"
+                        "AC3" -> "AC3"
+                        "TRUEHD" -> "TrueHD"
+                        "DTS" -> "DTS"
+                        "AAC" -> "AAC"
+                        "FLAC" -> "FLAC"
+                        "OPUS" -> "Opus"
+                        else -> stream.codec?.uppercase()
+                    }
+                    val channels = when (stream.channels) {
+                        2 -> "Stereo"
+                        6 -> "5.1"
+                        8 -> "7.1"
+                        else -> stream.channels?.let { "$it ch" }
+                    }
+                    listOfNotNull(codec, channels).joinToString(" ").ifBlank { null }
+                },
             isWatched = isWatched(),
             playbackProgress = (getWatchedPercentage() / 100.0).toFloat(),
             episodeCode = getEpisodeCode()

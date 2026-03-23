@@ -27,6 +27,7 @@ data class TvShowDetailModel(
     val overview: String?,
     val backdropUrl: String?,
     val posterUrl: String?,
+    val logoUrl: String?,
     val genres: List<String>,
     val videoQuality: String?,
     val audioLabel: String?,
@@ -154,6 +155,7 @@ class TvShowDetailViewModel @Inject constructor(
             overview = overview,
             backdropUrl = repositories.stream.getBackdropUrl(this),
             posterUrl = repositories.stream.getPosterCardImageUrl(this),
+            logoUrl = repositories.stream.getLogoUrl(this),
             genres = genres ?: emptyList(),
             videoQuality = getMediaQualityLabel(),
             audioLabel = mediaSources

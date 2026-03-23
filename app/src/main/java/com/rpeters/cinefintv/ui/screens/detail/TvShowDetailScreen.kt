@@ -3,6 +3,19 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.CastConnected
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.LocalOffer
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.SurroundSound
+import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -150,47 +163,96 @@ private fun TvShowDetailContent(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .fillMaxWidth()
-                        .padding(horizontal = 56.dp, vertical = 32.dp),
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                        .padding(horizontal = 56.dp, vertical = 36.dp),
+                    horizontalArrangement = Arrangement.spacedBy(28.dp),
                     verticalAlignment = Alignment.Bottom,
                 ) {
                     DetailPosterArt(
                         imageUrl = show.posterUrl,
                         title = show.title,
                         modifier = Modifier
-                            .width(196.dp)
-                            .height(294.dp),
+                            .width(210.dp)
+                            .height(315.dp),
                     )
                     DetailGlassPanel(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth(),
                     ) {
+                        DetailTitleLogo(
+                            logoUrl = show.logoUrl,
+                            title = show.title,
+                        )
                         Text(
                             text = show.title,
-                            style = MaterialTheme.typography.displayMedium,
+                            style = if (show.logoUrl != null) {
+                                MaterialTheme.typography.headlineLarge
+                            } else {
+                                MaterialTheme.typography.displayMedium
+                            },
                             fontWeight = FontWeight.Bold,
                             maxLines = 2,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = if (show.logoUrl != null) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
                         )
                         DetailMetaLine(
-                            values = buildList {
-                                show.rating?.let { add("IMDb $it") }
-                                show.secondaryRating?.let { add("Critic $it") }
-                                show.airedDate?.let { add(it) } ?: show.yearRange?.let { add(it) }
-                                show.officialRating?.let { add(it) }
-                                show.videoQuality?.let { add(it) }
-                                show.audioLabel?.let { add(it) }
+                            items = buildList {
+                                show.rating?.let { add(DetailMetaItem(Icons.Default.Star, "IMDb $it")) }
+                                show.secondaryRating?.let { add(DetailMetaItem(Icons.Default.Tv, "Critic $it")) }
+                                show.airedDate?.let { add(DetailMetaItem(Icons.Default.CalendarToday, it)) }
+                                    ?: show.yearRange?.let { add(DetailMetaItem(Icons.Default.CalendarToday, it)) }
+                                show.officialRating?.let { add(DetailMetaItem(Icons.Default.Verified, it)) }
+                                show.videoQuality?.let { add(DetailMetaItem(Icons.Default.HighQuality, it)) }
+                                show.audioLabel?.let { add(DetailMetaItem(Icons.Default.SurroundSound, it)) }
                             }
                         )
                         DetailMetaLabelLine(
-                            values = buildList {
-                                if (show.genres.isNotEmpty()) add("Tags" to show.genres.take(4).joinToString(", "))
-                                if (show.seasonCount > 0) add("Seasons" to show.seasonCount.toString())
-                                show.endedDate?.let { add("Ends" to it) }
-                                show.status?.let { add("Status" to it) }
-                                if (show.creators.isNotEmpty()) add("Created by" to show.creators.take(2).joinToString(", "))
-                                if (show.networks.isNotEmpty()) add("Network" to show.networks.take(2).joinToString(", "))
+                            items = buildList {
+                                if (show.genres.isNotEmpty()) {
+                                    add(
+                                        DetailLabeledMetaItem(
+                                            Icons.Default.LocalOffer,
+                                            "Tags",
+                                            show.genres.take(4).joinToString(", "),
+                                        )
+                                    )
+                                }
+                                if (show.seasonCount > 0) {
+                                    add(
+                                        DetailLabeledMetaItem(
+                                            Icons.Default.VideoLibrary,
+                                            "Seasons",
+                                            show.seasonCount.toString(),
+                                        )
+                                    )
+                                }
+                                show.endedDate?.let {
+                                    add(DetailLabeledMetaItem(Icons.Default.Event, "Ends", it))
+                                }
+                                show.status?.let {
+                                    add(DetailLabeledMetaItem(Icons.Default.Tv, "Status", it))
+                                }
+                                if (show.creators.isNotEmpty()) {
+                                    add(
+                                        DetailLabeledMetaItem(
+                                            Icons.Default.Edit,
+                                            "Created by",
+                                            show.creators.take(2).joinToString(", "),
+                                        )
+                                    )
+                                }
+                                if (show.networks.isNotEmpty()) {
+                                    add(
+                                        DetailLabeledMetaItem(
+                                            Icons.Default.CastConnected,
+                                            "Network",
+                                            show.networks.take(2).joinToString(", "),
+                                        )
+                                    )
+                                }
                             }
                         )
                         show.overview?.let {
@@ -238,10 +300,14 @@ private fun TvShowDetailContent(
 
         if (seasons.isNotEmpty()) {
             item {
-                DetailContentSection(title = "Seasons", eyebrow = "${seasons.size} available") {
+                DetailContentSection(
+                    title = "Seasons",
+                    eyebrow = "${seasons.size} available",
+                    icon = Icons.Default.VideoLibrary,
+                ) {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 56.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
                     ) {
                         items(seasons) { season ->
                             TvMediaCard(
@@ -249,7 +315,7 @@ private fun TvShowDetailContent(
                                 subtitle = season.episodeCount?.let { "$it Episodes" },
                                 imageUrl = season.imageUrl,
                                 aspectRatio = 2f / 3f,
-                                cardWidth = 140.dp,
+                                cardWidth = 152.dp,
                                 unwatchedCount = season.unwatchedCount,
                                 modifier = Modifier
                                     .then(
@@ -277,10 +343,14 @@ private fun TvShowDetailContent(
 
         if (cast.isNotEmpty()) {
             item {
-                DetailContentSection(title = "Cast & Crew", eyebrow = "${cast.size} people") {
+                DetailContentSection(
+                    title = "Cast & Crew",
+                    eyebrow = "${cast.size} people",
+                    icon = Icons.Default.Groups,
+                ) {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 56.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
                     ) {
                         items(cast) { person ->
                             TvPersonCard(
@@ -316,17 +386,21 @@ private fun TvShowDetailContent(
 
         if (similarShows.isNotEmpty()) {
             item {
-                DetailContentSection(title = "More Like This", eyebrow = "Recommended next") {
+                DetailContentSection(
+                    title = "More Like This",
+                    eyebrow = "Recommended next",
+                    icon = Icons.Default.Tv,
+                ) {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 56.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
                     ) {
                         items(similarShows) { item ->
                             TvMediaCard(
                                 title = item.title,
                                 imageUrl = item.imageUrl,
                                 aspectRatio = 2f / 3f,
-                                cardWidth = 140.dp,
+                                cardWidth = 152.dp,
                                 modifier = Modifier
                                     .then(
                                         if (item.id == lastFocusedSimilarId) {

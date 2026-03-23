@@ -2,8 +2,13 @@
 
 package com.rpeters.cinefintv.ui.screens.detail
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,10 +22,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
@@ -36,10 +43,13 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -58,6 +68,17 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 
+data class DetailMetaItem(
+    val icon: ImageVector,
+    val value: String,
+)
+
+data class DetailLabeledMetaItem(
+    val icon: ImageVector,
+    val label: String,
+    val value: String,
+)
+
 /**
  * Full-width hero box with backdrop image and gradient overlays.
  * Content is placed via [content] slot; anchor to [Alignment.BottomStart] for standard detail layout.
@@ -74,7 +95,7 @@ fun DetailHeroBox(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 420.dp)
+            .heightIn(min = 500.dp)
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
@@ -117,12 +138,41 @@ fun DetailHeroBox(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            expressiveColors.focusGlow.copy(alpha = 0.24f),
+                            expressiveColors.chromeSurface.copy(alpha = 0.08f),
+                            Color.Transparent,
+                        ),
+                        radius = 960f,
+                        center = androidx.compose.ui.geometry.Offset(280f, 240f),
+                    )
+                )
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
                     Brush.linearGradient(
                         colors = listOf(
                             expressiveColors.chromeSurface.copy(alpha = 0.14f),
                             Color.Transparent,
                             expressiveColors.focusGlow.copy(alpha = 0.18f),
                         ),
+                    )
+                )
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(110.dp)
+                .align(Alignment.TopCenter)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            background.copy(alpha = 0.34f),
+                            Color.Transparent,
+                        )
                     )
                 )
         )
@@ -140,7 +190,9 @@ fun DetailPosterArt(
     val expressiveColors = LocalCinefinExpressiveColors.current
 
     Surface(
-        modifier = modifier,
+        modifier = modifier.graphicsLayer {
+            shadowElevation = 28.dp.toPx()
+        },
         shape = RoundedCornerShape(spacing.cornerContainer),
         colors = SurfaceDefaults.colors(containerColor = expressiveColors.accentSurface.copy(alpha = 0.92f)),
         tonalElevation = 10.dp,
@@ -187,7 +239,12 @@ fun DetailGlassPanel(
     Box(
         modifier = modifier
             .background(
-                color = expressiveColors.chromeSurface.copy(alpha = 0.82f),
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        expressiveColors.chromeSurface.copy(alpha = 0.9f),
+                        expressiveColors.chromeSurface.copy(alpha = 0.84f),
+                    )
+                ),
                 shape = RoundedCornerShape(spacing.cornerContainer),
             )
             .border(
@@ -197,11 +254,42 @@ fun DetailGlassPanel(
             ),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 22.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            Color.Transparent,
+                        )
+                    )
+                )
+                .padding(horizontal = 28.dp, vertical = 26.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             content = content,
         )
     }
+}
+
+@Composable
+fun DetailTitleLogo(
+    logoUrl: String?,
+    title: String,
+    modifier: Modifier = Modifier,
+) {
+    if (logoUrl == null) return
+
+    AsyncImage(
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(logoUrl)
+            .crossfade(true)
+            .size(720, 240)
+            .build(),
+        contentDescription = title,
+        contentScale = ContentScale.Fit,
+        modifier = modifier
+            .widthIn(max = 420.dp)
+            .heightIn(max = 108.dp),
+    )
 }
 
 @Composable
@@ -244,34 +332,109 @@ fun DetailProgressLabel(
 
 @Composable
 fun DetailMetaLine(
-    values: List<String>,
+    items: List<DetailMetaItem>,
     modifier: Modifier = Modifier,
 ) {
-    val filtered = values.map { it.trim() }.filter { it.isNotBlank() }
+    val filtered = items.mapNotNull { item ->
+        item.value.trim().takeIf { it.isNotBlank() }?.let { item.copy(value = it) }
+    }
     if (filtered.isEmpty()) return
 
-    Text(
-        text = filtered.joinToString("  •  "),
+    FlowRow(
         modifier = modifier,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onBackground,
-    )
+        horizontalArrangement = Arrangement.spacedBy(18.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        filtered.forEach { item ->
+            DetailMetaItemView(item = item)
+        }
+    }
 }
 
 @Composable
 fun DetailMetaLabelLine(
-    values: List<Pair<String, String>>,
+    items: List<DetailLabeledMetaItem>,
     modifier: Modifier = Modifier,
 ) {
-    val filtered = values.filter { it.second.isNotBlank() }
+    val filtered = items.mapNotNull { item ->
+        item.value.trim().takeIf { it.isNotBlank() }?.let { item.copy(value = it) }
+    }
     if (filtered.isEmpty()) return
 
-    Text(
-        text = filtered.joinToString("  •  ") { (label, value) -> "$label $value" },
+    FlowRow(
         modifier = modifier,
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+        horizontalArrangement = Arrangement.spacedBy(22.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        filtered.forEach { item ->
+            DetailLabeledMetaItemView(item = item)
+        }
+    }
+}
+
+@Composable
+private fun DetailMetaItemView(
+    item: DetailMetaItem,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.22f),
+                shape = RoundedCornerShape(999.dp),
+            )
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            imageVector = item.icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            text = item.value,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+    }
+}
+
+@Composable
+private fun DetailLabeledMetaItemView(
+    item: DetailLabeledMetaItem,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(20.dp),
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            imageVector = item.icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp),
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = item.label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = item.value,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 @Composable
@@ -290,44 +453,30 @@ fun DetailActionRow(
 
     Row(
         modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Button(
             onClick = onPrimaryClick,
-            modifier = if (primaryFocusRequester != null) {
-                Modifier
-                    .focusRequester(primaryFocusRequester)
-                    .then(
-                        if (primaryDownFocusRequester != null) {
-                            Modifier.focusProperties { down = primaryDownFocusRequester }
-                        } else {
-                            Modifier
-                        }
-                    )
-                    .then(
-                        if (hasSecondaryAction) {
-                            Modifier.focusProperties { right = secondaryFocusRequester }
-                        } else {
-                            Modifier
-                        }
-                    )
-            } else {
-                if (primaryDownFocusRequester != null) {
-                    Modifier.focusProperties {
-                        down = primaryDownFocusRequester
-                        if (hasSecondaryAction) {
-                            right = secondaryFocusRequester
-                        }
-                    }
-                } else {
-                    if (hasSecondaryAction) {
-                        Modifier.focusProperties { right = secondaryFocusRequester }
+            modifier = Modifier
+                .then(
+                    if (primaryFocusRequester != null) {
+                        Modifier.focusRequester(primaryFocusRequester)
                     } else {
                         Modifier
                     }
+                )
+                .focusProperties {
+                    if (primaryDownFocusRequester != null) {
+                        down = primaryDownFocusRequester
+                    }
+                    if (hasSecondaryAction) {
+                        right = secondaryFocusRequester
+                    }
                 }
-            },
-            scale = ButtonDefaults.scale(focusedScale = 1.06f),
+                .defaultMinSize(minWidth = 220.dp, minHeight = 56.dp),
+            scale = ButtonDefaults.scale(focusedScale = 1.03f),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
             colors = ButtonDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -342,13 +491,15 @@ fun DetailActionRow(
                 onClick = onSecondaryClick,
                 modifier = Modifier
                     .focusRequester(secondaryFocusRequester)
+                    .defaultMinSize(minWidth = 220.dp, minHeight = 56.dp)
                     .focusProperties {
                         left = primaryFocusRequester ?: FocusRequester.Default
                         if (primaryDownFocusRequester != null) {
                             down = primaryDownFocusRequester
                         }
                     },
-                scale = ButtonDefaults.scale(focusedScale = 1.05f),
+                scale = ButtonDefaults.scale(focusedScale = 1.03f),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
                 colors = ButtonDefaults.colors(
                     containerColor = expressiveColors.chromeSurface.copy(alpha = 0.7f),
                     contentColor = MaterialTheme.colorScheme.onBackground,
@@ -384,6 +535,7 @@ fun DetailActionRow(
 fun DetailContentSection(
     title: String,
     eyebrow: String? = null,
+    icon: ImageVector? = null,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -391,8 +543,8 @@ fun DetailContentSection(
     var isHeaderFocused by remember(title) { mutableStateOf(false) }
 
     Column(
-        modifier = modifier.padding(top = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = modifier.padding(top = 36.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         BoxWithConstraints(
             modifier = Modifier
@@ -401,31 +553,66 @@ fun DetailContentSection(
                     isHeaderFocused = state.hasFocus || state.isFocused
                 }
         ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                eyebrow?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (isHeaderFocused) Color.White else MaterialTheme.colorScheme.primary,
-                    )
-                }
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontWeight = FontWeight.SemiBold,
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(
                     modifier = Modifier
-                        .padding(top = 6.dp)
-                        .height(3.dp)
-                        .width((this@BoxWithConstraints.maxWidth * 0.18f).coerceAtLeast(72.dp))
+                        .fillMaxWidth()
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    expressiveColors.chromeSurface.copy(alpha = 0.78f),
+                                    expressiveColors.chromeSurface.copy(alpha = 0.36f),
+                                    Color.Transparent,
+                                )
+                            ),
+                            shape = RoundedCornerShape(24.dp),
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = expressiveColors.borderSubtle.copy(alpha = if (isHeaderFocused) 0.7f else 0.32f),
+                            shape = RoundedCornerShape(24.dp),
+                        )
+                        .padding(horizontal = 18.dp, vertical = 16.dp),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        eyebrow?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (isHeaderFocused) Color.White else MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            icon?.let {
+                                Icon(
+                                    imageVector = it,
+                                    contentDescription = null,
+                                    tint = if (isHeaderFocused) expressiveColors.focusRing else MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .padding(start = 10.dp)
+                        .height(4.dp)
+                        .width((this@BoxWithConstraints.maxWidth * 0.22f).coerceAtLeast(92.dp))
                         .background(
                             Brush.horizontalGradient(
                                 listOf(
                                     if (isHeaderFocused) expressiveColors.focusRing else expressiveColors.titleAccent,
+                                    expressiveColors.titleAccent.copy(alpha = 0.4f),
                                     Color.Transparent,
                                 )
                             ),
@@ -507,7 +694,7 @@ fun EpisodeListRow(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 48.dp, vertical = 6.dp)
+            .padding(horizontal = 52.dp, vertical = 8.dp)
             .onFocusChanged {
                 val focused = it.isFocused || it.hasFocus
                 if (focused != isFocused) {
@@ -523,20 +710,28 @@ fun EpisodeListRow(
         ),
         shape = androidx.tv.material3.CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),
         colors = androidx.tv.material3.CardDefaults.colors(
-            containerColor = if (isFocused) expressiveColors.accentSurface else expressiveColors.chromeSurface.copy(alpha = 0.45f),
+            containerColor = if (isFocused) expressiveColors.accentSurface else expressiveColors.chromeSurface.copy(alpha = 0.62f),
             focusedContainerColor = expressiveColors.accentSurface,
         ),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(96.dp),
+                .height(112.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = if (isFocused) 0.06f else 0.02f),
+                            Color.Transparent,
+                        )
+                    )
+                ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Thumbnail
             Box(
                 modifier = Modifier
-                    .width(160.dp)
+                    .width(184.dp)
                     .fillMaxHeight()
             ) {
                 if (episode.imageUrl != null) {
@@ -544,7 +739,7 @@ fun EpisodeListRow(
                         model = coil3.request.ImageRequest.Builder(LocalContext.current)
                             .data(episode.imageUrl)
                             .crossfade(true)
-                            .size(320, 180)
+                            .size(368, 208)
                             .build(),
                         contentDescription = episode.title,
                         contentScale = ContentScale.Crop,
@@ -611,7 +806,7 @@ fun EpisodeListRow(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .padding(start = 16.dp, end = 24.dp),
+                    .padding(start = 18.dp, end = 24.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.Start,
             ) {
@@ -625,6 +820,27 @@ fun EpisodeListRow(
                         maxLines = 1,
                     )
                 }
+                val qualityLine = listOfNotNull(episode.videoQuality, episode.audioLabel)
+                if (qualityLine.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        episode.videoQuality?.let {
+                            EpisodeMetaBadge(
+                                icon = Icons.Default.HighQuality,
+                                label = it,
+                            )
+                        }
+                        episode.audioLabel?.let {
+                            EpisodeMetaBadge(
+                                icon = Icons.Default.GraphicEq,
+                                label = it,
+                            )
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = episode.title,
@@ -635,7 +851,7 @@ fun EpisodeListRow(
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )
                 episode.overview?.let {
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodyMedium,
@@ -646,5 +862,37 @@ fun EpisodeListRow(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun EpisodeMetaBadge(
+    icon: ImageVector,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.22f),
+                shape = RoundedCornerShape(999.dp),
+            )
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(14.dp),
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
     }
 }

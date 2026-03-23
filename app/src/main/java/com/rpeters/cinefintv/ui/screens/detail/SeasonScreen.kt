@@ -3,6 +3,8 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -103,8 +105,6 @@ private fun SeasonContent(
     val resumableEpisode = remember(episodes) {
         episodes.firstOrNull { (it.playbackProgress ?: 0f) > 0f && !it.isWatched }
     }
-    
-    var focusedEpisode by remember { mutableStateOf<EpisodeModel?>(null) }
     var lastFocusedEpisodeId by rememberSaveable { mutableStateOf<String?>(episodes.firstOrNull()?.id) }
 
     LaunchedEffect(season.id) {
@@ -123,24 +123,14 @@ private fun SeasonContent(
                     scope.launch {
                         listState.scrollToItem(0)
                         primaryActionFocusRequester.requestFocus()
-                        focusedEpisode = null
                     }
                 }
             )
         }
 
         item {
-            val displayBackdrop = focusedEpisode?.imageUrl ?: season.backdropUrl
-            val displayTitle = focusedEpisode?.title ?: season.title
-            val displayOverview = focusedEpisode?.overview ?: season.overview
-            val displayEyebrow = if (focusedEpisode != null) {
-                focusedEpisode?.episodeCode ?: "Episode ${focusedEpisode?.number}"
-            } else {
-                season.seriesName ?: "Season"
-            }
-
             DetailHeroBox(
-                backdropUrl = displayBackdrop,
+                backdropUrl = season.backdropUrl,
                 modifier = Modifier.onFocusChanged {
                     if (it.hasFocus) {
                         scope.launch { listState.animateScrollToItem(0) }
@@ -156,8 +146,8 @@ private fun SeasonContent(
                     verticalAlignment = Alignment.Bottom,
                 ) {
                     DetailPosterArt(
-                        imageUrl = if (focusedEpisode != null) null else season.posterUrl,
-                        title = displayTitle,
+                        imageUrl = season.posterUrl,
+                        title = season.title,
                         modifier = Modifier
                             .width(172.dp)
                             .height(258.dp),
@@ -167,29 +157,24 @@ private fun SeasonContent(
                     ) {
                         DetailChipRow(
                             labels = buildList {
-                                if (focusedEpisode != null) {
-                                    add("Episode")
-                                    focusedEpisode?.duration?.let { add(it) }
-                                } else {
-                                    add("Season")
-                                    add("${episodes.size} episodes")
-                                }
+                                add("Season")
+                                add("${episodes.size} episodes")
                             }
                         )
-                        
+
                         Text(
-                            text = displayEyebrow,
+                            text = season.seriesName ?: "Season",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.secondary,
                         )
-                        
+
                         Text(
-                            text = displayTitle,
+                            text = season.title,
                             style = MaterialTheme.typography.displaySmall,
                             fontWeight = FontWeight.Bold,
                         )
-                        
-                        displayOverview?.let {
+
+                        season.overview?.let {
                             Text(
                                 text = it,
                                 style = MaterialTheme.typography.bodyLarge,
@@ -197,30 +182,22 @@ private fun SeasonContent(
                                 maxLines = 3,
                             )
                         }
-                        
-                        if (focusedEpisode == null) {
-                            resumableEpisode?.playbackProgress?.let {
-                                DetailProgressLabel(progress = it)
-                            }
-                            if (nextEpisode != null) {
-                                DetailActionRow(
-                                    primaryLabel = if (resumableEpisode != null) "Resume Episode" else "Continue Watching",
-                                    onPrimaryClick = {
-                                        onOpenEpisode(resumableEpisode?.id ?: nextEpisode.id)
-                                    },
-                                    secondaryLabel = episodes.firstOrNull()?.let { "Start From Episode 1" },
-                                    onSecondaryClick = episodes.firstOrNull()?.let { firstEpisode ->
-                                        { onOpenEpisode(firstEpisode.id) }
-                                    },
-                                    primaryFocusRequester = primaryActionFocusRequester,
-                                    primaryDownFocusRequester = if (episodes.isNotEmpty()) episodeGridEntryRequester else null,
-                                )
-                            }
-                        } else {
+
+                        resumableEpisode?.playbackProgress?.let {
+                            DetailProgressLabel(progress = it)
+                        }
+                        if (nextEpisode != null) {
                             DetailActionRow(
-                                primaryLabel = if ((focusedEpisode?.playbackProgress ?: 0f) > 0f) "Resume Episode" else "Play Episode",
-                                onPrimaryClick = { onOpenEpisode(focusedEpisode!!.id) },
+                                primaryLabel = if (resumableEpisode != null) "Resume Episode" else "Continue Watching",
+                                onPrimaryClick = {
+                                    onOpenEpisode(resumableEpisode?.id ?: nextEpisode.id)
+                                },
+                                secondaryLabel = episodes.firstOrNull()?.let { "Start From Episode 1" },
+                                onSecondaryClick = episodes.firstOrNull()?.let { firstEpisode ->
+                                    { onOpenEpisode(firstEpisode.id) }
+                                },
                                 primaryFocusRequester = primaryActionFocusRequester,
+                                primaryDownFocusRequester = if (episodes.isNotEmpty()) episodeGridEntryRequester else null,
                             )
                         }
                     }
@@ -232,6 +209,7 @@ private fun SeasonContent(
             DetailContentSection(
                 title = "Episodes",
                 eyebrow = "${episodes.count { !it.isWatched }} unwatched",
+                icon = Icons.Default.VideoLibrary,
             ) {}
         }
 
@@ -251,7 +229,6 @@ private fun SeasonContent(
                     ),
                 onFocus = {
                     lastFocusedEpisodeId = episode.id
-                    focusedEpisode = episode
                 },
                 onClick = { onOpenEpisode(episode.id) },
             )
