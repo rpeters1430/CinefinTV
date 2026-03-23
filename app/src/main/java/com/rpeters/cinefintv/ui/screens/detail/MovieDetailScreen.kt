@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.first
 fun MovieDetailScreen(
     onPlayMovie: (String) -> Unit,
     onOpenMovie: (String) -> Unit,
+    onOpenPerson: (String) -> Unit,
     onBack: () -> Unit,
     viewModel: MovieDetailViewModel = hiltViewModel(),
 ) {
@@ -61,7 +62,7 @@ fun MovieDetailScreen(
     val listState = rememberLazyListState()
     val primaryActionFocus = remember { FocusRequester() }
 
-    LaunchedEffect(uiState) {
+    LaunchedEffect((uiState as? MovieDetailUiState.Content)?.movie?.id) {
         if (uiState is MovieDetailUiState.Content) {
             val content = uiState as MovieDetailUiState.Content
             listState.scrollToItem(0)
@@ -148,7 +149,7 @@ fun MovieDetailScreen(
                     factSummary = factSummary,
                     castItems = state.cast,
                     similarItems = state.similarMovies,
-                    onCastClick = {},
+                    onCastClick = { personId -> onOpenPerson(personId) },
                     onSimilarClick = { onOpenMovie(it) },
                     listState = listState,
                 )
