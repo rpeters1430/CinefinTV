@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
@@ -21,13 +20,11 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
@@ -65,8 +62,6 @@ import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
-import com.rpeters.cinefintv.utils.DevicePerformanceProfile
-import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 
 data class DetailMetaItem(
     val icon: ImageVector,
@@ -161,107 +156,6 @@ fun MetaFactItem(
     }
 }
 
-/**
- * Full-width hero box with backdrop image and gradient overlays.
- * Content is placed via [content] slot; anchor to [Alignment.BottomStart] for standard detail layout.
- */
-@Composable
-fun DetailHeroBox(
-    backdropUrl: String?,
-    modifier: Modifier = Modifier,
-    content: @Composable BoxScope.() -> Unit,
-) {
-    val background = MaterialTheme.colorScheme.background
-    val expressiveColors = LocalCinefinExpressiveColors.current
-    val performanceProfile = LocalPerformanceProfile.current
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 430.dp)
-    ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(backdropUrl)
-                .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
-                .size(1280, 720)
-                .build(),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colorStops = arrayOf(
-                            0f to background.copy(alpha = 0.08f),
-                            0.35f to background.copy(alpha = 0.42f),
-                            1f to background,
-                        )
-                    )
-                )
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.horizontalGradient(
-                        colorStops = arrayOf(
-                            0f to background.copy(alpha = 0.96f),
-                            0.28f to background.copy(alpha = 0.82f),
-                            0.56f to background.copy(alpha = 0.3f),
-                            1f to Color.Transparent,
-                        )
-                    )
-                )
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            expressiveColors.focusGlow.copy(alpha = 0.24f),
-                            expressiveColors.chromeSurface.copy(alpha = 0.08f),
-                            Color.Transparent,
-                        ),
-                        radius = 960f,
-                        center = androidx.compose.ui.geometry.Offset(280f, 240f),
-                    )
-                )
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            expressiveColors.chromeSurface.copy(alpha = 0.14f),
-                            Color.Transparent,
-                            expressiveColors.focusGlow.copy(alpha = 0.18f),
-                        ),
-                    )
-                )
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(110.dp)
-                .align(Alignment.TopCenter)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            background.copy(alpha = 0.34f),
-                            Color.Transparent,
-                        )
-                    )
-                )
-        )
-        content()
-    }
-}
-
 @Composable
 fun DetailPosterArt(
     imageUrl: String?,
@@ -309,69 +203,6 @@ fun DetailPosterArt(
             }
         }
     }
-}
-
-@Composable
-fun DetailGlassPanel(
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    val expressiveColors = LocalCinefinExpressiveColors.current
-    val spacing = LocalCinefinSpacing.current
-    Box(
-        modifier = modifier
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        expressiveColors.chromeSurface.copy(alpha = 0.9f),
-                        expressiveColors.chromeSurface.copy(alpha = 0.84f),
-                    )
-                ),
-                shape = RoundedCornerShape(spacing.cornerContainer),
-            )
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.border.copy(alpha = 0.14f),
-                shape = RoundedCornerShape(spacing.cornerContainer),
-            ),
-    ) {
-        Column(
-            modifier = Modifier
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                            Color.Transparent,
-                        )
-                    )
-                )
-                .padding(horizontal = 22.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            content = content,
-        )
-    }
-}
-
-@Composable
-fun DetailTitleLogo(
-    logoUrl: String?,
-    title: String,
-    modifier: Modifier = Modifier,
-) {
-    if (logoUrl == null) return
-
-    AsyncImage(
-        model = ImageRequest.Builder(LocalContext.current)
-            .data(logoUrl)
-            .crossfade(true)
-            .size(720, 240)
-            .build(),
-        contentDescription = title,
-        contentScale = ContentScale.Fit,
-        modifier = modifier
-            .widthIn(max = 420.dp)
-            .heightIn(max = 84.dp),
-    )
 }
 
 @Composable
