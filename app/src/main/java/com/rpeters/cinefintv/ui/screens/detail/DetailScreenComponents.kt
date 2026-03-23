@@ -5,7 +5,7 @@ package com.rpeters.cinefintv.ui.screens.detail
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material3.Icon
+import androidx.tv.material3.Icon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.PaddingValues
@@ -113,14 +113,14 @@ fun MetaFactItem(
                     )
                     Text(
                         text = label.uppercase(),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         maxLines = 1,
                     )
                 }
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -147,7 +147,7 @@ fun MetaFactItem(
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         text = label,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Text(
@@ -891,7 +891,7 @@ fun EpisodeListRow(
                 if (metaLine.isNotBlank()) {
                     Text(
                         text = metaLine,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                     )
@@ -930,7 +930,7 @@ fun EpisodeListRow(
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
@@ -965,7 +965,7 @@ private fun EpisodeMetaBadge(
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
