@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -81,26 +82,29 @@ fun MovieDetailLayout(
         }
 
         item {
+            var isDescriptionFocused by remember { mutableStateOf(false) }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .onFocusChanged { isDescriptionFocused = it.isFocused }
+                    .clickable { descriptionExpanded = !descriptionExpanded }
                     .padding(horizontal = spacing.gutter, vertical = spacing.rowGap),
             ) {
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isDescriptionFocused) 
+                        MaterialTheme.colorScheme.onSurface 
+                    else 
+                        MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = if (descriptionExpanded) Int.MAX_VALUE else 4,
-                    modifier = Modifier.clickable { descriptionExpanded = !descriptionExpanded },
                 )
                 if (description.length > 200) {
                     Text(
                         text = if (descriptionExpanded) "Show less" else "Show more",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .padding(top = spacing.labelGap)
-                            .clickable { descriptionExpanded = !descriptionExpanded },
+                        modifier = Modifier.padding(top = spacing.labelGap),
                     )
                 }
             }

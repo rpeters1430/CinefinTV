@@ -65,13 +65,6 @@ fun ExpandableFactsSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { isFocused = it.isFocused }
-                .focusable()
-                .onKeyEvent { event ->
-                    if (event.key == Key.DirectionCenter && event.type == KeyEventType.KeyDown) {
-                        expanded = !expanded
-                        true
-                    } else false
-                }
                 .clickable { expanded = !expanded }
                 .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,

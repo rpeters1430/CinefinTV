@@ -590,6 +590,7 @@ fun DetailAnchor(
 fun EpisodeListRow(
     episode: com.rpeters.cinefintv.ui.screens.detail.EpisodeModel,
     modifier: Modifier = Modifier,
+    isNext: Boolean = false,
     onFocus: () -> Unit = {},
     onClick: () -> Unit,
 ) {
@@ -666,6 +667,21 @@ fun EpisodeListRow(
                         )
                     }
                 }
+                
+                // NEXT badge
+                if (isNext) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp)
+                    ) {
+                        CinefinChip(
+                            label = "NEXT",
+                            strong = true
+                        )
+                    }
+                }
+
                 // Watch status overlay
                 val watchStatus = when {
                     episode.isWatched -> com.rpeters.cinefintv.ui.components.WatchStatus.WATCHED

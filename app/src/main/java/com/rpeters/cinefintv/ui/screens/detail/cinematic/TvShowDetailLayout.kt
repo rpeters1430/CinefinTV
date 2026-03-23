@@ -110,6 +110,7 @@ fun TvShowDetailLayout(
             primaryActionFocusRequester = primaryActionFocusRequester,
         )
 
+        val dividerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
         Row(modifier = Modifier.fillMaxSize()) {
             // Left rail
             LazyColumn(
@@ -159,7 +160,7 @@ fun TvShowDetailLayout(
                     .width(1.dp)
                     .fillMaxHeight()
                     .drawBehind {
-                        drawRect(color = Color.White.copy(alpha = 0.08f))
+                        drawRect(color = dividerColor)
                     }
             )
 
@@ -253,11 +254,10 @@ private fun EpisodesPanel(
             state = listState,
             contentPadding = PaddingValues(bottom = spacing.gutter),
         ) {
-            items(episodes) { episode ->
-                // TODO: pass isNext = index == resumeEpisodeIndex once EpisodeListRow gains a
-                // "next episode" indicator parameter.
+            itemsIndexed(episodes) { index, episode ->
                 EpisodeListRow(
                     episode = episode,
+                    isNext = index == resumeEpisodeIndex,
                     onClick = { onEpisodeClick(episode) },
                 )
             }
