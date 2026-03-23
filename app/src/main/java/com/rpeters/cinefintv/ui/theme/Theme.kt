@@ -124,7 +124,7 @@ fun CinefinTvTheme(
         pillMuted = ProgressGray,
         pillStrong = expressiveColorScheme.primary.copy(alpha = 0.7f),
         titleAccent = CinefinGold,
-        watchedGreen = WatchedGreen,
+        watchedGreen = WatchedIndicator,
     )
 
     val composeShapes = ComposeShapes(
