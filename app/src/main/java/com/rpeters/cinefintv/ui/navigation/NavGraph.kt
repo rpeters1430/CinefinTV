@@ -258,6 +258,9 @@ fun CinefinTvNavGraph(
                 onOpenShow = { seriesId ->
                     navController.navigate(NavRoutes.tvShowDetail(seriesId))
                 },
+                onOpenPerson = { personId ->
+                    navController.navigate(NavRoutes.personDetail(personId))
+                },
                 onBack = { navController.popBackStack() },
             )
         }

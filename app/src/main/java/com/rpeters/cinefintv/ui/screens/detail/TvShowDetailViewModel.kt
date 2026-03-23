@@ -54,6 +54,9 @@ sealed class TvShowDetailUiState {
         val seasons: List<SeasonModel>,
         val cast: List<CastModel>,
         val similarShows: List<SimilarMovieModel>, // Reusing SimilarMovieModel for simplicity
+        val selectedSeasonIndex: Int = 0,
+        val episodes: List<EpisodeModel> = emptyList(),
+        val resumeEpisodeIndex: Int = -1,
     ) : TvShowDetailUiState()
 }
 
@@ -113,14 +116,48 @@ class TvShowDetailViewModel @Inject constructor(
                     )
                 } ?: emptyList()
 
-                _uiState.value = TvShowDetailUiState.Content(
+                val initialContent = TvShowDetailUiState.Content(
                     show = seriesDto.toDetailModel(nextUp),
                     seasons = seasons,
                     cast = cast,
-                    similarShows = similarShows
+                    similarShows = similarShows,
+                    selectedSeasonIndex = 0,
+                    episodes = emptyList(),
+                    resumeEpisodeIndex = -1,
                 )
+                _uiState.value = initialContent
+                // Load episodes for the first season
+                if (seasons.isNotEmpty()) {
+                    loadEpisodesForSeason(seasons[0].id, 0)
+                }
             } else if (seriesResult is ApiResult.Error) {
                 _uiState.value = TvShowDetailUiState.Error(seriesResult.message)
+            }
+        }
+    }
+
+    fun selectSeason(index: Int) {
+        val content = _uiState.value as? TvShowDetailUiState.Content ?: return
+        if (index < 0 || index >= content.seasons.size) return
+        if (index == content.selectedSeasonIndex) return
+        _uiState.value = content.copy(selectedSeasonIndex = index, episodes = emptyList())
+        viewModelScope.launch {
+            loadEpisodesForSeason(content.seasons[index].id, index)
+        }
+    }
+
+    private suspend fun loadEpisodesForSeason(seasonId: String, seasonIndex: Int) {
+        val result = repositories.media.getEpisodesForSeason(seasonId)
+        if (result is ApiResult.Success) {
+            val episodes = result.data.map { it.toEpisodeModel() }
+            val resumeIndex = episodes.indexOfFirst { it.playbackProgress != null && (it.playbackProgress ?: 0f) > 0f }
+            val latestContent = _uiState.value as? TvShowDetailUiState.Content ?: return
+            // Only update if still viewing the same season
+            if (latestContent.selectedSeasonIndex == seasonIndex) {
+                _uiState.value = latestContent.copy(
+                    episodes = episodes,
+                    resumeEpisodeIndex = resumeIndex,
+                )
             }
         }
     }
@@ -204,6 +241,45 @@ class TvShowDetailViewModel @Inject constructor(
             imageUrl = repositories.stream.getWideCardImageUrl(this),
             episodeCount = childCount,
             unwatchedCount = userData?.unplayedItemCount ?: 0
+        )
+    }
+
+    private fun BaseItemDto.toEpisodeModel(): EpisodeModel {
+        return EpisodeModel(
+            id = id.toString(),
+            title = getDisplayTitle(),
+            number = indexNumber,
+            overview = overview,
+            imageUrl = repositories.stream.getBackdropUrl(this),
+            duration = getFormattedDuration(),
+            videoQuality = getMediaQualityLabel(),
+            audioLabel = mediaSources
+                ?.firstOrNull()
+                ?.mediaStreams
+                ?.filter { it.type == org.jellyfin.sdk.model.api.MediaStreamType.AUDIO }
+                ?.firstOrNull()
+                ?.let { stream ->
+                    val codec = when (stream.codec?.uppercase()) {
+                        "EAC3", "E-AC3" -> "EAC3"
+                        "AC3" -> "AC3"
+                        "TRUEHD" -> "TrueHD"
+                        "DTS" -> "DTS"
+                        "AAC" -> "AAC"
+                        "FLAC" -> "FLAC"
+                        "OPUS" -> "Opus"
+                        else -> stream.codec?.uppercase()
+                    }
+                    val channels = when (stream.channels) {
+                        2 -> "Stereo"
+                        6 -> "5.1"
+                        8 -> "7.1"
+                        else -> stream.channels?.let { "$it ch" }
+                    }
+                    listOfNotNull(codec, channels).joinToString(" ").ifBlank { null }
+                },
+            isWatched = isWatched(),
+            playbackProgress = (getWatchedPercentage() / 100.0).toFloat(),
+            episodeCode = getEpisodeCode()
         )
     }
 
