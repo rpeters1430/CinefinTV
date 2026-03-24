@@ -12,7 +12,7 @@ It targets a 10-foot experience (D-pad navigation, focused controls, large UI pr
 
 **[⬇ Download latest signed APK](https://github.com/rpeters1430/CinefinTV/releases/latest/download/app-release.apk)**
 
-The APK is signed and published automatically whenever a new version is released via `./publish.sh`. Each release also pushes an updated `updates/version.json` so the in-app updater can notify existing users.
+The APK is signed and published automatically whenever a new version is released via `./publish.sh` on Unix-like shells or `.\publish.ps1` on Windows PowerShell. Each release also pushes an updated `updates/version.json` so the in-app updater can notify existing users.
 
 You can also browse all releases on the [Releases page](https://github.com/rpeters1430/CinefinTV/releases).
 
