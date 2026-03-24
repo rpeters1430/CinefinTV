@@ -14,6 +14,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
@@ -41,6 +43,7 @@ fun MovieDetailLayout(
     onPrimaryAction: () -> Unit,
     secondaryActions: List<Pair<String, () -> Unit>>,
     primaryActionFocusRequester: FocusRequester,
+    overviewFocusRequester: FocusRequester,
     description: String,
     factItems: List<DetailLabeledMetaItem>,
     factSummary: String,
@@ -70,6 +73,7 @@ fun MovieDetailLayout(
                 onPrimaryAction = onPrimaryAction,
                 secondaryActions = secondaryActions,
                 primaryActionFocusRequester = primaryActionFocusRequester,
+                focusProperties = { down = overviewFocusRequester },
             )
         }
 
@@ -80,13 +84,16 @@ fun MovieDetailLayout(
                 description = description,
                 factItems = factItems,
                 chips = genres,
+                overviewFocusRequester = overviewFocusRequester,
                 modifier = Modifier.padding(top = spacing.rowGap),
             )
         }
 
         if (castItems.isNotEmpty()) {
             item {
-                Column {
+                Column(
+                    modifier = Modifier.testTag(DetailTestTags.MovieCastSection),
+                ) {
                     CinefinShelfTitle(
                         title = "Cast",
                         modifier = Modifier.padding(
@@ -113,7 +120,9 @@ fun MovieDetailLayout(
 
         if (similarItems.isNotEmpty()) {
             item {
-                Column {
+                Column(
+                    modifier = Modifier.testTag(DetailTestTags.MovieSimilarSection),
+                ) {
                     CinefinShelfTitle(
                         title = "More Like This",
                         modifier = Modifier.padding(
@@ -130,6 +139,7 @@ fun MovieDetailLayout(
                                 title = mediaItem.title,
                                 imageUrl = mediaItem.imageUrl,
                                 aspectRatio = 16f / 9f,
+                                cardWidth = 280.dp,
                                 onClick = { onSimilarClick(mediaItem.id) },
                             )
                         }

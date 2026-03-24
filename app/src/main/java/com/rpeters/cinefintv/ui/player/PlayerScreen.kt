@@ -529,6 +529,7 @@ fun PlayerScreen(
                         exit = fadeOut() + slideOutHorizontally { it },
                     ) {
                         NextEpisodeCard(
+                            seriesTitle = uiState.title,
                             title = uiState.nextEpisodeTitle ?: "Next Episode",
                             thumbnailUrl = uiState.nextEpisodeThumbnailUrl,
                             remainingMs = remaining.coerceAtLeast(0L),

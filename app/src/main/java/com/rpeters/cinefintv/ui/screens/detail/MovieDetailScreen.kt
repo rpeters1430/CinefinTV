@@ -61,6 +61,7 @@ fun MovieDetailScreen(
 
     val listState = rememberLazyListState()
     val primaryActionFocus = remember { FocusRequester() }
+    val overviewFocus = remember { FocusRequester() }
 
     LaunchedEffect((uiState as? MovieDetailUiState.Content)?.movie?.id) {
         if (uiState is MovieDetailUiState.Content) {
@@ -145,6 +146,7 @@ fun MovieDetailScreen(
                     onPrimaryAction = { onPlayMovie(movie.id) },
                     secondaryActions = listOf("Watchlist" to {}),
                     primaryActionFocusRequester = primaryActionFocus,
+                    overviewFocusRequester = overviewFocus,
                     description = movie.overview ?: "",
                     factItems = factItems,
                     factSummary = factSummary,

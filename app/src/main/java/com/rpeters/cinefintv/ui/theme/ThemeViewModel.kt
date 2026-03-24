@@ -14,6 +14,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
+interface ThemeColorController {
+    fun updateSeedColor(color: Color?)
+}
+
 /**
  * ViewModel responsible for managing global theme state, including Material You seed colors
  * and user preferences for dynamic theming.
@@ -21,7 +25,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ThemeViewModel @Inject constructor(
     private val themePreferencesRepository: ThemePreferencesRepository
-) : ViewModel() {
+) : ViewModel(), ThemeColorController {
 
     /**
      * The current theme preferences from DataStore.
@@ -44,7 +48,7 @@ class ThemeViewModel @Inject constructor(
      * Update the seed color for dynamic theming.
      * Typically called when a movie detail or hero section is focused.
      */
-    fun updateSeedColor(color: Color?) {
+    override fun updateSeedColor(color: Color?) {
         if (currentSeedColor == color) return
         currentSeedColor = color
     }

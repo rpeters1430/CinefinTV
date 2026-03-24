@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,13 +21,13 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -43,10 +42,8 @@ import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinTextInputField
 import com.rpeters.cinefintv.ui.components.TvMediaCard
-import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -55,11 +52,25 @@ fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    SearchScreenContent(
+        uiState = uiState,
+        onQueryChange = viewModel::updateQuery,
+        onOpenItem = onOpenItem,
+    )
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+internal fun SearchScreenContent(
+    uiState: SearchUiState,
+    onQueryChange: (String) -> Unit,
+    onOpenItem: (com.rpeters.cinefintv.ui.screens.home.HomeCardModel) -> Unit,
+) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     val spacing = LocalCinefinSpacing.current
     val gridState = rememberLazyGridState()
-    val scope = rememberCoroutineScope()
     val primaryContentRequester = remember { FocusRequester() }
+    val firstResultFocusRequester = remember { FocusRequester() }
 
     Box(
         modifier = Modifier
@@ -91,10 +102,15 @@ fun SearchScreen(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 SearchField(
                     value = uiState.query,
-                    onValueChange = viewModel::updateQuery,
+                    onValueChange = onQueryChange,
                     modifier = Modifier
                         .padding(bottom = spacing.elementGap)
                         .focusRequester(primaryContentRequester)
+                        .focusProperties {
+                            if (uiState.results.isNotEmpty()) {
+                                down = firstResultFocusRequester
+                            }
+                        }
                 )
             }
 
@@ -105,6 +121,7 @@ fun SearchScreen(
                             text = "Browse with intent: search movies, TV, music, and library content from one surface.",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag(SearchTestTags.Hint),
                         )
                     }
                 }
@@ -115,6 +132,7 @@ fun SearchScreen(
                             text = "Searching for \"${uiState.query}\"...",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.testTag(SearchTestTags.Loading),
                         )
                     }
                 }
@@ -125,6 +143,7 @@ fun SearchScreen(
                             text = uiState.errorMessage.orEmpty(),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.testTag(SearchTestTags.Error),
                         )
                     }
                 }
@@ -135,6 +154,7 @@ fun SearchScreen(
                             text = "No results found for \"${uiState.query}\"",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag(SearchTestTags.Empty),
                         )
                     }
                 }
@@ -145,6 +165,7 @@ fun SearchScreen(
                             text = "${uiState.results.size} results",
                             style = MaterialTheme.typography.titleLarge,
                             color = expressiveColors.titleAccent,
+                            modifier = Modifier.testTag(SearchTestTags.ResultsCount),
                         )
                     }
                     itemsIndexed(uiState.results, key = { _, item -> item.id }) { index, item ->
@@ -157,11 +178,16 @@ fun SearchScreen(
                             playbackProgress = item.playbackProgress,
                             unwatchedCount = item.unwatchedCount,
                             modifier = if (index < 6) {
-                                Modifier.focusProperties {
-                                    up = primaryContentRequester
-                                }
-                            } else {
                                 Modifier
+                                    .testTag(SearchTestTags.resultItem(index))
+                                    .then(
+                                        if (index == 0) Modifier.focusRequester(firstResultFocusRequester) else Modifier
+                                    )
+                                    .focusProperties {
+                                        up = primaryContentRequester
+                                    }
+                            } else {
+                                Modifier.testTag(SearchTestTags.resultItem(index))
                             }
                         )
                     }
@@ -184,9 +210,11 @@ private fun SearchHero(
         modifier = modifier
             .fillMaxWidth()
             .padding(top = 6.dp, bottom = 2.dp),
+        contentAlignment = androidx.compose.ui.Alignment.CenterStart,
     ) {
         Surface(
             modifier = Modifier
+                .testTag(SearchTestTags.Hero)
                 .widthIn(max = 620.dp)
                 .clip(RoundedCornerShape(spacing.cornerContainer)),
             shape = RoundedCornerShape(spacing.cornerContainer),
@@ -234,7 +262,7 @@ private fun SearchField(
         value = value,
         onValueChange = onValueChange,
         placeholder = "Search your Jellyfin library...",
-        modifier = modifier,
+        modifier = modifier.testTag(SearchTestTags.Field),
         imeAction = ImeAction.Search,
         keyboardType = KeyboardType.Text,
     )

@@ -25,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +36,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -62,13 +62,11 @@ import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
-import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 import com.rpeters.cinefintv.utils.coerceAlpha
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -78,13 +76,6 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val listState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope()
-    val spacing = LocalCinefinSpacing.current
-    
-    // Key focus anchors for logical navigation
-    val primaryContentRequester = remember { FocusRequester() }
-    val firstRowFocusRequester = remember { FocusRequester() }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     var hasBeenPaused by remember { mutableStateOf(false) }
@@ -104,9 +95,36 @@ fun HomeScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    HomeScreenContent(
+        uiState = uiState,
+        onOpenItem = onOpenItem,
+        onPlayItem = onPlayItem,
+        onRetry = viewModel::refresh,
+    )
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+internal fun HomeScreenContent(
+    uiState: HomeUiState,
+    onOpenItem: (HomeCardModel) -> Unit,
+    onPlayItem: (String) -> Unit,
+    onRetry: () -> Unit,
+) {
+    val listState = rememberLazyListState()
+    val spacing = LocalCinefinSpacing.current
+
+    val primaryContentRequester = remember { FocusRequester() }
+    val firstRowFocusRequester = remember { FocusRequester() }
+
     when (val state = uiState) {
         HomeUiState.Loading -> {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag(HomeTestTags.Loading),
+                contentAlignment = Alignment.Center,
+            ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -125,7 +143,8 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(spacing.gutter),
+                    .padding(spacing.gutter)
+                    .testTag(HomeTestTags.Error),
                 verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
             ) {
                 Text(
@@ -137,7 +156,10 @@ fun HomeScreen(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Button(onClick = viewModel::refresh) {
+                Button(
+                    onClick = onRetry,
+                    modifier = Modifier.testTag(HomeTestTags.RetryButton),
+                ) {
                     Text("Retry")
                 }
             }
@@ -153,7 +175,7 @@ fun HomeScreen(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(top = 0.dp, bottom = 120.dp),
-                    verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
+                    verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
                 ) {
                     if (state.featuredItems.isNotEmpty()) {
                         item {
@@ -161,7 +183,6 @@ fun HomeScreen(
                                 items = state.featuredItems,
                                 onMoreInfo = onOpenItem,
                                 onPlay = onPlayItem,
-                                sectionCount = state.sections.size,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = 0.dp, start = spacing.gutter, end = spacing.gutter)
@@ -193,6 +214,7 @@ fun HomeScreen(
                         }
 
                         HomeSection(
+                            sectionIndex = index,
                             title = section.title,
                             items = section.items,
                             onOpenItem = onOpenItem,
@@ -213,7 +235,6 @@ private fun FeaturedCarousel(
     items: List<HomeCardModel>,
     onMoreInfo: (HomeCardModel) -> Unit,
     onPlay: (String) -> Unit,
-    sectionCount: Int,
     modifier: Modifier = Modifier,
 ) {
     val carouselState = rememberCarouselState()
@@ -224,13 +245,13 @@ private fun FeaturedCarousel(
         carouselState = carouselState,
         autoScrollDurationMillis = 15000L,
         modifier = modifier
+            .testTag(HomeTestTags.FeaturedCarousel)
             .fillMaxWidth()
             .height(360.dp),
     ) { index ->
         val item = items[index]
         HeroItem(
             item = item,
-            sectionCount = sectionCount,
             seedColorCache = seedColorCache,
             onMoreInfo = { onMoreInfo(item) },
             onPlay = { onPlay(item.id) },
@@ -243,7 +264,6 @@ private fun FeaturedCarousel(
 @Composable
 private fun HeroItem(
     item: HomeCardModel,
-    sectionCount: Int,
     seedColorCache: MutableMap<String, Color>,
     onMoreInfo: () -> Unit,
     onPlay: () -> Unit,
@@ -335,6 +355,7 @@ private fun HeroItem(
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.testTag(HomeTestTags.FeaturedTitle),
             )
             val carouselMeta = listOfNotNull(
                 item.year?.toString(),
@@ -367,11 +388,16 @@ private fun HeroItem(
             Row(horizontalArrangement = Arrangement.spacedBy(spacing.elementGap)) {
                 Button(
                     onClick = onPlay,
-                    modifier = Modifier.focusRequester(playButtonRequester)
+                    modifier = Modifier
+                        .focusRequester(playButtonRequester)
+                        .testTag(HomeTestTags.FeaturedPlayButton)
                 ) {
                     Text("Play")
                 }
-                OutlinedButton(onClick = onMoreInfo) {
+                OutlinedButton(
+                    onClick = onMoreInfo,
+                    modifier = Modifier.testTag(HomeTestTags.FeaturedDetailsButton),
+                ) {
                     Text("Details")
                 }
             }
@@ -381,6 +407,7 @@ private fun HeroItem(
 
 @Composable
 private fun HomeSection(
+    sectionIndex: Int,
     title: String,
     items: List<HomeCardModel>,
     onOpenItem: (HomeCardModel) -> Unit,
@@ -392,7 +419,9 @@ private fun HomeSection(
     val spacing = LocalCinefinSpacing.current
     val visibleItems = items.take(12)
 
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier.testTag(HomeTestTags.section(sectionIndex)),
+    ) {
         CinefinShelfTitle(
             title = title,
             eyebrow = null,
@@ -419,13 +448,14 @@ private fun HomeSection(
                         cardWidth = cardWidth,
                         modifier = if (index == 0) {
                             Modifier
+                                .testTag(HomeTestTags.sectionItem(sectionIndex, index))
                                 .focusRequester(firstItemFocusRequester)
                                 .focusProperties {
                                     upRequester?.let { up = it }
                                     downRequester?.let { down = it }
                                 }
                         } else {
-                            Modifier
+                            Modifier.testTag(HomeTestTags.sectionItem(sectionIndex, index))
                         }
                     )
                 }

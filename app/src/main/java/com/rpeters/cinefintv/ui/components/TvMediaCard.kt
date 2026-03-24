@@ -90,6 +90,7 @@ fun TvMediaCard(
         else if (aspectRatio > 1f || (cardWidth != null && cardWidth > 200.dp)) 1.05f 
         else 1.1f
     }
+    val metadataTextAlign = if (compactMetadata) TextAlign.Center else TextAlign.Start
 
     StandardCardContainer(
         modifier = if (cardWidth != null) Modifier.width(cardWidth) else Modifier.fillMaxWidth(),
@@ -209,7 +210,7 @@ fun TvMediaCard(
                 color = titleColor,
                 maxLines = if (subtitle.isNullOrBlank()) 1 else 2,
                 overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Start,
+                textAlign = metadataTextAlign,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
             )
         },
@@ -221,7 +222,7 @@ fun TvMediaCard(
                     color = subtitleColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Start,
+                    textAlign = metadataTextAlign,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

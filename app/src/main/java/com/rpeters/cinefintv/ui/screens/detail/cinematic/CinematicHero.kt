@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.requiredWidthIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -40,6 +41,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.palette.graphics.Palette
@@ -88,7 +90,7 @@ fun CinematicHero(
     val context = LocalContext.current
     val panelWidth = (screenWidth * 0.44f).coerceIn(420.dp, 760.dp)
 
-    var logoLoaded by remember { mutableStateOf(logoUrl == null) }
+    var logoLoaded by remember(logoUrl) { mutableStateOf(false) }
     var logoFailed by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
@@ -149,7 +151,7 @@ fun CinematicHero(
                 .fillMaxWidth()
                 .fillMaxHeight()
                 .padding(horizontal = spacing.gutter, vertical = spacing.gutter),
-            contentAlignment = Alignment.BottomStart,
+            contentAlignment = Alignment.TopStart,
         ) {
             if (logoUrl != null) {
                 AsyncImage(
@@ -166,6 +168,7 @@ fun CinematicHero(
             Column(
                 modifier = Modifier
                     .requiredWidthIn(max = panelWidth)
+                    .wrapContentHeight()
                     .background(
                         brush = Brush.verticalGradient(
                             listOf(
@@ -205,27 +208,29 @@ fun CinematicHero(
                     )
                 }
 
-                AnimatedVisibility(
-                    visible = logoLoaded,
-                    enter = fadeIn(tween(300)),
-                ) {
-                    if (logoUrl != null && !logoFailed) {
+                if (logoUrl != null && logoLoaded && !logoFailed) {
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = fadeIn(tween(300)),
+                    ) {
                         AsyncImage(
                             model = logoUrl,
                             contentDescription = title,
                             modifier = Modifier
+                                .testTag(DetailTestTags.HeroLogo)
                                 .heightIn(max = 110.dp)
                                 .wrapContentWidth(),
                         )
-                    } else {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.displaySmall,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
                     }
                 }
+
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.testTag(DetailTestTags.HeroTitle),
+                )
 
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
@@ -276,7 +281,8 @@ fun CinematicHero(
                         ),
                         modifier = Modifier
                             .focusRequester(primaryActionFocusRequester)
-                            .focusProperties(focusProperties),
+                            .focusProperties(focusProperties)
+                            .testTag(DetailTestTags.PrimaryAction),
                     ) {
                         Text(primaryActionLabel, fontWeight = FontWeight.Bold)
                     }

@@ -2,6 +2,7 @@
 
 package com.rpeters.cinefintv.ui.screens.detail.cinematic
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -22,9 +23,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -46,6 +50,7 @@ fun DetailOverviewSection(
     factItems: List<DetailLabeledMetaItem>,
     chips: List<String>,
     modifier: Modifier = Modifier,
+    overviewFocusRequester: FocusRequester? = null,
     posterUrl: String? = null,
     posterTitle: String = title,
 ) {
@@ -94,6 +99,15 @@ fun DetailOverviewSection(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .then(
+                            if (overviewFocusRequester != null) {
+                                Modifier.focusRequester(overviewFocusRequester)
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .testTag(DetailTestTags.Overview)
+                        .focusable()
                         .background(
                             color = expressiveColors.chromeSurface.copy(alpha = 0.42f),
                             shape = RoundedCornerShape(spacing.cornerContainer),

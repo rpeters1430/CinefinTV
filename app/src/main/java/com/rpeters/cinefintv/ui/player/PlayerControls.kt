@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -70,6 +71,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -126,11 +128,15 @@ internal fun PlayerControls(
     val (subtitleButtonBounds, setSubtitleButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
     val (audioButtonBounds, setAudioButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
     val (qualityButtonBounds, setQualityButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
+    val (speedButtonBounds, setSpeedButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
+    val (settingsButtonBounds, setSettingsButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
 
     val backFocusRequester = remember { FocusRequester() }
     val subtitleFocusRequester = remember { FocusRequester() }
     val audioFocusRequester = remember { FocusRequester() }
     val qualityFocusRequester = remember { FocusRequester() }
+    val speedFocusRequester = remember { FocusRequester() }
+    val settingsFocusRequester = remember { FocusRequester() }
     val skipBackFocusRequester = remember { FocusRequester() }
     val skipForwardFocusRequester = remember { FocusRequester() }
 
@@ -142,6 +148,23 @@ internal fun PlayerControls(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .testTag(PlayerTestTags.ControlsOverlay)
+                .onPreviewKeyEvent { keyEvent ->
+                    if (keyEvent.type == KeyEventType.KeyDown) {
+                        when (keyEvent.key) {
+                            Key.DirectionLeft,
+                            Key.DirectionRight,
+                            Key.DirectionUp,
+                            Key.DirectionDown -> {
+                                onInteract()
+                                false
+                            }
+                            else -> false
+                        }
+                    } else {
+                        false
+                    }
+                }
                 .background(
                     Brush.verticalGradient(
                         0.0f to expressiveColors.playerOverlayStart,
@@ -206,24 +229,28 @@ internal fun PlayerControls(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        val episodeInfo = buildString {
-                            uiState.seasonNumber?.let { append("S$it") }
-                            uiState.episodeNumber?.let {
-                                if (isNotEmpty()) append(" : E$it")
-                                else append("E$it")
+                        val metadataLine = buildList {
+                            uiState.seasonNumber?.let { season ->
+                                uiState.episodeNumber?.let { episode ->
+                                    add("Season $season · Episode $episode")
+                                } ?: add("Season $season")
+                            } ?: uiState.episodeNumber?.let { episode ->
+                                add("Episode $episode")
                             }
+                            if (uiState.isHdrPlayback) add("HDR")
+                            if (uiState.transcodingQuality != com.rpeters.cinefintv.data.preferences.TranscodingQuality.AUTO) {
+                                add(uiState.transcodingQuality.label)
+                            }
+                        }.joinToString("  •  ")
+                        if (metadataLine.isNotBlank()) {
+                            Text(
+                                text = metadataLine,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = expressiveColors.playerContentSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
-                        Text(
-                            text = if (episodeInfo.isNotEmpty()) {
-                                "${uiState.title}  •  $episodeInfo"
-                            } else {
-                                uiState.title
-                            },
-                            style = MaterialTheme.typography.titleMedium,
-                            color = expressiveColors.playerContentSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
                     }
                 }
             }
@@ -284,6 +311,7 @@ internal fun PlayerControls(
                             .focusRequester(skipBackFocusRequester)
                             .focusProperties {
                                 up = seekBarFocusRequester
+                                left = skipBackFocusRequester
                                 right = playPauseFocusRequester
                             }
                     )
@@ -335,6 +363,7 @@ internal fun PlayerControls(
                             onClick = { onInteract(); onSettingsClick(SettingsSection.AUDIO, audioButtonBounds) },
                             modifier = Modifier
                                 .focusRequester(audioFocusRequester)
+                                .testTag(PlayerTestTags.AudioButton)
                                 .focusProperties {
                                     up = seekBarFocusRequester
                                     left = skipForwardFocusRequester
@@ -348,6 +377,7 @@ internal fun PlayerControls(
                             onClick = { onInteract(); onSettingsClick(SettingsSection.SUBTITLES, subtitleButtonBounds) },
                             modifier = Modifier
                                 .focusRequester(subtitleFocusRequester)
+                                .testTag(PlayerTestTags.SubtitleButton)
                                 .focusProperties {
                                     up = seekBarFocusRequester
                                     left = audioFocusRequester
@@ -361,11 +391,42 @@ internal fun PlayerControls(
                             onClick = { onInteract(); onSettingsClick(SettingsSection.QUALITY, qualityButtonBounds) },
                             modifier = Modifier
                                 .focusRequester(qualityFocusRequester)
+                                .testTag(PlayerTestTags.QualityButton)
                                 .focusProperties {
                                     up = seekBarFocusRequester
                                     left = subtitleFocusRequester
+                                    right = speedFocusRequester
                                 }
                                 .onGloballyPositioned { setQualityButtonBounds(it.boundsInRoot()) }
+                        )
+
+                        ActionIconButton(
+                            icon = Icons.Default.PlayArrow,
+                            label = if (uiState.playbackSpeed == 1.0f) "1x" else "${uiState.playbackSpeed}x",
+                            onClick = { onInteract(); onSettingsClick(SettingsSection.SPEED, speedButtonBounds) },
+                            modifier = Modifier
+                                .focusRequester(speedFocusRequester)
+                                .testTag(PlayerTestTags.SpeedButton)
+                                .focusProperties {
+                                    up = seekBarFocusRequester
+                                    left = qualityFocusRequester
+                                    right = settingsFocusRequester
+                                }
+                                .onGloballyPositioned { setSpeedButtonBounds(it.boundsInRoot()) }
+                        )
+
+                        ActionIconButton(
+                            icon = Icons.Default.Settings,
+                            onClick = { onInteract(); onSettingsClick(SettingsSection.ALL, settingsButtonBounds) },
+                            modifier = Modifier
+                                .focusRequester(settingsFocusRequester)
+                                .testTag(PlayerTestTags.SettingsButton)
+                                .focusProperties {
+                                    up = seekBarFocusRequester
+                                    left = speedFocusRequester
+                                    right = settingsFocusRequester
+                                }
+                                .onGloballyPositioned { setSettingsButtonBounds(it.boundsInRoot()) }
                         )
                     }
                 }
@@ -440,6 +501,7 @@ internal fun SkipActionCard(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 internal fun NextEpisodeCard(
+    seriesTitle: String? = null,
     title: String,
     thumbnailUrl: String?,
     remainingMs: Long,
@@ -495,6 +557,16 @@ internal fun NextEpisodeCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                seriesTitle?.takeIf { it.isNotBlank() && it != title }?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontSize = 16.sp,
+                        color = expressiveColors.playerContentPrimary.copy(alpha = 0.72f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Text(
                     text = if (autoPlayEnabled) {
                         "Starting in ${remainingMs / 1000}s..."
@@ -726,6 +798,7 @@ private fun SeekBarControl(
         modifier = modifier
             .fillMaxWidth()
             .height(32.dp)
+            .testTag(PlayerTestTags.SeekBar)
             .focusRequester(focusRequester)
             .focusProperties {
                 this.up = up
@@ -859,11 +932,16 @@ private fun SeekBarControl(
                 val percentage = if (duration > 0L) (seekPosition.toFloat() / duration.toFloat()) * 100f else 0f
                 val percentageStr = String.format(java.util.Locale.US, "%.2f%%", percentage)
                 val timeStr = formatMs(seekPosition)
+                val activeChapterName = chapters
+                    .lastOrNull { it.positionMs <= seekPosition }
+                    ?.name
+                    ?.takeIf { it.isNotBlank() }
 
                 Surface(
                     modifier = Modifier
+                        .testTag(PlayerTestTags.SeekBubble)
                         .offset(x = bubbleClampedX, y = (-30).dp)
-                        .width(bubbleWidth),
+                        .width(if (activeChapterName != null) 180.dp else bubbleWidth),
                     shape = RoundedCornerShape(6.dp),
                     colors = SurfaceDefaults.colors(
                         containerColor = expressiveColors.playerSurface.copy(alpha = 0.92f)
@@ -872,17 +950,32 @@ private fun SeekBarControl(
                         border = BorderStroke(1.dp, expressiveColors.playerContentPrimary.copy(alpha = 0.2f))
                     )
                 ) {
-                    Text(
-                        text = "$timeStr • $percentageStr",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = expressiveColors.playerContentPrimary,
+                    Column(
                         modifier = Modifier
                             .padding(horizontal = 8.dp, vertical = 4.dp),
-                        maxLines = 1,
-                        textAlign = TextAlign.Center
-                    )
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = "$timeStr • $percentageStr",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = expressiveColors.playerContentPrimary,
+                            maxLines = 1,
+                            textAlign = TextAlign.Center
+                        )
+                        if (activeChapterName != null) {
+                            Text(
+                                text = activeChapterName,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 12.sp,
+                                color = expressiveColors.playerContentPrimary.copy(alpha = 0.72f),
+                                maxLines = 1,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
                 }
             }
         }

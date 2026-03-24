@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.HighQuality
@@ -72,13 +71,6 @@ internal fun PlayerTrackPanel(
     onInteract: () -> Unit
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
-    val dismissOrReturnToMenu = {
-        if (section == SettingsSection.ALL) {
-            onClose()
-        } else {
-            onSectionSelected(SettingsSection.ALL)
-        }
-    }
     if (isVisible && anchorBounds != null) {
         val popupWidth = 320.dp
         val popupMaxHeight = 400.dp
@@ -151,10 +143,10 @@ internal fun PlayerTrackPanel(
                         .takeIf { it >= 0 } ?: PLAYBACK_SPEEDS.indexOf(1.0f)
                     val initialListIndex = when (section) {
                         SettingsSection.ALL -> 0
-                        SettingsSection.AUDIO -> 1 + selectedAudioIndex
-                        SettingsSection.SUBTITLES -> 1 + selectedSubtitleIndex
-                        SettingsSection.QUALITY -> 1 + selectedQualityIndex
-                        SettingsSection.SPEED -> 1 + selectedSpeedIndex
+                        SettingsSection.AUDIO -> selectedAudioIndex
+                        SettingsSection.SUBTITLES -> selectedSubtitleIndex
+                        SettingsSection.QUALITY -> selectedQualityIndex
+                        SettingsSection.SPEED -> selectedSpeedIndex
                     }
 
                     LaunchedEffect(isVisible, section, initialListIndex) {
@@ -169,19 +161,6 @@ internal fun PlayerTrackPanel(
                         modifier = Modifier.weight(1f, fill = false),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (section != SettingsSection.ALL) {
-                            item {
-                                NavigationListItem(
-                                    icon = Icons.AutoMirrored.Filled.ArrowBack,
-                                    title = "Back to playback options",
-                                    onClick = {
-                                        onInteract()
-                                        onSectionSelected(SettingsSection.ALL)
-                                    },
-                                )
-                            }
-                        }
-
                         if (section == SettingsSection.ALL) {
                             item {
                                 SettingsMenuItem(

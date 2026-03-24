@@ -42,6 +42,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -114,7 +115,11 @@ fun TvShowDetailLayout(
         )
 
         val dividerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-        Row(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
             // Left rail
             LazyColumn(
                 modifier = Modifier
@@ -133,6 +138,7 @@ fun TvShowDetailLayout(
                             .then(
                                 if (index == 0) Modifier.focusRequester(railFocusRequester) else Modifier
                             )
+                            .testTag(DetailTestTags.tvTab(tab))
                             .drawBehind {
                                 if (isSelected) {
                                     drawRect(
@@ -189,36 +195,40 @@ fun TvShowDetailLayout(
                         onEpisodeClick = onEpisodeClick,
                         listState = episodeListState,
                     )
-                    TvShowTab.Cast -> LazyVerticalGrid(
-                        columns = GridCells.Fixed(4),
-                        state = castGridState,
-                        contentPadding = PaddingValues(spacing.cardGap),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
-                        verticalArrangement = Arrangement.spacedBy(spacing.cardGap),
-                    ) {
-                        items(castItems) { person ->
-                            TvPersonCard(
-                                name = person.name,
-                                role = person.role,
-                                imageUrl = person.imageUrl,
-                                onClick = { onCastClick(person.id) },
-                            )
+                    TvShowTab.Cast -> Box(modifier = Modifier.testTag(DetailTestTags.TvCastPanel)) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(4),
+                            state = castGridState,
+                            contentPadding = PaddingValues(spacing.cardGap),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                            verticalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                        ) {
+                            items(castItems) { person ->
+                                TvPersonCard(
+                                    name = person.name,
+                                    role = person.role,
+                                    imageUrl = person.imageUrl,
+                                    onClick = { onCastClick(person.id) },
+                                )
+                            }
                         }
                     }
-                    TvShowTab.Similar -> LazyVerticalGrid(
-                        columns = GridCells.Fixed(4),
-                        state = similarGridState,
-                        contentPadding = PaddingValues(spacing.cardGap),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
-                        verticalArrangement = Arrangement.spacedBy(spacing.cardGap),
-                    ) {
-                        items(similarItems) { item ->
-                            TvMediaCard(
-                                title = item.title,
-                                imageUrl = item.imageUrl,
-                                aspectRatio = 2f / 3f,
-                                onClick = { onSimilarClick(item.id) },
-                            )
+                    TvShowTab.Similar -> Box(modifier = Modifier.testTag(DetailTestTags.TvSimilarPanel)) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(4),
+                            state = similarGridState,
+                            contentPadding = PaddingValues(spacing.cardGap),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                            verticalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                        ) {
+                            items(similarItems) { item ->
+                                TvMediaCard(
+                                    title = item.title,
+                                    imageUrl = item.imageUrl,
+                                    aspectRatio = 2f / 3f,
+                                    onClick = { onSimilarClick(item.id) },
+                                )
+                            }
                         }
                     }
                     TvShowTab.Details -> DetailsPanel(
@@ -245,7 +255,11 @@ private fun EpisodesPanel(
     listState: LazyListState,
 ) {
     val spacing = LocalCinefinSpacing.current
-    Column {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag(DetailTestTags.TvEpisodesPanel),
+    ) {
         LazyRow(
             contentPadding = PaddingValues(horizontal = spacing.cardGap, vertical = spacing.elementGap),
             horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
@@ -259,6 +273,7 @@ private fun EpisodesPanel(
             }
         }
         LazyColumn(
+            modifier = Modifier.weight(1f),
             state = listState,
             contentPadding = PaddingValues(bottom = spacing.gutter),
         ) {
@@ -283,6 +298,7 @@ private fun DetailsPanel(
 ) {
     val spacing = LocalCinefinSpacing.current
     LazyColumn(
+        modifier = Modifier.testTag(DetailTestTags.TvDetailsPanel),
         contentPadding = PaddingValues(start = spacing.cardGap, end = spacing.cardGap, bottom = spacing.gutter),
     ) {
         item {

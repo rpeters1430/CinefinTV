@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +33,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -58,6 +60,7 @@ import com.rpeters.cinefintv.ui.navigation.navTabItems
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import com.rpeters.cinefintv.ui.theme.ThemeColorController
 import com.rpeters.cinefintv.ui.theme.ThemeViewModel
 import com.rpeters.cinefintv.update.UpdateInfo
 import com.rpeters.cinefintv.update.UpdateInstallResult
@@ -70,8 +73,8 @@ import kotlinx.coroutines.launch
  * CompositionLocal to allow any screen to update the theme's seed color
  * for content-based dynamic theming (Material You).
  */
-val LocalCinefinThemeController = compositionLocalOf<ThemeViewModel> {
-    error("No ThemeViewModel provided")
+val LocalCinefinThemeController = compositionLocalOf<ThemeColorController> {
+    error("No ThemeColorController provided")
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -243,81 +246,11 @@ fun CinefinTvApp(
                         ),
                     )
             ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    if (showNav) {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = spacing.gutter, vertical = 16.dp),
-                            shape = RoundedCornerShape(spacing.cornerContainer),
-                            colors = androidx.tv.material3.SurfaceDefaults.colors(
-                                containerColor = expressiveColors.chromeSurface.copy(alpha = 0.92f),
-                            ),
-                            border = androidx.tv.material3.Border(
-                                border = BorderStroke(
-                                    width = 1.dp,
-                                    color = expressiveColors.borderSubtle.copy(alpha = 0.75f),
-                                ),
-                            ),
-                            tonalElevation = 8.dp,
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(
-                                        Brush.horizontalGradient(
-                                            colors = listOf(
-                                                Color.Transparent,
-                                                expressiveColors.accentSurface.copy(alpha = 0.28f),
-                                            ),
-                                        ),
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                                verticalArrangement = Arrangement.Center,
-                            ) {
-                                TabRow(
-                                    selectedTabIndex = selectedTabIndex,
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    navTabItems.forEachIndexed { index, item ->
-                                        val isSelected = index == selectedTabIndex
-                                        
-                                        Tab(
-                                            selected = isSelected,
-                                            onFocus = { },
-                                            onClick = { navigateToTab(item.route) },
-                                            colors = TabDefaults.pillIndicatorTabColors(
-                                                contentColor = Color.White.copy(alpha = 0.8f),
-                                                inactiveContentColor = Color.White.copy(alpha = 0.5f),
-                                                selectedContentColor = Color(0xFF0D1117),
-                                                focusedContentColor = expressiveColors.focusRing,
-                                                focusedSelectedContentColor = Color(0xFF0D1117),
-                                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                                disabledInactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                                disabledSelectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                            ),
-                                        ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = item.icon,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                                Text(
-                                                    text = item.label,
-                                                    style = MaterialTheme.typography.labelMedium
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                CinefinAppScaffold(
+                    showNav = showNav,
+                    selectedTabIndex = selectedTabIndex,
+                    onNavigateToTab = ::navigateToTab,
+                ) {
                     Box(modifier = Modifier.weight(1f)) {
                         CinefinTvNavGraph(
                             navController = navController,
@@ -327,6 +260,98 @@ fun CinefinTvApp(
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+internal fun CinefinAppScaffold(
+    showNav: Boolean,
+    selectedTabIndex: Int,
+    onNavigateToTab: (String) -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    val spacing = LocalCinefinSpacing.current
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (showNav) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = spacing.gutter, vertical = 16.dp)
+                    .testTag(AppTestTags.NavBar),
+                shape = RoundedCornerShape(spacing.cornerContainer),
+                colors = androidx.tv.material3.SurfaceDefaults.colors(
+                    containerColor = expressiveColors.chromeSurface.copy(alpha = 0.92f),
+                ),
+                border = androidx.tv.material3.Border(
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = expressiveColors.borderSubtle.copy(alpha = 0.75f),
+                    ),
+                ),
+                tonalElevation = 8.dp,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    expressiveColors.accentSurface.copy(alpha = 0.28f),
+                                ),
+                            ),
+                        )
+                        .padding(horizontal = 12.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    TabRow(
+                        selectedTabIndex = selectedTabIndex,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        navTabItems.forEachIndexed { index, item ->
+                            val isSelected = index == selectedTabIndex
+
+                            Tab(
+                                selected = isSelected,
+                                onFocus = { },
+                                onClick = { onNavigateToTab(item.route) },
+                                modifier = Modifier.testTag(AppTestTags.tab(item.route)),
+                                colors = TabDefaults.pillIndicatorTabColors(
+                                    contentColor = Color.White.copy(alpha = 0.8f),
+                                    inactiveContentColor = Color.White.copy(alpha = 0.5f),
+                                    selectedContentColor = Color(0xFF0D1117),
+                                    focusedContentColor = expressiveColors.focusRing,
+                                    focusedSelectedContentColor = Color(0xFF0D1117),
+                                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    disabledInactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    disabledSelectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                ),
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = item.icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = item.label,
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        content()
     }
 }
 
