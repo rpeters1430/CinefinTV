@@ -43,6 +43,12 @@ data class MovieDetailModel(
     val directors: List<String>,
     val isWatched: Boolean,
     val playbackProgress: Float?,
+    val communityRatingRaw: Float?,
+    val criticRatingRaw: Float?,
+    val status: String?,
+    val originalLanguage: String?,
+    val budget: Double?,
+    val revenue: Double?,
 )
 
 data class CastModel(
@@ -172,6 +178,19 @@ class MovieDetailViewModel @Inject constructor(
                 ?: emptyList(),
             isWatched = isWatched(),
             playbackProgress = if (canResume()) (getWatchedPercentage() / 100.0).toFloat() else null,
+            communityRatingRaw = communityRating,
+            criticRatingRaw = criticRating,
+            status = status,
+            originalLanguage = run {
+                val audioStreams = mediaSources
+                    ?.firstOrNull()
+                    ?.mediaStreams
+                    ?.filter { it.type == org.jellyfin.sdk.model.api.MediaStreamType.AUDIO }
+                audioStreams?.firstOrNull { it.isDefault == true }?.language
+                    ?: audioStreams?.firstOrNull()?.language
+            },
+            budget = budget,
+            revenue = revenue,
         )
     }
 

@@ -155,6 +155,12 @@ fun MovieDetailScreen(
                     onCastClick = { personId -> onOpenPerson(personId) },
                     onSimilarClick = { onOpenMovie(it) },
                     listState = listState,
+                    communityRating = movie.communityRatingRaw,
+                    criticRating = movie.criticRatingRaw,
+                    status = movie.status,
+                    originalLanguage = movie.originalLanguage,
+                    budget = movie.budget,
+                    revenue = movie.revenue,
                 )
             }
         }

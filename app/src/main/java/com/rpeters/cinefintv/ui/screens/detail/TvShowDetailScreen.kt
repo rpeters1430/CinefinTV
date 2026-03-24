@@ -191,6 +191,8 @@ fun TvShowDetailScreen(
                     episodeListState = episodeListState,
                     castGridState = castGridState,
                     similarGridState = similarGridState,
+                    communityRating = show.communityRatingRaw,
+                    criticRating = show.criticRatingRaw,
                 )
             }
         }

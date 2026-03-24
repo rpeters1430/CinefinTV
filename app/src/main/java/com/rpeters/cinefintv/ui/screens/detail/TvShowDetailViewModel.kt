@@ -36,6 +36,8 @@ data class TvShowDetailModel(
     val nextUpEpisodeId: String?,
     val nextUpTitle: String?,
     val seasonCount: Int,
+    val communityRatingRaw: Float? = null,
+    val criticRatingRaw: Float? = null,
 )
 
 data class SeasonModel(
@@ -217,7 +219,9 @@ class TvShowDetailViewModel @Inject constructor(
             networks = studios?.mapNotNull { it.name } ?: emptyList(),
             nextUpEpisodeId = nextUp?.id?.toString(),
             nextUpTitle = nextUp?.getDisplayTitle(),
-            seasonCount = childCount ?: 0
+            seasonCount = childCount ?: 0,
+            communityRatingRaw = communityRating,
+            criticRatingRaw = criticRating,
         )
     }
 

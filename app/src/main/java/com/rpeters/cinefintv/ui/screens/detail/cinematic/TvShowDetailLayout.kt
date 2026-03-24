@@ -7,6 +7,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +30,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,10 +48,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinChip
+import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.TvPersonCard
 import com.rpeters.cinefintv.ui.screens.detail.CastModel
@@ -58,6 +63,7 @@ import com.rpeters.cinefintv.ui.screens.detail.EpisodeModel
 import com.rpeters.cinefintv.ui.screens.detail.SeasonModel
 import com.rpeters.cinefintv.ui.screens.detail.SimilarMovieModel
 import com.rpeters.cinefintv.ui.theme.CinefinRed
+import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 
 enum class TvShowTab { Episodes, Cast, Similar, Details }
@@ -93,6 +99,8 @@ fun TvShowDetailLayout(
     episodeListState: LazyListState,
     castGridState: LazyGridState,
     similarGridState: LazyGridState,
+    communityRating: Float? = null,
+    criticRating: Float? = null,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
@@ -237,6 +245,8 @@ fun TvShowDetailLayout(
                         description = description,
                         factItems = factItems,
                         genres = genres,
+                        communityRating = communityRating,
+                        criticRating = criticRating,
                     )
                 }
             }
@@ -295,6 +305,8 @@ private fun DetailsPanel(
     description: String,
     factItems: List<DetailLabeledMetaItem>,
     genres: List<String>,
+    communityRating: Float? = null,
+    criticRating: Float? = null,
 ) {
     val spacing = LocalCinefinSpacing.current
     LazyColumn(
@@ -310,5 +322,101 @@ private fun DetailsPanel(
                 chips = genres,
             )
         }
+
+        if (criticRating != null || communityRating != null) {
+            item {
+                TvShowReviewsSection(
+                    criticRating = criticRating,
+                    communityRating = communityRating,
+                    modifier = Modifier.padding(top = spacing.rowGap),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TvShowReviewsSection(
+    criticRating: Float?,
+    communityRating: Float?,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = LocalCinefinSpacing.current
+    val expressiveColors = LocalCinefinExpressiveColors.current
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        CinefinShelfTitle(
+            title = "Reviews",
+            modifier = Modifier.padding(vertical = spacing.elementGap),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+        ) {
+            criticRating?.let { rating ->
+                TvShowRatingCard(
+                    label = "Critics",
+                    icon = "🎬",
+                    score = "${rating.toInt()}%",
+                    modifier = Modifier.weight(1f),
+                    surfaceColor = expressiveColors.surfaceContainerHigh,
+                )
+            }
+            communityRating?.let { rating ->
+                TvShowRatingCard(
+                    label = "Community",
+                    icon = "⭐",
+                    score = String.format(java.util.Locale.US, "%.1f", rating),
+                    modifier = Modifier.weight(1f),
+                    surfaceColor = expressiveColors.surfaceContainerHigh,
+                )
+            }
+            if (criticRating == null || communityRating == null) {
+                Box(modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TvShowRatingCard(
+    label: String,
+    icon: String,
+    score: String,
+    surfaceColor: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .background(
+                color = surfaceColor,
+                shape = RoundedCornerShape(12.dp),
+            )
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(12.dp),
+            )
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(text = icon, fontSize = 22.sp)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            )
+        }
+        Text(
+            text = score,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
