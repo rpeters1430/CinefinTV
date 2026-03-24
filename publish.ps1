@@ -47,14 +47,14 @@ function Invoke-Git {
     }
 }
 
-function Test-GitRevParse {
+function Test-GitTagExists {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Ref
+        [string]$Tag
     )
 
-    & git rev-parse $Ref *> $null
-    return $LASTEXITCODE -eq 0
+    $tagMatch = (& git tag --list -- $Tag | Select-Object -First 1)
+    return -not [string]::IsNullOrWhiteSpace($tagMatch)
 }
 
 function Assert-CleanWorktree {
@@ -181,7 +181,7 @@ try {
     $newVersionCode = $oldVersionCode + 1
     $tag = "v$NewVersionName"
 
-    if (Test-GitRevParse -Ref $tag) {
+    if (Test-GitTagExists -Tag $tag) {
         throw "Tag $tag already exists."
     }
 
