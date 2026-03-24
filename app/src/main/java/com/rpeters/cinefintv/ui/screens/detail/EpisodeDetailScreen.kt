@@ -4,9 +4,11 @@ package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,13 +34,13 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
 import com.rpeters.cinefintv.utils.formatMs
 
 @Composable
@@ -94,8 +96,19 @@ private fun EpisodeDetailContent(
 ) {
     val listState = rememberLazyListState()
     val primaryActionFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
-    val firstContentFocusRequester = androidx.compose.runtime.remember { FocusRequester() }
-    var lastFocusedChapterId by rememberSaveable { mutableStateOf<String?>(chapters.firstOrNull()?.id) }
+    val factItems = remember(episode) {
+        buildList {
+            episode.episodeCode?.let {
+                add(DetailLabeledMetaItem(Icons.Default.VideoLibrary, "Episode", it))
+            }
+            episode.duration?.let {
+                add(DetailLabeledMetaItem(Icons.Default.Timer, "Runtime", it))
+            }
+            episode.year?.let {
+                add(DetailLabeledMetaItem(Icons.Default.CalendarToday, "Year", it.toString()))
+            }
+        }
+    }
 
     LaunchedEffect(episode.id) {
         listState.scrollToItem(0)
@@ -129,6 +142,16 @@ private fun EpisodeDetailContent(
             )
         }
 
+        item {
+            DetailOverviewSection(
+                title = episode.title,
+                description = episode.overview.orEmpty(),
+                factItems = factItems,
+                chips = listOfNotNull(episode.seriesName, episode.episodeCode),
+                modifier = Modifier.padding(top = 28.dp),
+            )
+        }
+
         if (chapters.isNotEmpty()) {
             item {
                 DetailContentSection(
@@ -149,16 +172,12 @@ private fun EpisodeDetailContent(
                                 cardWidth = 240.dp,
                                 modifier = Modifier
                                     .then(
-                                        if (chapter.id == lastFocusedChapterId) Modifier.focusRequester(firstContentFocusRequester) else Modifier
-                                    )
-                                    .then(
                                         if (chapter.id == chapters.firstOrNull()?.id) {
                                             Modifier.focusProperties { up = primaryActionFocusRequester }
                                         } else {
                                             Modifier
                                         }
                                     ),
-                                onFocus = { lastFocusedChapterId = chapter.id },
                                 onClick = { onPlayEpisode(episode.id, chapter.positionMs) },
                             )
                         }
@@ -173,7 +192,6 @@ private fun EpisodeDetailContent(
                     title = "Media Details",
                     icon = Icons.Default.VideoLibrary,
                 ) {
-                    // Video row
                     mediaDetail.video?.let { video ->
                         val videoChips = listOfNotNull(
                             video.resolution,
@@ -189,7 +207,6 @@ private fun EpisodeDetailContent(
                             )
                         }
                     }
-                    // Audio rows (one per stream)
                     mediaDetail.audioStreams.forEach { audio ->
                         val audioLabel = listOfNotNull(
                             audio.codec,

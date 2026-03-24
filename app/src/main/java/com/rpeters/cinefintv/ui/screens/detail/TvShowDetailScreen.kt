@@ -152,6 +152,7 @@ fun TvShowDetailScreen(
 
                 TvShowDetailLayout(
                     backdropUrl = show.backdropUrl,
+                    posterUrl = show.posterUrl,
                     logoUrl = show.logoUrl,
                     title = show.title,
                     eyebrow = eyebrow,

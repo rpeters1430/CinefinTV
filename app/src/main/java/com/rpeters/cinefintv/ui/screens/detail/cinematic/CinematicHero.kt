@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalTvMaterial3Api::class)
+@file:OptIn(ExperimentalTvMaterial3Api::class, ExperimentalLayoutApi::class)
 
 package com.rpeters.cinefintv.ui.screens.detail.cinematic
 
@@ -10,13 +10,17 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidthIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -58,6 +62,7 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 
 /**
  * Full-bleed cinematic hero section shared by MovieDetailLayout and TvShowDetailLayout.
+ * Left-docked composition so the screen reads like a detail page, not a carousel slide.
  */
 @Composable
 fun CinematicHero(
@@ -74,17 +79,18 @@ fun CinematicHero(
     focusProperties: FocusProperties.() -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+    val screenWidth = configuration.screenWidthDp.dp
     val expressiveColors = LocalCinefinExpressiveColors.current
     val spacing = LocalCinefinSpacing.current
     val themeController = LocalCinefinThemeController.current
     val context = LocalContext.current
+    val panelWidth = (screenWidth * 0.44f).coerceIn(420.dp, 760.dp)
 
-    // logoLoaded: start true if there's no logo (show text immediately)
     var logoLoaded by remember { mutableStateOf(logoUrl == null) }
     var logoFailed by remember { mutableStateOf(false) }
 
-    // Clear seed color when leaving this screen
     DisposableEffect(Unit) {
         onDispose { themeController.updateSeedColor(null) }
     }
@@ -92,10 +98,8 @@ fun CinematicHero(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = screenHeight * 0.52f),
-        contentAlignment = Alignment.BottomCenter,
+            .heightIn(min = screenHeight * 0.56f),
     ) {
-        // Backdrop image with Palette extraction
         if (backdropUrl != null) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
@@ -109,41 +113,44 @@ fun CinematicHero(
                     val bitmap = state.result.image.toBitmap()
                     Palette.from(bitmap).generate { palette ->
                         val color = palette?.vibrantSwatch?.rgb ?: palette?.dominantSwatch?.rgb
-                        color?.let {
-                            themeController.updateSeedColor(Color(it))
-                        }
+                        color?.let { themeController.updateSeedColor(Color(it)) }
                     }
                 },
             )
         }
 
-        // Gradient overlay: transparent → BackgroundDark
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .background(
                     Brush.verticalGradient(
                         0.0f to Color.Transparent,
-                        0.4f to BackgroundDark.copy(alpha = 0.3f),
+                        0.38f to BackgroundDark.copy(alpha = 0.28f),
                         1.0f to BackgroundDark,
                     )
                 )
         )
 
-        // Content: eyebrow + logo/title + meta + action bar
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // Eyebrow line
-            Text(
-                text = eyebrow.uppercase(),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                modifier = Modifier.padding(bottom = spacing.elementGap),
-            )
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.horizontalGradient(
+                        0.0f to BackgroundDark.copy(alpha = 0.94f),
+                        0.18f to BackgroundDark.copy(alpha = 0.82f),
+                        0.48f to BackgroundDark.copy(alpha = 0.32f),
+                        1.0f to Color.Transparent,
+                    )
+                )
+        )
 
-            // Pre-load the logo image outside AnimatedVisibility so loading starts immediately
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(horizontal = spacing.gutter, vertical = spacing.gutter),
+            contentAlignment = Alignment.BottomStart,
+        ) {
             if (logoUrl != null) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
@@ -156,85 +163,146 @@ fun CinematicHero(
                 )
             }
 
-            // Logo or title
-            AnimatedVisibility(
-                visible = logoLoaded,
-                enter = fadeIn(tween(300)),
-            ) {
-                if (logoUrl != null && !logoFailed) {
-                    AsyncImage(
-                        model = logoUrl,
-                        contentDescription = title,
-                        modifier = Modifier
-                            .heightIn(max = 120.dp)
-                            .wrapContentWidth(),
-                    )
-                } else {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(spacing.elementGap))
-
-            // Rating + genre chips
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = spacing.elementGap),
-            ) {
-                ratingText?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = expressiveColors.titleAccent,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-                genres.take(3).forEach { genre ->
-                    CinefinChip(label = genre)
-                }
-            }
-
-            // Action bar
-            Row(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .background(expressiveColors.chromeSurface.copy(alpha = 0.85f))
+                    .requiredWidthIn(max = panelWidth)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                expressiveColors.chromeSurface.copy(alpha = 0.82f),
+                                expressiveColors.chromeSurface.copy(alpha = 0.62f),
+                            )
+                        ),
+                        shape = MaterialTheme.shapes.extraLarge,
+                    )
                     .border(
                         width = 1.dp,
-                        color = MaterialTheme.colorScheme.border,
-                        shape = RectangleShape,
+                        color = expressiveColors.borderSubtle.copy(alpha = 0.58f),
+                        shape = MaterialTheme.shapes.extraLarge,
                     )
-                    .padding(horizontal = spacing.gutter, vertical = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(spacing.elementGap),
-                verticalAlignment = Alignment.CenterVertically,
+                    .padding(28.dp),
+                verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
             ) {
-                Button(
-                    onClick = onPrimaryAction,
-                    colors = ButtonDefaults.colors(
-                        containerColor = CinefinRed,
-                        contentColor = Color.White,
-                        focusedContainerColor = CinefinRed,
-                        focusedContentColor = Color.White,
-                    ),
-                    modifier = Modifier
-                        .focusRequester(primaryActionFocusRequester)
-                        .focusProperties(focusProperties),
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(primaryActionLabel, fontWeight = FontWeight.Bold)
+                    Box(
+                        modifier = Modifier
+                            .width(4.dp)
+                            .height(42.dp)
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    listOf(CinefinRed, expressiveColors.titleAccent)
+                                ),
+                                shape = RectangleShape,
+                            )
+                    )
+                    Text(
+                        text = eyebrow.uppercase(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                    )
                 }
 
-                secondaryActions.forEach { (label, action) ->
-                    OutlinedButton(onClick = action) {
-                        Text(label)
+                AnimatedVisibility(
+                    visible = logoLoaded,
+                    enter = fadeIn(tween(300)),
+                ) {
+                    if (logoUrl != null && !logoFailed) {
+                        AsyncImage(
+                            model = logoUrl,
+                            contentDescription = title,
+                            modifier = Modifier
+                                .heightIn(max = 110.dp)
+                                .wrapContentWidth(),
+                        )
+                    } else {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                }
+
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
+                    verticalArrangement = Arrangement.spacedBy(spacing.chipGap),
+                ) {
+                    ratingText?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = expressiveColors.titleAccent,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .background(
+                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.36f),
+                                    shape = MaterialTheme.shapes.large,
+                                )
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                        )
+                    }
+                    genres.take(4).forEach { genre ->
+                        CinefinChip(label = genre)
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            expressiveColors.chromeSurface.copy(alpha = 0.6f),
+                            shape = MaterialTheme.shapes.large,
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = expressiveColors.borderSubtle.copy(alpha = 0.48f),
+                            shape = MaterialTheme.shapes.large,
+                        )
+                        .padding(horizontal = 18.dp, vertical = 18.dp),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.elementGap),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Button(
+                        onClick = onPrimaryAction,
+                        colors = ButtonDefaults.colors(
+                            containerColor = CinefinRed,
+                            contentColor = Color.White,
+                            focusedContainerColor = CinefinRed,
+                            focusedContentColor = Color.White,
+                        ),
+                        modifier = Modifier
+                            .focusRequester(primaryActionFocusRequester)
+                            .focusProperties(focusProperties),
+                    ) {
+                        Text(primaryActionLabel, fontWeight = FontWeight.Bold)
+                    }
+
+                    secondaryActions.forEach { (label, action) ->
+                        OutlinedButton(onClick = action) {
+                            Text(label)
+                        }
                     }
                 }
             }
         }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = spacing.gutter, bottom = spacing.gutter)
+                .size(220.dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            expressiveColors.focusGlow.copy(alpha = 0.16f),
+                            Color.Transparent,
+                        )
+                    )
+                )
+        )
     }
 }

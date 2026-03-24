@@ -4,6 +4,7 @@ package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +36,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
 
 @Composable
 fun StuffDetailScreen(
@@ -77,22 +79,43 @@ private fun StuffVideoContent(
     onPlayItem: (String) -> Unit,
 ) {
     val primaryActionFocusRequester = remember { FocusRequester() }
+    val factItems = remember(stuff) {
+        buildList {
+            stuff.type?.let {
+                add(DetailLabeledMetaItem(Icons.Default.Category, "Type", it))
+            }
+            stuff.playbackProgress?.let {
+                add(DetailLabeledMetaItem(Icons.Default.VideoLibrary, "Progress", "${(it * 100).toInt()}% watched"))
+            }
+        }
+    }
 
     LaunchedEffect(stuff.id) {
         primaryActionFocusRequester.requestFocus()
     }
 
-    CinematicHero(
-        backdropUrl = stuff.backdropUrl,
-        logoUrl = null,
-        title = stuff.title,
-        eyebrow = (stuff.type ?: "Video").uppercase(),
-        ratingText = null,
-        genres = emptyList(),
-        primaryActionLabel = if (stuff.playbackProgress != null) "▶ Resume" else "▶ Play",
-        onPrimaryAction = { onPlayItem(stuff.id) },
-        primaryActionFocusRequester = primaryActionFocusRequester,
-    )
+    Column(modifier = Modifier.fillMaxSize()) {
+        CinematicHero(
+            backdropUrl = stuff.backdropUrl,
+            logoUrl = null,
+            title = stuff.title,
+            eyebrow = (stuff.type ?: "Video").uppercase(),
+            ratingText = null,
+            genres = emptyList(),
+            primaryActionLabel = if (stuff.playbackProgress != null) "▶ Resume" else "▶ Play",
+            onPrimaryAction = { onPlayItem(stuff.id) },
+            primaryActionFocusRequester = primaryActionFocusRequester,
+        )
+
+        DetailOverviewSection(
+            title = stuff.title,
+            posterUrl = stuff.posterUrl,
+            description = stuff.overview.orEmpty(),
+            factItems = factItems,
+            chips = listOfNotNull(stuff.type),
+            modifier = Modifier.padding(top = 28.dp),
+        )
+    }
 }
 
 @Composable
@@ -104,6 +127,14 @@ private fun StuffCollectionContent(
     val primaryActionFocusRequester = remember { FocusRequester() }
     val gridEntryFocusRequester = remember { FocusRequester() }
     var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(items.firstOrNull()?.id) }
+    val factItems = remember(stuff, items) {
+        buildList {
+            stuff.type?.let {
+                add(DetailLabeledMetaItem(Icons.Default.Category, "Type", it))
+            }
+            add(DetailLabeledMetaItem(Icons.Default.VideoLibrary, "Items", items.size.toString()))
+        }
+    }
 
     LaunchedEffect(stuff.id) {
         primaryActionFocusRequester.requestFocus()
@@ -120,6 +151,15 @@ private fun StuffCollectionContent(
             primaryActionLabel = "Browse",
             onPrimaryAction = { /* no-op, collection browsing is the content below */ },
             primaryActionFocusRequester = primaryActionFocusRequester,
+        )
+
+        DetailOverviewSection(
+            title = stuff.title,
+            posterUrl = stuff.posterUrl,
+            description = stuff.overview.orEmpty(),
+            factItems = factItems,
+            chips = listOfNotNull(stuff.type),
+            modifier = Modifier.padding(top = 28.dp),
         )
 
         DetailContentSection(

@@ -2,7 +2,6 @@
 
 package com.rpeters.cinefintv.ui.screens.detail.cinematic
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,17 +12,9 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
@@ -40,6 +31,7 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 @Composable
 fun MovieDetailLayout(
     backdropUrl: String?,
+    posterUrl: String?,
     logoUrl: String?,
     title: String,
     eyebrow: String,
@@ -60,8 +52,6 @@ fun MovieDetailLayout(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
-    val descriptionFocusRequester = remember { FocusRequester() }
-    var descriptionExpanded by remember { mutableStateOf(false) }
 
     LazyColumn(
         state = listState,
@@ -80,60 +70,18 @@ fun MovieDetailLayout(
                 onPrimaryAction = onPrimaryAction,
                 secondaryActions = secondaryActions,
                 primaryActionFocusRequester = primaryActionFocusRequester,
-                focusProperties = { down = descriptionFocusRequester },
             )
         }
 
         item {
-            var isDescriptionFocused by remember { mutableStateOf(false) }
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(descriptionFocusRequester)
-                    .onFocusChanged { isDescriptionFocused = it.isFocused }
-                    .clickable { descriptionExpanded = !descriptionExpanded }
-                    .padding(horizontal = spacing.gutter, vertical = spacing.rowGap),
-            ) {
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (isDescriptionFocused) 
-                        MaterialTheme.colorScheme.onSurface 
-                    else 
-                        MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = if (descriptionExpanded) Int.MAX_VALUE else 4,
-                )
-                if (description.length > 200) {
-                    Text(
-                        text = if (descriptionExpanded) "Show less" else "Show more",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = spacing.labelGap),
-                    )
-                }
-            }
-        }
-
-        item {
-            ExpandableFactsSection(
-                items = factItems,
-                summaryText = factSummary,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = spacing.gutter),
+            DetailOverviewSection(
+                title = title,
+                posterUrl = posterUrl,
+                description = description,
+                factItems = factItems,
+                chips = genres,
+                modifier = Modifier.padding(top = spacing.rowGap),
             )
-        }
-
-        item {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = spacing.gutter),
-                horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
-                modifier = Modifier.padding(vertical = spacing.elementGap),
-            ) {
-                items(genres) { genre ->
-                    CinefinChip(label = genre)
-                }
-            }
         }
 
         if (castItems.isNotEmpty()) {

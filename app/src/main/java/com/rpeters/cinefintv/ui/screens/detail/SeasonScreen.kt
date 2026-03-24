@@ -4,10 +4,12 @@ package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -31,6 +33,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
 
 @Composable
 fun SeasonScreen(
@@ -83,13 +86,23 @@ private fun SeasonContent(
 ) {
     val listState = rememberLazyListState()
     val primaryActionFocusRequester = remember { FocusRequester() }
-    val episodeGridEntryRequester = remember { FocusRequester() }
 
     val resumeEpisode = remember(episodes) {
         episodes.firstOrNull { (it.playbackProgress ?: 0f) > 0f && !it.isWatched }
             ?: episodes.firstOrNull { !it.isWatched }
     }
-    var lastFocusedEpisodeId by rememberSaveable { mutableStateOf<String?>(episodes.firstOrNull()?.id) }
+    var lastFocusedEpisodeId by rememberSaveable(season.id) { mutableStateOf<String?>(episodes.firstOrNull()?.id) }
+    val factItems = remember(season, episodes) {
+        buildList {
+            season.seriesName?.let {
+                add(DetailLabeledMetaItem(Icons.Default.Subscriptions, "Series", it))
+            }
+            add(DetailLabeledMetaItem(Icons.Default.VideoLibrary, "Episodes", episodes.size.toString()))
+            resumeEpisode?.episodeCode?.let {
+                add(DetailLabeledMetaItem(Icons.Default.VideoLibrary, "Continue With", it))
+            }
+        }
+    }
 
     LaunchedEffect(season.id) {
         primaryActionFocusRequester.requestFocus()
@@ -121,6 +134,17 @@ private fun SeasonContent(
         }
 
         item {
+            DetailOverviewSection(
+                title = season.title,
+                posterUrl = season.posterUrl,
+                description = season.overview.orEmpty(),
+                factItems = factItems,
+                chips = emptyList(),
+                modifier = Modifier.padding(top = 28.dp),
+            )
+        }
+
+        item {
             DetailContentSection(
                 title = "Episodes",
                 eyebrow = "${episodes.count { !it.isWatched }} unwatched",
@@ -132,9 +156,6 @@ private fun SeasonContent(
             EpisodeListRow(
                 episode = episode,
                 modifier = Modifier
-                    .then(
-                        if (episode.id == lastFocusedEpisodeId) Modifier.focusRequester(episodeGridEntryRequester) else Modifier
-                    )
                     .then(
                         if (episode.id == episodes.firstOrNull()?.id) {
                             Modifier.focusProperties { up = primaryActionFocusRequester }

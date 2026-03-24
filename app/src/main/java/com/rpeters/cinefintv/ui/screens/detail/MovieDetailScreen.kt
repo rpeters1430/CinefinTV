@@ -135,6 +135,7 @@ fun MovieDetailScreen(
 
                 MovieDetailLayout(
                     backdropUrl = movie.backdropUrl,
+                    posterUrl = movie.posterUrl,
                     logoUrl = movie.logoUrl,
                     title = movie.title,
                     eyebrow = eyebrow,

@@ -64,6 +64,7 @@ enum class TvShowTab { Episodes, Cast, Similar, Details }
 @Composable
 fun TvShowDetailLayout(
     backdropUrl: String?,
+    posterUrl: String?,
     logoUrl: String?,
     title: String,
     eyebrow: String,
@@ -221,9 +222,10 @@ fun TvShowDetailLayout(
                         }
                     }
                     TvShowTab.Details -> DetailsPanel(
+                        title = title,
+                        posterUrl = posterUrl,
                         description = description,
                         factItems = factItems,
-                        factSummary = factSummary,
                         genres = genres,
                     )
                 }
@@ -273,33 +275,24 @@ private fun EpisodesPanel(
 
 @Composable
 private fun DetailsPanel(
+    title: String,
+    posterUrl: String?,
     description: String,
     factItems: List<DetailLabeledMetaItem>,
-    factSummary: String,
     genres: List<String>,
 ) {
     val spacing = LocalCinefinSpacing.current
     LazyColumn(
         contentPadding = PaddingValues(start = spacing.cardGap, end = spacing.cardGap, bottom = spacing.gutter),
-        verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
     ) {
         item {
-            ExpandableFactsSection(
-                items = factItems,
-                summaryText = factSummary,
+            DetailOverviewSection(
+                title = title,
+                posterUrl = posterUrl,
+                description = description,
+                factItems = factItems,
+                chips = genres,
             )
-        }
-        item {
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(spacing.chipGap)) {
-                items(genres) { CinefinChip(label = it) }
-            }
         }
     }
 }
