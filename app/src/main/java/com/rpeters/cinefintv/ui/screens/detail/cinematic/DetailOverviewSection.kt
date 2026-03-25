@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
@@ -50,16 +51,33 @@ fun DetailOverviewSection(
     factItems: List<DetailLabeledMetaItem>,
     chips: List<String>,
     modifier: Modifier = Modifier,
+    focusRequester: FocusRequester? = null,
+    upFocusRequester: FocusRequester? = null,
+    downFocusRequester: FocusRequester? = null,
     posterUrl: String? = null,
     posterTitle: String = title,
 ) {
     val spacing = LocalCinefinSpacing.current
     val expressiveColors = LocalCinefinExpressiveColors.current
+    var isFocused by remember(title) { mutableStateOf(false) }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = spacing.gutter)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .focusProperties {
+                if (upFocusRequester != null) {
+                    up = upFocusRequester
+                }
+                if (downFocusRequester != null) {
+                    down = downFocusRequester
+                }
+            }
+            .onFocusChanged { state ->
+                isFocused = state.isFocused || state.hasFocus
+            }
+            .focusable()
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(
@@ -71,7 +89,7 @@ fun DetailOverviewSection(
             )
             .border(
                 width = 1.dp,
-                color = expressiveColors.borderSubtle.copy(alpha = 0.55f),
+                color = if (isFocused) expressiveColors.focusRing else expressiveColors.borderSubtle.copy(alpha = 0.55f),
                 shape = RoundedCornerShape(spacing.cornerContainer),
             )
             .padding(spacing.gutter),

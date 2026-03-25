@@ -5,15 +5,19 @@ package com.rpeters.cinefintv.ui.screens.detail.cinematic
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -22,6 +26,7 @@ import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.TvPersonCard
 import com.rpeters.cinefintv.ui.screens.detail.CastModel
+import com.rpeters.cinefintv.ui.screens.detail.DetailAnchor
 import com.rpeters.cinefintv.ui.screens.detail.DetailLabeledMetaItem
 import com.rpeters.cinefintv.ui.screens.detail.SimilarMovieModel
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
@@ -42,6 +47,7 @@ fun MovieDetailLayout(
     primaryActionLabel: String,
     onPrimaryAction: () -> Unit,
     secondaryActions: List<Pair<String, () -> Unit>>,
+    topFocusRequester: FocusRequester,
     primaryActionFocusRequester: FocusRequester,
     description: String,
     factItems: List<DetailLabeledMetaItem>,
@@ -54,12 +60,28 @@ fun MovieDetailLayout(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
+    val overviewFocusRequester = remember { FocusRequester() }
+    val firstCastFocusRequester = remember { FocusRequester() }
+    val firstSimilarFocusRequester = remember { FocusRequester() }
+    val firstContentFocusRequester = when {
+        castItems.isNotEmpty() -> firstCastFocusRequester
+        similarItems.isNotEmpty() -> firstSimilarFocusRequester
+        else -> null
+    }
 
     LazyColumn(
         state = listState,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = spacing.gutter * 2),
     ) {
+        item {
+            DetailAnchor(
+                focusRequester = topFocusRequester,
+                downFocusRequester = overviewFocusRequester,
+                onFocused = {},
+            )
+        }
+
         item {
             CinematicHero(
                 backdropUrl = backdropUrl,
@@ -72,6 +94,7 @@ fun MovieDetailLayout(
                 onPrimaryAction = onPrimaryAction,
                 secondaryActions = secondaryActions,
                 primaryActionFocusRequester = primaryActionFocusRequester,
+                primaryActionDownFocusRequester = overviewFocusRequester,
             )
         }
 
@@ -82,6 +105,9 @@ fun MovieDetailLayout(
                 description = description,
                 factItems = factItems,
                 chips = genres,
+                focusRequester = overviewFocusRequester,
+                upFocusRequester = primaryActionFocusRequester,
+                downFocusRequester = firstContentFocusRequester,
                 modifier = Modifier.padding(top = spacing.rowGap),
             )
         }
@@ -109,6 +135,13 @@ fun MovieDetailLayout(
                                 name = person.name,
                                 role = person.role,
                                 imageUrl = person.imageUrl,
+                                modifier = if (person.id == castItems.firstOrNull()?.id) {
+                                    Modifier
+                                        .focusRequester(firstCastFocusRequester)
+                                        .focusProperties { up = overviewFocusRequester }
+                                } else {
+                                    Modifier
+                                },
                                 onClick = { onCastClick(person.id) },
                             )
                         }
@@ -140,6 +173,19 @@ fun MovieDetailLayout(
                                 title = mediaItem.title,
                                 imageUrl = mediaItem.imageUrl,
                                 aspectRatio = 2f / 3f, // Standard poster ratio
+                                modifier = if (mediaItem.id == similarItems.firstOrNull()?.id) {
+                                    Modifier
+                                        .focusRequester(firstSimilarFocusRequester)
+                                        .focusProperties {
+                                            up = if (castItems.isNotEmpty()) {
+                                                firstCastFocusRequester
+                                            } else {
+                                                overviewFocusRequester
+                                            }
+                                        }
+                                } else {
+                                    Modifier
+                                },
                                 onClick = { onSimilarClick(mediaItem.id) },
                             )
                         }

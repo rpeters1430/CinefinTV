@@ -79,6 +79,7 @@ private fun StuffVideoContent(
     onPlayItem: (String) -> Unit,
 ) {
     val primaryActionFocusRequester = remember { FocusRequester() }
+    val overviewFocusRequester = remember { FocusRequester() }
     val factItems = remember(stuff) {
         buildList {
             stuff.type?.let {
@@ -105,6 +106,7 @@ private fun StuffVideoContent(
             primaryActionLabel = if (stuff.playbackProgress != null) "▶ Resume" else "▶ Play",
             onPrimaryAction = { onPlayItem(stuff.id) },
             primaryActionFocusRequester = primaryActionFocusRequester,
+            primaryActionDownFocusRequester = overviewFocusRequester,
         )
 
         DetailOverviewSection(
@@ -113,6 +115,8 @@ private fun StuffVideoContent(
             description = stuff.overview.orEmpty(),
             factItems = factItems,
             chips = listOfNotNull(stuff.type),
+            focusRequester = overviewFocusRequester,
+            upFocusRequester = primaryActionFocusRequester,
             modifier = Modifier.padding(top = 28.dp),
         )
     }
@@ -125,6 +129,7 @@ private fun StuffCollectionContent(
     onOpenItem: (String, String?) -> Unit,
 ) {
     val primaryActionFocusRequester = remember { FocusRequester() }
+    val overviewFocusRequester = remember { FocusRequester() }
     val gridEntryFocusRequester = remember { FocusRequester() }
     var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(items.firstOrNull()?.id) }
     val factItems = remember(stuff, items) {
@@ -151,6 +156,7 @@ private fun StuffCollectionContent(
             primaryActionLabel = "Browse",
             onPrimaryAction = { /* no-op, collection browsing is the content below */ },
             primaryActionFocusRequester = primaryActionFocusRequester,
+            primaryActionDownFocusRequester = overviewFocusRequester,
         )
 
         DetailOverviewSection(
@@ -159,6 +165,9 @@ private fun StuffCollectionContent(
             description = stuff.overview.orEmpty(),
             factItems = factItems,
             chips = listOfNotNull(stuff.type),
+            focusRequester = overviewFocusRequester,
+            upFocusRequester = primaryActionFocusRequester,
+            downFocusRequester = if (items.isNotEmpty()) gridEntryFocusRequester else null,
             modifier = Modifier.padding(top = 28.dp),
         )
 
@@ -203,7 +212,7 @@ private fun StuffCollectionContent(
                             )
                             .then(
                                 if (item.id == items.firstOrNull()?.id) {
-                                    Modifier.focusProperties { up = primaryActionFocusRequester }
+                                    Modifier.focusProperties { up = overviewFocusRequester }
                                 } else {
                                     Modifier
                                 }

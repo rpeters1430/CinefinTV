@@ -18,7 +18,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -28,7 +27,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.MovieDetailLayout
-import kotlinx.coroutines.flow.first
 
 @Composable
 fun MovieDetailScreen(
@@ -60,14 +58,15 @@ fun MovieDetailScreen(
     }
 
     val listState = rememberLazyListState()
+    val topFocus = remember { FocusRequester() }
     val primaryActionFocus = remember { FocusRequester() }
 
     LaunchedEffect((uiState as? MovieDetailUiState.Content)?.movie?.id) {
         if (uiState is MovieDetailUiState.Content) {
-            try { 
-                primaryActionFocus.requestFocus() 
-            } catch (_: Exception) {}
-            listState.scrollToItem(0)
+            focusDetailScreenAtTop(
+                listState = listState,
+                initialFocusRequester = topFocus,
+            )
         }
     }
 
@@ -143,6 +142,7 @@ fun MovieDetailScreen(
                     primaryActionLabel = primaryActionLabel,
                     onPrimaryAction = { onPlayMovie(movie.id) },
                     secondaryActions = listOf("Watchlist" to {}),
+                    topFocusRequester = topFocus,
                     primaryActionFocusRequester = primaryActionFocus,
                     description = movie.overview ?: "",
                     factItems = factItems,

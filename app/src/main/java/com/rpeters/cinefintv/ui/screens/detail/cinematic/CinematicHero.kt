@@ -78,6 +78,7 @@ fun CinematicHero(
     onPrimaryAction: () -> Unit,
     secondaryActions: List<Pair<String, () -> Unit>> = emptyList(),
     primaryActionFocusRequester: FocusRequester = remember { FocusRequester() },
+    primaryActionDownFocusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier,
 ) {
     val configuration = LocalConfiguration.current
@@ -151,9 +152,9 @@ fun CinematicHero(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight()
+                .wrapContentHeight()
                 .padding(horizontal = spacing.gutter, vertical = spacing.gutter),
-            contentAlignment = Alignment.CenterStart,
+            contentAlignment = Alignment.TopStart,
         ) {
             if (logoUrl != null) {
                 AsyncImage(
@@ -169,6 +170,7 @@ fun CinematicHero(
 
             Column(
                 modifier = Modifier
+                    .padding(top = 48.dp)
                     .requiredWidthIn(max = panelWidth)
                     .wrapContentHeight()
                     .background(
@@ -269,13 +271,25 @@ fun CinematicHero(
                         ),
                         modifier = Modifier
                             .focusRequester(primaryActionFocusRequester)
+                            .focusProperties {
+                                if (primaryActionDownFocusRequester != null) {
+                                    down = primaryActionDownFocusRequester
+                                }
+                            }
                             .testTag(DetailTestTags.PrimaryAction),
                     ) {
                         Text(primaryActionLabel, fontWeight = FontWeight.ExtraBold)
                     }
 
                     secondaryActions.forEach { (label, action) ->
-                        OutlinedButton(onClick = action) {
+                        OutlinedButton(
+                            onClick = action,
+                            modifier = Modifier.focusProperties {
+                                if (primaryActionDownFocusRequester != null) {
+                                    down = primaryActionDownFocusRequester
+                                }
+                            },
+                        ) {
                             Text(label, fontWeight = FontWeight.Bold)
                         }
                     }

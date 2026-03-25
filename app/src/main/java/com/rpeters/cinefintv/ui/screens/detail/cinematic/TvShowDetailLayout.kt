@@ -5,15 +5,19 @@ package com.rpeters.cinefintv.ui.screens.detail.cinematic
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -21,6 +25,7 @@ import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.TvPersonCard
 import com.rpeters.cinefintv.ui.screens.detail.CastModel
+import com.rpeters.cinefintv.ui.screens.detail.DetailAnchor
 import com.rpeters.cinefintv.ui.screens.detail.DetailLabeledMetaItem
 import com.rpeters.cinefintv.ui.screens.detail.SeasonModel
 import com.rpeters.cinefintv.ui.screens.detail.SimilarMovieModel
@@ -41,6 +46,7 @@ fun TvShowDetailLayout(
     primaryActionLabel: String,
     onPrimaryAction: () -> Unit,
     secondaryActions: List<Pair<String, () -> Unit>>,
+    topFocusRequester: FocusRequester,
     primaryActionFocusRequester: FocusRequester,
     seasons: List<SeasonModel>,
     onSeasonClick: (SeasonModel) -> Unit,
@@ -54,12 +60,30 @@ fun TvShowDetailLayout(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
+    val overviewFocusRequester = remember { FocusRequester() }
+    val firstSeasonFocusRequester = remember { FocusRequester() }
+    val firstCastFocusRequester = remember { FocusRequester() }
+    val firstSimilarFocusRequester = remember { FocusRequester() }
+    val firstContentFocusRequester = when {
+        seasons.isNotEmpty() -> firstSeasonFocusRequester
+        castItems.isNotEmpty() -> firstCastFocusRequester
+        similarItems.isNotEmpty() -> firstSimilarFocusRequester
+        else -> null
+    }
 
     LazyColumn(
         state = listState,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = spacing.gutter * 2),
     ) {
+        item {
+            DetailAnchor(
+                focusRequester = topFocusRequester,
+                downFocusRequester = overviewFocusRequester,
+                onFocused = {},
+            )
+        }
+
         item {
             CinematicHero(
                 backdropUrl = backdropUrl,
@@ -72,6 +96,7 @@ fun TvShowDetailLayout(
                 onPrimaryAction = onPrimaryAction,
                 secondaryActions = secondaryActions,
                 primaryActionFocusRequester = primaryActionFocusRequester,
+                primaryActionDownFocusRequester = overviewFocusRequester,
             )
         }
 
@@ -82,6 +107,9 @@ fun TvShowDetailLayout(
                 description = description,
                 factItems = factItems,
                 chips = genres,
+                focusRequester = overviewFocusRequester,
+                upFocusRequester = primaryActionFocusRequester,
+                downFocusRequester = firstContentFocusRequester,
                 modifier = Modifier.padding(top = spacing.rowGap),
             )
         }
@@ -109,6 +137,13 @@ fun TvShowDetailLayout(
                                 title = season.title,
                                 imageUrl = season.imageUrl,
                                 aspectRatio = 2f / 3f,
+                                modifier = if (season.id == seasons.firstOrNull()?.id) {
+                                    Modifier
+                                        .focusRequester(firstSeasonFocusRequester)
+                                        .focusProperties { up = overviewFocusRequester }
+                                } else {
+                                    Modifier
+                                },
                                 onClick = { onSeasonClick(season) },
                             )
                         }
@@ -140,6 +175,19 @@ fun TvShowDetailLayout(
                                 name = person.name,
                                 role = person.role,
                                 imageUrl = person.imageUrl,
+                                modifier = if (person.id == castItems.firstOrNull()?.id) {
+                                    Modifier
+                                        .focusRequester(firstCastFocusRequester)
+                                        .focusProperties {
+                                            up = if (seasons.isNotEmpty()) {
+                                                firstSeasonFocusRequester
+                                            } else {
+                                                overviewFocusRequester
+                                            }
+                                        }
+                                } else {
+                                    Modifier
+                                },
                                 onClick = { onCastClick(person.id) },
                             )
                         }
@@ -171,6 +219,19 @@ fun TvShowDetailLayout(
                                 title = item.title,
                                 imageUrl = item.imageUrl,
                                 aspectRatio = 2f / 3f,
+                                modifier = if (item.id == similarItems.firstOrNull()?.id) {
+                                    Modifier
+                                        .focusRequester(firstSimilarFocusRequester)
+                                        .focusProperties {
+                                            up = when {
+                                                castItems.isNotEmpty() -> firstCastFocusRequester
+                                                seasons.isNotEmpty() -> firstSeasonFocusRequester
+                                                else -> overviewFocusRequester
+                                            }
+                                        }
+                                } else {
+                                    Modifier
+                                },
                                 onClick = { onSimilarClick(item.id) },
                             )
                         }

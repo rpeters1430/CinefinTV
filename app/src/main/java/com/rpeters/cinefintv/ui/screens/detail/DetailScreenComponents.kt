@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
@@ -32,6 +33,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -62,6 +65,7 @@ import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import kotlinx.coroutines.flow.first
 
 data class DetailMetaItem(
     val icon: ImageVector,
@@ -75,6 +79,20 @@ data class DetailLabeledMetaItem(
 )
 
 enum class MetaFactStyle { Card, Inline }
+
+suspend fun focusDetailScreenAtTop(
+    listState: LazyListState,
+    initialFocusRequester: FocusRequester,
+) {
+    listState.scrollToItem(0)
+    snapshotFlow {
+        val layoutInfo = listState.layoutInfo
+        layoutInfo.viewportEndOffset > layoutInfo.viewportStartOffset &&
+            layoutInfo.visibleItemsInfo.any { it.index == 0 }
+    }.first { it }
+    withFrameNanos { }
+    runCatching { initialFocusRequester.requestFocus() }
+}
 
 @Composable
 fun MetaFactItem(
@@ -566,6 +584,7 @@ fun DetailLoadingState() {
 @Composable
 fun DetailAnchor(
     focusRequester: FocusRequester,
+    downFocusRequester: FocusRequester? = null,
     onFocused: () -> Unit,
 ) {
     Spacer(
@@ -574,8 +593,10 @@ fun DetailAnchor(
             .focusRequester(focusRequester)
             .onFocusChanged { if (it.isFocused) onFocused() }
             .focusProperties {
-                // Don't allow manual navigation to this anchor
                 canFocus = true
+                if (downFocusRequester != null) {
+                    down = downFocusRequester
+                }
             }
             .background(Color.Transparent)
     )

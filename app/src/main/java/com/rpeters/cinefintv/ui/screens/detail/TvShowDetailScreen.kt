@@ -20,7 +20,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -30,7 +29,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowDetailLayout
-import kotlinx.coroutines.flow.first
 
 @Composable
 fun TvShowDetailScreen(
@@ -63,14 +61,15 @@ fun TvShowDetailScreen(
     }
 
     val listState = rememberLazyListState()
+    val topFocus = remember { FocusRequester() }
     val primaryActionFocus = remember { FocusRequester() }
 
     LaunchedEffect((uiState as? TvShowDetailUiState.Content)?.show?.id) {
         if (uiState is TvShowDetailUiState.Content) {
-            try { 
-                primaryActionFocus.requestFocus() 
-            } catch (_: Exception) {}
-            listState.scrollToItem(0)
+            focusDetailScreenAtTop(
+                listState = listState,
+                initialFocusRequester = topFocus,
+            )
         }
     }
 
@@ -156,6 +155,7 @@ fun TvShowDetailScreen(
                         }
                     },
                     secondaryActions = emptyList(),
+                    topFocusRequester = topFocus,
                     primaryActionFocusRequester = primaryActionFocus,
                     seasons = state.seasons,
                     onSeasonClick = { season -> onOpenSeason(season.id) },

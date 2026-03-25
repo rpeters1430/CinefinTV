@@ -20,9 +20,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -33,7 +34,6 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
-import kotlinx.coroutines.flow.first
 
 @Composable
 fun SeasonScreen(
@@ -86,7 +86,10 @@ private fun SeasonContent(
 ) {
     val spacing = LocalCinefinSpacing.current
     val listState = rememberLazyListState()
+    val topFocusRequester = remember { FocusRequester() }
     val primaryActionFocusRequester = remember { FocusRequester() }
+    val overviewFocusRequester = remember { FocusRequester() }
+    val firstEpisodeFocusRequester = remember { FocusRequester() }
 
     val resumeEpisode = remember(episodes) {
         episodes.firstOrNull { (it.playbackProgress ?: 0f) > 0f && !it.isWatched }
@@ -106,10 +109,10 @@ private fun SeasonContent(
     }
 
     LaunchedEffect(season.id) {
-        try { 
-            primaryActionFocusRequester.requestFocus() 
-        } catch (_: Exception) {}
-        listState.scrollToItem(0)
+        focusDetailScreenAtTop(
+            listState = listState,
+            initialFocusRequester = topFocusRequester,
+        )
     }
 
     LazyColumn(
@@ -117,6 +120,14 @@ private fun SeasonContent(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = spacing.gutter * 2),
     ) {
+        item {
+            DetailAnchor(
+                focusRequester = topFocusRequester,
+                downFocusRequester = overviewFocusRequester,
+                onFocused = {},
+            )
+        }
+
         item {
             CinematicHero(
                 backdropUrl = season.backdropUrl,
@@ -134,6 +145,7 @@ private fun SeasonContent(
                     listOf("Start From Episode 1" to { onOpenEpisode(episodes.first().id) })
                 else emptyList(),
                 primaryActionFocusRequester = primaryActionFocusRequester,
+                primaryActionDownFocusRequester = overviewFocusRequester,
             )
         }
 
@@ -144,6 +156,9 @@ private fun SeasonContent(
                 description = season.overview.orEmpty(),
                 factItems = factItems,
                 chips = emptyList(),
+                focusRequester = overviewFocusRequester,
+                upFocusRequester = primaryActionFocusRequester,
+                downFocusRequester = if (episodes.isNotEmpty()) firstEpisodeFocusRequester else null,
                 modifier = Modifier.padding(top = spacing.rowGap),
             )
         }
@@ -160,6 +175,13 @@ private fun SeasonContent(
             EpisodeListRow(
                 episode = episode,
                 isNext = episode.id == resumeEpisode?.id,
+                modifier = if (episode.id == episodes.firstOrNull()?.id) {
+                    Modifier
+                        .focusRequester(firstEpisodeFocusRequester)
+                        .focusProperties { up = overviewFocusRequester }
+                } else {
+                    Modifier
+                },
                 onClick = { onOpenEpisode(episode.id) },
             )
         }
