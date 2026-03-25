@@ -54,7 +54,6 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.TabRow
 import androidx.tv.material3.Tab
 import androidx.tv.material3.TabRowDefaults
-import androidx.tv.material3.TabPosition
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinDialogActions
 import com.rpeters.cinefintv.ui.components.CinefinDialogSurface
@@ -278,21 +277,13 @@ internal fun CinefinAppScaffold(
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     val spacing = LocalCinefinSpacing.current
-    var focusedTabIndex by remember { mutableStateOf(selectedTabIndex) }
-
-    LaunchedEffect(selectedTabIndex) {
-        if (focusedTabIndex !in navTabItems.indices) {
-            focusedTabIndex = selectedTabIndex
-        }
-    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (showNav) {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = spacing.gutter, vertical = 16.dp)
-                    .testTag(AppTestTags.NavBar),
+                    .padding(horizontal = spacing.gutter, vertical = 16.dp),
                 shape = RoundedCornerShape(spacing.cornerContainer),
                 colors = androidx.tv.material3.SurfaceDefaults.colors(
                     containerColor = expressiveColors.chromeSurface.copy(alpha = 0.92f),
@@ -319,58 +310,29 @@ internal fun CinefinAppScaffold(
                         .padding(horizontal = 12.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    TabRow(
+                        selectedTabIndex = selectedTabIndex,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(AppTestTags.NavBar),
+                        indicator = { tabPositions, doesTabRowHaveFocus ->
+                            TabRowDefaults.UnderlinedIndicator(
+                                currentTabPosition = tabPositions[selectedTabIndex],
+                                doesTabRowHaveFocus = doesTabRowHaveFocus
+                            )
+                        }
                     ) {
                         navTabItems.forEachIndexed { index, item ->
-                            val isSelected = index == selectedTabIndex
-                            val isFocused = index == focusedTabIndex
-
-                            Button(
-                                modifier = Modifier
-                                    .testTag(AppTestTags.tab(item.route))
-                                    .onFocusChanged { state ->
-                                        if (state.isFocused || state.hasFocus) {
-                                            focusedTabIndex = index
-                                        }
-                                    }
-                                    .focusable(),
-                                onClick = { onNavigateToTab(item.route) },
-                                shape = ButtonDefaults.shape(RoundedCornerShape(999.dp)),
-                                colors = ButtonDefaults.colors(
-                                    containerColor = when {
-                                        isSelected -> Color.White
-                                        else -> Color.Transparent
-                                    },
-                                    contentColor = when {
-                                        isSelected -> Color(0xFF0D1117)
-                                        else -> Color.White.copy(alpha = 0.8f)
-                                    },
-                                    focusedContainerColor = if (isSelected) {
-                                        Color.White
-                                    } else {
-                                        expressiveColors.accentSurface.copy(alpha = 0.92f)
-                                    },
-                                    focusedContentColor = if (isSelected) {
-                                        Color(0xFF0D1117)
-                                    } else {
-                                        expressiveColors.focusRing
-                                    },
-                                ),
-                                border = ButtonDefaults.border(
-                                    focusedBorder = androidx.tv.material3.Border(
-                                        border = BorderStroke(1.5.dp, expressiveColors.focusRing.copy(alpha = 0.75f)),
-                                    ),
-                                    border = androidx.tv.material3.Border(
-                                        border = BorderStroke(0.dp, Color.Transparent),
-                                    ),
-                                ),
+                            Tab(
+                                selected = index == selectedTabIndex,
+                                onFocus = { onNavigateToTab(item.route) },
+                                modifier = Modifier.testTag(AppTestTags.tab(item.route)),
+                                onClick = { onNavigateToTab(item.route) }
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                                 ) {
                                     Icon(
                                         imageVector = item.icon,
