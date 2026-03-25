@@ -92,6 +92,10 @@ suspend fun focusDetailScreenAtTop(
     }.first { it }
     withFrameNanos { }
     runCatching { initialFocusRequester.requestFocus() }
+    // requestFocus may trigger BringIntoView which scrolls the list off the top of the hero.
+    // Wait one frame for that scroll to settle, then snap back to the anchor.
+    withFrameNanos { }
+    listState.scrollToItem(0)
 }
 
 @Composable
