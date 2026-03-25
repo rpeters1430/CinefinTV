@@ -14,6 +14,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailTestTags
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.MovieDetailLayout
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowDetailLayout
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -172,6 +173,246 @@ class DetailDpadNavigationUiTest {
         composeRule.waitForIdle()
 
         composeRule.onNodeWithTag(DetailTestTags.Overview).assertIsFocused()
+    }
+
+    // -------------------------------------------------------------------------
+    // TvShowDetailLayout — focus routing tests
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun tvShowDetail_onLoad_playButtonHasFocus() {
+        val focus = FocusRequester()
+        setTvShowContent(LazyListState(), focus)
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(DetailTestTags.PrimaryAction).assertIsFocused()
+    }
+
+    @Test
+    fun tvShowDetail_playButton_downNavigatesToOverview() {
+        val focus = FocusRequester()
+        setTvShowContent(LazyListState(), focus)
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(DetailTestTags.Overview).assertIsFocused()
+    }
+
+    @Test
+    fun tvShowDetail_overview_downNavigatesToFirstSeason() {
+        val focus = FocusRequester()
+        setTvShowContent(
+            listState = LazyListState(firstVisibleItemIndex = 2),
+            primaryActionFocusRequester = focus,
+            seasons = listOf(SeasonModel(id = "s1", title = "Season 1", imageUrl = null, episodeCount = 5, unwatchedCount = 2)),
+        )
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → overview
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → season
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(DetailTestTags.FirstSeasonItem).assertIsFocused()
+    }
+
+    @Test
+    fun tvShowDetail_firstSeason_upNavigatesToOverview() {
+        val focus = FocusRequester()
+        setTvShowContent(
+            listState = LazyListState(firstVisibleItemIndex = 2),
+            primaryActionFocusRequester = focus,
+            seasons = listOf(SeasonModel(id = "s1", title = "Season 1", imageUrl = null, episodeCount = 5, unwatchedCount = 2)),
+        )
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → overview
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → season
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // → overview
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(DetailTestTags.Overview).assertIsFocused()
+    }
+
+    @Test
+    fun tvShowDetail_overview_downNavigatesToFirstCast_whenNoSeasons() {
+        val focus = FocusRequester()
+        setTvShowContent(
+            listState = LazyListState(firstVisibleItemIndex = 2),
+            primaryActionFocusRequester = focus,
+            castItems = listOf(CastModel(id = "c1", name = "Actor", role = "Lead", imageUrl = null)),
+        )
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → overview
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → cast
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(DetailTestTags.FirstCastItem).assertIsFocused()
+    }
+
+    @Test
+    fun tvShowDetail_firstCast_upNavigatesToFirstSeason_whenBothPresent() {
+        val focus = FocusRequester()
+        // firstVisibleItemIndex=3: seasons row at top, cast row (index 4) in prefetch window
+        setTvShowContent(
+            listState = LazyListState(firstVisibleItemIndex = 3),
+            primaryActionFocusRequester = focus,
+            seasons = listOf(SeasonModel(id = "s1", title = "Season 1", imageUrl = null, episodeCount = 5, unwatchedCount = 2)),
+            castItems = listOf(CastModel(id = "c1", name = "Actor", role = "Lead", imageUrl = null)),
+        )
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → overview
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → season
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → cast
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // → season
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(DetailTestTags.FirstSeasonItem).assertIsFocused()
+    }
+
+    @Test
+    fun tvShowDetail_firstSimilar_upNavigatesToFirstCast_whenCastPresent() {
+        // Seasons + cast + similar all present; similar is at LazyColumn index 5
+        val focus = FocusRequester()
+        setTvShowContent(
+            listState = LazyListState(firstVisibleItemIndex = 4),
+            primaryActionFocusRequester = focus,
+            seasons = listOf(SeasonModel(id = "s1", title = "Season 1", imageUrl = null, episodeCount = 5, unwatchedCount = 2)),
+            castItems = listOf(CastModel(id = "c1", name = "Actor", role = "Lead", imageUrl = null)),
+            similarItems = listOf(SimilarMovieModel(id = "sim1", title = "Similar Show", imageUrl = null)),
+        )
+
+        // Navigate: play → overview → season → cast → similar
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // similar → cast
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(DetailTestTags.FirstCastItem).assertIsFocused()
+    }
+
+    @Test
+    fun tvShowDetail_firstSimilar_upNavigatesToFirstSeason_whenNoCast() {
+        // Seasons + similar (no cast); similar is at LazyColumn index 4
+        val focus = FocusRequester()
+        setTvShowContent(
+            listState = LazyListState(firstVisibleItemIndex = 3),
+            primaryActionFocusRequester = focus,
+            seasons = listOf(SeasonModel(id = "s1", title = "Season 1", imageUrl = null, episodeCount = 5, unwatchedCount = 2)),
+            similarItems = listOf(SimilarMovieModel(id = "sim1", title = "Similar Show", imageUrl = null)),
+        )
+
+        // Navigate: play → overview → season → similar
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // similar → season
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(DetailTestTags.FirstSeasonItem).assertIsFocused()
+    }
+
+    @Test
+    fun tvShowDetail_firstSimilar_upNavigatesToOverview_whenNoSeasonsNoCast() {
+        // Similar only; similar is at LazyColumn index 3
+        val focus = FocusRequester()
+        setTvShowContent(
+            listState = LazyListState(firstVisibleItemIndex = 2),
+            primaryActionFocusRequester = focus,
+            similarItems = listOf(SimilarMovieModel(id = "sim1", title = "Similar Show", imageUrl = null)),
+        )
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → overview
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → similar
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // → overview
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(DetailTestTags.Overview).assertIsFocused()
+    }
+
+    @Test
+    fun tvShowDetail_overview_downDoesNotMoveFocus_whenNoOptionalRows() {
+        val focus = FocusRequester()
+        setTvShowContent(LazyListState(), focus)
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → overview
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // no target
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(DetailTestTags.Overview).assertIsFocused()
+    }
+
+    // TV Show layout helper — note: no factSummary parameter
+    private fun setTvShowContent(
+        listState: LazyListState,
+        primaryActionFocusRequester: FocusRequester,
+        seasons: List<SeasonModel> = emptyList(),
+        castItems: List<CastModel> = emptyList(),
+        similarItems: List<SimilarMovieModel> = emptyList(),
+    ) {
+        composeRule.setContent {
+            DetailTestHost {
+                TvShowDetailLayout(
+                    backdropUrl = null,
+                    posterUrl = null,
+                    logoUrl = null,
+                    title = "Test Show",
+                    eyebrow = "TV SERIES",
+                    ratingText = null,
+                    genres = emptyList(),
+                    primaryActionLabel = "▶ Play",
+                    onPrimaryAction = {},
+                    secondaryActions = emptyList(),
+                    primaryActionFocusRequester = primaryActionFocusRequester,
+                    seasons = seasons,
+                    onSeasonClick = {},
+                    castItems = castItems,
+                    similarItems = similarItems,
+                    onCastClick = {},
+                    onSimilarClick = {},
+                    description = "Test overview.",
+                    factItems = emptyList(),
+                    listState = listState,
+                )
+            }
+        }
     }
 
     // -------------------------------------------------------------------------
