@@ -63,6 +63,7 @@ fun DetailOverviewSection(
 
     Box(
         modifier = modifier
+            .testTag(DetailTestTags.Overview)
             .fillMaxWidth()
             .padding(horizontal = spacing.gutter)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
@@ -115,7 +116,6 @@ fun DetailOverviewSection(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag(DetailTestTags.Overview)
                         .background(
                             color = expressiveColors.chromeSurface.copy(alpha = 0.42f),
                             shape = RoundedCornerShape(spacing.cornerContainer),
