@@ -11,4 +11,7 @@ object DetailTestTags {
     const val TvCastPanel = "tv_detail_cast_panel"
     const val TvSimilarPanel = "tv_detail_similar_panel"
     const val TvDetailsPanel = "tv_detail_details_panel"
+    const val FirstCastItem = "detail_first_cast_item"
+    const val FirstSimilarItem = "detail_first_similar_item"
+    const val FirstSeasonItem = "detail_first_season_item"
 }

@@ -46,7 +46,6 @@ fun TvShowDetailLayout(
     primaryActionLabel: String,
     onPrimaryAction: () -> Unit,
     secondaryActions: List<Pair<String, () -> Unit>>,
-    topFocusRequester: FocusRequester,
     primaryActionFocusRequester: FocusRequester,
     seasons: List<SeasonModel>,
     onSeasonClick: (SeasonModel) -> Unit,
@@ -60,6 +59,7 @@ fun TvShowDetailLayout(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
+    val topFocusRequester = remember { FocusRequester() }
     val overviewFocusRequester = remember { FocusRequester() }
     val firstSeasonFocusRequester = remember { FocusRequester() }
     val firstCastFocusRequester = remember { FocusRequester() }
@@ -79,7 +79,7 @@ fun TvShowDetailLayout(
         item {
             DetailAnchor(
                 focusRequester = topFocusRequester,
-                downFocusRequester = overviewFocusRequester,
+                downFocusRequester = primaryActionFocusRequester,
                 onFocused = {},
             )
         }
@@ -141,6 +141,7 @@ fun TvShowDetailLayout(
                                     Modifier
                                         .focusRequester(firstSeasonFocusRequester)
                                         .focusProperties { up = overviewFocusRequester }
+                                        .testTag(DetailTestTags.FirstSeasonItem)
                                 } else {
                                     Modifier
                                 },
@@ -185,6 +186,7 @@ fun TvShowDetailLayout(
                                                 overviewFocusRequester
                                             }
                                         }
+                                        .testTag(DetailTestTags.FirstCastItem)
                                 } else {
                                     Modifier
                                 },
@@ -229,6 +231,7 @@ fun TvShowDetailLayout(
                                                 else -> overviewFocusRequester
                                             }
                                         }
+                                        .testTag(DetailTestTags.FirstSimilarItem)
                                 } else {
                                     Modifier
                                 },

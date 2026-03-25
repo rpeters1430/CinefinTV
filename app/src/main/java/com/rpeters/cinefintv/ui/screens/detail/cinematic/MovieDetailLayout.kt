@@ -47,7 +47,6 @@ fun MovieDetailLayout(
     primaryActionLabel: String,
     onPrimaryAction: () -> Unit,
     secondaryActions: List<Pair<String, () -> Unit>>,
-    topFocusRequester: FocusRequester,
     primaryActionFocusRequester: FocusRequester,
     description: String,
     factItems: List<DetailLabeledMetaItem>,
@@ -60,6 +59,7 @@ fun MovieDetailLayout(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
+    val topFocusRequester = remember { FocusRequester() }
     val overviewFocusRequester = remember { FocusRequester() }
     val firstCastFocusRequester = remember { FocusRequester() }
     val firstSimilarFocusRequester = remember { FocusRequester() }
@@ -77,7 +77,7 @@ fun MovieDetailLayout(
         item {
             DetailAnchor(
                 focusRequester = topFocusRequester,
-                downFocusRequester = overviewFocusRequester,
+                downFocusRequester = primaryActionFocusRequester,
                 onFocused = {},
             )
         }
@@ -139,6 +139,7 @@ fun MovieDetailLayout(
                                     Modifier
                                         .focusRequester(firstCastFocusRequester)
                                         .focusProperties { up = overviewFocusRequester }
+                                        .testTag(DetailTestTags.FirstCastItem)
                                 } else {
                                     Modifier
                                 },
@@ -183,6 +184,7 @@ fun MovieDetailLayout(
                                                 overviewFocusRequester
                                             }
                                         }
+                                        .testTag(DetailTestTags.FirstSimilarItem)
                                 } else {
                                     Modifier
                                 },
