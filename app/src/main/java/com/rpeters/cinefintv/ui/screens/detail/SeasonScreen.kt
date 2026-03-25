@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalTvMaterial3Api::class)
+@file:OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 
 package com.rpeters.cinefintv.ui.screens.detail
 
@@ -7,23 +7,28 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.relocation.BringIntoViewResponder
+import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -34,6 +39,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import kotlinx.coroutines.launch
 
 @Composable
 fun SeasonScreen(
@@ -86,10 +92,12 @@ private fun SeasonContent(
 ) {
     val spacing = LocalCinefinSpacing.current
     val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
     val topFocusRequester = remember { FocusRequester() }
     val primaryActionFocusRequester = remember { FocusRequester() }
     val overviewFocusRequester = remember { FocusRequester() }
     val firstEpisodeFocusRequester = remember { FocusRequester() }
+    val firstEpisodeItemIndex = 3
 
     val resumeEpisode = remember(episodes) {
         episodes.firstOrNull { (it.playbackProgress ?: 0f) > 0f && !it.isWatched }
@@ -111,7 +119,8 @@ private fun SeasonContent(
     LaunchedEffect(season.id) {
         focusDetailScreenAtTop(
             listState = listState,
-            initialFocusRequester = topFocusRequester,
+            initialFocusRequester = primaryActionFocusRequester,
+            anchorFocusRequester = topFocusRequester,
         )
     }
 
@@ -121,32 +130,51 @@ private fun SeasonContent(
         contentPadding = PaddingValues(bottom = spacing.gutter * 2),
     ) {
         item {
-            DetailAnchor(
-                focusRequester = topFocusRequester,
-                downFocusRequester = overviewFocusRequester,
-                onFocused = {},
-            )
-        }
+            Column(
+                modifier = Modifier.bringIntoViewResponder(
+                    object : BringIntoViewResponder {
+                        @androidx.compose.foundation.ExperimentalFoundationApi
+                        override fun calculateRectForParent(
+                            localRect: androidx.compose.ui.geometry.Rect
+                        ): androidx.compose.ui.geometry.Rect {
+                            return androidx.compose.ui.geometry.Rect.Zero
+                        }
 
-        item {
-            CinematicHero(
-                backdropUrl = season.backdropUrl,
-                logoUrl = null,
-                title = season.title,
-                eyebrow = listOfNotNull(season.seriesName, "${episodes.size} episodes").joinToString(" · "),
-                ratingText = null,
-                genres = emptyList(),
-                primaryActionLabel = if (resumeEpisode != null) "▶ Resume" else "▶ Play",
-                onPrimaryAction = {
-                    val target = resumeEpisode ?: episodes.firstOrNull()
-                    if (target != null) onOpenEpisode(target.id)
-                },
-                secondaryActions = if (episodes.isNotEmpty())
-                    listOf("Start From Episode 1" to { onOpenEpisode(episodes.first().id) })
-                else emptyList(),
-                primaryActionFocusRequester = primaryActionFocusRequester,
-                primaryActionDownFocusRequester = overviewFocusRequester,
-            )
+                        @androidx.compose.foundation.ExperimentalFoundationApi
+                        override suspend fun bringChildIntoView(
+                            localChildBounds: () -> androidx.compose.ui.geometry.Rect?
+                        ) {
+                            // Block auto-scroll
+                        }
+                    }
+                )
+            ) {
+                DetailAnchor(
+                    focusRequester = topFocusRequester,
+                    downFocusRequester = primaryActionFocusRequester,
+                    onFocused = {},
+                )
+                CinematicHero(
+                    backdropUrl = season.backdropUrl,
+                    logoUrl = null,
+                    title = season.title,
+                    eyebrow = listOfNotNull(season.seriesName, "${episodes.size} episodes").joinToString(" · "),
+                    ratingText = null,
+                    genres = emptyList(),
+                    primaryActionLabel = if (resumeEpisode != null) "▶ Resume" else "▶ Play",
+                    onPrimaryAction = {
+                        val target = resumeEpisode ?: episodes.firstOrNull()
+                        if (target != null) onOpenEpisode(target.id)
+                    },
+                    secondaryActions = if (episodes.isNotEmpty())
+                        listOf("Start From Episode 1" to { onOpenEpisode(episodes.first().id) })
+                    else emptyList(),
+                    primaryActionFocusRequester = primaryActionFocusRequester,
+                    primaryActionDownFocusRequester = overviewFocusRequester,
+                    upFocusRequester = topFocusRequester,
+                    listState = listState,
+                )
+            }
         }
 
         item {
@@ -158,8 +186,24 @@ private fun SeasonContent(
                 chips = emptyList(),
                 focusRequester = overviewFocusRequester,
                 upFocusRequester = primaryActionFocusRequester,
-                downFocusRequester = if (episodes.isNotEmpty()) firstEpisodeFocusRequester else null,
-                modifier = Modifier.padding(top = spacing.rowGap),
+                downFocusRequester = null,
+                modifier = Modifier
+                    .padding(top = spacing.rowGap)
+                    .onPreviewKeyEvent { event ->
+                        if (
+                            episodes.isNotEmpty() &&
+                            event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                            event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                        ) {
+                            coroutineScope.launch {
+                                listState.scrollToItem(firstEpisodeItemIndex)
+                                firstEpisodeFocusRequester.requestFocus()
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    },
             )
         }
 

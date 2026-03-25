@@ -8,13 +8,14 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.tv.material3.Icon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,6 +47,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailTestTags
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -83,19 +86,38 @@ enum class MetaFactStyle { Card, Inline }
 suspend fun focusDetailScreenAtTop(
     listState: LazyListState,
     initialFocusRequester: FocusRequester,
+    anchorFocusRequester: FocusRequester? = null,
 ) {
+    // 1. Initial snap to top
     listState.scrollToItem(0)
+    
+    // 2. Wait for composition to settle
     snapshotFlow {
         val layoutInfo = listState.layoutInfo
         layoutInfo.viewportEndOffset > layoutInfo.viewportStartOffset &&
             layoutInfo.visibleItemsInfo.any { it.index == 0 }
     }.first { it }
-    withFrameNanos { }
+    
+    // 3. Ground focus at the anchor first if available
+    if (anchorFocusRequester != null) {
+        runCatching { anchorFocusRequester.requestFocus() }
+        listState.scrollToItem(0)
+        androidx.compose.runtime.withFrameNanos { }
+    }
+
+    // 4. Transfer focus to the actual primary action
     runCatching { initialFocusRequester.requestFocus() }
-    // requestFocus may trigger BringIntoView which scrolls the list off the top of the hero.
-    // Wait one frame for that scroll to settle, then snap back to the anchor.
-    withFrameNanos { }
-    listState.scrollToItem(0)
+    
+    // 5. Short loop to suppress BringIntoView jitter during the focus transition
+    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+        val startTime = System.currentTimeMillis()
+        while (System.currentTimeMillis() - startTime < 400) {
+            if (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0) {
+                listState.scrollToItem(0)
+            }
+            androidx.compose.runtime.withFrameNanos { }
+        }
+    }
 }
 
 @Composable
@@ -593,8 +615,10 @@ fun DetailAnchor(
 ) {
     Spacer(
         modifier = Modifier
-            .size(1.dp)
+            .fillMaxWidth()
+            .height(1.dp)
             .focusRequester(focusRequester)
+            .focusable()
             .onFocusChanged { if (it.isFocused) onFocused() }
             .focusProperties {
                 canFocus = true
@@ -628,6 +652,7 @@ fun EpisodeListRow(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 52.dp, vertical = 8.dp)
+            .testTag(DetailTestTags.EpisodeItem)
             .onFocusChanged {
                 val focused = it.isFocused || it.hasFocus
                 if (focused != isFocused) {

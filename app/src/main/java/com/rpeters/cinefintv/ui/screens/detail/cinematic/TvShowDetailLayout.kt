@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalTvMaterial3Api::class)
+@file:OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 
 package com.rpeters.cinefintv.ui.screens.detail.cinematic
 
@@ -12,6 +12,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.relocation.BringIntoViewResponder
+import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -57,9 +59,9 @@ fun TvShowDetailLayout(
     factItems: List<DetailLabeledMetaItem>,
     listState: LazyListState,
     modifier: Modifier = Modifier,
+    topFocusRequester: FocusRequester = remember { FocusRequester() },
 ) {
     val spacing = LocalCinefinSpacing.current
-    val topFocusRequester = remember { FocusRequester() }
     val overviewFocusRequester = remember { FocusRequester() }
     val firstSeasonFocusRequester = remember { FocusRequester() }
     val firstCastFocusRequester = remember { FocusRequester() }
@@ -77,27 +79,46 @@ fun TvShowDetailLayout(
         contentPadding = PaddingValues(bottom = spacing.gutter * 2),
     ) {
         item {
-            DetailAnchor(
-                focusRequester = topFocusRequester,
-                downFocusRequester = primaryActionFocusRequester,
-                onFocused = {},
-            )
-        }
+            Column(
+                modifier = Modifier.bringIntoViewResponder(
+                    object : BringIntoViewResponder {
+                        @androidx.compose.foundation.ExperimentalFoundationApi
+                        override fun calculateRectForParent(
+                            localRect: androidx.compose.ui.geometry.Rect
+                        ): androidx.compose.ui.geometry.Rect {
+                            return androidx.compose.ui.geometry.Rect.Zero
+                        }
 
-        item {
-            CinematicHero(
-                backdropUrl = backdropUrl,
-                logoUrl = logoUrl,
-                title = title,
-                eyebrow = eyebrow,
-                ratingText = ratingText,
-                genres = genres,
-                primaryActionLabel = primaryActionLabel,
-                onPrimaryAction = onPrimaryAction,
-                secondaryActions = secondaryActions,
-                primaryActionFocusRequester = primaryActionFocusRequester,
-                primaryActionDownFocusRequester = overviewFocusRequester,
-            )
+                        @androidx.compose.foundation.ExperimentalFoundationApi
+                        override suspend fun bringChildIntoView(
+                            localChildBounds: () -> androidx.compose.ui.geometry.Rect?
+                        ) {
+                            // Block auto-scroll
+                        }
+                    }
+                )
+            ) {
+                DetailAnchor(
+                    focusRequester = topFocusRequester,
+                    downFocusRequester = primaryActionFocusRequester,
+                    onFocused = {},
+                )
+                CinematicHero(
+                    backdropUrl = backdropUrl,
+                    logoUrl = logoUrl,
+                    title = title,
+                    eyebrow = eyebrow,
+                    ratingText = ratingText,
+                    genres = genres,
+                    primaryActionLabel = primaryActionLabel,
+                    onPrimaryAction = onPrimaryAction,
+                    secondaryActions = secondaryActions,
+                    primaryActionFocusRequester = primaryActionFocusRequester,
+                    primaryActionDownFocusRequester = overviewFocusRequester,
+                    upFocusRequester = topFocusRequester,
+                    listState = listState,
+                )
+            }
         }
 
         item {

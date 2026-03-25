@@ -58,6 +58,7 @@ fun MovieDetailScreen(
     }
 
     val listState = rememberLazyListState()
+    val topFocus = remember { FocusRequester() }
     val primaryActionFocus = remember { FocusRequester() }
 
     LaunchedEffect((uiState as? MovieDetailUiState.Content)?.movie?.id) {
@@ -65,6 +66,7 @@ fun MovieDetailScreen(
             focusDetailScreenAtTop(
                 listState = listState,
                 initialFocusRequester = primaryActionFocus,
+                anchorFocusRequester = topFocus,
             )
         }
     }
@@ -141,6 +143,7 @@ fun MovieDetailScreen(
                     primaryActionLabel = primaryActionLabel,
                     onPrimaryAction = { onPlayMovie(movie.id) },
                     secondaryActions = listOf("Watchlist" to {}),
+                    topFocusRequester = topFocus,
                     primaryActionFocusRequester = primaryActionFocus,
                     description = movie.overview ?: "",
                     factItems = factItems,

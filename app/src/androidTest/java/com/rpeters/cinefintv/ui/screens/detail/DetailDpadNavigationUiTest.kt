@@ -15,6 +15,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailTestTags
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.MovieDetailLayout
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowDetailLayout
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -173,6 +175,43 @@ class DetailDpadNavigationUiTest {
         composeRule.waitForIdle()
 
         composeRule.onNodeWithTag(DetailTestTags.Overview).assertIsFocused()
+    }
+
+    @Test
+    fun movieDetail_scrollDown_upFromPlayButton_returnsToTop() {
+        val focus = FocusRequester()
+        val listState = LazyListState()
+        setMovieContent(
+            listState = listState,
+            primaryActionFocusRequester = focus,
+            castItems = (1..10).map { CastModel("c$it", "Actor $it", "Role", null) },
+            similarItems = (1..10).map { SimilarMovieModel("s$it", "Similar $it", null) }
+        )
+
+        // 1. Initial focus on play button
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+
+        // 2. Scroll down manually to some offset (item 3 is usually cast row)
+        composeRule.runOnIdle {
+            kotlinx.coroutines.runBlocking {
+                listState.scrollToItem(3) 
+            }
+        }
+        composeRule.waitForIdle()
+        assertTrue("Should be scrolled down. Current index: ${listState.firstVisibleItemIndex}", listState.firstVisibleItemIndex > 0)
+
+        // 3. Focus the play button again (it's part of item 0, which is now offscreen)
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+
+        // 4. Press UP
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.waitForIdle()
+
+        // 5. Verify we are back at 0,0
+        assertEquals("Should be at item index 0 after scrolling back up", 0, listState.firstVisibleItemIndex)
+        assertEquals("Should be at scroll offset 0 after scrolling back up", 0, listState.firstVisibleItemScrollOffset)
     }
 
     // -------------------------------------------------------------------------

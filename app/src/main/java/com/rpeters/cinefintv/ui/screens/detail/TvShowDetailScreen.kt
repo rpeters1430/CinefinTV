@@ -61,6 +61,7 @@ fun TvShowDetailScreen(
     }
 
     val listState = rememberLazyListState()
+    val topFocus = remember { FocusRequester() }
     val primaryActionFocus = remember { FocusRequester() }
 
     LaunchedEffect((uiState as? TvShowDetailUiState.Content)?.show?.id) {
@@ -68,6 +69,7 @@ fun TvShowDetailScreen(
             focusDetailScreenAtTop(
                 listState = listState,
                 initialFocusRequester = primaryActionFocus,
+                anchorFocusRequester = topFocus,
             )
         }
     }
@@ -154,6 +156,7 @@ fun TvShowDetailScreen(
                         }
                     },
                     secondaryActions = emptyList(),
+                    topFocusRequester = topFocus,
                     primaryActionFocusRequester = primaryActionFocus,
                     seasons = state.seasons,
                     onSeasonClick = { season -> onOpenSeason(season.id) },

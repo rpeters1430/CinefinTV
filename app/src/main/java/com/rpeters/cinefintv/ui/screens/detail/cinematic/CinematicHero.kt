@@ -35,6 +35,7 @@ import androidx.compose.ui.focus.FocusProperties
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -61,6 +62,7 @@ import com.rpeters.cinefintv.ui.theme.BackgroundDark
 import com.rpeters.cinefintv.ui.theme.CinefinRed
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import kotlinx.coroutines.launch
 
 /**
  * Full-bleed cinematic hero section shared by MovieDetailLayout and TvShowDetailLayout.
@@ -79,6 +81,8 @@ fun CinematicHero(
     secondaryActions: List<Pair<String, () -> Unit>> = emptyList(),
     primaryActionFocusRequester: FocusRequester = remember { FocusRequester() },
     primaryActionDownFocusRequester: FocusRequester? = null,
+    upFocusRequester: FocusRequester? = null,
+    listState: androidx.compose.foundation.lazy.LazyListState? = null,
     modifier: Modifier = Modifier,
 ) {
     val configuration = LocalConfiguration.current
@@ -89,6 +93,7 @@ fun CinematicHero(
     val themeController = LocalCinefinThemeController.current
     val context = LocalContext.current
     val panelWidth = (screenWidth * 0.44f).coerceIn(420.dp, 760.dp)
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
     var logoLoaded by remember(logoUrl) { mutableStateOf(false) }
     var logoFailed by remember { mutableStateOf(false) }
@@ -271,9 +276,21 @@ fun CinematicHero(
                         ),
                         modifier = Modifier
                             .focusRequester(primaryActionFocusRequester)
+                            .onFocusChanged { 
+                                if (it.isFocused && listState != null) {
+                                    coroutineScope.launch {
+                                        if (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0) {
+                                            listState.scrollToItem(0)
+                                        }
+                                    }
+                                }
+                            }
                             .focusProperties {
                                 if (primaryActionDownFocusRequester != null) {
                                     down = primaryActionDownFocusRequester
+                                }
+                                if (upFocusRequester != null) {
+                                    up = upFocusRequester
                                 }
                             }
                             .testTag(DetailTestTags.PrimaryAction),

@@ -509,18 +509,35 @@ class JellyfinMediaRepository @Inject constructor(
         withServerClient("getEpisodesForSeason") { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
             val seasonUuid = parseUuid(seasonId, "season")
+            val fields = listOf(
+                org.jellyfin.sdk.model.api.ItemFields.MEDIA_SOURCES,
+                org.jellyfin.sdk.model.api.ItemFields.DATE_CREATED,
+                org.jellyfin.sdk.model.api.ItemFields.OVERVIEW,
+            )
+            val seasonItem = getItemDetailsById(seasonId, "season", server, client)
+            val seriesUuid = seasonItem.seriesId
+
+            if (seriesUuid != null) {
+                val tvEpisodes = client.tvShowsApi.getEpisodes(
+                    seriesId = seriesUuid,
+                    userId = userUuid,
+                    seasonId = seasonUuid,
+                    fields = fields,
+                    enableUserData = true,
+                ).content.items
+                if (tvEpisodes.isNotEmpty()) {
+                    return@withServerClient tvEpisodes
+                }
+            }
 
             val response = client.itemsApi.getItems(
                 userId = userUuid,
                 parentId = seasonUuid,
+                recursive = true,
                 includeItemTypes = listOf(BaseItemKind.EPISODE),
                 sortBy = listOf(ItemSortBy.INDEX_NUMBER),
                 sortOrder = listOf(SortOrder.ASCENDING),
-                fields = listOf(
-                    org.jellyfin.sdk.model.api.ItemFields.MEDIA_SOURCES,
-                    org.jellyfin.sdk.model.api.ItemFields.DATE_CREATED,
-                    org.jellyfin.sdk.model.api.ItemFields.OVERVIEW,
-                ),
+                fields = fields,
             )
             response.content.items
         }

@@ -34,6 +34,7 @@ import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.mediaInfoApi
 import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.api.client.extensions.systemApi
+import org.jellyfin.sdk.api.client.extensions.tvShowsApi
 import org.jellyfin.sdk.api.client.extensions.userApi
 import org.jellyfin.sdk.api.client.extensions.userLibraryApi
 import org.jellyfin.sdk.model.UUID
@@ -756,19 +757,45 @@ class JellyfinRepository @Inject constructor(
             val userUuid = runCatching { UUID.fromString(server.userId ?: "") }.getOrNull()
                 ?: throw IllegalStateException("Invalid user ID")
             val seasonUuid = parseUuid(seasonId, "season")
-
-            val response = client.itemsApi.getItems(
+            val fields = listOf(ItemFields.MEDIA_SOURCES, ItemFields.DATE_CREATED, ItemFields.OVERVIEW)
+            val seasonItem = client.itemsApi.getItems(
                 userId = userUuid,
-                parentId = seasonUuid,
-                includeItemTypes = listOf(BaseItemKind.EPISODE),
-                sortBy = listOf(ItemSortBy.INDEX_NUMBER),
-                sortOrder = listOf(SortOrder.ASCENDING),
-                fields = listOf(ItemFields.MEDIA_SOURCES, ItemFields.DATE_CREATED, ItemFields.OVERVIEW),
-            )
-            if (BuildConfig.DEBUG) {
-                Log.d("JellyfinRepository", "getEpisodesForSeason: Successfully fetched ${response.content.items.size} episodes for seasonId=$seasonId")
+                ids = listOf(seasonUuid),
+                limit = 1,
+                fields = listOf(
+                    ItemFields.OVERVIEW,
+                    ItemFields.PARENT_ID,
+                ),
+            ).content.items.firstOrNull() ?: throw IllegalStateException("Season not found")
+            val tvEpisodes = seasonItem.seriesId?.let { seriesUuid ->
+                client.tvShowsApi.getEpisodes(
+                    seriesId = seriesUuid,
+                    userId = userUuid,
+                    seasonId = seasonUuid,
+                    fields = fields,
+                    enableUserData = true,
+                ).content.items
+            }.orEmpty()
+            val response = if (tvEpisodes.isNotEmpty()) {
+                null
+            } else {
+                client.itemsApi.getItems(
+                    userId = userUuid,
+                    parentId = seasonUuid,
+                    recursive = true,
+                    includeItemTypes = listOf(BaseItemKind.EPISODE),
+                    sortBy = listOf(ItemSortBy.INDEX_NUMBER),
+                    sortOrder = listOf(SortOrder.ASCENDING),
+                    fields = fields,
+                )
             }
-            response.content.items
+            if (BuildConfig.DEBUG) {
+                Log.d(
+                    "JellyfinRepository",
+                    "getEpisodesForSeason: Successfully fetched ${(response?.content?.items ?: tvEpisodes).size} episodes for seasonId=$seasonId",
+                )
+            }
+            response?.content?.items ?: tvEpisodes
         }
     }
 
