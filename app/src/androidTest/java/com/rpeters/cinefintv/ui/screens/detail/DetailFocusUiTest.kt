@@ -14,8 +14,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.printToLog
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailTestTags
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.MovieDetailLayout
@@ -63,7 +61,6 @@ class DetailFocusUiTest {
             }
         }
 
-        composeRule.onRoot().printToLog("DEBUG_DETAIL")
         assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.HeroTitle).fetchSemanticsNodes().isNotEmpty())
         assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.PrimaryAction).fetchSemanticsNodes().isNotEmpty())
         assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.Overview).fetchSemanticsNodes().isNotEmpty())
@@ -111,7 +108,6 @@ class DetailFocusUiTest {
             }
         }
 
-        composeRule.onRoot().printToLog("DEBUG_DETAIL")
         assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.TvEpisodesPanel).fetchSemanticsNodes().isNotEmpty())
         assertTrue(composeRule.onAllNodesWithText("Season 1").fetchSemanticsNodes().isNotEmpty())
     }
@@ -152,7 +148,6 @@ class DetailFocusUiTest {
             }
         }
 
-        composeRule.onRoot().printToLog("DEBUG_DETAIL")
         assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.MovieCastSection).fetchSemanticsNodes().isNotEmpty())
         assertTrue(composeRule.onAllNodesWithText("Jane Doe").fetchSemanticsNodes().isNotEmpty())
         assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.MovieSimilarSection).fetchSemanticsNodes().isNotEmpty())
@@ -190,7 +185,6 @@ class DetailFocusUiTest {
             }
         }
 
-        composeRule.onRoot().printToLog("DEBUG_DETAIL")
         assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.HeroTitle).fetchSemanticsNodes().isNotEmpty())
         assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.HeroLogo).fetchSemanticsNodes().isEmpty())
     }
@@ -226,7 +220,6 @@ class DetailFocusUiTest {
             }
         }
 
-        composeRule.onRoot().printToLog("DEBUG_DETAIL")
         assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.Overview).fetchSemanticsNodes().isNotEmpty())
         assertTrue(composeRule.onAllNodesWithText("No overview available.").fetchSemanticsNodes().isNotEmpty())
     }

@@ -96,7 +96,7 @@ class DetailDpadNavigationUiTest {
 
     @Test
     // Also covers spec row 9: overview DOWN → similar when no cast but similar present
-    fun movieDetail_overview_downNavigatesToFirstSimilar_whenNoCast() {
+    fun movieDetail_overview_downNavigatesToFirstSimilar_whenNoCastButSimilarPresent() {
         val focus = FocusRequester()
         setMovieContent(
             listState = LazyListState(firstVisibleItemIndex = 2),
