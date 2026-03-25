@@ -99,7 +99,7 @@ fun CinematicHero(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = screenHeight * 0.42f),
+            .heightIn(min = screenHeight * 0.62f),
     ) {
         // Backdrop
         if (backdropUrl != null) {

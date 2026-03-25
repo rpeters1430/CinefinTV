@@ -67,10 +67,10 @@ fun TvShowDetailScreen(
 
     LaunchedEffect((uiState as? TvShowDetailUiState.Content)?.show?.id) {
         if (uiState is TvShowDetailUiState.Content) {
+            try { 
+                primaryActionFocus.requestFocus() 
+            } catch (_: Exception) {}
             listState.scrollToItem(0)
-            snapshotFlow { listState.isScrollInProgress }
-                .first { !it }
-            try { primaryActionFocus.requestFocus() } catch (_: Exception) {}
         }
     }
 

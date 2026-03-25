@@ -106,10 +106,10 @@ private fun SeasonContent(
     }
 
     LaunchedEffect(season.id) {
+        try { 
+            primaryActionFocusRequester.requestFocus() 
+        } catch (_: Exception) {}
         listState.scrollToItem(0)
-        snapshotFlow { listState.isScrollInProgress }
-            .first { !it }
-        try { primaryActionFocusRequester.requestFocus() } catch (_: Exception) {}
     }
 
     LazyColumn(

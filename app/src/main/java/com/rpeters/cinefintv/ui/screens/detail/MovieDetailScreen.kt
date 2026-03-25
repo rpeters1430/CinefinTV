@@ -64,11 +64,10 @@ fun MovieDetailScreen(
 
     LaunchedEffect((uiState as? MovieDetailUiState.Content)?.movie?.id) {
         if (uiState is MovieDetailUiState.Content) {
-            val content = uiState as MovieDetailUiState.Content
+            try { 
+                primaryActionFocus.requestFocus() 
+            } catch (_: Exception) {}
             listState.scrollToItem(0)
-            snapshotFlow { listState.isScrollInProgress }
-                .first { !it }
-            try { primaryActionFocus.requestFocus() } catch (_: Exception) {}
         }
     }
 
