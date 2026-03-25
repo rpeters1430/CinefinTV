@@ -2,14 +2,11 @@ package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -19,15 +16,10 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.printToLog
-import androidx.compose.ui.test.performSemanticsAction
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailTestTags
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.MovieDetailLayout
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowDetailLayout
-import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
-import com.rpeters.cinefintv.ui.theme.ThemeColorController
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -128,8 +120,8 @@ class DetailFocusUiTest {
     fun movieDetail_rendersCastAndSimilarSections() {
         composeRule.setContent {
             val primaryActionFocusRequester = remember { FocusRequester() }
-            // Pre-scroll to ensure these shelves are composed
-            val listState = remember { LazyListState(firstVisibleItemIndex = 2) }
+            // Start at cast section (item 3) so similar section (item 4) is in the prefetch window
+            val listState = remember { LazyListState(firstVisibleItemIndex = 3) }
 
             DetailTestHost {
                 MovieDetailLayout(
@@ -237,21 +229,5 @@ class DetailFocusUiTest {
         composeRule.onRoot().printToLog("DEBUG_DETAIL")
         assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.Overview).fetchSemanticsNodes().isNotEmpty())
         assertTrue(composeRule.onAllNodesWithText("No overview available.").fetchSemanticsNodes().isNotEmpty())
-    }
-}
-
-private fun SemanticsNodeInteraction.requestFocus(): SemanticsNodeInteraction =
-    apply { performSemanticsAction(SemanticsActions.RequestFocus) }
-
-@Composable
-private fun DetailTestHost(content: @Composable () -> Unit) {
-    CinefinTvTheme(useDynamicColors = false) {
-        CompositionLocalProvider(
-            LocalCinefinThemeController provides object : ThemeColorController {
-                override fun updateSeedColor(color: Color?) = Unit
-            }
-        ) {
-            content()
-        }
     }
 }
