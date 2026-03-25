@@ -19,12 +19,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -34,6 +32,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
+import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun SeasonScreen(
@@ -84,6 +84,7 @@ private fun SeasonContent(
     episodes: List<EpisodeModel>,
     onOpenEpisode: (String) -> Unit,
 ) {
+    val spacing = LocalCinefinSpacing.current
     val listState = rememberLazyListState()
     val primaryActionFocusRequester = remember { FocusRequester() }
 
@@ -91,7 +92,7 @@ private fun SeasonContent(
         episodes.firstOrNull { (it.playbackProgress ?: 0f) > 0f && !it.isWatched }
             ?: episodes.firstOrNull { !it.isWatched }
     }
-    var lastFocusedEpisodeId by rememberSaveable(season.id) { mutableStateOf<String?>(episodes.firstOrNull()?.id) }
+    
     val factItems = remember(season, episodes) {
         buildList {
             season.seriesName?.let {
@@ -105,13 +106,16 @@ private fun SeasonContent(
     }
 
     LaunchedEffect(season.id) {
-        primaryActionFocusRequester.requestFocus()
+        listState.scrollToItem(0)
+        snapshotFlow { listState.isScrollInProgress }
+            .first { !it }
+        try { primaryActionFocusRequester.requestFocus() } catch (_: Exception) {}
     }
 
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 48.dp),
+        contentPadding = PaddingValues(bottom = spacing.gutter * 2),
     ) {
         item {
             CinematicHero(
@@ -140,7 +144,7 @@ private fun SeasonContent(
                 description = season.overview.orEmpty(),
                 factItems = factItems,
                 chips = emptyList(),
-                modifier = Modifier.padding(top = 28.dp),
+                modifier = Modifier.padding(top = spacing.rowGap),
             )
         }
 
@@ -155,17 +159,7 @@ private fun SeasonContent(
         items(episodes, key = { it.id }) { episode ->
             EpisodeListRow(
                 episode = episode,
-                modifier = Modifier
-                    .then(
-                        if (episode.id == episodes.firstOrNull()?.id) {
-                            Modifier.focusProperties { up = primaryActionFocusRequester }
-                        } else {
-                            Modifier
-                        }
-                    ),
-                onFocus = {
-                    lastFocusedEpisodeId = episode.id
-                },
+                isNext = episode.id == resumeEpisode?.id,
                 onClick = { onOpenEpisode(episode.id) },
             )
         }

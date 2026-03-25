@@ -78,7 +78,6 @@ fun CinematicHero(
     onPrimaryAction: () -> Unit,
     secondaryActions: List<Pair<String, () -> Unit>> = emptyList(),
     primaryActionFocusRequester: FocusRequester = remember { FocusRequester() },
-    focusProperties: FocusProperties.() -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val configuration = LocalConfiguration.current
@@ -100,8 +99,9 @@ fun CinematicHero(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = screenHeight * 0.56f),
+            .heightIn(min = screenHeight * 0.62f),
     ) {
+        // Backdrop
         if (backdropUrl != null) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
@@ -121,13 +121,14 @@ fun CinematicHero(
             )
         }
 
+        // Gradients for legibility
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .background(
                     Brush.verticalGradient(
                         0.0f to Color.Transparent,
-                        0.38f to BackgroundDark.copy(alpha = 0.28f),
+                        0.4f to BackgroundDark.copy(alpha = 0.3f),
                         1.0f to BackgroundDark,
                     )
                 )
@@ -138,20 +139,21 @@ fun CinematicHero(
                 .matchParentSize()
                 .background(
                     Brush.horizontalGradient(
-                        0.0f to BackgroundDark.copy(alpha = 0.94f),
-                        0.18f to BackgroundDark.copy(alpha = 0.82f),
-                        0.48f to BackgroundDark.copy(alpha = 0.32f),
+                        0.0f to BackgroundDark.copy(alpha = 0.96f),
+                        0.3f to BackgroundDark.copy(alpha = 0.7f),
+                        0.6f to BackgroundDark.copy(alpha = 0.2f),
                         1.0f to Color.Transparent,
                     )
                 )
         )
 
+        // Content
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight()
                 .padding(horizontal = spacing.gutter, vertical = spacing.gutter),
-            contentAlignment = Alignment.TopStart,
+            contentAlignment = Alignment.CenterStart,
         ) {
             if (logoUrl != null) {
                 AsyncImage(
@@ -172,8 +174,8 @@ fun CinematicHero(
                     .background(
                         brush = Brush.verticalGradient(
                             listOf(
-                                expressiveColors.chromeSurface.copy(alpha = 0.82f),
-                                expressiveColors.chromeSurface.copy(alpha = 0.62f),
+                                expressiveColors.chromeSurface.copy(alpha = 0.88f),
+                                expressiveColors.chromeSurface.copy(alpha = 0.72f),
                             )
                         ),
                         shape = MaterialTheme.shapes.extraLarge,
@@ -183,7 +185,7 @@ fun CinematicHero(
                         color = expressiveColors.borderSubtle.copy(alpha = 0.58f),
                         shape = MaterialTheme.shapes.extraLarge,
                     )
-                    .padding(28.dp),
+                    .padding(32.dp),
                 verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
             ) {
                 Row(
@@ -205,32 +207,29 @@ fun CinematicHero(
                         text = eyebrow.uppercase(),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                        fontWeight = FontWeight.Bold,
                     )
                 }
 
                 if (logoUrl != null && logoLoaded && !logoFailed) {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = fadeIn(tween(300)),
-                    ) {
-                        AsyncImage(
-                            model = logoUrl,
-                            contentDescription = title,
-                            modifier = Modifier
-                                .testTag(DetailTestTags.HeroLogo)
-                                .heightIn(max = 110.dp)
-                                .wrapContentWidth(),
-                        )
-                    }
+                    AsyncImage(
+                        model = logoUrl,
+                        contentDescription = title,
+                        modifier = Modifier
+                            .testTag(DetailTestTags.HeroLogo)
+                            .heightIn(max = 120.dp)
+                            .wrapContentWidth(),
+                        contentScale = ContentScale.Fit,
+                    )
+                } else {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.testTag(DetailTestTags.HeroTitle),
+                    )
                 }
-
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.testTag(DetailTestTags.HeroTitle),
-                )
 
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
@@ -256,18 +255,7 @@ fun CinematicHero(
                 }
 
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            expressiveColors.chromeSurface.copy(alpha = 0.6f),
-                            shape = MaterialTheme.shapes.large,
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = expressiveColors.borderSubtle.copy(alpha = 0.48f),
-                            shape = MaterialTheme.shapes.large,
-                        )
-                        .padding(horizontal = 18.dp, vertical = 18.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(spacing.elementGap),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -276,39 +264,23 @@ fun CinematicHero(
                         colors = ButtonDefaults.colors(
                             containerColor = CinefinRed,
                             contentColor = Color.White,
-                            focusedContainerColor = CinefinRed,
-                            focusedContentColor = Color.White,
+                            focusedContainerColor = Color.White,
+                            focusedContentColor = CinefinRed,
                         ),
                         modifier = Modifier
                             .focusRequester(primaryActionFocusRequester)
-                            .focusProperties(focusProperties)
                             .testTag(DetailTestTags.PrimaryAction),
                     ) {
-                        Text(primaryActionLabel, fontWeight = FontWeight.Bold)
+                        Text(primaryActionLabel, fontWeight = FontWeight.ExtraBold)
                     }
 
                     secondaryActions.forEach { (label, action) ->
                         OutlinedButton(onClick = action) {
-                            Text(label)
+                            Text(label, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
         }
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = spacing.gutter, bottom = spacing.gutter)
-                .size(220.dp)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            expressiveColors.focusGlow.copy(alpha = 0.16f),
-                            Color.Transparent,
-                        )
-                    )
-                )
-        )
     }
 }

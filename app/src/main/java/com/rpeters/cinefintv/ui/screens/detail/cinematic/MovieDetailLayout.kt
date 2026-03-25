@@ -43,7 +43,6 @@ fun MovieDetailLayout(
     onPrimaryAction: () -> Unit,
     secondaryActions: List<Pair<String, () -> Unit>>,
     primaryActionFocusRequester: FocusRequester,
-    overviewFocusRequester: FocusRequester,
     description: String,
     factItems: List<DetailLabeledMetaItem>,
     factSummary: String,
@@ -59,7 +58,7 @@ fun MovieDetailLayout(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(bottom = spacing.gutter),
+        contentPadding = PaddingValues(bottom = spacing.gutter * 2),
     ) {
         item {
             CinematicHero(
@@ -73,7 +72,6 @@ fun MovieDetailLayout(
                 onPrimaryAction = onPrimaryAction,
                 secondaryActions = secondaryActions,
                 primaryActionFocusRequester = primaryActionFocusRequester,
-                focusProperties = { down = overviewFocusRequester },
             )
         }
 
@@ -84,7 +82,6 @@ fun MovieDetailLayout(
                 description = description,
                 factItems = factItems,
                 chips = genres,
-                overviewFocusRequester = overviewFocusRequester,
                 modifier = Modifier.padding(top = spacing.rowGap),
             )
         }
@@ -92,7 +89,9 @@ fun MovieDetailLayout(
         if (castItems.isNotEmpty()) {
             item {
                 Column(
-                    modifier = Modifier.testTag(DetailTestTags.MovieCastSection),
+                    modifier = Modifier
+                        .padding(top = spacing.rowGap)
+                        .testTag(DetailTestTags.MovieCastSection),
                 ) {
                     CinefinShelfTitle(
                         title = "Cast",
@@ -121,7 +120,9 @@ fun MovieDetailLayout(
         if (similarItems.isNotEmpty()) {
             item {
                 Column(
-                    modifier = Modifier.testTag(DetailTestTags.MovieSimilarSection),
+                    modifier = Modifier
+                        .padding(top = spacing.rowGap)
+                        .testTag(DetailTestTags.MovieSimilarSection),
                 ) {
                     CinefinShelfTitle(
                         title = "More Like This",
@@ -138,8 +139,7 @@ fun MovieDetailLayout(
                             TvMediaCard(
                                 title = mediaItem.title,
                                 imageUrl = mediaItem.imageUrl,
-                                aspectRatio = 16f / 9f,
-                                cardWidth = 280.dp,
+                                aspectRatio = 2f / 3f, // Standard poster ratio
                                 onClick = { onSimilarClick(mediaItem.id) },
                             )
                         }

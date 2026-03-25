@@ -11,6 +11,4 @@ object DetailTestTags {
     const val TvCastPanel = "tv_detail_cast_panel"
     const val TvSimilarPanel = "tv_detail_similar_panel"
     const val TvDetailsPanel = "tv_detail_details_panel"
-
-    fun tvTab(tab: TvShowTab): String = "tv_detail_tab_${tab.name}"
 }

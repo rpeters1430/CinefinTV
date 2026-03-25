@@ -32,7 +32,6 @@ import com.rpeters.cinefintv.ui.player.audio.AudioPlayerScreen
 import com.rpeters.cinefintv.ui.screens.auth.AuthViewModel
 import com.rpeters.cinefintv.ui.screens.auth.LoginScreen
 import com.rpeters.cinefintv.ui.screens.auth.ServerConnectionScreen
-import com.rpeters.cinefintv.ui.screens.detail.EpisodeDetailScreen
 import com.rpeters.cinefintv.ui.screens.detail.MovieDetailScreen
 import com.rpeters.cinefintv.ui.screens.detail.SeasonScreen
 import com.rpeters.cinefintv.ui.screens.detail.StuffDetailScreen
@@ -151,7 +150,7 @@ fun CinefinTvNavGraph(
                             navController.navigate(NavRoutes.seasonDetail(item.id))
                         }
                         item.itemType?.equals("Episode", ignoreCase = true) == true -> {
-                            navController.navigate(NavRoutes.episodeDetail(item.id))
+                            navController.navigate(NavRoutes.player(item.id))
                         }
                         else -> {
                             navController.navigate(NavRoutes.stuffDetail(item.id))
@@ -187,7 +186,7 @@ fun CinefinTvNavGraph(
                             navController.navigate(NavRoutes.seasonDetail(item.id))
                         }
                         item.itemType?.equals("Episode", ignoreCase = true) == true -> {
-                            navController.navigate(NavRoutes.episodeDetail(item.id))
+                            navController.navigate(NavRoutes.player(item.id))
                         }
                         else -> {
                             navController.navigate(NavRoutes.stuffDetail(item.id))
@@ -270,18 +269,7 @@ fun CinefinTvNavGraph(
         ) {
             SeasonScreen(
                 onOpenEpisode = { episodeId ->
-                    navController.navigate(NavRoutes.episodeDetail(episodeId))
-                },
-                onBack = { navController.popBackStack() },
-            )
-        }
-        composable(
-            NavRoutes.EPISODE_DETAIL,
-            arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
-        ) {
-            EpisodeDetailScreen(
-                onPlayEpisode = { episodeId, position ->
-                    navController.navigate(NavRoutes.player(episodeId, position))
+                    navController.navigate(NavRoutes.player(episodeId))
                 },
                 onBack = { navController.popBackStack() },
             )
@@ -296,7 +284,7 @@ fun CinefinTvNavGraph(
                         "Movie" -> navController.navigate(NavRoutes.movieDetail(id))
                         "Series" -> navController.navigate(NavRoutes.tvShowDetail(id))
                         "Season" -> navController.navigate(NavRoutes.seasonDetail(id))
-                        "Episode" -> navController.navigate(NavRoutes.episodeDetail(id))
+                        "Episode" -> navController.navigate(NavRoutes.player(id))
                         else -> navController.navigate(NavRoutes.stuffDetail(id))
                     }
                 },
@@ -324,7 +312,7 @@ fun CinefinTvNavGraph(
                             navController.navigate(NavRoutes.seasonDetail(id))
                         }
                         type?.equals("Episode", ignoreCase = true) == true -> {
-                            navController.navigate(NavRoutes.episodeDetail(id))
+                            navController.navigate(NavRoutes.player(id))
                         }
                         else -> {
                             navController.navigate(NavRoutes.stuffDetail(id))

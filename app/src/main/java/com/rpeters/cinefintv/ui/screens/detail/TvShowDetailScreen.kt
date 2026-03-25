@@ -13,15 +13,14 @@ import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -31,7 +30,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowDetailLayout
-import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowTab
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun TvShowDetailScreen(
@@ -63,20 +62,16 @@ fun TvShowDetailScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val episodeListState = rememberLazyListState()
-    val castGridState = rememberLazyGridState()
-    val similarGridState = rememberLazyGridState()
+    val listState = rememberLazyListState()
     val primaryActionFocus = remember { FocusRequester() }
-    var selectedTab by rememberSaveable { mutableStateOf(TvShowTab.Episodes) }
-    var selectedSeasonIndex by rememberSaveable { mutableStateOf(0) }
 
     LaunchedEffect((uiState as? TvShowDetailUiState.Content)?.show?.id) {
-        selectedTab = TvShowTab.Episodes
-        selectedSeasonIndex = 0
-        episodeListState.scrollToItem(0)
-        castGridState.scrollToItem(0)
-        similarGridState.scrollToItem(0)
-        try { primaryActionFocus.requestFocus() } catch (_: Exception) {}
+        if (uiState is TvShowDetailUiState.Content) {
+            listState.scrollToItem(0)
+            snapshotFlow { listState.isScrollInProgress }
+                .first { !it }
+            try { primaryActionFocus.requestFocus() } catch (_: Exception) {}
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -136,13 +131,6 @@ fun TvShowDetailScreen(
                     show.rating?.let { "★ $it" }
                 }
 
-                val factSummary = remember(show) {
-                    listOfNotNull(
-                        show.creators.firstOrNull(),
-                        show.networks.firstOrNull(),
-                    ).joinToString(" · ")
-                }
-
                 val primaryActionLabel = remember(show) {
                     when {
                         show.nextUpEpisodeId != null -> "▶ ${show.nextUpTitle ?: "Next Up"}"
@@ -170,27 +158,14 @@ fun TvShowDetailScreen(
                     secondaryActions = emptyList(),
                     primaryActionFocusRequester = primaryActionFocus,
                     seasons = state.seasons,
-                    selectedSeasonIndex = selectedSeasonIndex,
-                    onSeasonSelected = { index ->
-                        selectedSeasonIndex = index
-                        val seasonId = state.seasons.getOrNull(index)?.id
-                        if (seasonId != null) viewModel.loadEpisodesForSeason(seasonId)
-                    },
-                    episodes = state.episodes,
-                    resumeEpisodeIndex = state.resumeEpisodeIndex,
-                    onEpisodeClick = { episode -> onPlayEpisode(episode.id) },
+                    onSeasonClick = { season -> onOpenSeason(season.id) },
                     castItems = state.cast,
                     similarItems = state.similarShows,
                     onCastClick = { personId -> onOpenPerson(personId) },
                     onSimilarClick = { showId -> onOpenShow(showId) },
                     description = show.overview ?: "",
                     factItems = factItems,
-                    factSummary = factSummary,
-                    selectedTab = selectedTab,
-                    onTabSelected = { selectedTab = it },
-                    episodeListState = episodeListState,
-                    castGridState = castGridState,
-                    similarGridState = similarGridState,
+                    listState = listState,
                 )
             }
         }

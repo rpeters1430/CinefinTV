@@ -50,13 +50,11 @@ fun DetailOverviewSection(
     factItems: List<DetailLabeledMetaItem>,
     chips: List<String>,
     modifier: Modifier = Modifier,
-    overviewFocusRequester: FocusRequester? = null,
     posterUrl: String? = null,
     posterTitle: String = title,
 ) {
     val spacing = LocalCinefinSpacing.current
     val expressiveColors = LocalCinefinExpressiveColors.current
-    var summaryFocused by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -99,15 +97,7 @@ fun DetailOverviewSection(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .then(
-                            if (overviewFocusRequester != null) {
-                                Modifier.focusRequester(overviewFocusRequester)
-                            } else {
-                                Modifier
-                            }
-                        )
                         .testTag(DetailTestTags.Overview)
-                        .focusable()
                         .background(
                             color = expressiveColors.chromeSurface.copy(alpha = 0.42f),
                             shape = RoundedCornerShape(spacing.cornerContainer),
@@ -117,7 +107,6 @@ fun DetailOverviewSection(
                             color = expressiveColors.borderSubtle.copy(alpha = 0.32f),
                             shape = RoundedCornerShape(spacing.cornerContainer),
                         )
-                        .onFocusChanged { summaryFocused = it.hasFocus || it.isFocused }
                         .padding(22.dp),
                     verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
                 ) {
@@ -138,7 +127,7 @@ fun DetailOverviewSection(
                     Text(
                         text = "ABOUT",
                         style = MaterialTheme.typography.labelLarge,
-                        color = if (summaryFocused) Color.White else MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
