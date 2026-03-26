@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.relocation.BringIntoViewResponder
-import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -131,23 +129,7 @@ private fun SeasonContent(
     ) {
         item {
             Column(
-                modifier = Modifier.bringIntoViewResponder(
-                    object : BringIntoViewResponder {
-                        @androidx.compose.foundation.ExperimentalFoundationApi
-                        override fun calculateRectForParent(
-                            localRect: androidx.compose.ui.geometry.Rect
-                        ): androidx.compose.ui.geometry.Rect {
-                            return androidx.compose.ui.geometry.Rect.Zero
-                        }
-
-                        @androidx.compose.foundation.ExperimentalFoundationApi
-                        override suspend fun bringChildIntoView(
-                            localChildBounds: () -> androidx.compose.ui.geometry.Rect?
-                        ) {
-                            // Block auto-scroll
-                        }
-                    }
-                )
+                modifier = Modifier.blockBringIntoView()
             ) {
                 DetailAnchor(
                     focusRequester = topFocusRequester,
