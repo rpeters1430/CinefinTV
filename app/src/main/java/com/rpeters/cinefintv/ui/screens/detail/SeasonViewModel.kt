@@ -49,6 +49,7 @@ sealed class SeasonUiState {
 @HiltViewModel
 class SeasonViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
+    private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -62,6 +63,23 @@ class SeasonViewModel @Inject constructor(
             _uiState.value = SeasonUiState.Error("Invalid season ID")
         } else {
             load()
+            observeUpdateEvents()
+        }
+    }
+
+    private fun observeUpdateEvents() {
+        viewModelScope.launch {
+            updateBus.events.collect { event ->
+                when (event) {
+                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshItem -> {
+                        // Refresh watch status if any item was updated
+                        refreshWatchStatus()
+                    }
+                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshAll -> {
+                        load()
+                    }
+                }
+            }
         }
     }
 

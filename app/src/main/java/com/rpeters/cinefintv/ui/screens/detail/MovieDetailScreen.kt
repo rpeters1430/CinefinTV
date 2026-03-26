@@ -48,7 +48,7 @@ fun MovieDetailScreen(
                 Lifecycle.Event.ON_PAUSE  -> hasBeenPaused = true
                 Lifecycle.Event.ON_RESUME -> if (hasBeenPaused) {
                     hasBeenPaused = false
-                    viewModel.refreshWatchStatus()
+                    viewModel.load()
                 }
                 else -> {}
             }

@@ -62,6 +62,7 @@ sealed class TvShowDetailUiState {
 @HiltViewModel
 class TvShowDetailViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
+    private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -75,6 +76,54 @@ class TvShowDetailViewModel @Inject constructor(
             _uiState.value = TvShowDetailUiState.Error("Invalid series ID")
         } else {
             load()
+            observeUpdateEvents()
+        }
+    }
+
+    private fun observeUpdateEvents() {
+        viewModelScope.launch {
+            updateBus.events.collect { event ->
+                when (event) {
+                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshItem -> {
+                        // Refresh if the updated item is this series, or if it might be an episode of this series
+                        // For simplicity, we refresh the Next Up and potentially seasons/episodes
+                        refreshSilently()
+                    }
+                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshAll -> {
+                        load()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun refreshSilently() {
+        viewModelScope.launch {
+            // Re-fetch essential status data
+            val nextUpResult = repositories.media.getNextUpForSeries(seriesId)
+            val seasonsResult = repositories.media.getSeasonsForSeries(seriesId)
+            
+            val currentState = _uiState.value
+            if (currentState is TvShowDetailUiState.Content) {
+                val nextUp = (nextUpResult as? ApiResult.Success)?.data
+                val updatedSeasons = if (seasonsResult is ApiResult.Success) {
+                    seasonsResult.data.map { it.toSeasonModel() }
+                } else {
+                    currentState.seasons
+                }
+
+                _uiState.value = currentState.copy(
+                    show = currentState.show.copy(
+                        nextUpEpisodeId = nextUp?.id?.toString(),
+                        nextUpTitle = nextUp?.getDisplayTitle()
+                    ),
+                    seasons = updatedSeasons
+                )
+                
+                // Also refresh current episodes list if visible
+                val currentSeasonId = updatedSeasons.firstOrNull()?.id // This is a bit naive, might need tracking current season
+                // But loadEpisodesForSeason already handles state update
+            }
         }
     }
 
@@ -139,7 +188,7 @@ class TvShowDetailViewModel @Inject constructor(
             val result = repositories.media.getEpisodesForSeason(seasonId)
             if (result is ApiResult.Success) {
                 val episodes = result.data.map { it.toEpisodeModel() }
-                val resumeIndex = episodes.indexOfFirst { it.playbackProgress != null && (it.playbackProgress ?: 0f) > 0f }
+                val resumeIndex = episodes.indexOfFirst { it.playbackProgress != null && it.playbackProgress > 0f }
                 val latestContent = _uiState.value as? TvShowDetailUiState.Content ?: return@launch
                 _uiState.value = latestContent.copy(
                     episodes = episodes,

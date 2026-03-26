@@ -23,6 +23,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -67,12 +68,31 @@ sealed class HomeUiState {
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
+    private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
         refresh()
+        observeUpdateEvents()
+    }
+
+    private fun observeUpdateEvents() {
+        viewModelScope.launch {
+            updateBus.events.collect { event ->
+                when (event) {
+                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshItem -> {
+                        // For Home, many things could change (Continue Watching, Recently Added, etc.)
+                        // so we do a watch status refresh which is lightweight.
+                        refreshWatchStatus()
+                    }
+                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshAll -> {
+                        refresh()
+                    }
+                }
+            }
+        }
     }
 
     fun refresh() {
@@ -147,8 +167,10 @@ class HomeViewModel @Inject constructor(
     }
 
     fun refreshWatchStatus() {
-        _uiState.value as? HomeUiState.Content ?: return
+        val currentState = _uiState.value as? HomeUiState.Content ?: return
         viewModelScope.launch {
+            // Give server a moment to process the stop report
+            delay(500)
             when (val result = repositories.media.getContinueWatching(limit = 12)) {
                 is ApiResult.Success -> {
                     // Re-read state after the suspension point to avoid overwriting concurrent mutations

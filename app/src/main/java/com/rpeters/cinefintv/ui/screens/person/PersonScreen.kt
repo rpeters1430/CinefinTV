@@ -290,9 +290,9 @@ private fun PersonImmersiveSection(
                 .background(
                     Brush.horizontalGradient(
                         colorStops = listOf(
-                            0f to (expressiveColors.heroStart as Color).copy(alpha = 0.96f),
+                            0f to expressiveColors.heroStart.copy(alpha = 0.96f),
                             0.32f to Color.Black.copy(alpha = 0.8f),
-                            0.7f to (expressiveColors.heroEnd as Color).copy(alpha = 0.35f),
+                            0.7f to expressiveColors.heroEnd.copy(alpha = 0.35f),
                             1f to Color.Transparent,
                         ).toTypedArray(),
                     ),

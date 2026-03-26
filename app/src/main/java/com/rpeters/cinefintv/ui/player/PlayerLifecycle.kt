@@ -52,21 +52,20 @@ internal fun PlayerLifecycleManager(
     DisposableEffect(player, uiState.itemId) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
-                if (
-                    playbackState == Player.STATE_ENDED &&
-                    uiState.isEpisodicContent &&
-                    uiState.autoPlayNextEpisode
-                ) {
+                if (playbackState == Player.STATE_ENDED) {
                     viewModel.savePlaybackPosition(
                         positionMs = player.currentPosition,
                         durationMs = player.duration.coerceAtLeast(0L),
                         isPaused = true,
                     )
 
-                    player.pause()
-                    player.seekTo(0L)
-
-                    onNextEpisodeRequest(uiState.nextEpisodeId ?: "")
+                    if (uiState.isEpisodicContent && uiState.autoPlayNextEpisode && !uiState.nextEpisodeId.isNullOrBlank()) {
+                        player.pause()
+                        onNextEpisodeRequest(uiState.nextEpisodeId)
+                    } else {
+                        // For non-episodic content or when auto-play is off, navigate back
+                        onNextEpisodeRequest("")
+                    }
                 }
             }
 

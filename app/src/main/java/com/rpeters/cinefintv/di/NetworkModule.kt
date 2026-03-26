@@ -211,6 +211,8 @@ object NetworkModule {
         deviceCapabilities: DeviceCapabilities,
         authRepository: JellyfinAuthRepository,
         streamRepository: JellyfinStreamRepository,
+        mediaRepository: com.rpeters.cinefintv.data.repository.JellyfinMediaRepository,
+        searchRepository: com.rpeters.cinefintv.data.repository.JellyfinSearchRepository,
         connectivityChecker: ConnectivityChecker,
         analyticsHelper: com.rpeters.cinefintv.utils.AnalyticsHelper,
     ): JellyfinRepository {
@@ -221,6 +223,8 @@ object NetworkModule {
             deviceCapabilities,
             authRepository,
             streamRepository,
+            mediaRepository,
+            searchRepository,
             connectivityChecker,
             analyticsHelper,
         )

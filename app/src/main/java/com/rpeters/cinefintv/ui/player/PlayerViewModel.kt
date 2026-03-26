@@ -57,6 +57,7 @@ class PlayerViewModel @Inject constructor(
     private val subtitleAppearancePreferencesRepository: SubtitleAppearancePreferencesRepository,
     @param:ApplicationContext private val appContext: Context,
     private val okHttpClient: OkHttpClient,
+    private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
 ) : ViewModel() {
     private val playbackSessionId: String = UUID.randomUUID().toString()
     val itemId: String = savedStateHandle.get<String>("itemId").orEmpty()
@@ -569,8 +570,10 @@ class PlayerViewModel @Inject constructor(
             val persistedPosition = if (isCompleted) 0L else positionMs.coerceAtLeast(0L)
             PlaybackPositionStore.savePlaybackPosition(appContext, itemId, persistedPosition)
 
-            if (shouldSyncToServer) {
-                try {
+            // Notify about playback update
+            updateBus.refreshItem(itemId)
+
+            if (shouldSyncToServer) {                try {
                     val positionTicks = if (persistedPosition <= 0L) null else persistedPosition * TICKS_PER_MILLISECOND
                     val sessionId = activePlaySessionId?.takeIf { it.isNotBlank() } ?: playbackSessionId
                     if (isCompleted) {

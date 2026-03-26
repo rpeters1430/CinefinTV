@@ -2,6 +2,7 @@ package com.rpeters.cinefintv.data.repository
 
 import android.util.Log
 import com.rpeters.cinefintv.BuildConfig
+import com.rpeters.cinefintv.core.constants.Constants
 import com.rpeters.cinefintv.data.cache.JellyfinCache
 import com.rpeters.cinefintv.data.repository.common.ApiParameterValidator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
@@ -13,6 +14,8 @@ import kotlinx.coroutines.CancellationException
 import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.tvShowsApi
+import org.jellyfin.sdk.api.client.extensions.userApi
+import org.jellyfin.sdk.api.client.extensions.userLibraryApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ItemFields
@@ -33,6 +36,7 @@ class JellyfinMediaRepository @Inject constructor(
     sessionManager: com.rpeters.cinefintv.data.session.JellyfinSessionManager,
     cache: JellyfinCache,
     private val healthChecker: LibraryHealthChecker,
+    private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
 ) : BaseJellyfinRepository(authRepository, sessionManager, cache) {
 
     // Helper function to get default item types for a collection
@@ -64,6 +68,7 @@ class JellyfinMediaRepository @Inject constructor(
         startIndex: Int = 0,
         limit: Int = 100,
         collectionType: String? = null,
+        fields: List<ItemFields>? = null,
     ): ApiResult<List<BaseItemDto>> {
         // ✅ COMPREHENSIVE FIX: Use centralized parameter validation
         val validatedParams = ApiParameterValidator.validateLibraryParams(
@@ -137,7 +142,7 @@ class JellyfinMediaRepository @Inject constructor(
                     else -> listOf(ItemSortBy.SORT_NAME)
                 }
                 val sortOrder = listOf(SortOrder.ASCENDING)
-                val fields = listOf(
+                val defaultFields = listOf(
                     org.jellyfin.sdk.model.api.ItemFields.PRIMARY_IMAGE_ASPECT_RATIO,
                     org.jellyfin.sdk.model.api.ItemFields.OVERVIEW,
                     org.jellyfin.sdk.model.api.ItemFields.GENRES,
@@ -153,7 +158,7 @@ class JellyfinMediaRepository @Inject constructor(
                     includeItemTypes = itemKinds,
                     sortBy = sortBy,
                     sortOrder = sortOrder,
-                    fields = fields,
+                    fields = fields ?: defaultFields,
                     startIndex = validatedParams.startIndex,
                     limit = validatedParams.limit,
                 )
@@ -357,6 +362,70 @@ class JellyfinMediaRepository @Inject constructor(
         }
     }
 
+    suspend fun getRecentlyAddedFromLibrary(
+        libraryId: String,
+        limit: Int = 10,
+    ): ApiResult<List<BaseItemDto>> {
+        return withServerClient("getRecentlyAddedFromLibrary") { server, client ->
+            val userUuid = parseUuid(server.userId ?: "", "user")
+            val parentUuid = parseUuid(libraryId, "library")
+            val response = client.itemsApi.getItems(
+                userId = userUuid,
+                parentId = parentUuid,
+                recursive = true,
+                sortBy = listOf(ItemSortBy.DATE_CREATED),
+                sortOrder = listOf(SortOrder.DESCENDING),
+                limit = limit,
+            )
+            response.content.items
+        }
+    }
+
+    suspend fun getRecentlyAddedByTypes(limit: Int = Constants.RECENTLY_ADDED_BY_TYPE_LIMIT): ApiResult<Map<String, List<BaseItemDto>>> {
+        val contentTypes = listOf(
+            BaseItemKind.MOVIE,
+            BaseItemKind.SERIES,
+            BaseItemKind.EPISODE,
+            BaseItemKind.AUDIO,
+            BaseItemKind.BOOK,
+            BaseItemKind.AUDIO_BOOK,
+            BaseItemKind.VIDEO,
+        )
+
+        if (BuildConfig.DEBUG) {
+            Log.d("JellyfinMediaRepository", "getRecentlyAddedByTypes: Starting to fetch items for ${contentTypes.size} content types")
+        }
+        val results = mutableMapOf<String, List<BaseItemDto>>()
+
+        for (contentType in contentTypes) {
+            when (val result = getRecentlyAddedByType(contentType, limit)) {
+                is ApiResult.Success -> {
+                    if (result.data.isNotEmpty()) {
+                        val typeName = when (contentType) {
+                            BaseItemKind.MOVIE -> "Movies"
+                            BaseItemKind.SERIES -> "TV Shows"
+                            BaseItemKind.EPISODE -> "Episodes"
+                            BaseItemKind.AUDIO -> "Music"
+                            BaseItemKind.BOOK -> "Books"
+                            BaseItemKind.AUDIO_BOOK -> "Audiobooks"
+                            BaseItemKind.VIDEO -> "Videos"
+                            else -> "Other"
+                        }
+                        results[typeName] = result.data
+                        if (BuildConfig.DEBUG) {
+                            Log.d("JellyfinMediaRepository", "getRecentlyAddedByTypes: Added ${result.data.size} items to category '$typeName'")
+                        }
+                    }
+                }
+                is ApiResult.Error -> {
+                    Log.w("JellyfinMediaRepository", "getRecentlyAddedByTypes: Failed to load $contentType: ${result.message}")
+                }
+                else -> {}
+            }
+        }
+        return ApiResult.Success(results)
+    }
+
     suspend fun getContinueWatching(limit: Int = 20, forceRefresh: Boolean = false): ApiResult<List<BaseItemDto>> {
         return withServerClient("getContinueWatching") { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
@@ -372,6 +441,19 @@ class JellyfinMediaRepository @Inject constructor(
                 sortOrder = listOf(SortOrder.DESCENDING),
                 filters = listOf(ItemFilter.IS_RESUMABLE),
                 limit = limit,
+            )
+            response.content.items
+        }
+    }
+
+    suspend fun getFavorites(): ApiResult<List<BaseItemDto>> {
+        return withServerClient("getFavorites") { server, client ->
+            val userUuid = parseUuid(server.userId ?: "", "user")
+            val response = client.itemsApi.getItems(
+                userId = userUuid,
+                recursive = true,
+                sortBy = listOf(ItemSortBy.SORT_NAME),
+                filters = listOf(ItemFilter.IS_FAVORITE),
             )
             response.content.items
         }
@@ -420,6 +502,57 @@ class JellyfinMediaRepository @Inject constructor(
         withServerClient("getItemDetails") { server, client ->
             getItemDetailsById(itemId, "item", server, client)
         }
+
+    suspend fun toggleFavorite(itemId: String, isFavorite: Boolean): ApiResult<Boolean> {
+        return withServerClient("toggleFavorite") { server, client ->
+            val userUuid = parseUuid(server.userId ?: "", "user")
+            val itemUuid = parseUuid(itemId, "item")
+
+            if (isFavorite) {
+                client.userLibraryApi.markFavoriteItem(itemId = itemUuid, userId = userUuid)
+            } else {
+                client.userLibraryApi.unmarkFavoriteItem(itemId = itemUuid, userId = userUuid)
+            }
+            updateBus.refreshItem(itemId)
+            !isFavorite // Return the new state
+        }
+    }
+
+    suspend fun deleteItem(itemId: String): ApiResult<Boolean> {
+        return withServerClient("deleteItem") { _, client ->
+            val itemUuid = parseUuid(itemId, "item")
+            client.libraryApi.deleteItem(itemId = itemUuid)
+            updateBus.refreshAll()
+            true
+        }
+    }
+
+    /**
+     * Checks if the currently authenticated user has administrator privileges
+     * or permission to delete content.
+     */
+    private suspend fun hasAdminDeletePermission(
+        server: com.rpeters.cinefintv.data.JellyfinServer,
+        client: org.jellyfin.sdk.api.client.ApiClient,
+    ): Boolean {
+        val user = client.userApi.getCurrentUser().content
+        return user.policy?.isAdministrator == true || user.policy?.enableContentDeletion == true
+    }
+
+    /**
+     * Deletes an item only if the current user has administrator permissions.
+     */
+    suspend fun deleteItemAsAdmin(itemId: String): ApiResult<Boolean> {
+        return withServerClient("deleteItemAsAdmin") { server, client ->
+            if (!hasAdminDeletePermission(server, client)) {
+                throw IllegalStateException("Administrator permissions required")
+            }
+            val itemUuid = parseUuid(itemId, "item")
+            client.libraryApi.deleteItem(itemId = itemUuid)
+            updateBus.refreshAll()
+            true
+        }
+    }
 
     suspend fun getAlbumsForArtist(artistId: String): ApiResult<List<BaseItemDto>> =
         withServerClient("getAlbumsForArtist") { server, client ->
@@ -588,7 +721,8 @@ class JellyfinMediaRepository @Inject constructor(
      */
     suspend fun getItemsByPerson(
         personId: String,
-        limit: Int = 50,
+        includeTypes: List<BaseItemKind>? = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
+        limit: Int = 100,
     ): ApiResult<List<BaseItemDto>> =
         withServerClient("getItemsByPerson") { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
@@ -598,17 +732,14 @@ class JellyfinMediaRepository @Inject constructor(
                 userId = userUuid,
                 personIds = listOf(personUuid),
                 recursive = true,
-                includeItemTypes = listOf(
-                    BaseItemKind.MOVIE,
-                    BaseItemKind.SERIES,
-                    BaseItemKind.EPISODE,
-                ),
-                sortBy = listOf(ItemSortBy.PREMIERE_DATE, ItemSortBy.SORT_NAME),
+                includeItemTypes = includeTypes,
+                sortBy = listOf(ItemSortBy.PRODUCTION_YEAR, ItemSortBy.SORT_NAME),
                 sortOrder = listOf(SortOrder.DESCENDING),
                 fields = listOf(
                     org.jellyfin.sdk.model.api.ItemFields.PRIMARY_IMAGE_ASPECT_RATIO,
                     org.jellyfin.sdk.model.api.ItemFields.OVERVIEW,
                     org.jellyfin.sdk.model.api.ItemFields.GENRES,
+                    org.jellyfin.sdk.model.api.ItemFields.PEOPLE,
                 ),
                 limit = limit,
             )

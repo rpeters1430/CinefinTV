@@ -266,9 +266,10 @@ fun PlayerScreen(
                     isPlaying = renderState.isPlaying,
                     onNextEpisodeRequest = { nextId ->
                         coroutineScope.launch {
-                            if (nextId.isNotBlank()) onOpenItem(nextId)
-                            else {
-                                // If no next episode ID but ENDED was called, just exit or handle accordingly
+                            if (nextId.isNotBlank()) {
+                                onOpenItem(nextId)
+                            } else {
+                                onBack()
                             }
                         }
                     }

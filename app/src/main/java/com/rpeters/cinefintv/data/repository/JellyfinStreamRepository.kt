@@ -5,6 +5,9 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
 import com.rpeters.cinefintv.BuildConfig
+import com.rpeters.cinefintv.data.repository.common.BaseJellyfinRepository
+import com.rpeters.cinefintv.data.session.JellyfinSessionManager
+import com.rpeters.cinefintv.data.cache.JellyfinCache
 import com.rpeters.cinefintv.data.DeviceCapabilities
 import com.rpeters.cinefintv.data.model.JellyfinDeviceProfile
 import com.rpeters.cinefintv.utils.SecureLogger
@@ -14,11 +17,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import org.jellyfin.sdk.api.client.extensions.mediaInfoApi
+import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.PlaybackInfoDto
 import org.jellyfin.sdk.model.api.PlaybackInfoResponse
+import com.rpeters.cinefintv.core.OfflineManager
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,10 +38,12 @@ import okhttp3.OkHttpClient
 @Singleton
 class JellyfinStreamRepository @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    private val authRepository: JellyfinAuthRepository,
+    authRepository: JellyfinAuthRepository,
+    sessionManager: JellyfinSessionManager,
+    cache: JellyfinCache,
     private val deviceCapabilities: DeviceCapabilities,
     private val okHttpClient: OkHttpClient,
-) {
+) : BaseJellyfinRepository(authRepository, sessionManager, cache) {
     companion object {
         // Stream quality constants
         private const val DEFAULT_MAX_BITRATE = 140_000_000
@@ -67,10 +74,6 @@ class JellyfinStreamRepository @Inject constructor(
     /**
      * Get transcoded stream URL with specific quality parameters.
      * Uses progressive streaming endpoint for better compatibility and immediate playback.
-     * @param allowVideoStreamCopy When false, forces real video transcoding (required for offline
-     *   quality presets so the server honours MaxWidth/MaxHeight/VideoBitrate instead of copying
-     *   the original stream).
-     * @param allowAudioStreamCopy When false, forces audio transcoding for compatibility.
      */
     fun getTranscodedStreamUrl(
         itemId: String,
@@ -89,27 +92,8 @@ class JellyfinStreamRepository @Inject constructor(
         allowVideoStreamCopy: Boolean = true,
         allowAudioStreamCopy: Boolean = true,
     ): String? {
-        val server = authRepository.getCurrentServer() ?: return null
-
-        // Validate server connection and authentication
-        if (server.accessToken.isNullOrBlank()) {
-            Log.w("JellyfinStreamRepository", "getTranscodedStreamUrl: No access token available")
-            return null
-        }
-
-        // Validate itemId format
-        if (itemId.isBlank()) {
-            Log.w("JellyfinStreamRepository", "getTranscodedStreamUrl: Invalid item ID")
-            return null
-        }
-
-        // Validate that itemId is a valid UUID format
-        runCatching { java.util.UUID.fromString(itemId) }.getOrNull() ?: run {
-            Log.w("JellyfinStreamRepository", "getTranscodedStreamUrl: Invalid item ID format: $itemId")
-            return null
-        }
-
         return try {
+            val server = validateServer()
             val params = mutableListOf<String>()
 
             // Add transcoding parameters
@@ -135,15 +119,13 @@ class JellyfinStreamRepository @Inject constructor(
 
             // Add playback identifiers when available so the server can apply session-specific settings.
             mediaSourceId?.let { params.add("MediaSourceId=$it") }
-            playSessionId?.let { params.add("PlaySessionId=$it") }
-                ?: params.add("PlaySessionId=${java.util.UUID.randomUUID()}")
-            // Auth via header (OkHttp interceptor)
+            params.add("PlaySessionId=${playSessionId ?: UUID.randomUUID()}")
 
-            // Use progressive stream endpoint instead of HLS for better compatibility
-            // HLS (master.m3u8) requires additional manifest parsing and can fail if not ready
             "${server.url}/Videos/$itemId/stream?${params.joinToString("&")}"
-        } catch (e: CancellationException) {
-            throw e
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("JellyfinStreamRepository", "getTranscodedStreamUrl failed: ${e.message}")
+            null
         }
     }
 
@@ -151,41 +133,61 @@ class JellyfinStreamRepository @Inject constructor(
      * Get HLS (HTTP Live Streaming) URL for adaptive bitrate streaming
      */
     fun getHlsStreamUrl(itemId: String): String? {
-        val server = authRepository.getCurrentServer() ?: return null
-        return "${server.url}/Videos/$itemId/master.m3u8?" +
-            "VideoCodec=$DEFAULT_VIDEO_CODEC&" +
-            "AudioCodec=$DEFAULT_AUDIO_CODEC&" +
-            "MaxStreamingBitrate=$DEFAULT_MAX_BITRATE&" +
-            "PlaySessionId=${UUID.randomUUID()}"
+        return try {
+            val server = validateServer()
+            "${server.url}/Videos/$itemId/master.m3u8?" +
+                "VideoCodec=$DEFAULT_VIDEO_CODEC&" +
+                "AudioCodec=$DEFAULT_AUDIO_CODEC&" +
+                "MaxStreamingBitrate=$DEFAULT_MAX_BITRATE&" +
+                "PlaySessionId=${UUID.randomUUID()}"
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
+        }
     }
 
     /**
      * Get DASH (Dynamic Adaptive Streaming over HTTP) URL
      */
     fun getDashStreamUrl(itemId: String): String? {
-        val server = authRepository.getCurrentServer() ?: return null
-        return "${server.url}/Videos/$itemId/stream.mpd?" +
-            "VideoCodec=$DEFAULT_VIDEO_CODEC&" +
-            "AudioCodec=$DEFAULT_AUDIO_CODEC&" +
-            "MaxStreamingBitrate=$DEFAULT_MAX_BITRATE&" +
-            "PlaySessionId=${UUID.randomUUID()}"
+        return try {
+            val server = validateServer()
+            "${server.url}/Videos/$itemId/stream.mpd?" +
+                "VideoCodec=$DEFAULT_VIDEO_CODEC&" +
+                "AudioCodec=$DEFAULT_AUDIO_CODEC&" +
+                "MaxStreamingBitrate=$DEFAULT_MAX_BITRATE&" +
+                "PlaySessionId=${UUID.randomUUID()}"
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
+        }
     }
 
     /**
      * Get download URL for a media item
      */
     fun getDownloadUrl(itemId: String): String? {
-        val server = authRepository.getCurrentServer() ?: return null
-        return "${server.url}/Items/$itemId/Download"
+        return try {
+            val server = validateServer()
+            "${server.url}/Items/$itemId/Download"
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
+        }
     }
 
     /**
      * Get direct stream URL - forces direct play without transcoding
      */
     fun getDirectStreamUrl(itemId: String, container: String? = null): String? {
-        val server = authRepository.getCurrentServer() ?: return null
-        val containerParam = container?.let { "&Container=$it" } ?: ""
-        return "${server.url}/Videos/$itemId/stream?static=true$containerParam"
+        return try {
+            val server = validateServer()
+            val containerParam = container?.let { "&Container=$it" } ?: ""
+            "${server.url}/Videos/$itemId/stream?static=true$containerParam"
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
+        }
     }
 
     /**
@@ -193,16 +195,12 @@ class JellyfinStreamRepository @Inject constructor(
      */
     fun getImageUrl(itemId: String, imageType: String = "Primary", tag: String? = null): String? {
         return try {
-            val server = authRepository.getCurrentServer() ?: return null
-            if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) {
-                Log.w("JellyfinStreamRepository", "getImageUrl: Server not available or missing credentials")
-                return null
-            }
-
+            val server = validateServer()
             val tagParam = tag?.let { "&tag=$it" } ?: ""
             "${server.url}/Items/$itemId/Images/$imageType?maxHeight=$DEFAULT_IMAGE_MAX_HEIGHT&maxWidth=$DEFAULT_IMAGE_MAX_WIDTH$tagParam"
-        } catch (e: CancellationException) {
-            throw e
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
         }
     }
 
@@ -211,16 +209,12 @@ class JellyfinStreamRepository @Inject constructor(
      */
     fun getUserImageUrl(userId: String, tag: String? = null): String? {
         return try {
-            val server = authRepository.getCurrentServer() ?: return null
-            if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) {
-                Log.w("JellyfinStreamRepository", "getUserImageUrl: Server not available or missing credentials")
-                return null
-            }
-
+            val server = validateServer()
             val tagParam = tag?.let { "&tag=$it" } ?: ""
             "${server.url}/Users/$userId/Images/Primary?maxHeight=$DEFAULT_IMAGE_MAX_HEIGHT&maxWidth=$DEFAULT_IMAGE_MAX_WIDTH$tagParam"
-        } catch (e: CancellationException) {
-            throw e
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
         }
     }
 
@@ -229,12 +223,7 @@ class JellyfinStreamRepository @Inject constructor(
      */
     fun getSeriesImageUrl(item: BaseItemDto): String? {
         return try {
-            val server = authRepository.getCurrentServer() ?: return null
-            if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) {
-                Log.w("JellyfinStreamRepository", "getSeriesImageUrl: Server not available or missing credentials")
-                return null
-            }
-
+            val server = validateServer()
             // For episodes, use the series poster if available
             val imageId = if (item.type == BaseItemKind.EPISODE && item.seriesId != null) {
                 item.seriesId.toString()
@@ -242,32 +231,28 @@ class JellyfinStreamRepository @Inject constructor(
                 item.id.toString()
             }
             "${server.url}/Items/$imageId/Images/Primary?maxHeight=$DEFAULT_IMAGE_MAX_HEIGHT&maxWidth=$DEFAULT_IMAGE_MAX_WIDTH"
-        } catch (e: CancellationException) {
-            throw e
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
         }
     }
 
     /**
      * Get Trickplay manifest for smooth seeking thumbnails
      */
-    suspend fun getTrickplayManifest(itemId: String, width: Int = 320): TrickplayManifest? {
-        return try {
-            val server = authRepository.getCurrentServer() ?: return null
-            val url = "${server.url}/Videos/$itemId/Trickplay/$width/manifest.json"
+    suspend fun getTrickplayManifest(itemId: String, width: Int = 320): TrickplayManifest? = executeWithClient("getTrickplayManifest") { client ->
+        val server = validateServer()
+        val url = "${server.url}/Videos/$itemId/Trickplay/$width/manifest.json"
+        
+        val request = okhttp3.Request.Builder()
+            .url(url)
+            .header("X-Emby-Token", server.accessToken ?: "")
+            .build()
             
-            val request = okhttp3.Request.Builder()
-                .url(url)
-                .header("X-Emby-Token", server.accessToken ?: "")
-                .build()
-                
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return null
-                val body = response.body.string()
-                trickplayJson.decodeFromString<TrickplayManifest>(body)
-            }
-        } catch (e: Exception) {
-            Log.w("JellyfinStreamRepository", "Failed to fetch trickplay manifest for $itemId", e)
-            null
+        okHttpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return@executeWithClient null
+            val body = response.body.string()
+            trickplayJson.decodeFromString<TrickplayManifest>(body)
         }
     }
 
@@ -275,18 +260,26 @@ class JellyfinStreamRepository @Inject constructor(
      * Get base URL for Trickplay images
      */
     fun getTrickplayBaseUrl(itemId: String, width: Int = 320): String? {
-        val server = authRepository.getCurrentServer() ?: return null
-        return "${server.url}/Videos/$itemId/Trickplay/$width/"
+        return try {
+            val server = validateServer()
+            "${server.url}/Videos/$itemId/Trickplay/$width/"
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
+        }
     }
 
     /**
      * Get image URL for a specific chapter
      */
     fun getChapterImageUrl(itemId: String, chapterIndex: Int): String? {
-        val server = authRepository.getCurrentServer() ?: return null
-        if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) return null
-        
-        return "${server.url}/Items/$itemId/Images/Chapter/$chapterIndex"
+        return try {
+            val server = validateServer()
+            "${server.url}/Items/$itemId/Images/Chapter/$chapterIndex"
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
+        }
     }
 
     /**
@@ -296,9 +289,7 @@ class JellyfinStreamRepository @Inject constructor(
      */
     fun getPosterCardImageUrl(item: BaseItemDto, parentItem: BaseItemDto? = null): String? {
         return try {
-            val server = authRepository.getCurrentServer() ?: return null
-            if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) return null
-
+            val server = validateServer()
             val itemId = item.id.toString()
 
             if (item.type == BaseItemKind.EPISODE) {
@@ -326,8 +317,9 @@ class JellyfinStreamRepository @Inject constructor(
             }
 
             null
-        } catch (e: CancellationException) {
-            throw e
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
         }
     }
 
@@ -339,9 +331,7 @@ class JellyfinStreamRepository @Inject constructor(
      */
     fun getLandscapeImageUrl(item: BaseItemDto): String? {
         return try {
-            val server = authRepository.getCurrentServer() ?: return null
-            if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) return null
-
+            val server = validateServer()
             val itemId = item.id.toString()
 
             if (item.type == BaseItemKind.EPISODE) {
@@ -367,8 +357,9 @@ class JellyfinStreamRepository @Inject constructor(
             }
 
             null
-        } catch (e: CancellationException) {
-            throw e
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
         }
     }
 
@@ -382,9 +373,7 @@ class JellyfinStreamRepository @Inject constructor(
      */
     fun getWideCardImageUrl(item: BaseItemDto, parentItem: BaseItemDto? = null): String? {
         return try {
-            val server = authRepository.getCurrentServer() ?: return null
-            if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) return null
-
+            val server = validateServer()
             val itemId = item.id.toString()
 
             if (item.type == BaseItemKind.EPISODE) {
@@ -419,8 +408,9 @@ class JellyfinStreamRepository @Inject constructor(
             }
 
             null
-        } catch (e: CancellationException) {
-            throw e
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
         }
     }
 
@@ -436,20 +426,16 @@ class JellyfinStreamRepository @Inject constructor(
      */
     fun getBackdropUrl(item: BaseItemDto): String? {
         return try {
-            val server = authRepository.getCurrentServer() ?: return null
-            if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) {
-                Log.w("JellyfinStreamRepository", "getBackdropUrl: Server not available or missing credentials")
-                return null
-            }
-
+            val server = validateServer()
             val backdropTag = item.backdropImageTags?.firstOrNull()
             if (backdropTag != null) {
                 "${server.url}/Items/${item.id}/Images/Backdrop?tag=$backdropTag&maxHeight=$BACKDROP_MAX_HEIGHT&maxWidth=$BACKDROP_MAX_WIDTH"
             } else {
                 getImageUrl(item.id.toString(), "Primary", item.imageTags?.get(ImageType.PRIMARY))
             }
-        } catch (e: CancellationException) {
-            throw e
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
         }
     }
 
@@ -459,9 +445,7 @@ class JellyfinStreamRepository @Inject constructor(
      */
     fun getBackdropUrlWithFallback(item: BaseItemDto, parentItem: BaseItemDto? = null): String? {
         return try {
-            val server = authRepository.getCurrentServer() ?: return null
-            if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) return null
-
+            val server = validateServer()
             // Try item's own backdrop first
             val backdropTag = item.backdropImageTags?.firstOrNull()
             if (backdropTag != null) {
@@ -478,8 +462,9 @@ class JellyfinStreamRepository @Inject constructor(
 
             // Fall back to existing logic (may use Primary)
             getBackdropUrl(item)
-        } catch (e: CancellationException) {
-            throw e
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
         }
     }
 
@@ -488,20 +473,16 @@ class JellyfinStreamRepository @Inject constructor(
      */
     fun getLogoUrl(item: BaseItemDto): String? {
         return try {
-            val server = authRepository.getCurrentServer() ?: return null
-            if (server.accessToken.isNullOrBlank() || server.url.isNullOrBlank()) {
-                Log.w("JellyfinStreamRepository", "getLogoUrl: Server not available or missing credentials")
-                return null
-            }
-
+            val server = validateServer()
             val logoTag = item.imageTags?.get(ImageType.LOGO)
             if (logoTag != null) {
                 "${server.url}/Items/${item.id}/Images/Logo?tag=$logoTag"
             } else {
                 null
             }
-        } catch (e: CancellationException) {
-            throw e
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
         }
     }
 
@@ -513,12 +494,8 @@ class JellyfinStreamRepository @Inject constructor(
         audioStreamIndex: Int? = null,
         subtitleStreamIndex: Int? = null,
         startPositionMs: Long = 0L,
-    ): PlaybackInfoResponse = withContext(Dispatchers.IO) {
-        val client = authRepository.createApiClient()
-            ?: throw IllegalStateException("Client not authenticated")
-
-        val server = authRepository.getCurrentServer()
-            ?: throw IllegalStateException("No active server found")
+    ): PlaybackInfoResponse = executeWithClient("getPlaybackInfo") { client ->
+        val server = validateServer()
 
         val userUuid = runCatching { UUID.fromString(server.userId ?: "") }.getOrNull()
             ?: throw IllegalStateException("Invalid user UUID: ${server.userId}")
@@ -567,14 +544,166 @@ class JellyfinStreamRepository @Inject constructor(
         ).content
 
         if (BuildConfig.DEBUG) {
+            // Log the response from the server for easier debugging of transcoding decisions
+            val sourceSummaries = response.mediaSources.orEmpty().map { source ->
+                "id=${source.id}, " +
+                    "directPlay=${source.supportsDirectPlay}, " +
+                    "directStream=${source.supportsDirectStream}, " +
+                    "transcode=${source.supportsTranscoding}, " +
+                    "container=${source.container}, " +
+                    "transcodingUrl=${!source.transcodingUrl.isNullOrBlank()}"
+            }
             SecureLogger.d(
                 "JellyfinStreamRepository",
                 "PlaybackInfo response: playSessionId=${response.playSessionId}, " +
+                    "mediaSources=${sourceSummaries.size}",
+            )
+            if (sourceSummaries.isNotEmpty()) {
+                SecureLogger.v("JellyfinStreamRepository", "PlaybackInfo sources: ${sourceSummaries.joinToString(" | ")}")
+            }
+        }
+
+        response
+    }
+
+    /**
+     * Gets playback information for a media item for Cast playback.
+     * Uses device-specific profiles based on the Cast receiver's capabilities.
+     * @param itemId The item ID to get playback info for
+     * @param isShieldOrAndroidTV Whether the Cast receiver is a SHIELD/Android TV (more capable)
+     */
+    suspend fun getCastPlaybackInfo(
+        itemId: String,
+        isShieldOrAndroidTV: Boolean = false,
+        audioStreamIndex: Int? = null,
+        subtitleStreamIndex: Int? = null,
+    ): PlaybackInfoResponse = executeWithClient("getCastPlaybackInfo") { client ->
+        val server = validateServer()
+
+        val userUuid = runCatching { UUID.fromString(server.userId ?: "") }.getOrNull()
+            ?: throw IllegalStateException("Invalid user UUID: ${server.userId}")
+        val itemUuid = runCatching { UUID.fromString(itemId) }.getOrNull()
+            ?: throw IllegalArgumentException("Invalid item ID: $itemId")
+
+        // Use device-specific profile based on Cast receiver capabilities
+        val deviceProfile = if (isShieldOrAndroidTV) {
+            JellyfinDeviceProfile.createShieldCastDeviceProfile()
+        } else {
+            JellyfinDeviceProfile.createChromecastDeviceProfile()
+        }
+
+        // Use adaptive bitrate for Cast based on network quality, but capped
+        // for reliability on the receiver side.
+        val maxBitrate = if (isShieldOrAndroidTV) {
+            minOf(getNetworkBasedMaxBitrate(), 60_000_000)
+        } else {
+            20_000_000
+        }
+
+        val playbackInfoDto = PlaybackInfoDto(
+            userId = userUuid,
+            maxStreamingBitrate = maxBitrate,
+            startTimeTicks = null,
+            audioStreamIndex = audioStreamIndex,
+            subtitleStreamIndex = subtitleStreamIndex,
+            maxAudioChannels = null,
+            mediaSourceId = null,
+            liveStreamId = null,
+            deviceProfile = deviceProfile,
+            enableDirectPlay = isShieldOrAndroidTV,
+            enableDirectStream = true, // Always allow remuxing
+            enableTranscoding = true, // Always allow transcoding as fallback
+            allowVideoStreamCopy = true, // Always allow remuxing
+            allowAudioStreamCopy = true, // Always allow remuxing
+            autoOpenLiveStream = null,
+        )
+
+        if (BuildConfig.DEBUG) {
+            SecureLogger.d(
+                "JellyfinStreamRepository",
+                "Cast PlaybackInfo request for item $itemId: " +
+                    "maxBitrate=${maxBitrate / 1_000_000}Mbps, " +
+                    "isShield=$isShieldOrAndroidTV",
+            )
+        }
+
+        val response = client.mediaInfoApi.getPostedPlaybackInfo(
+            itemId = itemUuid,
+            data = playbackInfoDto,
+        ).content
+
+        if (BuildConfig.DEBUG) {
+            SecureLogger.d(
+                "JellyfinStreamRepository",
+                "Cast PlaybackInfo response: playSessionId=${response.playSessionId}, " +
                     "mediaSources=${response.mediaSources.size}",
             )
         }
 
         response
+    }
+
+    /**
+     * Get transcoding progress for active sessions on this device.
+     *
+     * @param deviceId The device ID to filter sessions by
+     * @param jellyfinItemId Optional item ID to match specific transcoding session
+     * @return TranscodingProgressInfo if an active transcoding session is found, null otherwise
+     */
+    suspend fun getTranscodingProgress(
+        deviceId: String,
+        jellyfinItemId: String? = null,
+    ): TranscodingProgressInfo? = executeWithClient("getTranscodingProgress") { client ->
+        val response = client.sessionApi.getSessions(deviceId = deviceId)
+        val sessions = response.content
+
+        val session = if (jellyfinItemId != null) {
+            sessions.find { session ->
+                session.transcodingInfo != null &&
+                    session.nowPlayingItem?.id?.toString() == jellyfinItemId
+            }
+        } else {
+            sessions.find { it.transcodingInfo != null }
+        }
+
+        session?.transcodingInfo?.let { info ->
+            TranscodingProgressInfo(
+                completionPercentage = info.completionPercentage ?: 0.0,
+                bitrate = info.bitrate,
+                width = info.width,
+                height = info.height,
+            )
+        }
+    }
+
+    fun getBestStreamUrl(itemId: String, offlineManager: OfflineManager, container: String? = null): String? {
+        // Implementation for offline mode integration - currently falls back to streaming
+        return getStreamUrl(itemId)
+    }
+
+    /**
+     * Determines if the repository should use offline mode for operations.
+     *
+     * @param offlineManager The offline manager to check connectivity
+     * @return True if should operate in offline mode
+     */
+    fun shouldUseOfflineMode(offlineManager: OfflineManager): Boolean {
+        return !offlineManager.isCurrentlyOnline()
+    }
+
+    /**
+     * Gets offline-compatible error messages when operations fail.
+     *
+     * @param offlineManager The offline manager for connectivity info
+     * @param operation The operation that failed
+     * @return User-friendly error message with offline context
+     */
+    fun getOfflineContextualError(offlineManager: OfflineManager, operation: String): String {
+        return if (!offlineManager.isCurrentlyOnline()) {
+            offlineManager.getOfflineErrorMessage(operation)
+        } else {
+            "$operation failed. Please check your connection and try again."
+        }
     }
 
     private fun getNetworkBasedMaxBitrate(): Int {
@@ -585,16 +714,32 @@ class JellyfinStreamRepository @Inject constructor(
         val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
 
         return when {
-            // Ethernet: Best quality
+            // Ethernet: Best quality, allow high bitrates
             networkCapabilities?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true -> {
-                120_000_000 // 120 Mbps
+                120_000_000 // 120 Mbps - excellent quality for direct play or 4K transcoding
             }
-            // WiFi: Good quality
+            // WiFi: Good quality, allow good bitrates
             networkCapabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true -> {
-                60_000_000 // 60 Mbps
+                80_000_000 // 80 Mbps - very good quality for 1080p/4K
             }
-            // Default (Mobile or other): Conservative quality
-            else -> 20_000_000 // 20 Mbps
+            // Cellular: Medium quality, conservative bitrate
+            networkCapabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true -> {
+                25_000_000 // 25 Mbps - good quality 1080p transcoding
+            }
+            // Unknown network: Low quality, very conservative
+            else -> {
+                10_000_000 // 10 Mbps - basic 720p/1080p transcoding
+            }
         }
     }
 }
+
+/**
+ * Information about an active transcoding session.
+ */
+data class TranscodingProgressInfo(
+    val completionPercentage: Double,
+    val bitrate: Int? = null,
+    val width: Int? = null,
+    val height: Int? = null,
+)

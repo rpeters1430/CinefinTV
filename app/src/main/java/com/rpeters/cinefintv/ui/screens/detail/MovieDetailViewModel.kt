@@ -71,6 +71,7 @@ sealed class MovieDetailUiState {
 @HiltViewModel
 class MovieDetailViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
+    private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -84,6 +85,39 @@ class MovieDetailViewModel @Inject constructor(
             _uiState.value = MovieDetailUiState.Error("Invalid movie ID")
         } else {
             load()
+            observeUpdateEvents()
+        }
+    }
+
+    private fun observeUpdateEvents() {
+        viewModelScope.launch {
+            updateBus.events.collect { event ->
+                when (event) {
+                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshItem -> {
+                        if (event.itemId == movieId) {
+                            refreshSilently()
+                        }
+                    }
+                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshAll -> {
+                        load()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun refreshSilently() {
+        viewModelScope.launch {
+            val movieResult = repositories.media.getMovieDetails(movieId)
+            if (movieResult is ApiResult.Success) {
+                val movieDto = movieResult.data
+                val currentState = _uiState.value
+                if (currentState is MovieDetailUiState.Content) {
+                    _uiState.value = currentState.copy(
+                        movie = movieDto.toDetailModel()
+                    )
+                }
+            }
         }
     }
 

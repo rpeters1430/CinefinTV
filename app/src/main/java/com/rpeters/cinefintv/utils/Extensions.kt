@@ -76,7 +76,7 @@ fun BaseItemDto.getItemTypeString(): String {
         org.jellyfin.sdk.model.api.BaseItemKind.AUDIO -> "Audio"
         org.jellyfin.sdk.model.api.BaseItemKind.MUSIC_ALBUM -> "MusicAlbum"
         org.jellyfin.sdk.model.api.BaseItemKind.MUSIC_ARTIST -> "MusicArtist"
-        else -> type?.toString() ?: "Unknown"
+        else -> type.toString()
     }
 }
 
