@@ -54,6 +54,10 @@ open class SubtitleAppearancePreferencesRepository(
                     value = preferences[PreferencesKeys.BACKGROUND],
                     default = defaults.background,
                 ),
+                textColor = parseEnum(
+                    value = preferences[PreferencesKeys.TEXT_COLOR],
+                    default = defaults.textColor,
+                ),
             )
         }
 
@@ -72,6 +76,12 @@ open class SubtitleAppearancePreferencesRepository(
     open suspend fun setBackground(background: SubtitleBackground) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.BACKGROUND] = background.name
+        }
+    }
+
+    open suspend fun setTextColor(textColor: SubtitleTextColor) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.TEXT_COLOR] = textColor.name
         }
     }
 
@@ -97,6 +107,7 @@ open class SubtitleAppearancePreferencesRepository(
         val TEXT_SIZE = stringPreferencesKey("subtitle_text_size")
         val FONT = stringPreferencesKey("subtitle_font")
         val BACKGROUND = stringPreferencesKey("subtitle_background")
+        val TEXT_COLOR = stringPreferencesKey("subtitle_text_color")
     }
 
     companion object {

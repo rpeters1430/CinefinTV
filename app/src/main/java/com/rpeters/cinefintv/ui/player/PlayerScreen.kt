@@ -67,6 +67,7 @@ import com.rpeters.cinefintv.ui.components.CinefinDialogSurface
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
 import com.rpeters.cinefintv.data.preferences.SubtitleBackground
 import com.rpeters.cinefintv.data.preferences.SubtitleFont
+import com.rpeters.cinefintv.data.preferences.SubtitleTextColor
 import com.rpeters.cinefintv.ui.player.PlayerConstants.CONTROLS_HIDE_DELAY_MS
 import com.rpeters.cinefintv.ui.player.PlayerConstants.NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS
 import com.rpeters.cinefintv.ui.player.PlayerConstants.PROGRESS_UPDATE_INTERVAL_MS
@@ -89,7 +90,7 @@ private fun PlayerView.applySubtitleAppearance(preferences: SubtitleAppearancePr
         setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, preferences.textSize.sizeSp)
         setStyle(
             CaptionStyleCompat(
-                AndroidColor.WHITE,
+                textColorFor(preferences.textColor),
                 backgroundColorFor(preferences.background),
                 AndroidColor.TRANSPARENT,
                 CaptionStyleCompat.EDGE_TYPE_DROP_SHADOW,
@@ -104,6 +105,14 @@ private fun backgroundColorFor(background: SubtitleBackground): Int = when (back
     SubtitleBackground.NONE -> AndroidColor.TRANSPARENT
     SubtitleBackground.BLACK -> AndroidColor.BLACK
     SubtitleBackground.SEMI_TRANSPARENT -> AndroidColor.argb(160, 0, 0, 0)
+}
+
+private fun textColorFor(textColor: SubtitleTextColor): Int = when (textColor) {
+    SubtitleTextColor.WHITE -> AndroidColor.WHITE
+    SubtitleTextColor.OFF_WHITE -> AndroidColor.rgb(240, 240, 230)
+    SubtitleTextColor.YELLOW -> AndroidColor.rgb(255, 235, 120)
+    SubtitleTextColor.CYAN -> AndroidColor.rgb(150, 235, 255)
+    SubtitleTextColor.GREEN -> AndroidColor.rgb(170, 255, 170)
 }
 
 private fun typefaceFor(font: SubtitleFont): Typeface? = when (font) {

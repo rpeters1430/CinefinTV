@@ -34,12 +34,24 @@ enum class SubtitleBackground {
 }
 
 /**
+ * Subtitle text color options.
+ */
+enum class SubtitleTextColor {
+    WHITE,
+    OFF_WHITE,
+    YELLOW,
+    CYAN,
+    GREEN,
+}
+
+/**
  * Data class representing subtitle appearance preferences.
  */
 data class SubtitleAppearancePreferences(
     val textSize: SubtitleTextSize = SubtitleTextSize.MEDIUM,
     val font: SubtitleFont = SubtitleFont.DEFAULT,
     val background: SubtitleBackground = SubtitleBackground.SEMI_TRANSPARENT,
+    val textColor: SubtitleTextColor = SubtitleTextColor.WHITE,
 ) {
     companion object {
         val DEFAULT = SubtitleAppearancePreferences()

@@ -17,20 +17,16 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.LibraryBooks
-import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Contrast
-import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.HighQuality
-import androidx.compose.material.icons.filled.MotionPhotosPaused
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -47,7 +44,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.material3.Button
 import androidx.tv.material3.Icon
 import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
@@ -63,11 +59,11 @@ import com.rpeters.cinefintv.data.preferences.ResumePlaybackMode
 import com.rpeters.cinefintv.data.preferences.SubtitleBackground
 import com.rpeters.cinefintv.data.preferences.SubtitleFont
 import com.rpeters.cinefintv.data.preferences.SubtitleTextSize
+import com.rpeters.cinefintv.data.preferences.SubtitleTextColor
 import com.rpeters.cinefintv.data.preferences.ThemeMode
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.preferences.VideoSeekIncrement
 import com.rpeters.cinefintv.ui.components.CinefinOptionDialog
-import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
 private enum class SettingsChoiceDialog {
@@ -81,6 +77,7 @@ private enum class SettingsChoiceDialog {
     SUBTITLE_TEXT_SIZE,
     SUBTITLE_FONT,
     SUBTITLE_BACKGROUND,
+    SUBTITLE_TEXT_COLOR,
 }
 
 private enum class SettingsCategory(
@@ -103,21 +100,6 @@ private enum class SettingsCategory(
         description = "Readability and style",
         icon = Icons.Default.Subtitles,
     ),
-    LIBRARY(
-        label = "Library",
-        description = "Collection management",
-        icon = Icons.AutoMirrored.Filled.LibraryBooks,
-    ),
-    CASTING(
-        label = "Casting",
-        description = "Device handoff behavior",
-        icon = Icons.Default.Cast,
-    ),
-    SECURITY(
-        label = "Security",
-        description = "Credential protections",
-        icon = Icons.Default.Security,
-    ),
 }
 
 @Composable
@@ -127,14 +109,26 @@ fun SettingsScreen(
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
     val expressiveColors = LocalCinefinExpressiveColors.current
     val listState = rememberLazyListState()
-    val primaryContentRequester = remember { FocusRequester() }
+    val categoryFocusRequesters = remember {
+        SettingsCategory.entries.associateWith { FocusRequester() }
+    }
+    val firstSectionItemRequester = remember { FocusRequester() }
     var activeDialog by remember { mutableStateOf<SettingsChoiceDialog?>(null) }
     var selectedCategory by remember { mutableStateOf(SettingsCategory.PLAYBACK) }
+    val firstSectionItemModifier = Modifier
+        .focusRequester(firstSectionItemRequester)
+        .focusProperties {
+            up = categoryFocusRequesters.getValue(selectedCategory)
+        }
+
+    LaunchedEffect(selectedCategory) {
+        categoryFocusRequesters.getValue(selectedCategory).requestFocus()
+    }
 
     when (activeDialog) {
         SettingsChoiceDialog.THEME_MODE -> CinefinOptionDialog(
             title = "Theme mode",
-            supportingText = "Select how Cinefin TV should look.",
+            supportingText = "Switch between system, light, dark, and AMOLED black.",
             options = ThemeMode.entries,
             selected = uiState.appearance.themeMode,
             labelFor = { it.name.replace('_', ' ') },
@@ -143,7 +137,7 @@ fun SettingsScreen(
         )
         SettingsChoiceDialog.ACCENT_COLOR -> CinefinOptionDialog(
             title = "Accent color",
-            supportingText = "Used when dynamic colors are disabled.",
+            supportingText = "Fallback accent when dynamic colors are off.",
             options = AccentColor.entries,
             selected = uiState.appearance.accentColor,
             labelFor = { it.name.replace('_', ' ') },
@@ -152,7 +146,7 @@ fun SettingsScreen(
         )
         SettingsChoiceDialog.CONTRAST_LEVEL -> CinefinOptionDialog(
             title = "Contrast level",
-            supportingText = "Increase contrast for readability.",
+            supportingText = "Increase focus-ring and surface separation for readability.",
             options = ContrastLevel.entries,
             selected = uiState.appearance.contrastLevel,
             labelFor = { it.name.replace('_', ' ') },
@@ -222,6 +216,15 @@ fun SettingsScreen(
             onDismissRequest = { activeDialog = null },
             onOptionSelected = viewModel::setSubtitleBackground,
         )
+        SettingsChoiceDialog.SUBTITLE_TEXT_COLOR -> CinefinOptionDialog(
+            title = "Subtitle text color",
+            supportingText = "Change subtitle text color in the player.",
+            options = SubtitleTextColor.entries,
+            selected = uiState.subtitles.textColor,
+            labelFor = { it.name.replace('_', ' ') },
+            onDismissRequest = { activeDialog = null },
+            onOptionSelected = viewModel::setSubtitleTextColor,
+        )
         null -> Unit
     }
 
@@ -246,6 +249,8 @@ fun SettingsScreen(
                 SettingsCategorySelector(
                     selected = selectedCategory,
                     onCategorySelected = { selectedCategory = it },
+                    categoryFocusRequesters = categoryFocusRequesters,
+                    sectionFocusRequester = firstSectionItemRequester,
                 )
             }
 
@@ -271,7 +276,7 @@ fun SettingsScreen(
                     when (selectedCategory) {
                         SettingsCategory.APPEARANCE -> SettingsSectionCard(
                             title = "Appearance",
-                            description = "Material expressive controls and system-level visual behavior.",
+                            description = "Global TV theme controls applied across the app.",
                             icon = Icons.Default.Palette,
                         ) {
                             SettingsChoiceRow(
@@ -280,49 +285,28 @@ fun SettingsScreen(
                                 description = "System, light, dark, or AMOLED black.",
                                 selectedLabel = uiState.appearance.themeMode.name.replace('_', ' '),
                                 onClick = { activeDialog = SettingsChoiceDialog.THEME_MODE },
-                                
+                                modifier = firstSectionItemModifier,
                             )
                             SettingsToggleRow(
                                 icon = Icons.Default.Palette,
                                 title = "Use dynamic colors",
-                                description = "Extract accent colors from media artwork.",
+                                description = "Use artwork-derived accent colors across the TV UI.",
                                 checked = uiState.appearance.useDynamicColors,
                                 onCheckedChange = viewModel::setUseDynamicColors,
                             )
                             SettingsChoiceRow(
                                 icon = Icons.Default.Palette,
                                 title = "Accent color",
-                                description = "Fallback accent when dynamic colors are off.",
+                                description = "Fallback accent color when dynamic colors are disabled.",
                                 selectedLabel = uiState.appearance.accentColor.name.replace('_', ' '),
                                 onClick = { activeDialog = SettingsChoiceDialog.ACCENT_COLOR },
                             )
                             SettingsChoiceRow(
                                 icon = Icons.Default.Contrast,
                                 title = "Contrast level",
-                                description = "Adjust readability with stronger contrast.",
+                                description = "Strengthen focus and surface separation.",
                                 selectedLabel = uiState.appearance.contrastLevel.name.replace('_', ' '),
                                 onClick = { activeDialog = SettingsChoiceDialog.CONTRAST_LEVEL },
-                            )
-                            SettingsToggleRow(
-                                icon = Icons.Default.Palette,
-                                title = "Use themed app icon",
-                                description = "Apply dynamic icon tint where supported.",
-                                checked = uiState.appearance.useThemedIcon,
-                                onCheckedChange = viewModel::setUseThemedIcon,
-                            )
-                            SettingsToggleRow(
-                                icon = Icons.Default.Devices,
-                                title = "Enable edge-to-edge",
-                                description = "Use edge-to-edge layout where available.",
-                                checked = uiState.appearance.enableEdgeToEdge,
-                                onCheckedChange = viewModel::setEnableEdgeToEdge,
-                            )
-                            SettingsToggleRow(
-                                icon = Icons.Default.MotionPhotosPaused,
-                                title = "Reduce motion",
-                                description = "Respect reduced-motion preference where possible.",
-                                checked = uiState.appearance.respectReduceMotion,
-                                onCheckedChange = viewModel::setRespectReduceMotion,
                             )
                         }
                         SettingsCategory.PLAYBACK -> SettingsSectionCard(
@@ -336,7 +320,7 @@ fun SettingsScreen(
                                 description = "Start the next episode near the end of current playback.",
                                 checked = uiState.playback.autoPlayNextEpisode,
                                 onCheckedChange = viewModel::setAutoPlayNextEpisode,
-                                
+                                modifier = firstSectionItemModifier,
                             )
                             SettingsChoiceRow(
                                 icon = Icons.Default.PlayArrow,
@@ -369,7 +353,7 @@ fun SettingsScreen(
                         }
                         SettingsCategory.SUBTITLES -> SettingsSectionCard(
                             title = "Subtitles",
-                            description = "Tune subtitle readability for distance viewing.",
+                            description = "Player subtitle styling that applies during video playback.",
                             icon = Icons.Default.Subtitles,
                         ) {
                             SettingsChoiceRow(
@@ -378,7 +362,7 @@ fun SettingsScreen(
                                 description = "Preferred subtitle text size.",
                                 selectedLabel = uiState.subtitles.textSize.name.replace('_', ' '),
                                 onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_TEXT_SIZE },
-                                
+                                modifier = firstSectionItemModifier,
                             )
                             SettingsChoiceRow(
                                 icon = Icons.Default.ClosedCaption,
@@ -394,56 +378,12 @@ fun SettingsScreen(
                                 selectedLabel = uiState.subtitles.background.name.replace('_', ' '),
                                 onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_BACKGROUND },
                             )
-                        }
-                        SettingsCategory.LIBRARY -> SettingsSectionCard(
-                            title = "Library",
-                            description = "Sensitive management actions for media libraries.",
-                            icon = Icons.AutoMirrored.Filled.LibraryBooks,
-                        ) {
-                            SettingsToggleRow(
-                                icon = Icons.AutoMirrored.Filled.LibraryBooks,
-                                title = "Enable management actions",
-                                description = "Allow delete/refresh actions when available.",
-                                checked = uiState.libraryActions.enableManagementActions,
-                                onCheckedChange = viewModel::setLibraryManagementActions,
-                                
-                            )
-                        }
-                        SettingsCategory.CASTING -> SettingsSectionCard(
-                            title = "Casting",
-                            description = "Connection behavior for external playback devices.",
-                            icon = Icons.Default.Cast,
-                        ) {
-                            SettingsToggleRow(
-                                icon = Icons.Default.Cast,
-                                title = "Auto-reconnect",
-                                description = "Reconnect to the previous cast session when possible.",
-                                checked = uiState.cast.autoReconnect,
-                                onCheckedChange = viewModel::setCastAutoReconnect,
-                                
-                            )
-                            SettingsToggleRow(
-                                icon = Icons.Default.Devices,
-                                title = "Remember last device",
-                                description = uiState.cast.lastDeviceName?.let {
-                                    "Store the last cast target. Last: $it"
-                                } ?: "Store the last cast target for faster reconnects.",
-                                checked = uiState.cast.rememberLastDevice,
-                                onCheckedChange = viewModel::setRememberLastCastDevice,
-                            )
-                        }
-                        SettingsCategory.SECURITY -> SettingsSectionCard(
-                            title = "Security",
-                            description = "Credential access protection and auth hardening.",
-                            icon = Icons.Default.Security,
-                        ) {
-                            SettingsToggleRow(
-                                icon = Icons.Default.Security,
-                                title = "Require strong auth for credentials",
-                                description = "Require stronger device auth before credential access.",
-                                checked = uiState.credentialSecurity.requireStrongAuthForCredentials,
-                                onCheckedChange = viewModel::setRequireStrongAuthForCredentials,
-                                
+                            SettingsChoiceRow(
+                                icon = Icons.Default.ClosedCaption,
+                                title = "Text color",
+                                description = "Set the subtitle text color used in the player.",
+                                selectedLabel = uiState.subtitles.textColor.name.replace('_', ' '),
+                                onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_TEXT_COLOR },
                             )
                         }
                     }
@@ -534,38 +474,61 @@ private fun StatusPill(text: String) {
 private fun SettingsCategorySelector(
     selected: SettingsCategory,
     onCategorySelected: (SettingsCategory) -> Unit,
-    initialModifier: Modifier = Modifier,
+    categoryFocusRequesters: Map<SettingsCategory, FocusRequester>,
+    sectionFocusRequester: FocusRequester,
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         itemsIndexed(SettingsCategory.entries) { index, category ->
-            // Use the initialModifier (which has the primary requester) for the SELECTED item
-            // so that navigating from the TabBar hits the active category.
-            val modifier = if (category == selected) initialModifier else Modifier
-            if (category == selected) {
-                Button(
-                    onClick = { onCategorySelected(category) },
-                    modifier = modifier,
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(imageVector = category.icon, contentDescription = null)
-                        Text(text = category.label)
+            val isSelected = category == selected
+            OutlinedButton(
+                onClick = { onCategorySelected(category) },
+                modifier = Modifier
+                    .focusRequester(categoryFocusRequesters.getValue(category))
+                    .onFocusChanged { state ->
+                        if (state.hasFocus && !isSelected) {
+                            onCategorySelected(category)
+                        }
                     }
-                }
-            } else {
-                OutlinedButton(
-                    onClick = { onCategorySelected(category) },
-                    modifier = modifier,
+                    .focusProperties {
+                        up = FocusRequester.Cancel
+                        down = sectionFocusRequester
+                        left = categoryFocusRequesters[SettingsCategory.entries.getOrNull(index - 1)]
+                            ?: FocusRequester.Cancel
+                        right = categoryFocusRequesters[SettingsCategory.entries.getOrNull(index + 1)]
+                            ?: FocusRequester.Cancel
+                    },
+                colors = androidx.tv.material3.ButtonDefaults.colors(
+                    containerColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                    focusedContainerColor = if (isSelected) Color.White else expressiveColors.focusGlow.copy(alpha = 0.24f),
+                    focusedContentColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.White,
+                ),
+                border = androidx.tv.material3.ButtonDefaults.border(
+                    border = androidx.tv.material3.Border(
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = 1.dp,
+                            color = if (isSelected) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                            } else {
+                                expressiveColors.borderSubtle.copy(alpha = 0.7f)
+                            },
+                        ),
+                    ),
+                    focusedBorder = androidx.tv.material3.Border(
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = 2.dp,
+                            color = expressiveColors.focusRing,
+                        ),
+                    ),
+                ),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(imageVector = category.icon, contentDescription = null)
-                        Text(text = category.label)
-                    }
+                    Icon(imageVector = category.icon, contentDescription = null)
+                    Text(text = category.label)
                 }
             }
         }

@@ -19,6 +19,7 @@ import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferencesRepos
 import com.rpeters.cinefintv.data.preferences.SubtitleBackground
 import com.rpeters.cinefintv.data.preferences.SubtitleFont
 import com.rpeters.cinefintv.data.preferences.SubtitleTextSize
+import com.rpeters.cinefintv.data.preferences.SubtitleTextColor
 import com.rpeters.cinefintv.data.preferences.ThemeMode
 import com.rpeters.cinefintv.data.preferences.ThemePreferences
 import com.rpeters.cinefintv.data.preferences.ThemePreferencesRepository
@@ -159,6 +160,11 @@ class SettingsViewModel @Inject constructor(
     fun setSubtitleFont(font: SubtitleFont) {
         updatePreference { subtitleAppearancePreferencesRepository.setFont(font) }
         _uiState.update { it.copy(subtitles = it.subtitles.copy(font = font)) }
+    }
+
+    fun setSubtitleTextColor(textColor: SubtitleTextColor) {
+        updatePreference { subtitleAppearancePreferencesRepository.setTextColor(textColor) }
+        _uiState.update { it.copy(subtitles = it.subtitles.copy(textColor = textColor)) }
     }
 
     fun setLibraryManagementActions(enabled: Boolean) {

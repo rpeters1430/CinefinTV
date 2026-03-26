@@ -93,7 +93,10 @@ fun CinefinTvApp(
     
     CinefinTvTheme(
         seedColor = themeViewModel.currentSeedColor,
-        useDynamicColors = themePrefs.useDynamicColors
+        themeMode = themePrefs.themeMode,
+        useDynamicColors = themePrefs.useDynamicColors,
+        accentColor = themePrefs.accentColor,
+        contrastLevel = themePrefs.contrastLevel,
     ) {
         CompositionLocalProvider(LocalCinefinThemeController provides themeViewModel) {
             val navController = rememberNavController()
