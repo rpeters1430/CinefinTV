@@ -19,10 +19,6 @@ import javax.inject.Singleton
 @Retention(AnnotationRetention.BINARY)
 annotation class PlaybackPreferencesDataStore
 
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class OfflineProgressDataStore
-
 @Module
 @InstallIn(SingletonComponent::class)
 object DataStoreModule {
@@ -38,20 +34,6 @@ object DataStoreModule {
             corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
             scope = scope,
             produceFile = { context.preferencesDataStoreFile("playback_preferences") },
-        )
-    }
-
-    @Provides
-    @Singleton
-    @OfflineProgressDataStore
-    fun provideOfflineProgressDataStore(
-        @ApplicationContext context: Context,
-        @ApplicationScope scope: kotlinx.coroutines.CoroutineScope,
-    ): DataStore<Preferences> {
-        return PreferenceDataStoreFactory.create(
-            corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
-            scope = scope,
-            produceFile = { context.preferencesDataStoreFile("offline_progress_updates") },
         )
     }
 }

@@ -23,7 +23,6 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.PlaybackInfoDto
 import org.jellyfin.sdk.model.api.PlaybackInfoResponse
-import com.rpeters.cinefintv.core.OfflineManager
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -567,83 +566,6 @@ class JellyfinStreamRepository @Inject constructor(
     }
 
     /**
-     * Gets playback information for a media item for Cast playback.
-     * Uses device-specific profiles based on the Cast receiver's capabilities.
-     * @param itemId The item ID to get playback info for
-     * @param isShieldOrAndroidTV Whether the Cast receiver is a SHIELD/Android TV (more capable)
-     */
-    suspend fun getCastPlaybackInfo(
-        itemId: String,
-        isShieldOrAndroidTV: Boolean = false,
-        audioStreamIndex: Int? = null,
-        subtitleStreamIndex: Int? = null,
-    ): PlaybackInfoResponse = executeWithClient("getCastPlaybackInfo") { client ->
-        val server = validateServer()
-
-        val userUuid = runCatching { UUID.fromString(server.userId ?: "") }.getOrNull()
-            ?: throw IllegalStateException("Invalid user UUID: ${server.userId}")
-        val itemUuid = runCatching { UUID.fromString(itemId) }.getOrNull()
-            ?: throw IllegalArgumentException("Invalid item ID: $itemId")
-
-        // Use device-specific profile based on Cast receiver capabilities
-        val deviceProfile = if (isShieldOrAndroidTV) {
-            JellyfinDeviceProfile.createShieldCastDeviceProfile()
-        } else {
-            JellyfinDeviceProfile.createChromecastDeviceProfile()
-        }
-
-        // Use adaptive bitrate for Cast based on network quality, but capped
-        // for reliability on the receiver side.
-        val maxBitrate = if (isShieldOrAndroidTV) {
-            minOf(getNetworkBasedMaxBitrate(), 60_000_000)
-        } else {
-            20_000_000
-        }
-
-        val playbackInfoDto = PlaybackInfoDto(
-            userId = userUuid,
-            maxStreamingBitrate = maxBitrate,
-            startTimeTicks = null,
-            audioStreamIndex = audioStreamIndex,
-            subtitleStreamIndex = subtitleStreamIndex,
-            maxAudioChannels = null,
-            mediaSourceId = null,
-            liveStreamId = null,
-            deviceProfile = deviceProfile,
-            enableDirectPlay = isShieldOrAndroidTV,
-            enableDirectStream = true, // Always allow remuxing
-            enableTranscoding = true, // Always allow transcoding as fallback
-            allowVideoStreamCopy = true, // Always allow remuxing
-            allowAudioStreamCopy = true, // Always allow remuxing
-            autoOpenLiveStream = null,
-        )
-
-        if (BuildConfig.DEBUG) {
-            SecureLogger.d(
-                "JellyfinStreamRepository",
-                "Cast PlaybackInfo request for item $itemId: " +
-                    "maxBitrate=${maxBitrate / 1_000_000}Mbps, " +
-                    "isShield=$isShieldOrAndroidTV",
-            )
-        }
-
-        val response = client.mediaInfoApi.getPostedPlaybackInfo(
-            itemId = itemUuid,
-            data = playbackInfoDto,
-        ).content
-
-        if (BuildConfig.DEBUG) {
-            SecureLogger.d(
-                "JellyfinStreamRepository",
-                "Cast PlaybackInfo response: playSessionId=${response.playSessionId}, " +
-                    "mediaSources=${response.mediaSources.size}",
-            )
-        }
-
-        response
-    }
-
-    /**
      * Get transcoding progress for active sessions on this device.
      *
      * @param deviceId The device ID to filter sessions by
@@ -673,36 +595,6 @@ class JellyfinStreamRepository @Inject constructor(
                 width = info.width,
                 height = info.height,
             )
-        }
-    }
-
-    fun getBestStreamUrl(itemId: String, offlineManager: OfflineManager, container: String? = null): String? {
-        // Implementation for offline mode integration - currently falls back to streaming
-        return getStreamUrl(itemId)
-    }
-
-    /**
-     * Determines if the repository should use offline mode for operations.
-     *
-     * @param offlineManager The offline manager to check connectivity
-     * @return True if should operate in offline mode
-     */
-    fun shouldUseOfflineMode(offlineManager: OfflineManager): Boolean {
-        return !offlineManager.isCurrentlyOnline()
-    }
-
-    /**
-     * Gets offline-compatible error messages when operations fail.
-     *
-     * @param offlineManager The offline manager for connectivity info
-     * @param operation The operation that failed
-     * @return User-friendly error message with offline context
-     */
-    fun getOfflineContextualError(offlineManager: OfflineManager, operation: String): String {
-        return if (!offlineManager.isCurrentlyOnline()) {
-            offlineManager.getOfflineErrorMessage(operation)
-        } else {
-            "$operation failed. Please check your connection and try again."
         }
     }
 

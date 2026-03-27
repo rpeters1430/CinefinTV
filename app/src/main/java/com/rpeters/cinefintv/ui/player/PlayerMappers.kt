@@ -13,7 +13,7 @@ object PlayerMappers {
             .mapIndexed { index, stream ->
                 TrackOption(
                     id = "audio-${stream.index}",
-                    label = toTrackLabel(stream, "Audio", index + 1),
+                    label = toAudioTrackLabel(stream, index + 1),
                     language = stream.language,
                     streamIndex = stream.index,
                 )
@@ -26,16 +26,17 @@ object PlayerMappers {
             .mapIndexed { index, stream ->
                 TrackOption(
                     id = "sub-${stream.index}",
-                    label = toTrackLabel(stream, "Subtitle", index + 1),
+                    label = toSubtitleTrackLabel(stream, index + 1),
                     language = stream.language,
                     streamIndex = stream.index,
                 )
             }
 
-    private fun toTrackLabel(stream: MediaStream, prefix: String, fallbackNumber: Int): String {
+    private fun toAudioTrackLabel(stream: MediaStream, fallbackNumber: Int): String {
+        stream.displayTitle?.trim()?.takeIf { it.isNotBlank() }?.let { return it }
+
         val parts = listOfNotNull(
             stream.title?.takeIf { it.isNotBlank() },
-            stream.displayTitle?.takeIf { it.isNotBlank() },
             stream.language?.takeIf { it.isNotBlank() },
             stream.codec?.takeIf { it.isNotBlank() }?.uppercase(),
         ).distinct()
@@ -43,7 +44,25 @@ object PlayerMappers {
         return if (parts.isNotEmpty()) {
             parts.joinToString(" • ")
         } else {
-            "$prefix $fallbackNumber"
+            "Audio $fallbackNumber"
         }
+    }
+
+    private fun toSubtitleTrackLabel(stream: MediaStream, fallbackNumber: Int): String {
+        val baseLabel = stream.displayTitle?.trim()?.takeIf { it.isNotBlank() }
+            ?: listOfNotNull(
+                stream.title?.takeIf { it.isNotBlank() },
+                stream.language?.takeIf { it.isNotBlank() },
+                stream.codec?.takeIf { it.isNotBlank() }?.uppercase(),
+            ).distinct().joinToString(" • ").ifBlank { "Subtitle $fallbackNumber" }
+
+        val badges = buildList {
+            if (stream.isForced) add(stream.localizedForced?.takeIf { it.isNotBlank() } ?: "Forced")
+            if (stream.isDefault) add(stream.localizedDefault?.takeIf { it.isNotBlank() } ?: "Default")
+            if (stream.isHearingImpaired) add(stream.localizedHearingImpaired?.takeIf { it.isNotBlank() } ?: "SDH")
+            if (stream.isExternal) add(stream.localizedExternal?.takeIf { it.isNotBlank() } ?: "External")
+        }.distinct()
+
+        return listOf(baseLabel, *badges.toTypedArray()).joinToString(" • ")
     }
 }

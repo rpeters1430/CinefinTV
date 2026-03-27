@@ -3,9 +3,10 @@ package com.rpeters.cinefintv.ui.player
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.preferences.VideoSeekIncrement
-
+import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.util.concurrent.ConcurrentHashMap
 
 data class TrackOption(
     val id: String,
@@ -33,6 +34,16 @@ data class TrickplayTile(
     @SerialName("RowCount") val rowCount: Int,
     @SerialName("ColumnCount") val columnCount: Int
 )
+
+object TrickplayTileBitmapCache {
+    private val cache = ConcurrentHashMap<String, ImageBitmap>()
+
+    fun get(tileUrl: String): ImageBitmap? = cache[tileUrl]
+
+    fun put(tileUrl: String, bitmap: ImageBitmap) {
+        cache.putIfAbsent(tileUrl, bitmap)
+    }
+}
 
 data class PlayerUiState(
     val itemId: String = "",

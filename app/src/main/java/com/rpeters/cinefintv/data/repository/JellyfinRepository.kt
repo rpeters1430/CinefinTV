@@ -1,7 +1,6 @@
 package com.rpeters.cinefintv.data.repository
 
 import android.content.Context
-import com.rpeters.cinefintv.core.OfflineManager
 import com.rpeters.cinefintv.core.constants.Constants
 import com.rpeters.cinefintv.data.DeviceCapabilities
 import com.rpeters.cinefintv.data.JellyfinServer
@@ -280,19 +279,6 @@ class JellyfinRepository @Inject constructor(
             startPositionMs = startPositionMs,
         )
 
-    suspend fun getCastPlaybackInfo(
-        itemId: String,
-        isShieldOrAndroidTV: Boolean = false,
-        audioStreamIndex: Int? = null,
-        subtitleStreamIndex: Int? = null,
-    ): PlaybackInfoResponse =
-        streamRepository.getCastPlaybackInfo(
-            itemId = itemId,
-            isShieldOrAndroidTV = isShieldOrAndroidTV,
-            audioStreamIndex = audioStreamIndex,
-            subtitleStreamIndex = subtitleStreamIndex,
-        )
-
     fun getCurrentServer(): JellyfinServer? = authRepository.getCurrentServer()
 
     fun isUserAuthenticated(): Boolean = authRepository.isUserAuthenticated()
@@ -308,15 +294,6 @@ class JellyfinRepository @Inject constructor(
 
     fun getDirectStreamUrl(itemId: String, container: String? = null): String? =
         streamRepository.getDirectStreamUrl(itemId, container)
-
-    fun getBestStreamUrl(itemId: String, offlineManager: OfflineManager, container: String? = null): String? =
-        streamRepository.getBestStreamUrl(itemId, offlineManager, container)
-
-    fun shouldUseOfflineMode(offlineManager: OfflineManager): Boolean =
-        streamRepository.shouldUseOfflineMode(offlineManager)
-
-    fun getOfflineContextualError(offlineManager: OfflineManager, operation: String): String =
-        streamRepository.getOfflineContextualError(offlineManager, operation)
 
     private fun parseUuid(id: String, idType: String): UUID = RepositoryUtils.parseUuid(id, idType)
 }

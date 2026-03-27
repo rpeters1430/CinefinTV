@@ -4,11 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.preferences.AccentColor
 import com.rpeters.cinefintv.data.preferences.AudioChannelPreference
-import com.rpeters.cinefintv.data.preferences.CastPreferences
-import com.rpeters.cinefintv.data.preferences.CastPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.ContrastLevel
-import com.rpeters.cinefintv.data.preferences.CredentialSecurityPreferences
-import com.rpeters.cinefintv.data.preferences.CredentialSecurityPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.LibraryActionsPreferences
 import com.rpeters.cinefintv.data.preferences.LibraryActionsPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferences
@@ -40,8 +36,6 @@ data class SettingsUiState(
     val playback: PlaybackPreferences = PlaybackPreferences.DEFAULT,
     val subtitles: SubtitleAppearancePreferences = SubtitleAppearancePreferences.DEFAULT,
     val libraryActions: LibraryActionsPreferences = LibraryActionsPreferences.DEFAULT,
-    val cast: CastPreferences = CastPreferences.DEFAULT,
-    val credentialSecurity: CredentialSecurityPreferences = CredentialSecurityPreferences.DEFAULT,
 )
 
 @HiltViewModel
@@ -50,8 +44,6 @@ class SettingsViewModel @Inject constructor(
     private val playbackPreferencesRepository: PlaybackPreferencesRepository,
     private val subtitleAppearancePreferencesRepository: SubtitleAppearancePreferencesRepository,
     private val libraryActionsPreferencesRepository: LibraryActionsPreferencesRepository,
-    private val castPreferencesRepository: CastPreferencesRepository,
-    private val credentialSecurityPreferencesRepository: CredentialSecurityPreferencesRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -63,23 +55,17 @@ class SettingsViewModel @Inject constructor(
                 playbackPreferencesRepository.preferences,
                 subtitleAppearancePreferencesRepository.preferencesFlow,
                 libraryActionsPreferencesRepository.preferences,
-                castPreferencesRepository.castPreferencesFlow,
-                credentialSecurityPreferencesRepository.preferences,
             ) { values: Array<Any> ->
                 val appearance = values[0] as ThemePreferences
                 val playback = values[1] as PlaybackPreferences
                 val subtitles = values[2] as SubtitleAppearancePreferences
                 val libraryActions = values[3] as LibraryActionsPreferences
-                val cast = values[4] as CastPreferences
-                val credentialSecurity = values[5] as CredentialSecurityPreferences
                 SettingsUiState(
                     isLoading = false,
                     appearance = appearance,
                     playback = playback,
                     subtitles = subtitles,
                     libraryActions = libraryActions,
-                    cast = cast,
-                    credentialSecurity = credentialSecurity,
                 )
             }.collect { state ->
                 _uiState.value = state
@@ -170,29 +156,6 @@ class SettingsViewModel @Inject constructor(
     fun setLibraryManagementActions(enabled: Boolean) {
         updatePreference { libraryActionsPreferencesRepository.setEnableManagementActions(enabled) }
         _uiState.update { it.copy(libraryActions = it.libraryActions.copy(enableManagementActions = enabled)) }
-    }
-
-    fun setCastAutoReconnect(enabled: Boolean) {
-        updatePreference { castPreferencesRepository.setAutoReconnect(enabled) }
-        _uiState.update { it.copy(cast = it.cast.copy(autoReconnect = enabled)) }
-    }
-
-    fun setRememberLastCastDevice(enabled: Boolean) {
-        updatePreference { castPreferencesRepository.setRememberLastDevice(enabled) }
-        _uiState.update { it.copy(cast = it.cast.copy(rememberLastDevice = enabled)) }
-    }
-
-    fun setRequireStrongAuthForCredentials(enabled: Boolean) {
-        updatePreference {
-            credentialSecurityPreferencesRepository.setRequireStrongAuthForCredentials(enabled)
-        }
-        _uiState.update {
-            it.copy(
-                credentialSecurity = it.credentialSecurity.copy(
-                    requireStrongAuthForCredentials = enabled,
-                ),
-            )
-        }
     }
 
     private fun updatePreference(block: suspend () -> Unit) {

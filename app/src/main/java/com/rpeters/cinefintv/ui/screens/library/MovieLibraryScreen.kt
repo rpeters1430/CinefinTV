@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.ui.screens.library
 
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -13,6 +14,7 @@ fun MovieLibraryScreen(
     viewModel: MovieLibraryViewModel = hiltViewModel()
 ) {
     val pagedItems = viewModel.pagedItems.collectAsLazyPagingItems()
+    val gridState = rememberLazyGridState()
     val uiState = when (val refreshState = pagedItems.loadState.refresh) {
         is LoadState.Loading -> LibraryGridUiState.Loading
         is LoadState.Error -> LibraryGridUiState.Error(refreshState.error.message ?: "Unknown error")
@@ -34,6 +36,7 @@ fun MovieLibraryScreen(
         emptyTitle = "No movies found",
         columnCount = 5,
         aspectRatio = 2f / 3f,
+        gridState = gridState,
         onOpenItem = onOpenItem,
         onRetry = { pagedItems.retry() },
     )

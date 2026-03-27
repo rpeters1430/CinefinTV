@@ -23,6 +23,7 @@ import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import javax.inject.Inject
@@ -39,7 +40,7 @@ data class LibraryCardModel(
 )
 
 abstract class BaseLibraryViewModel(
-    private val repositories: JellyfinRepositoryCoordinator,
+    protected val repositories: JellyfinRepositoryCoordinator,
     private val itemTypes: List<BaseItemKind>,
 ) : ViewModel() {
 
@@ -108,5 +109,36 @@ class TvShowLibraryViewModel @Inject constructor(
 
 @HiltViewModel
 class StuffLibraryViewModel @Inject constructor(
-    repositories: JellyfinRepositoryCoordinator
+    repositories: JellyfinRepositoryCoordinator,
+    private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
 ) : BaseLibraryViewModel(repositories, listOf(BaseItemKind.VIDEO, BaseItemKind.COLLECTION_FOLDER))
+
+{
+    fun markWatched(itemId: String, onComplete: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            if (repositories.user.markAsWatched(itemId) is com.rpeters.cinefintv.data.repository.common.ApiResult.Success) {
+                updateBus.refreshItem(itemId)
+                onComplete?.invoke()
+            }
+        }
+    }
+
+    fun markUnwatched(itemId: String, onComplete: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            if (repositories.user.markAsUnwatched(itemId) is com.rpeters.cinefintv.data.repository.common.ApiResult.Success) {
+                updateBus.refreshItem(itemId)
+                onComplete?.invoke()
+            }
+        }
+    }
+
+    fun deleteItem(itemId: String, onDeleted: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            val result = repositories.user.deleteItemAsAdmin(itemId)
+            if (result is com.rpeters.cinefintv.data.repository.common.ApiResult.Success) {
+                updateBus.refreshAll()
+                onDeleted?.invoke()
+            }
+        }
+    }
+}

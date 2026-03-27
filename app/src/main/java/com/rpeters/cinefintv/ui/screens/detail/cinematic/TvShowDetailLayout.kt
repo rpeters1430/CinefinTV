@@ -140,6 +140,9 @@ fun TvShowDetailLayout(
                             TvMediaCard(
                                 title = season.title,
                                 imageUrl = season.imageUrl,
+                                watchStatus = season.watchStatus,
+                                playbackProgress = season.playbackProgress,
+                                unwatchedCount = season.unwatchedCount.takeIf { it > 0 },
                                 aspectRatio = 2f / 3f,
                                 modifier = if (season.id == seasons.firstOrNull()?.id) {
                                     Modifier
@@ -224,6 +227,8 @@ fun TvShowDetailLayout(
                             TvMediaCard(
                                 title = item.title,
                                 imageUrl = item.imageUrl,
+                                watchStatus = item.watchStatus,
+                                playbackProgress = item.playbackProgress,
                                 aspectRatio = 2f / 3f,
                                 modifier = if (item.id == similarItems.firstOrNull()?.id) {
                                     Modifier

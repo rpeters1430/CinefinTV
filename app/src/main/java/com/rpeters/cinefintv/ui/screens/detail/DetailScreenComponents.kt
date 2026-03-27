@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailTestTags
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -88,35 +89,24 @@ suspend fun focusDetailScreenAtTop(
     initialFocusRequester: FocusRequester,
     anchorFocusRequester: FocusRequester? = null,
 ) {
-    // 1. Initial snap to top
     listState.scrollToItem(0)
-    
-    // 2. Wait for composition to settle
+
     snapshotFlow {
         val layoutInfo = listState.layoutInfo
         layoutInfo.viewportEndOffset > layoutInfo.viewportStartOffset &&
             layoutInfo.visibleItemsInfo.any { it.index == 0 }
     }.first { it }
-    
-    // 3. Ground focus at the anchor first if available
+
     if (anchorFocusRequester != null) {
         runCatching { anchorFocusRequester.requestFocus() }
-        listState.scrollToItem(0)
-        androidx.compose.runtime.withFrameNanos { }
+        withFrameNanos { }
     }
 
-    // 4. Transfer focus to the actual primary action
     runCatching { initialFocusRequester.requestFocus() }
-    
-    // 5. Short loop to suppress BringIntoView jitter during the focus transition
-    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-        val startTime = System.currentTimeMillis()
-        while (System.currentTimeMillis() - startTime < 400) {
-            if (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0) {
-                listState.scrollToItem(0)
-            }
-            androidx.compose.runtime.withFrameNanos { }
-        }
+
+    withFrameNanos { }
+    if (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0) {
+        listState.scrollToItem(0)
     }
 }
 
@@ -641,6 +631,7 @@ fun EpisodeListRow(
     modifier: Modifier = Modifier,
     isNext: Boolean = false,
     onFocus: () -> Unit = {},
+    onMenuAction: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
@@ -653,6 +644,19 @@ fun EpisodeListRow(
             .fillMaxWidth()
             .padding(horizontal = 52.dp, vertical = 8.dp)
             .testTag(DetailTestTags.EpisodeItem)
+            .onPreviewKeyEvent { keyEvent ->
+                val nativeEvent = keyEvent.nativeKeyEvent
+                if (
+                    onMenuAction != null &&
+                    nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_MENU
+                ) {
+                    onMenuAction()
+                    true
+                } else {
+                    false
+                }
+            }
             .onFocusChanged {
                 val focused = it.isFocused || it.hasFocus
                 if (focused != isFocused) {

@@ -26,6 +26,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.MovieDetailLayout
 
 @Composable
@@ -37,6 +38,7 @@ fun MovieDetailScreen(
     viewModel: MovieDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showDeleteDialog by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -80,6 +82,17 @@ fun MovieDetailScreen(
             )
             is MovieDetailUiState.Content -> {
                 val movie = state.movie
+                if (showDeleteDialog) {
+                    ConfirmDeleteDialog(
+                        title = "Delete ${movie.title}?",
+                        message = "This will remove the item from your Jellyfin library.",
+                        onDismissRequest = { showDeleteDialog = false },
+                        onConfirmDelete = {
+                            showDeleteDialog = false
+                            viewModel.deleteMovie(onBack)
+                        },
+                    )
+                }
 
                 val factItems = remember(movie) {
                     buildList {
@@ -142,7 +155,16 @@ fun MovieDetailScreen(
                     genres = movie.genres,
                     primaryActionLabel = primaryActionLabel,
                     onPrimaryAction = { onPlayMovie(movie.id) },
-                    secondaryActions = listOf("Watchlist" to {}),
+                    secondaryActions = buildList {
+                        add(
+                            if (movie.isWatched) {
+                                "Mark Unwatched" to { viewModel.markUnwatched() }
+                            } else {
+                                "Mark Watched" to { viewModel.markWatched() }
+                            }
+                        )
+                        add("Delete" to { showDeleteDialog = true })
+                    },
                     topFocusRequester = topFocus,
                     primaryActionFocusRequester = primaryActionFocus,
                     description = movie.overview ?: "",

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
+import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +45,8 @@ data class SeasonModel(
     val imageUrl: String?,
     val episodeCount: Int?,
     val unwatchedCount: Int,
+    val watchStatus: WatchStatus,
+    val playbackProgress: Float?,
 )
 
 sealed class TvShowDetailUiState {
@@ -271,12 +274,21 @@ class TvShowDetailViewModel @Inject constructor(
     }
 
     private fun BaseItemDto.toSeasonModel(): SeasonModel {
+        val watchedPercentage = getWatchedPercentage()
+        val watchStatus = when {
+            isWatched() -> WatchStatus.WATCHED
+            canResume() -> WatchStatus.IN_PROGRESS
+            else -> WatchStatus.NONE
+        }
+
         return SeasonModel(
             id = id.toString(),
             title = getDisplayTitle(),
             imageUrl = repositories.stream.getWideCardImageUrl(this),
             episodeCount = childCount,
-            unwatchedCount = userData?.unplayedItemCount ?: 0
+            unwatchedCount = userData?.unplayedItemCount ?: 0,
+            watchStatus = watchStatus,
+            playbackProgress = if (canResume()) watchedPercentage.toFloat() / 100f else null,
         )
     }
 
@@ -321,10 +333,19 @@ class TvShowDetailViewModel @Inject constructor(
     }
 
     private fun BaseItemDto.toSimilarModel(): SimilarMovieModel {
+        val watchedPercentage = getWatchedPercentage()
+        val watchStatus = when {
+            isWatched() -> WatchStatus.WATCHED
+            canResume() -> WatchStatus.IN_PROGRESS
+            else -> WatchStatus.NONE
+        }
+
         return SimilarMovieModel(
             id = id.toString(),
             title = getDisplayTitle(),
             imageUrl = repositories.stream.getPosterCardImageUrl(this),
+            watchStatus = watchStatus,
+            playbackProgress = if (canResume()) watchedPercentage.toFloat() / 100f else null,
         )
     }
 }

@@ -21,6 +21,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -71,6 +73,7 @@ internal fun SearchScreenContent(
     val gridState = rememberLazyGridState()
     val primaryContentRequester = remember { FocusRequester() }
     val firstResultFocusRequester = remember { FocusRequester() }
+    var lastFocusedResultId by rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
 
     Box(
         modifier = Modifier
@@ -160,6 +163,8 @@ internal fun SearchScreenContent(
                 }
 
                 else -> {
+                    val restoredFocusIndex = uiState.results.indexOfFirst { it.id == lastFocusedResultId }
+                        .takeIf { it >= 0 } ?: 0
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         Text(
                             text = "${uiState.results.size} results",
@@ -177,18 +182,19 @@ internal fun SearchScreenContent(
                             watchStatus = item.watchStatus,
                             playbackProgress = item.playbackProgress,
                             unwatchedCount = item.unwatchedCount,
-                            modifier = if (index < 6) {
-                                Modifier
-                                    .testTag(SearchTestTags.resultItem(index))
-                                    .then(
-                                        if (index == 0) Modifier.focusRequester(firstResultFocusRequester) else Modifier
-                                    )
-                                    .focusProperties {
-                                        up = primaryContentRequester
+                            onFocus = { lastFocusedResultId = item.id },
+                            modifier = Modifier
+                                .testTag(SearchTestTags.resultItem(index))
+                                .then(
+                                    if (index == restoredFocusIndex) Modifier.focusRequester(firstResultFocusRequester) else Modifier
+                                )
+                                .then(
+                                    if (index < 6) {
+                                        Modifier.focusProperties { up = primaryContentRequester }
+                                    } else {
+                                        Modifier
                                     }
-                            } else {
-                                Modifier.testTag(SearchTestTags.resultItem(index))
-                            }
+                                )
                         )
                     }
                 }

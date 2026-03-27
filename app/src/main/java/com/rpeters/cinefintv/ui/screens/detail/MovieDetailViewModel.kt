@@ -56,6 +56,8 @@ data class SimilarMovieModel(
     val id: String,
     val title: String,
     val imageUrl: String?,
+    val watchStatus: WatchStatus,
+    val playbackProgress: Float?,
 )
 
 sealed class MovieDetailUiState {
@@ -229,11 +231,47 @@ class MovieDetailViewModel @Inject constructor(
         }
     }
 
+    fun markWatched() {
+        viewModelScope.launch {
+            if (repositories.user.markAsWatched(movieId) is ApiResult.Success) {
+                updateBus.refreshItem(movieId)
+                refreshWatchStatus()
+            }
+        }
+    }
+
+    fun markUnwatched() {
+        viewModelScope.launch {
+            if (repositories.user.markAsUnwatched(movieId) is ApiResult.Success) {
+                updateBus.refreshItem(movieId)
+                refreshWatchStatus()
+            }
+        }
+    }
+
+    fun deleteMovie(onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            if (repositories.user.deleteItemAsAdmin(movieId) is ApiResult.Success) {
+                updateBus.refreshAll()
+                onDeleted()
+            }
+        }
+    }
+
     private fun BaseItemDto.toSimilarModel(): SimilarMovieModel {
+        val watchedPercentage = getWatchedPercentage()
+        val watchStatus = when {
+            isWatched() -> WatchStatus.WATCHED
+            canResume() -> WatchStatus.IN_PROGRESS
+            else -> WatchStatus.NONE
+        }
+
         return SimilarMovieModel(
             id = id.toString(),
             title = getDisplayTitle(),
             imageUrl = repositories.stream.getPosterCardImageUrl(this),
+            watchStatus = watchStatus,
+            playbackProgress = if (canResume()) watchedPercentage.toFloat() / 100f else null,
         )
     }
 }

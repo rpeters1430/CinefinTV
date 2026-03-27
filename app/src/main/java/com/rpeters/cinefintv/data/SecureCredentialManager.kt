@@ -17,7 +17,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.core.constants.Constants
-import com.rpeters.cinefintv.data.preferences.CredentialSecurityPreferencesRepository
 import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.utils.normalizeServerUrl
 import com.rpeters.cinefintv.utils.normalizeServerUrlLegacy
@@ -43,7 +42,6 @@ import javax.inject.Singleton
 @Singleton
 class SecureCredentialManager @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    private val credentialSecurityPreferencesRepository: CredentialSecurityPreferencesRepository,
 ) {
     private val jsonSerializer = kotlinx.serialization.json.Json {
         ignoreUnknownKeys = true
@@ -80,11 +78,6 @@ class SecureCredentialManager @Inject constructor(
         }
     }
 
-    @Volatile
-    private var cachedUserAuthRequired: Boolean? = null
-
-    // Note: biometric authentication is excluded from the TV MVP (no BiometricAuthManager)
-
     @VisibleForTesting
     internal var debugLoggingEnabled: Boolean = BuildConfig.DEBUG
 
@@ -96,21 +89,11 @@ class SecureCredentialManager @Inject constructor(
     }
 
     /**
-     * Biometric authentication is not available in the TV MVP.
-     * Returns false always; can be wired in Task 24 if biometrics are added.
-     */
-    fun isBiometricAuthAvailable(requireStrongBiometric: Boolean = false): Boolean = false
-
-    /**
      * Generates a stable key alias.
      * We no longer use timestamps for rotation to prevent data loss.
      */
     private fun getKeyAlias(): String {
         return "${Constants.Security.KEY_ALIAS}_${KEY_VERSION}"
-    }
-
-    private fun getRotatedKeyAlias(): String {
-        return "${getKeyAlias()}_${System.currentTimeMillis()}"
     }
 
     /**
@@ -153,7 +136,7 @@ class SecureCredentialManager @Inject constructor(
                     }
                 }
             }
-            return@withContext generateKey(stableAlias, userAuthenticationRequired())
+            return@withContext generateKey(stableAlias, requireUserAuthentication = false)
         }
 
         // Return existing key if found
@@ -164,63 +147,7 @@ class SecureCredentialManager @Inject constructor(
 
         // No key found, generate stable one
         logDebug { "No existing key found, generating new stable key: $stableAlias" }
-        return@withContext generateKey(stableAlias, userAuthenticationRequired())
-    }
-
-    private fun deleteAliasIfExists(alias: String) {
-        if (keyStore.containsAlias(alias)) {
-            try {
-                keyStore.deleteEntry(alias)
-            } catch (e: KeyStoreException) {
-                Log.w(TAG, "Failed to delete key alias: $alias", e)
-            }
-        }
-    }
-
-    private fun removeOldKeys(excludeAlias: String) {
-        val stableAlias = getKeyAlias()
-        val aliases = keyStore.aliases()
-        while (aliases.hasMoreElements()) {
-            val alias = aliases.nextElement()
-            if (
-                alias.startsWith(Constants.Security.KEY_ALIAS) &&
-                alias != excludeAlias &&
-                alias != stableAlias
-            ) {
-                try {
-                    keyStore.deleteEntry(alias)
-                } catch (e: KeyStoreException) {
-                    Log.w(TAG, "Failed to delete old key: $alias", e)
-                }
-            }
-        }
-    }
-
-    private fun getLatestKeyAlias(): String? {
-        val aliases = keyStore.aliases()
-        var latestAlias: String? = null
-        var latestTimestamp = Long.MIN_VALUE
-
-        while (aliases.hasMoreElements()) {
-            val alias = aliases.nextElement()
-            if (!alias.startsWith(Constants.Security.KEY_ALIAS)) {
-                continue
-            }
-            val timestamp = parseKeyAliasTimestamp(alias) ?: continue
-            if (timestamp > latestTimestamp) {
-                latestTimestamp = timestamp
-                latestAlias = alias
-            }
-        }
-
-        return latestAlias
-    }
-
-    private fun parseKeyAliasTimestamp(alias: String): Long? {
-        val match = Regex("(\\d+)(?:_(\\d+))?$").find(alias) ?: return null
-        val primaryValue = match.groupValues.getOrNull(2)?.takeIf { it.isNotBlank() }
-            ?: match.groupValues.getOrNull(1)
-        return primaryValue?.toLongOrNull()
+        return@withContext generateKey(stableAlias, requireUserAuthentication = false)
     }
 
     private fun generateKey(alias: String, requireUserAuthentication: Boolean): SecretKey {
@@ -250,13 +177,6 @@ class SecureCredentialManager @Inject constructor(
 
         keyGenerator.init(keyGenParameterSpec)
         return keyGenerator.generateKey()
-    }
-
-    private suspend fun userAuthenticationRequired(): Boolean {
-        cachedUserAuthRequired?.let { return it }
-        val preference = credentialSecurityPreferencesRepository.currentPreferences().requireStrongAuthForCredentials
-        cachedUserAuthRequired = preference
-        return preference
     }
 
     /**
@@ -317,28 +237,6 @@ class SecureCredentialManager @Inject constructor(
             logDebug { "Key rotation completed successfully" }
         } catch (e: CancellationException) {
             throw e
-        }
-    }
-
-    suspend fun applyCredentialAuthenticationRequirement(requireAuthentication: Boolean) {
-        val currentRequirement = userAuthenticationRequired()
-        if (currentRequirement == requireAuthentication) {
-            return
-        }
-
-        val existingCredentials = exportPlaintextCredentials()
-        val newAlias = getRotatedKeyAlias()
-
-        try {
-            generateKey(newAlias, requireUserAuthentication = requireAuthentication)
-            restoreCredentials(existingCredentials)
-            credentialSecurityPreferencesRepository.setRequireStrongAuthForCredentials(requireAuthentication)
-            cachedUserAuthRequired = requireAuthentication
-            removeOldKeys(newAlias)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: CredentialEncryptionException) {
-            SecureLogger.e(TAG, "applyCredentialAuthenticationRequirement: failed to re-encrypt credentials", e)
         }
     }
 

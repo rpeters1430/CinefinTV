@@ -96,6 +96,33 @@ class SeasonViewModel @Inject constructor(
         }
     }
 
+    fun markEpisodeWatched(episodeId: String) {
+        viewModelScope.launch {
+            if (repositories.user.markAsWatched(episodeId) is ApiResult.Success) {
+                updateBus.refreshItem(episodeId)
+                refreshWatchStatus()
+            }
+        }
+    }
+
+    fun markEpisodeUnwatched(episodeId: String) {
+        viewModelScope.launch {
+            if (repositories.user.markAsUnwatched(episodeId) is ApiResult.Success) {
+                updateBus.refreshItem(episodeId)
+                refreshWatchStatus()
+            }
+        }
+    }
+
+    fun deleteEpisode(episodeId: String) {
+        viewModelScope.launch {
+            if (repositories.user.deleteItemAsAdmin(episodeId) is ApiResult.Success) {
+                updateBus.refreshAll()
+                refreshWatchStatus()
+            }
+        }
+    }
+
     fun load() {
         viewModelScope.launch {
             _uiState.value = SeasonUiState.Loading

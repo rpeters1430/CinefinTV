@@ -213,6 +213,9 @@ fun CinefinTvNavGraph(
             StuffLibraryScreen(
                 onOpenItem = { item ->
                     navController.navigate(NavRoutes.stuffDetail(item.id))
+                },
+                onPlayItem = { item ->
+                    navController.navigate(NavRoutes.player(item.id))
                 }
             )
         }

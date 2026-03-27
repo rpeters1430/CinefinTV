@@ -42,7 +42,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -51,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
@@ -91,8 +91,6 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
-import coil3.compose.AsyncImagePainter
-import coil3.compose.SubcomposeAsyncImage
 import coil3.toBitmap
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
@@ -283,7 +281,7 @@ internal fun PlayerControls(
                         trickplayManifest = trickplayManifest,
                         trickplayBaseUrl = trickplayBaseUrl,
                         seekIncrementMs = seekIncrement.millis,
-                        onSeek = { player.seekTo(it) },
+                        onSeekCommitted = { player.seekTo(it) },
                         onInteract = onInteract,
                         focusRequester = seekBarFocusRequester,
                         up = backFocusRequester,
@@ -697,6 +695,7 @@ private fun TrickplayPreview(
     val tileDuration = interval * totalFramesPerTile
     val tileIndex = (seekPosition / tileDuration).toInt().coerceIn(0, manifest.tiles.size - 1)
     val tile = manifest.tiles[tileIndex]
+    val tileUrl = baseUrl + tile.image
     
     val frameIndexInTile = ((seekPosition % tileDuration) / interval).toInt().coerceIn(0, totalFramesPerTile - 1)
     val row = frameIndexInTile / tile.columnCount
@@ -704,6 +703,9 @@ private fun TrickplayPreview(
 
     val frameWidth = manifest.width
     val frameHeight = manifest.height
+    var cachedBitmap by remember(tileUrl) {
+        mutableStateOf(TrickplayTileBitmapCache.get(tileUrl))
+    }
 
     Box(
         modifier = modifier
@@ -712,33 +714,36 @@ private fun TrickplayPreview(
             .background(Color.Black)
             .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
     ) {
-        SubcomposeAsyncImage(
-            model = baseUrl + tile.image,
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            content = {
-                val state by painter.state.collectAsState()
-                val successState = state as? AsyncImagePainter.State.Success
-                if (successState != null) {
-                    val bitmap = remember(successState) { successState.result.image.toBitmap().asImageBitmap() }
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val srcOffset = IntOffset(col * frameWidth, row * frameHeight)
-                        val srcSize = IntSize(frameWidth, frameHeight)
-                        
-                        drawImage(
-                            image = bitmap,
-                            srcOffset = srcOffset,
-                            srcSize = srcSize,
-                            dstSize = IntSize(size.width.toInt(), size.height.toInt())
-                        )
-                    }
-                } else {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                    }
-                }
+        val bitmap = cachedBitmap
+        if (bitmap != null) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val srcOffset = IntOffset(col * frameWidth, row * frameHeight)
+                val srcSize = IntSize(frameWidth, frameHeight)
+
+                drawImage(
+                    image = bitmap,
+                    srcOffset = srcOffset,
+                    srcSize = srcSize,
+                    dstSize = IntSize(size.width.toInt(), size.height.toInt())
+                )
             }
-        )
+        } else {
+            AsyncImage(
+                model = tileUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(0f),
+                onSuccess = { state ->
+                    val loadedBitmap = state.result.image.toBitmap().asImageBitmap()
+                    TrickplayTileBitmapCache.put(tileUrl, loadedBitmap)
+                    cachedBitmap = loadedBitmap
+                },
+            )
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+            }
+        }
     }
 }
 
@@ -752,7 +757,7 @@ private fun SeekBarControl(
     trickplayManifest: TrickplayManifest?,
     trickplayBaseUrl: String?,
     seekIncrementMs: Long,
-    onSeek: (Long) -> Unit,
+    onSeekCommitted: (Long) -> Unit,
     onInteract: () -> Unit,
     focusRequester: FocusRequester,
     up: FocusRequester,
@@ -765,6 +770,14 @@ private fun SeekBarControl(
     var seekInteractionVersion by remember { mutableIntStateOf(0) }
     val expressiveColors = LocalCinefinExpressiveColors.current
 
+    fun commitSeekIfNeeded() {
+        if (!isSeeking) return
+        isSeeking = false
+        if (seekPosition != position) {
+            onSeekCommitted(seekPosition)
+        }
+    }
+
     LaunchedEffect(position, isSeeking) {
         if (!isSeeking) {
             seekPosition = position
@@ -776,7 +789,7 @@ private fun SeekBarControl(
         val versionAtLaunch = seekInteractionVersion
         delay(700L)
         if (seekInteractionVersion == versionAtLaunch) {
-            isSeeking = false
+            commitSeekIfNeeded()
         }
     }
 
@@ -807,7 +820,7 @@ private fun SeekBarControl(
             .onFocusChanged {
                 isFocused = it.isFocused || it.hasFocus
                 if (!isFocused) {
-                    isSeeking = false
+                    commitSeekIfNeeded()
                     seekPosition = position
                 }
             }
@@ -819,7 +832,6 @@ private fun SeekBarControl(
                         seekPosition = (basePosition - seekIncrementMs).coerceAtLeast(0L)
                         isSeeking = true
                         seekInteractionVersion += 1
-                        onSeek(seekPosition)
                         onInteract()
                         true
                     }
@@ -829,12 +841,12 @@ private fun SeekBarControl(
                         seekPosition = (basePosition + seekIncrementMs).coerceIn(0L, duration)
                         isSeeking = true
                         seekInteractionVersion += 1
-                        onSeek(seekPosition)
                         onInteract()
                         true
                     }
                     keyEvent.type == KeyEventType.KeyUp &&
                         (keyEvent.key == Key.DirectionLeft || keyEvent.key == Key.DirectionRight) -> {
+                        commitSeekIfNeeded()
                         true
                     }
                     else -> false

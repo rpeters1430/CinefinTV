@@ -177,6 +177,8 @@ fun MovieDetailLayout(
                             TvMediaCard(
                                 title = mediaItem.title,
                                 imageUrl = mediaItem.imageUrl,
+                                watchStatus = mediaItem.watchStatus,
+                                playbackProgress = mediaItem.playbackProgress,
                                 aspectRatio = 2f / 3f, // Standard poster ratio
                                 modifier = if (mediaItem.id == similarItems.firstOrNull()?.id) {
                                     Modifier

@@ -57,6 +57,8 @@ fun MusicScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val expressiveColors = LocalCinefinExpressiveColors.current
+    val gridState = rememberLazyGridState()
+    val albumDetailListState = rememberLazyListState()
 
     BackHandler(enabled = uiState is MusicUiState.AlbumDetail) {
         viewModel.backToGrid()
@@ -119,6 +121,7 @@ fun MusicScreen(
         is MusicUiState.Grid -> {
             MusicGridContent(
                 state = state,
+                gridState = gridState,
                 onViewTypeChange = { viewModel.loadGrid(it) },
                 onOpenAlbum = { viewModel.openAlbum(it) },
                 onOpenArtist = { viewModel.openArtist(it) },
@@ -129,6 +132,7 @@ fun MusicScreen(
         is MusicUiState.AlbumDetail -> {
             AlbumDetailContent(
                 state = state,
+                listState = albumDetailListState,
                 onBack = { viewModel.backToGrid() },
                 onPlayTrack = { track ->
                     viewModel.buildPlaybackRequest(track, state.tracks)?.let(onPlayTrack)
@@ -143,13 +147,13 @@ fun MusicScreen(
 @Composable
 private fun MusicGridContent(
     state: MusicUiState.Grid,
+    gridState: androidx.compose.foundation.lazy.grid.LazyGridState,
     onViewTypeChange: (MusicViewType) -> Unit,
     onOpenAlbum: (BaseItemDto) -> Unit,
     onOpenArtist: (BaseItemDto) -> Unit,
     imageUrl: (BaseItemDto) -> String?,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
-    val gridState = rememberLazyGridState()
     val primaryContentRequester = remember { FocusRequester() }
 
     LazyVerticalGrid(
@@ -232,6 +236,7 @@ private fun MusicGridContent(
 @Composable
 private fun AlbumDetailContent(
     state: MusicUiState.AlbumDetail,
+    listState: androidx.compose.foundation.lazy.LazyListState,
     onBack: () -> Unit,
     onPlayTrack: (BaseItemDto) -> Unit,
     imageUrl: (BaseItemDto) -> String?,
@@ -240,7 +245,6 @@ private fun AlbumDetailContent(
     val albumTitle = album.name ?: "Unknown Album"
     val albumYear = album.productionYear?.toString()
     val expressiveColors = LocalCinefinExpressiveColors.current
-    val listState = rememberLazyListState()
     val primaryContentRequester = remember { FocusRequester() }
 
     LazyColumn(

@@ -126,6 +126,33 @@ private fun typefaceFor(font: SubtitleFont): Typeface? = when (font) {
     SubtitleFont.ROBOTO_MONO -> Typeface.create("monospace", Typeface.NORMAL)
 }
 
+@Composable
+private fun PlayerVideoSurface(
+    exoPlayer: ExoPlayer,
+    subtitleAppearance: SubtitleAppearancePreferences,
+    modifier: Modifier = Modifier,
+) {
+    AndroidView(
+        modifier = modifier,
+        factory = { ctx ->
+            PlayerView(ctx).apply {
+                layoutParams = android.view.ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+                useController = false
+                player = exoPlayer
+                isFocusable = false
+                isFocusableInTouchMode = false
+                applySubtitleAppearance(subtitleAppearance)
+            }
+        },
+        update = { pv ->
+            if (pv.player !== exoPlayer) {
+                pv.player = exoPlayer
+            }
+            pv.applySubtitleAppearance(subtitleAppearance)
+        },
+    )
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @UnstableApi
 @Composable
@@ -363,23 +390,10 @@ fun PlayerScreen(
                         .focusRequester(playerFocusRequester)
                         .focusable()
                 ) {
-                // PlayerView (full screen)
-                AndroidView(
+                PlayerVideoSurface(
+                    exoPlayer = exoPlayer,
+                    subtitleAppearance = uiState.subtitleAppearance,
                     modifier = Modifier.fillMaxSize(),
-                    factory = { ctx ->
-                        PlayerView(ctx).apply {
-                            layoutParams = android.view.ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                            useController = false
-                            this.player = exoPlayer
-                            isFocusable = false
-                            isFocusableInTouchMode = false
-                            applySubtitleAppearance(uiState.subtitleAppearance)
-                        }
-                    },
-                    update = { pv ->
-                        pv.player = exoPlayer
-                        pv.applySubtitleAppearance(uiState.subtitleAppearance)
-                    },
                 )
 
                 PlayerControls(

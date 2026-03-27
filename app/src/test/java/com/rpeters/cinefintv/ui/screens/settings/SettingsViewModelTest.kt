@@ -1,9 +1,5 @@
 package com.rpeters.cinefintv.ui.screens.settings
 
-import com.rpeters.cinefintv.data.preferences.CastPreferences
-import com.rpeters.cinefintv.data.preferences.CastPreferencesRepository
-import com.rpeters.cinefintv.data.preferences.CredentialSecurityPreferences
-import com.rpeters.cinefintv.data.preferences.CredentialSecurityPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.LibraryActionsPreferences
 import com.rpeters.cinefintv.data.preferences.LibraryActionsPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferences
@@ -38,23 +34,17 @@ class SettingsViewModelTest {
         val playbackRepo = mockk<PlaybackPreferencesRepository>(relaxed = true)
         val subtitleRepo = mockk<SubtitleAppearancePreferencesRepository>(relaxed = true)
         val libraryRepo = mockk<LibraryActionsPreferencesRepository>(relaxed = true)
-        val castRepo = mockk<CastPreferencesRepository>(relaxed = true)
-        val securityRepo = mockk<CredentialSecurityPreferencesRepository>(relaxed = true)
 
         every { themeRepo.themePreferencesFlow } returns flowOf(ThemePreferences.DEFAULT)
         every { playbackRepo.preferences } returns flowOf(PlaybackPreferences.DEFAULT)
         every { subtitleRepo.preferencesFlow } returns flowOf(SubtitleAppearancePreferences.DEFAULT)
         every { libraryRepo.preferences } returns flowOf(LibraryActionsPreferences.DEFAULT)
-        every { castRepo.castPreferencesFlow } returns flowOf(CastPreferences.DEFAULT)
-        every { securityRepo.preferences } returns flowOf(CredentialSecurityPreferences.DEFAULT)
 
         val viewModel = SettingsViewModel(
             themeRepo,
             playbackRepo,
             subtitleRepo,
             libraryRepo,
-            castRepo,
-            securityRepo
         )
         advanceUntilIdle()
 
@@ -68,23 +58,17 @@ class SettingsViewModelTest {
         val playbackRepo = mockk<PlaybackPreferencesRepository>(relaxed = true)
         val subtitleRepo = mockk<SubtitleAppearancePreferencesRepository>(relaxed = true)
         val libraryRepo = mockk<LibraryActionsPreferencesRepository>(relaxed = true)
-        val castRepo = mockk<CastPreferencesRepository>(relaxed = true)
-        val securityRepo = mockk<CredentialSecurityPreferencesRepository>(relaxed = true)
 
         every { themeRepo.themePreferencesFlow } returns flowOf(ThemePreferences.DEFAULT)
         every { playbackRepo.preferences } returns flowOf(PlaybackPreferences.DEFAULT)
         every { subtitleRepo.preferencesFlow } returns flowOf(SubtitleAppearancePreferences.DEFAULT)
         every { libraryRepo.preferences } returns flowOf(LibraryActionsPreferences.DEFAULT)
-        every { castRepo.castPreferencesFlow } returns flowOf(CastPreferences.DEFAULT)
-        every { securityRepo.preferences } returns flowOf(CredentialSecurityPreferences.DEFAULT)
 
         val viewModel = SettingsViewModel(
             themeRepo,
             playbackRepo,
             subtitleRepo,
             libraryRepo,
-            castRepo,
-            securityRepo
         )
         advanceUntilIdle()
 

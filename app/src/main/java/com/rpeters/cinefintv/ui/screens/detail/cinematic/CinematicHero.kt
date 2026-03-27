@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusProperties
@@ -45,7 +46,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.palette.graphics.Palette
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -62,6 +62,9 @@ import com.rpeters.cinefintv.ui.theme.BackgroundDark
 import com.rpeters.cinefintv.ui.theme.CinefinRed
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import com.rpeters.cinefintv.ui.theme.ThemeSeedColorCache
+import com.rpeters.cinefintv.utils.DevicePerformanceProfile
+import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 import kotlinx.coroutines.launch
 
 /**
@@ -92,14 +95,22 @@ fun CinematicHero(
     val spacing = LocalCinefinSpacing.current
     val themeController = LocalCinefinThemeController.current
     val context = LocalContext.current
+    val performanceProfile = LocalPerformanceProfile.current
     val panelWidth = (screenWidth * 0.44f).coerceIn(420.dp, 760.dp)
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    val shouldExtractPalette = performanceProfile.tier == DevicePerformanceProfile.Tier.HIGH
+    val cachedSeedColor = ThemeSeedColorCache.getCached(backdropUrl)
+    val currentListState by rememberUpdatedState(listState)
 
     var logoLoaded by remember(logoUrl) { mutableStateOf(false) }
     var logoFailed by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         onDispose { themeController.updateSeedColor(null) }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(backdropUrl, cachedSeedColor) {
+        cachedSeedColor?.let(themeController::updateSeedColor)
     }
 
     Box(
@@ -112,16 +123,23 @@ fun CinematicHero(
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(backdropUrl)
-                    .allowHardware(false)
+                    .allowHardware(!shouldExtractPalette)
                     .build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.matchParentSize(),
                 onSuccess = { state ->
-                    val bitmap = state.result.image.toBitmap()
-                    Palette.from(bitmap).generate { palette ->
-                        val color = palette?.vibrantSwatch?.rgb ?: palette?.dominantSwatch?.rgb
-                        color?.let { themeController.updateSeedColor(Color(it)) }
+                    if (!shouldExtractPalette) {
+                        return@AsyncImage
+                    }
+                    if (ThemeSeedColorCache.getCached(backdropUrl) != null) {
+                        return@AsyncImage
+                    }
+
+                    coroutineScope.launch {
+                        ThemeSeedColorCache.getOrExtract(backdropUrl) {
+                            state.result.image.toBitmap()
+                        }?.let(themeController::updateSeedColor)
                     }
                 },
             )
@@ -276,11 +294,16 @@ fun CinematicHero(
                         ),
                         modifier = Modifier
                             .focusRequester(primaryActionFocusRequester)
-                            .onFocusChanged { 
-                                if (it.isFocused && listState != null) {
+                            .onFocusChanged {
+                                val activeListState = currentListState
+                                if (it.isFocused && activeListState != null) {
                                     coroutineScope.launch {
-                                        if (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0) {
-                                            listState.scrollToItem(0)
+                                        val farFromTop = activeListState.firstVisibleItemIndex > 0
+                                        val hasMeaningfulOffset = activeListState.firstVisibleItemScrollOffset > 48
+                                        if (farFromTop) {
+                                            activeListState.animateScrollToItem(0)
+                                        } else if (hasMeaningfulOffset) {
+                                            activeListState.scrollToItem(0)
                                         }
                                     }
                                 }

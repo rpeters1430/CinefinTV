@@ -34,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
@@ -66,6 +67,8 @@ fun StuffDetailScreen(
                     StuffVideoContent(
                         stuff = state.stuff,
                         onPlayItem = onPlayItem,
+                        onBack = onBack,
+                        viewModel = viewModel,
                     )
                 }
             }
@@ -77,9 +80,12 @@ fun StuffDetailScreen(
 private fun StuffVideoContent(
     stuff: StuffDetailModel,
     onPlayItem: (String) -> Unit,
+    onBack: () -> Unit,
+    viewModel: StuffDetailViewModel,
 ) {
     val primaryActionFocusRequester = remember { FocusRequester() }
     val overviewFocusRequester = remember { FocusRequester() }
+    var showDeleteDialog by remember(stuff.id) { mutableStateOf(false) }
     val factItems = remember(stuff) {
         buildList {
             stuff.type?.let {
@@ -95,6 +101,18 @@ private fun StuffVideoContent(
         primaryActionFocusRequester.requestFocus()
     }
 
+    if (showDeleteDialog) {
+        ConfirmDeleteDialog(
+            title = "Delete ${stuff.title}?",
+            message = "This will remove the item from your Jellyfin library.",
+            onDismissRequest = { showDeleteDialog = false },
+            onConfirmDelete = {
+                showDeleteDialog = false
+                viewModel.deleteItem(onBack)
+            },
+        )
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         CinematicHero(
             backdropUrl = stuff.backdropUrl,
@@ -105,6 +123,16 @@ private fun StuffVideoContent(
             genres = emptyList(),
             primaryActionLabel = if (stuff.playbackProgress != null) "▶ Resume" else "▶ Play",
             onPrimaryAction = { onPlayItem(stuff.id) },
+            secondaryActions = buildList {
+                add(
+                    if (stuff.isWatched) {
+                        "Mark Unwatched" to { viewModel.markUnwatched() }
+                    } else {
+                        "Mark Watched" to { viewModel.markWatched() }
+                    }
+                )
+                add("Delete" to { showDeleteDialog = true })
+            },
             primaryActionFocusRequester = primaryActionFocusRequester,
             primaryActionDownFocusRequester = overviewFocusRequester,
         )

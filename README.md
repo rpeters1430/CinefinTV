@@ -89,15 +89,19 @@ See `docs/plans/2026-03-09-app-upgrade-roadmap.md` for the prioritized upgrade p
 - Android SDK installed (project compiles with `compileSdk 36`)
 - JDK 21
 - A reachable Jellyfin server account for end-to-end usage
+- Linux users can bootstrap dependencies with `./setup_linux.sh` on Ubuntu, Debian, Fedora, CachyOS, and Arch Linux
 
 ---
 
 ## Getting started
 
+```bash
 git clone <your-fork-or-repo-url>
 cd CinefinTV
+./setup_linux.sh
 ./gradlew :app:assembleDebug
 adb install app/build/outputs/apk/debug/app-debug.apk
+```
 
 ---
 

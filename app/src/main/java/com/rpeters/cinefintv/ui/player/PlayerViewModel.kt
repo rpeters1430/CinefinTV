@@ -193,6 +193,12 @@ class PlayerViewModel @Inject constructor(
         val mediaSource = playbackInfo?.mediaSources?.firstOrNull()
         val audioTracks = PlayerMappers.toAudioTrackOptions(mediaSource)
         val subtitleTracks = PlayerMappers.toSubtitleTrackOptions(mediaSource)
+        val selectedAudioTrack = audioTracks.firstOrNull {
+            it.streamIndex == mediaSource?.defaultAudioStreamIndex
+        } ?: audioTracks.firstOrNull()
+        val selectedSubtitleTrack = subtitleTracks.firstOrNull {
+            it.streamIndex == mediaSource?.defaultSubtitleStreamIndex
+        }
         activeMediaSourceId = mediaSource?.id
         activePlaySessionId = playbackInfo?.playSessionId
 
@@ -264,6 +270,8 @@ class PlayerViewModel @Inject constructor(
             nextEpisodeThumbnailUrl = nextEpisodeThumbnailUrl,
             audioTracks = audioTracks,
             subtitleTracks = subtitleTracks,
+            selectedAudioTrack = selectedAudioTrack,
+            selectedSubtitleTrack = selectedSubtitleTrack,
             chapters = chapters,
             introSkipRange = introSkipRange,
             creditsSkipRange = creditsSkipRange,

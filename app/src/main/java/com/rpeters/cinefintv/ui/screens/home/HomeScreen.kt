@@ -22,9 +22,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,7 +46,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.palette.graphics.Palette
 import androidx.tv.material3.Button
 import androidx.tv.material3.Carousel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -64,9 +64,11 @@ import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import com.rpeters.cinefintv.ui.theme.ThemeSeedColorCache
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 import com.rpeters.cinefintv.utils.coerceAlpha
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -169,6 +171,8 @@ internal fun HomeScreenContent(
             val sectionFocusRequesters = remember(state.sections.size) {
                 List(state.sections.size) { FocusRequester() }
             }
+            var lastFocusedSectionTitle by rememberSaveable { mutableStateOf<String?>(null) }
+            var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(null) }
 
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
@@ -218,6 +222,15 @@ internal fun HomeScreenContent(
                             title = section.title,
                             items = section.items,
                             onOpenItem = onOpenItem,
+                            restoredFocusedItemId = if (lastFocusedSectionTitle == section.title) {
+                                lastFocusedItemId
+                            } else {
+                                null
+                            },
+                            onItemFocused = { itemId ->
+                                lastFocusedSectionTitle = section.title
+                                lastFocusedItemId = itemId
+                            },
                             firstItemFocusRequester = rowRequester,
                             upRequester = upRequester,
                             downRequester = sectionFocusRequesters.getOrNull(index + 1),
@@ -238,7 +251,6 @@ private fun FeaturedCarousel(
     modifier: Modifier = Modifier,
 ) {
     val carouselState = rememberCarouselState()
-    val seedColorCache = remember { mutableStateMapOf<String, Color>() }
     
     Carousel(
         itemCount = items.size,
@@ -252,7 +264,6 @@ private fun FeaturedCarousel(
         val item = items[index]
         HeroItem(
             item = item,
-            seedColorCache = seedColorCache,
             onMoreInfo = { onMoreInfo(item) },
             onPlay = { onPlay(item.id) },
             modifier = Modifier.fillMaxSize()
@@ -264,7 +275,6 @@ private fun FeaturedCarousel(
 @Composable
 private fun HeroItem(
     item: HomeCardModel,
-    seedColorCache: MutableMap<String, Color>,
     onMoreInfo: () -> Unit,
     onPlay: () -> Unit,
     modifier: Modifier = Modifier,
@@ -275,9 +285,10 @@ private fun HeroItem(
     val spacing = LocalCinefinSpacing.current
     val themeController = LocalCinefinThemeController.current
     val playButtonRequester = remember { FocusRequester() }
+    val coroutineScope = rememberCoroutineScope()
     val heroImageUrl = item.backdropUrl ?: item.imageUrl
     val shouldExtractPalette = performanceProfile.tier == DevicePerformanceProfile.Tier.HIGH
-    val cachedSeedColor = heroImageUrl?.let(seedColorCache::get)
+    val cachedSeedColor = ThemeSeedColorCache.getCached(heroImageUrl)
 
     LaunchedEffect(heroImageUrl, cachedSeedColor) {
         if (cachedSeedColor != null) {
@@ -296,18 +307,17 @@ private fun HeroItem(
             contentDescription = item.title,
             contentScale = ContentScale.Crop,
             onSuccess = { state ->
-                if (!shouldExtractPalette || heroImageUrl == null || seedColorCache.containsKey(heroImageUrl)) {
+                if (!shouldExtractPalette || heroImageUrl == null) {
+                    return@AsyncImage
+                }
+                if (ThemeSeedColorCache.getCached(heroImageUrl) != null) {
                     return@AsyncImage
                 }
 
-                val bitmap = state.result.image.toBitmap()
-                Palette.from(bitmap).generate { palette ->
-                    val color = palette?.vibrantSwatch?.rgb ?: palette?.dominantSwatch?.rgb
-                    color?.let {
-                        val seedColor = androidx.compose.ui.graphics.Color(it)
-                        seedColorCache[heroImageUrl] = seedColor
-                        themeController.updateSeedColor(seedColor)
-                    }
+                coroutineScope.launch {
+                    ThemeSeedColorCache.getOrExtract(heroImageUrl) {
+                        state.result.image.toBitmap()
+                    }?.let(themeController::updateSeedColor)
                 }
             },
             modifier = Modifier.fillMaxSize(),
@@ -411,6 +421,8 @@ private fun HomeSection(
     title: String,
     items: List<HomeCardModel>,
     onOpenItem: (HomeCardModel) -> Unit,
+    restoredFocusedItemId: String?,
+    onItemFocused: (String) -> Unit,
     firstItemFocusRequester: FocusRequester,
     upRequester: FocusRequester?,
     downRequester: FocusRequester?,
@@ -418,6 +430,8 @@ private fun HomeSection(
 ) {
     val spacing = LocalCinefinSpacing.current
     val visibleItems = items.take(12)
+    val restoredFocusIndex = visibleItems.indexOfFirst { it.id == restoredFocusedItemId }
+        .takeIf { it >= 0 } ?: 0
 
     Column(
         modifier = modifier.testTag(HomeTestTags.section(sectionIndex)),
@@ -444,9 +458,10 @@ private fun HomeSection(
                         watchStatus = item.watchStatus,
                         unwatchedCount = item.unwatchedCount,
                         playbackProgress = item.playbackProgress,
+                        onFocus = { onItemFocused(item.id) },
                         aspectRatio = 16f / 9f,
                         cardWidth = cardWidth,
-                        modifier = if (index == 0) {
+                        modifier = if (index == restoredFocusIndex) {
                             Modifier
                                 .testTag(HomeTestTags.sectionItem(sectionIndex, index))
                                 .focusRequester(firstItemFocusRequester)

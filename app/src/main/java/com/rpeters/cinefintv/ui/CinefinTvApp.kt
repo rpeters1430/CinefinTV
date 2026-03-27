@@ -28,9 +28,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -270,7 +273,7 @@ fun CinefinTvApp(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 internal fun CinefinAppScaffold(
     showNav: Boolean,
@@ -280,6 +283,9 @@ internal fun CinefinAppScaffold(
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     val spacing = LocalCinefinSpacing.current
+    val tabFocusRequesters = remember {
+        List(navTabItems.size) { FocusRequester() }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (showNav) {
@@ -317,6 +323,9 @@ internal fun CinefinAppScaffold(
                         selectedTabIndex = selectedTabIndex,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .focusProperties {
+                                enter = { tabFocusRequesters[selectedTabIndex] }
+                            }
                             .testTag(AppTestTags.NavBar),
                         indicator = { tabPositions, doesTabRowHaveFocus ->
                             TabRowDefaults.UnderlinedIndicator(
@@ -329,7 +338,9 @@ internal fun CinefinAppScaffold(
                             Tab(
                                 selected = index == selectedTabIndex,
                                 onFocus = { onNavigateToTab(item.route) },
-                                modifier = Modifier.testTag(AppTestTags.tab(item.route)),
+                                modifier = Modifier
+                                    .focusRequester(tabFocusRequesters[index])
+                                    .testTag(AppTestTags.tab(item.route)),
                                 onClick = { onNavigateToTab(item.route) }
                             ) {
                                 Row(

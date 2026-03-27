@@ -28,6 +28,7 @@ data class StuffDetailModel(
     val posterUrl: String?,
     val isCollection: Boolean,
     val type: String?,
+    val isWatched: Boolean,
     val playbackProgress: Float?,
 )
 
@@ -52,6 +53,7 @@ sealed class StuffDetailUiState {
 @HiltViewModel
 class StuffDetailViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
+    private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -101,6 +103,33 @@ class StuffDetailViewModel @Inject constructor(
         }
     }
 
+    fun markWatched() {
+        viewModelScope.launch {
+            if (repositories.user.markAsWatched(itemId) is ApiResult.Success) {
+                updateBus.refreshItem(itemId)
+                load()
+            }
+        }
+    }
+
+    fun markUnwatched() {
+        viewModelScope.launch {
+            if (repositories.user.markAsUnwatched(itemId) is ApiResult.Success) {
+                updateBus.refreshItem(itemId)
+                load()
+            }
+        }
+    }
+
+    fun deleteItem(onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            if (repositories.user.deleteItemAsAdmin(itemId) is ApiResult.Success) {
+                updateBus.refreshAll()
+                onDeleted()
+            }
+        }
+    }
+
     private fun BaseItemDto.toStuffDetailModel(isCollection: Boolean): StuffDetailModel {
         return StuffDetailModel(
             id = id.toString(),
@@ -110,6 +139,7 @@ class StuffDetailViewModel @Inject constructor(
             posterUrl = repositories.stream.getPosterCardImageUrl(this),
             isCollection = isCollection,
             type = getItemTypeString(),
+            isWatched = isWatched(),
             playbackProgress = if (canResume()) (getWatchedPercentage() / 100f).toFloat() else null,
         )
     }

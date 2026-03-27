@@ -27,6 +27,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,6 +61,7 @@ fun TvMediaCard(
     subtitle: String? = null,
     imageUrl: String? = null,
     onClick: () -> Unit,
+    onMenuAction: (() -> Unit)? = null,
     onFocus: () -> Unit = {},
     modifier: Modifier = Modifier,
     watchStatus: WatchStatus = WatchStatus.NONE,
@@ -100,6 +102,19 @@ fun TvMediaCard(
                 modifier = modifier
                     .fillMaxWidth()
                     .aspectRatio(aspectRatio)
+                    .onPreviewKeyEvent { keyEvent ->
+                        val nativeEvent = keyEvent.nativeKeyEvent
+                        if (
+                            onMenuAction != null &&
+                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                            nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_MENU
+                        ) {
+                            onMenuAction()
+                            true
+                        } else {
+                            false
+                        }
+                    }
                     .onFocusChanged {
                         val focused = it.isFocused || it.hasFocus
                         if (focused != isFocused) {

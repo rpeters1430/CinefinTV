@@ -5,12 +5,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -50,7 +54,9 @@ internal fun LibraryGridContent(
     emptyTitle: String,
     columnCount: Int,
     aspectRatio: Float,
+    gridState: LazyGridState,
     onOpenItem: (LibraryCardModel) -> Unit,
+    onItemMenuAction: ((LibraryCardModel) -> Unit)? = null,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -117,7 +123,11 @@ internal fun LibraryGridContent(
             is LibraryGridUiState.Content -> {
                 val spacing = LocalCinefinSpacing.current
                 val firstItemFocusRequester = remember { FocusRequester() }
+                var lastFocusedItemId by rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
+                val restoredFocusIndex = uiState.items.indexOfFirst { it.id == lastFocusedItemId }
+                    .takeIf { it >= 0 } ?: 0
                 LazyVerticalGrid(
+                    state = gridState,
                     columns = GridCells.Fixed(columnCount),
                     contentPadding = PaddingValues(
                         horizontal = spacing.gridContentPadding,
@@ -140,8 +150,12 @@ internal fun LibraryGridContent(
                             playbackProgress = item.playbackProgress,
                             unwatchedCount = item.unwatchedCount,
                             onClick = { onOpenItem(item) },
+                            onMenuAction = onItemMenuAction?.let { menuHandler ->
+                                { menuHandler(item) }
+                            },
+                            onFocus = { lastFocusedItemId = item.id },
                             compactMetadata = true,
-                            modifier = if (index == 0) {
+                            modifier = if (index == restoredFocusIndex) {
                                 Modifier
                                     .testTag(LibraryTestTags.item(index))
                                     .focusRequester(firstItemFocusRequester)

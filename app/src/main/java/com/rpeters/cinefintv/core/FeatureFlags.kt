@@ -9,9 +9,6 @@ object FeatureFlags {
      * Experimental & Utility Flags
      */
     object Experimental {
-        /** Enable/disable cast reliability fixes from CAST_SYSTEM_UNIFIED_PLAN phase rollout */
-        const val ENABLE_CAST_FIX_PATH = "enable_cast_fix_path"
-
         /** Enable/disable video player gestures (tap/drag) */
         const val ENABLE_VIDEO_PLAYER_GESTURES = "enable_video_player_gestures"
 

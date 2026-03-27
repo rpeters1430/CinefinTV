@@ -34,6 +34,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
+import com.rpeters.cinefintv.ui.components.MediaActionDialog
+import com.rpeters.cinefintv.ui.components.MediaActionDialogItem
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
@@ -77,6 +80,7 @@ fun SeasonScreen(
                 season = state.season,
                 episodes = state.episodes,
                 onOpenEpisode = onOpenEpisode,
+                viewModel = viewModel,
             )
         }
     }
@@ -87,6 +91,7 @@ private fun SeasonContent(
     season: SeasonDetailModel,
     episodes: List<EpisodeModel>,
     onOpenEpisode: (String) -> Unit,
+    viewModel: SeasonViewModel,
 ) {
     val spacing = LocalCinefinSpacing.current
     val listState = rememberLazyListState()
@@ -96,6 +101,8 @@ private fun SeasonContent(
     val overviewFocusRequester = remember { FocusRequester() }
     val firstEpisodeFocusRequester = remember { FocusRequester() }
     val firstEpisodeItemIndex = 3
+    var selectedEpisode by remember { mutableStateOf<EpisodeModel?>(null) }
+    var pendingDeleteEpisode by remember { mutableStateOf<EpisodeModel?>(null) }
 
     val resumeEpisode = remember(episodes) {
         episodes.firstOrNull { (it.playbackProgress ?: 0f) > 0f && !it.isWatched }
@@ -119,6 +126,56 @@ private fun SeasonContent(
             listState = listState,
             initialFocusRequester = primaryActionFocusRequester,
             anchorFocusRequester = topFocusRequester,
+        )
+    }
+
+    selectedEpisode?.let { episode ->
+        MediaActionDialog(
+            title = episode.title,
+            actions = buildList {
+                add(
+                    MediaActionDialogItem(
+                        label = "Play",
+                        supportingText = "Start playback immediately.",
+                        onClick = { onOpenEpisode(episode.id) },
+                    )
+                )
+                add(
+                    MediaActionDialogItem(
+                        label = if (episode.isWatched) "Mark unwatched" else "Mark watched",
+                        supportingText = "Update the watched state for this episode.",
+                        onClick = {
+                            if (episode.isWatched) {
+                                viewModel.markEpisodeUnwatched(episode.id)
+                            } else {
+                                viewModel.markEpisodeWatched(episode.id)
+                            }
+                        },
+                    )
+                )
+                add(
+                    MediaActionDialogItem(
+                        label = "Delete",
+                        supportingText = "Remove this episode from the library.",
+                        isDestructive = true,
+                        onClick = { pendingDeleteEpisode = episode },
+                    )
+                )
+            },
+            onDismissRequest = { selectedEpisode = null },
+        )
+    }
+
+    pendingDeleteEpisode?.let { episode ->
+        ConfirmDeleteDialog(
+            title = "Delete ${episode.title}?",
+            message = "This will remove the episode from your Jellyfin library.",
+            onDismissRequest = { pendingDeleteEpisode = null },
+            onConfirmDelete = {
+                pendingDeleteEpisode = null
+                selectedEpisode = null
+                viewModel.deleteEpisode(episode.id)
+            },
         )
     }
 
@@ -208,6 +265,7 @@ private fun SeasonContent(
                 } else {
                     Modifier
                 },
+                onMenuAction = { selectedEpisode = episode },
                 onClick = { onOpenEpisode(episode.id) },
             )
         }
