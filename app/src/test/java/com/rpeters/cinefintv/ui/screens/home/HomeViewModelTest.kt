@@ -178,11 +178,44 @@ class HomeViewModelTest {
         assertTrue(state is HomeUiState.Error || state is HomeUiState.Content)
     }
 
-    private fun mockBaseItemDto(name: String): BaseItemDto {
+    @Test
+    fun refresh_recentlyAddedVideoSection_usesStuffTitle() = runTest {
+        val fakeRepositories = FakeHomeRepositories()
+        val video = mockBaseItemDto("Clip 1", BaseItemKind.VIDEO)
+
+        coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12)
+        } returns ApiResult.Success(listOf(video))
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
+        every { fakeRepositories.stream.getBackdropUrl(any()) } returns null
+
+        val viewModel = HomeViewModel(fakeRepositories.coordinator)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as HomeUiState.Content
+        assertEquals("Recently Added Stuff", state.sections.single().title)
+        assertEquals("Clip 1", state.sections.single().items.single().title)
+    }
+
+    private fun mockBaseItemDto(
+        name: String,
+        type: BaseItemKind = BaseItemKind.MOVIE,
+    ): BaseItemDto {
         val item: BaseItemDto = mockk()
         every { item.id } returns UUID.randomUUID()
         every { item.name } returns name
-        every { item.type } returns BaseItemKind.MOVIE
+        every { item.type } returns type
         every { item.userData } returns null
         every { item.productionYear } returns null
         every { item.runTimeTicks } returns null

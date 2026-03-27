@@ -152,6 +152,33 @@ class HomeScreenUiTest {
     }
 
     @Test
+    fun nonFirstItem_supportsVerticalNavigationBetweenSections() {
+        composeRule.setContent {
+            HomeTestHost {
+                HomeScreenContent(
+                    uiState = sampleContentState(featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))),
+                    onOpenItem = {},
+                    onPlayItem = {},
+                    onRetry = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 1))
+            .requestFocus()
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 1))
+            .assertIsFocused()
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 1))
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(1, 0))
+            .assertIsFocused()
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(1, 0))
+            .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
+            .assertIsFocused()
+    }
+
+    @Test
     fun featuredFallbackCopy_rendersWhenDescriptionAndQualityAreMissing() {
         composeRule.setContent {
             HomeTestHost {

@@ -144,7 +144,7 @@ class HomeViewModel @Inject constructor(
                 addSection("Recently Added TV Episodes", results[3])
                 addSection("Recently Added Movies", results[2])
                 addSection("Recently Added Music", results[5])
-                addSection("Recently Added Videos", results[4])
+                addSection("Recently Added Stuff", results[4])
             }
 
             val featuredItems = (results[2] as? ApiResult.Success<List<BaseItemDto>>)

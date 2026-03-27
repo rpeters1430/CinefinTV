@@ -450,6 +450,10 @@ private fun HomeSection(
                 contentPadding = PaddingValues(horizontal = spacing.gutter),
             ) {
                 itemsIndexed(visibleItems, key = { _, item -> item.id }) { index, item ->
+                    val focusModifier = Modifier.focusProperties {
+                        upRequester?.let { up = it }
+                        downRequester?.let { down = it }
+                    }
                     TvMediaCard(
                         title = item.title,
                         subtitle = item.subtitle ?: item.year?.toString(),
@@ -465,12 +469,11 @@ private fun HomeSection(
                             Modifier
                                 .testTag(HomeTestTags.sectionItem(sectionIndex, index))
                                 .focusRequester(firstItemFocusRequester)
-                                .focusProperties {
-                                    upRequester?.let { up = it }
-                                    downRequester?.let { down = it }
-                                }
+                                .then(focusModifier)
                         } else {
-                            Modifier.testTag(HomeTestTags.sectionItem(sectionIndex, index))
+                            Modifier
+                                .testTag(HomeTestTags.sectionItem(sectionIndex, index))
+                                .then(focusModifier)
                         }
                     )
                 }

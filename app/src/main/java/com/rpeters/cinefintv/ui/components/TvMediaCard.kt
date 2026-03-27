@@ -183,18 +183,30 @@ fun TvMediaCard(
                     }
 
                     if (watchStatus == WatchStatus.IN_PROGRESS && playbackProgress != null && playbackProgress > 0f) {
+                        val progressTrackShape = RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp)
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
                                 .fillMaxWidth()
-                                .height(3.dp)
-                                .background(Color.Black.copy(alpha = 0.5f))
+                                .height(7.dp)
+                                .background(
+                                    color = Color.Black.copy(alpha = 0.8f),
+                                    shape = progressTrackShape,
+                                )
                         ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxHeight()
                                     .fillMaxWidth(playbackProgress.coerceIn(0f, 1f))
-                                    .background(MaterialTheme.colorScheme.primary)
+                                    .background(
+                                        brush = Brush.horizontalGradient(
+                                            colors = listOf(
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
+                                                Color.White,
+                                            ),
+                                        ),
+                                        shape = progressTrackShape,
+                                    )
                             )
                         }
                     }
