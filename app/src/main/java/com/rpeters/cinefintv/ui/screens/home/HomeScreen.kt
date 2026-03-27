@@ -88,7 +88,7 @@ fun HomeScreen(
                 Lifecycle.Event.ON_PAUSE  -> hasBeenPaused = true
                 Lifecycle.Event.ON_RESUME -> if (hasBeenPaused) {
                     hasBeenPaused = false
-                    viewModel.refreshWatchStatus()
+                    viewModel.refresh()
                 }
                 else -> {}
             }
