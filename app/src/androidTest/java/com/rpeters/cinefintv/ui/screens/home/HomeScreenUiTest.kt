@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -23,6 +24,11 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.tv.material3.Button
 import androidx.tv.material3.Text
@@ -52,6 +58,8 @@ class HomeScreenUiTest {
                     uiState = HomeUiState.Loading,
                     onOpenItem = {},
                     onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
                     onRetry = {},
                 )
             }
@@ -71,6 +79,8 @@ class HomeScreenUiTest {
                     uiState = HomeUiState.Error("Network timeout"),
                     onOpenItem = {},
                     onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
                     onRetry = { retryCount++ },
                 )
             }
@@ -97,6 +107,8 @@ class HomeScreenUiTest {
                     uiState = sampleContentState(featuredItems = listOf(featured)),
                     onOpenItem = { openedItemId = it.id },
                     onPlayItem = { playedItemId = it },
+                    onOpenSeries = {},
+                    onOpenSeason = {},
                     onRetry = {},
                 )
             }
@@ -123,6 +135,8 @@ class HomeScreenUiTest {
                     uiState = sampleContentState(featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))),
                     onOpenItem = {},
                     onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
                     onRetry = {},
                 )
             }
@@ -146,6 +160,8 @@ class HomeScreenUiTest {
                     uiState = sampleContentState(featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))),
                     onOpenItem = {},
                     onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
                     onRetry = {},
                 )
             }
@@ -165,6 +181,8 @@ class HomeScreenUiTest {
                     uiState = sampleContentState(featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))),
                     onOpenItem = {},
                     onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
                     onRetry = {},
                 )
             }
@@ -188,6 +206,8 @@ class HomeScreenUiTest {
                     uiState = sampleContentState(featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))),
                     onOpenItem = {},
                     onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
                     onRetry = {},
                 )
             }
@@ -207,6 +227,8 @@ class HomeScreenUiTest {
                     uiState = sampleContentState(featuredItems = emptyList()),
                     onOpenItem = {},
                     onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
                     onRetry = {},
                 )
             }
@@ -226,6 +248,8 @@ class HomeScreenUiTest {
                     uiState = sampleContentState(featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))),
                     onOpenItem = {},
                     onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
                     onRetry = {},
                 )
             }
@@ -262,6 +286,8 @@ class HomeScreenUiTest {
                     ),
                     onOpenItem = {},
                     onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
                     onRetry = {},
                 )
             }
@@ -278,6 +304,8 @@ class HomeScreenUiTest {
                     uiState = sampleContentState(featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))),
                     onOpenItem = {},
                     onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
                     onRetry = {},
                 )
             }
@@ -287,6 +315,34 @@ class HomeScreenUiTest {
         composeRule.onNodeWithTag("top_nav")
             .performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton).assertIsFocused()
+    }
+
+    @Test
+    fun returningFromPlayer_restoresFocusedHomeItem_andDpadNavigationStillWorks() {
+        composeRule.setContent {
+            HomeTestHost {
+                HomeNavigationHarness(
+                    uiState = sampleContentState(
+                        featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))
+                    )
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
+            .requestFocus()
+            .assertIsFocused()
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        composeRule.onNodeWithTag("player_back").assertIsDisplayed()
+        composeRule.onNodeWithTag("player_back")
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(1, 0))
+            .assertIsFocused()
     }
 }
 
@@ -339,6 +395,42 @@ private fun sampleCard(
 
 private fun SemanticsNodeInteraction.requestFocus(): SemanticsNodeInteraction =
     apply { performSemanticsAction(SemanticsActions.RequestFocus) }
+
+@Composable
+private fun HomeNavigationHarness(
+    uiState: HomeUiState,
+) {
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = "home",
+    ) {
+        composable("home") {
+            HomeScreenContent(
+                uiState = uiState,
+                onOpenItem = { navController.navigate("player") },
+                onPlayItem = { navController.navigate("player") },
+                onOpenSeries = {},
+                onOpenSeason = {},
+                onRetry = {},
+            )
+        }
+        composable("player") {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Button(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier.testTag("player_back"),
+                ) {
+                    Text("Back To Home")
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun HomeTestHost(

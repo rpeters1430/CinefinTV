@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -138,6 +139,7 @@ internal fun HomeScreenContent(
     val spacing = LocalCinefinSpacing.current
     val chromeFocusController = LocalAppChromeFocusController.current
     val navUpRequester = chromeFocusController?.topNavFocusRequester
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     when (val state = uiState) {
         HomeUiState.Loading -> {
@@ -195,6 +197,17 @@ internal fun HomeScreenContent(
             var lastFocusedSectionTitle by rememberSaveable { mutableStateOf<String?>(null) }
             var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(null) }
             var selectedEpisodeMenuItem by remember { mutableStateOf<HomeCardModel?>(null) }
+            var shouldRestoreFocus by rememberSaveable { mutableStateOf(true) }
+
+            val preferredFocusRequester = when {
+                lastFocusedSectionTitle != null -> {
+                    state.sections.indexOfFirst { it.title == lastFocusedSectionTitle }
+                        .takeIf { it >= 0 }
+                        ?.let(sectionFocusRequesters::get)
+                }
+                state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
+                else -> sectionFocusRequesters.firstOrNull()
+            }
 
             selectedEpisodeMenuItem?.let { item ->
                 MediaActionDialog(
@@ -253,6 +266,33 @@ internal fun HomeScreenContent(
                         focusController.primaryContentFocusRequester = null
                     }
                 }
+            }
+
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        shouldRestoreFocus = true
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
+                }
+            }
+
+            LaunchedEffect(
+                shouldRestoreFocus,
+                preferredFocusRequester,
+                state.featuredItems.size,
+                state.sections.size,
+            ) {
+                if (!shouldRestoreFocus || preferredFocusRequester == null) {
+                    return@LaunchedEffect
+                }
+
+                withFrameNanos { }
+                runCatching { preferredFocusRequester.requestFocus() }
+                shouldRestoreFocus = false
             }
 
             Box(modifier = Modifier.fillMaxSize()) {
