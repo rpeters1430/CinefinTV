@@ -4,7 +4,10 @@ package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +33,9 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -47,7 +53,24 @@ fun StuffDetailScreen(
     viewModel: StuffDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var hasBeenPaused by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
+
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> hasBeenPaused = true
+                Lifecycle.Event.ON_RESUME -> if (hasBeenPaused) {
+                    hasBeenPaused = false
+                    viewModel.load()
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
@@ -91,10 +114,41 @@ private fun StuffVideoContent(
             stuff.type?.let {
                 add(DetailLabeledMetaItem(Icons.Default.Category, "Type", it))
             }
+            stuff.runtime?.let {
+                add(DetailLabeledMetaItem(Icons.Default.Schedule, "Runtime", it))
+            }
+            stuff.addedDate?.let {
+                add(DetailLabeledMetaItem(Icons.Default.CalendarToday, "Added", it))
+            }
+            stuff.mediaQuality?.let {
+                add(DetailLabeledMetaItem(Icons.Default.HighQuality, "Quality", it))
+            }
             stuff.playbackProgress?.let {
                 add(DetailLabeledMetaItem(Icons.Default.VideoLibrary, "Progress", "${(it * 100).toInt()}% watched"))
             }
         }
+    }
+    val eyebrow = remember(stuff) {
+        listOfNotNull(
+            stuff.type,
+            stuff.year?.toString(),
+            stuff.runtime,
+        ).joinToString(" · ").ifBlank { "Video" }
+    }
+    val ratingText = remember(stuff) {
+        stuff.playbackProgress?.let { "${(it * 100).toInt()}% watched" }
+    }
+    val chips = remember(stuff) {
+        buildList {
+            add(stuff.type ?: "Video")
+            if (stuff.playbackProgress != null) {
+                add("Resume available")
+            }
+            if (stuff.isWatched) {
+                add("Watched")
+            }
+            stuff.mediaQuality?.let(::add)
+        }.distinct()
     }
 
     LaunchedEffect(stuff.id) {
@@ -118,9 +172,9 @@ private fun StuffVideoContent(
             backdropUrl = stuff.backdropUrl,
             logoUrl = null,
             title = stuff.title,
-            eyebrow = (stuff.type ?: "Video").uppercase(),
-            ratingText = null,
-            genres = emptyList(),
+            eyebrow = eyebrow,
+            ratingText = ratingText,
+            genres = chips,
             primaryActionLabel = if (stuff.playbackProgress != null) "▶ Resume" else "▶ Play",
             onPrimaryAction = { onPlayItem(stuff.id) },
             secondaryActions = buildList {
@@ -140,9 +194,9 @@ private fun StuffVideoContent(
         DetailOverviewSection(
             title = stuff.title,
             posterUrl = stuff.posterUrl,
-            description = stuff.overview.orEmpty(),
+            description = stuff.overview ?: "No description available for this item yet.",
             factItems = factItems,
-            chips = listOfNotNull(stuff.type),
+            chips = chips,
             focusRequester = overviewFocusRequester,
             upFocusRequester = primaryActionFocusRequester,
             modifier = Modifier.padding(top = 28.dp),
@@ -166,6 +220,15 @@ private fun StuffCollectionContent(
                 add(DetailLabeledMetaItem(Icons.Default.Category, "Type", it))
             }
             add(DetailLabeledMetaItem(Icons.Default.VideoLibrary, "Items", items.size.toString()))
+            stuff.addedDate?.let {
+                add(DetailLabeledMetaItem(Icons.Default.CalendarToday, "Added", it))
+            }
+        }
+    }
+    val chips = remember(stuff, items) {
+        buildList {
+            add(stuff.type ?: "Collection")
+            add("${items.size} items")
         }
     }
 
@@ -178,11 +241,15 @@ private fun StuffCollectionContent(
             backdropUrl = stuff.backdropUrl,
             logoUrl = null,
             title = stuff.title,
-            eyebrow = "Collection · ${items.size} items",
+            eyebrow = listOfNotNull(stuff.type ?: "Collection", "${items.size} items").joinToString(" · "),
             ratingText = null,
-            genres = emptyList(),
-            primaryActionLabel = "Browse",
-            onPrimaryAction = { /* no-op, collection browsing is the content below */ },
+            genres = chips,
+            primaryActionLabel = if (items.isEmpty()) "Collection" else "Browse Items",
+            onPrimaryAction = {
+                if (items.isNotEmpty()) {
+                    gridEntryFocusRequester.requestFocus()
+                }
+            },
             primaryActionFocusRequester = primaryActionFocusRequester,
             primaryActionDownFocusRequester = overviewFocusRequester,
         )
@@ -190,9 +257,9 @@ private fun StuffCollectionContent(
         DetailOverviewSection(
             title = stuff.title,
             posterUrl = stuff.posterUrl,
-            description = stuff.overview.orEmpty(),
+            description = stuff.overview ?: "Browse everything included in this collection below.",
             factItems = factItems,
-            chips = listOfNotNull(stuff.type),
+            chips = chips,
             focusRequester = overviewFocusRequester,
             upFocusRequester = primaryActionFocusRequester,
             downFocusRequester = if (items.isNotEmpty()) gridEntryFocusRequester else null,
@@ -232,6 +299,7 @@ private fun StuffCollectionContent(
                 items(items, key = { it.id }) { item ->
                     TvMediaCard(
                         title = item.title,
+                        subtitle = item.subtitle,
                         imageUrl = item.imageUrl,
                         aspectRatio = 16f / 9f,
                         modifier = Modifier

@@ -8,8 +8,11 @@ import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
+import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getItemTypeString
+import com.rpeters.cinefintv.utils.getMediaQualityLabel
 import com.rpeters.cinefintv.utils.getWatchedPercentage
+import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +31,11 @@ data class StuffDetailModel(
     val posterUrl: String?,
     val isCollection: Boolean,
     val type: String?,
+    val year: Int?,
+    val runtime: String?,
+    val mediaQuality: String?,
+    val addedDate: String?,
+    val itemCount: Int?,
     val isWatched: Boolean,
     val playbackProgress: Float?,
 )
@@ -35,6 +43,7 @@ data class StuffDetailModel(
 data class StuffItemModel(
     val id: String,
     val title: String,
+    val subtitle: String?,
     val imageUrl: String?,
     val itemType: String?,
     val watchStatus: WatchStatus,
@@ -67,6 +76,22 @@ class StuffDetailViewModel @Inject constructor(
             _uiState.value = StuffDetailUiState.Error("Invalid item ID")
         } else {
             load()
+            observeUpdateEvents()
+        }
+    }
+
+    private fun observeUpdateEvents() {
+        viewModelScope.launch {
+            updateBus.events.collect { event ->
+                when (event) {
+                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshItem -> {
+                        if (event.itemId == itemId) {
+                            load()
+                        }
+                    }
+                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshAll -> load()
+                }
+            }
         }
     }
 
@@ -139,6 +164,11 @@ class StuffDetailViewModel @Inject constructor(
             posterUrl = repositories.stream.getPosterCardImageUrl(this),
             isCollection = isCollection,
             type = getItemTypeString(),
+            year = getYear(),
+            runtime = getFormattedDuration(),
+            mediaQuality = getMediaQualityLabel(),
+            addedDate = dateCreated?.toString()?.substringBefore("T"),
+            itemCount = childCount,
             isWatched = isWatched(),
             playbackProgress = if (canResume()) (getWatchedPercentage() / 100f).toFloat() else null,
         )
@@ -156,6 +186,11 @@ class StuffDetailViewModel @Inject constructor(
         return StuffItemModel(
             id = id.toString(),
             title = getDisplayTitle(),
+            subtitle = listOfNotNull(
+                getItemTypeString().takeIf { it.isNotBlank() },
+                getFormattedDuration(),
+                getYear()?.toString(),
+            ).joinToString("  ·  ").ifBlank { null },
             imageUrl = repositories.stream.getPosterCardImageUrl(this),
             itemType = getItemTypeString(),
             watchStatus = watchStatus,

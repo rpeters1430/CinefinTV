@@ -30,11 +30,10 @@ class LibraryItemPagingSource(
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, BaseItemDto> {
         return try {
-            val pageIndex = params.key ?: STARTING_PAGE_INDEX
-            val startIndex = pageIndex * pageSize
+            val startIndex = params.key ?: STARTING_PAGE_INDEX
 
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Loading page $pageIndex, startIndex=$startIndex, loadSize=${params.loadSize}")
+                Log.d(TAG, "Loading startIndex=$startIndex, pageSize=$pageSize, loadSize=${params.loadSize}")
             }
 
             val itemTypesString = itemTypes?.joinToString(",") { type ->
@@ -72,19 +71,27 @@ class LibraryItemPagingSource(
                     if (BuildConfig.DEBUG) {
                         Log.d(
                             TAG,
-                            "Loaded page $pageIndex: raw=${rawItems.size}, filtered=${items.size}, excluded=${excludedItemIds.size}",
+                            "Loaded startIndex=$startIndex: raw=${rawItems.size}, filtered=${items.size}, excluded=${excludedItemIds.size}",
                         )
                     }
 
                     LoadResult.Page(
                         data = items,
-                        prevKey = if (pageIndex == STARTING_PAGE_INDEX) null else pageIndex - 1,
-                        nextKey = if (rawItems.isEmpty() || rawItems.size < params.loadSize) null else pageIndex + 1,
+                        prevKey = if (startIndex == STARTING_PAGE_INDEX) {
+                            null
+                        } else {
+                            (startIndex - pageSize).coerceAtLeast(STARTING_PAGE_INDEX)
+                        },
+                        nextKey = if (rawItems.isEmpty() || rawItems.size < params.loadSize) {
+                            null
+                        } else {
+                            startIndex + rawItems.size
+                        },
                     )
                 }
                 is ApiResult.Error -> {
                     if (BuildConfig.DEBUG) {
-                        Log.w(TAG, "Failed to load page $pageIndex: ${result.message}")
+                        Log.w(TAG, "Failed to load startIndex=$startIndex: ${result.message}")
                     }
                     LoadResult.Error(Exception(result.message))
                 }

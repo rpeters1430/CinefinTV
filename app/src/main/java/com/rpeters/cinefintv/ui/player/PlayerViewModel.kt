@@ -578,9 +578,6 @@ class PlayerViewModel @Inject constructor(
             val persistedPosition = if (isCompleted) 0L else positionMs.coerceAtLeast(0L)
             PlaybackPositionStore.savePlaybackPosition(appContext, itemId, persistedPosition)
 
-            // Notify about playback update
-            updateBus.refreshItem(itemId)
-
             if (shouldSyncToServer) {                try {
                     val positionTicks = if (persistedPosition <= 0L) null else persistedPosition * TICKS_PER_MILLISECOND
                     val sessionId = activePlaySessionId?.takeIf { it.isNotBlank() } ?: playbackSessionId
@@ -611,6 +608,9 @@ class PlayerViewModel @Inject constructor(
                     )
                 }
             }
+
+            // Broadcast after the sync attempt so listeners pull the latest server state.
+            updateBus.refreshItem(itemId)
         }
     }
 

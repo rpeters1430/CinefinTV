@@ -107,7 +107,7 @@ fun StuffLibraryScreen(
         uiState = uiState,
         errorTitle = "Failed to load collections",
         emptyTitle = "No collections found",
-        columnCount = 4,
+        columnCount = 3,
         aspectRatio = 16f / 9f,
         gridState = gridState,
         onOpenItem = onOpenItem,

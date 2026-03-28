@@ -83,22 +83,20 @@ class HomeViewModel @Inject constructor(
             updateBus.events.collect { event ->
                 when (event) {
                     is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshItem -> {
-                        // For Home, many things could change (Continue Watching, Recently Added, etc.)
-                        // so we do a watch status refresh which is lightweight.
                         refreshWatchStatus()
                     }
                     is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshAll -> {
-                        refresh()
+                        refresh(silent = true)
                     }
                 }
             }
         }
     }
 
-    fun refresh() {
+    fun refresh(silent: Boolean = false) {
         viewModelScope.launch {
-            // Only show loading if we don't have content yet
-            if (_uiState.value !is HomeUiState.Content) {
+            val hasContent = _uiState.value is HomeUiState.Content
+            if (!silent || !hasContent) {
                 _uiState.value = HomeUiState.Loading
             }
 

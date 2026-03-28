@@ -3,12 +3,14 @@ package com.rpeters.cinefintv.ui.player
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import com.rpeters.cinefintv.data.PlaybackPositionStore
+import com.rpeters.cinefintv.data.common.MediaUpdateEvent
 import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferences
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferencesRepository
 import com.rpeters.cinefintv.data.repository.JellyfinRepository
+import com.rpeters.cinefintv.data.repository.JellyfinUserRepository
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.testutil.FakePlayerRepositories
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
@@ -17,14 +19,19 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
@@ -411,6 +418,60 @@ class PlayerViewModelTest {
         advanceUntilIdle()
 
         assertNull(viewModel.uiState.value.selectedSubtitleTrack)
+    }
+
+    @Test
+    fun savePlaybackPosition_emitsUpdateAfterServerSyncCompletes() = runTest {
+        val userRepository: JellyfinUserRepository = mockk(relaxed = true)
+        val fakeRepositories = FakePlayerRepositories(user = userRepository)
+        val syncGate = CompletableDeferred<Unit>()
+
+        coEvery {
+            userRepository.reportPlaybackProgress(
+                itemId = "movie-1",
+                sessionId = any(),
+                positionTicks = 5_000L * 10_000L,
+                mediaSourceId = any(),
+                playMethod = any(),
+                isPaused = false,
+                isMuted = any(),
+                canSeek = any(),
+            )
+        } coAnswers {
+            syncGate.await()
+            ApiResult.Success(Unit)
+        }
+        coEvery { PlaybackPositionStore.savePlaybackPosition(appContext, "movie-1", 5_000L) } returns Unit
+
+        val viewModel = PlayerViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("itemId" to "movie-1")),
+            repositories = fakeRepositories.coordinator,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
+            playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
+            appContext = appContext,
+            okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
+        )
+        advanceUntilIdle()
+
+        val eventDeferred = async { updateBus.events.first() }
+
+        viewModel.savePlaybackPosition(
+            positionMs = 5_000L,
+            durationMs = 20_000L,
+            isPaused = false,
+            shouldSyncToServer = true,
+        )
+        runCurrent()
+
+        assertFalse(eventDeferred.isCompleted)
+
+        syncGate.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(MediaUpdateEvent.RefreshItem("movie-1"), eventDeferred.await())
     }
 
     @org.junit.After

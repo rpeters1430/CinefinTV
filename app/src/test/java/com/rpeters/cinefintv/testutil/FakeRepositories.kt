@@ -5,6 +5,7 @@ import com.rpeters.cinefintv.data.repository.JellyfinMediaRepository
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.JellyfinSearchRepository
 import com.rpeters.cinefintv.data.repository.JellyfinStreamRepository
+import com.rpeters.cinefintv.data.repository.JellyfinUserRepository
 import io.mockk.every
 import io.mockk.mockk
 
@@ -28,11 +29,12 @@ class FakeHomeRepositories(
 class FakePlayerRepositories(
     val media: JellyfinMediaRepository = mockk(relaxed = true),
     val stream: JellyfinStreamRepository = mockk(relaxed = true),
+    val user: JellyfinUserRepository = mockk(relaxed = true),
 ) {
     val coordinator: JellyfinRepositoryCoordinator = mockk {
         every { this@mockk.media } returns this@FakePlayerRepositories.media
         every { this@mockk.stream } returns this@FakePlayerRepositories.stream
-        every { this@mockk.user } returns mockk(relaxed = true)
+        every { this@mockk.user } returns this@FakePlayerRepositories.user
         every { this@mockk.search } returns mockk(relaxed = true)
         every { this@mockk.auth } returns mockk(relaxed = true)
     }
@@ -102,6 +104,20 @@ class FakeSeasonDetailRepositories(
         every { this@mockk.media } returns this@FakeSeasonDetailRepositories.media
         every { this@mockk.stream } returns this@FakeSeasonDetailRepositories.stream
         every { this@mockk.user } returns mockk(relaxed = true)
+        every { this@mockk.search } returns mockk(relaxed = true)
+        every { this@mockk.auth } returns mockk(relaxed = true)
+    }
+}
+
+class FakeStuffDetailRepositories(
+    val media: JellyfinMediaRepository = mockk(relaxed = true),
+    val stream: JellyfinStreamRepository = mockk(relaxed = true),
+    val user: JellyfinUserRepository = mockk(relaxed = true),
+) {
+    val coordinator: JellyfinRepositoryCoordinator = mockk {
+        every { this@mockk.media } returns this@FakeStuffDetailRepositories.media
+        every { this@mockk.stream } returns this@FakeStuffDetailRepositories.stream
+        every { this@mockk.user } returns this@FakeStuffDetailRepositories.user
         every { this@mockk.search } returns mockk(relaxed = true)
         every { this@mockk.auth } returns mockk(relaxed = true)
     }

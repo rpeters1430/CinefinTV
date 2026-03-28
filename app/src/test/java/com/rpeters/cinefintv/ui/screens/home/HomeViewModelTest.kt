@@ -24,6 +24,8 @@ class HomeViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    private val updateBus = MediaUpdateBus()
+
     @Test
     fun refresh_buildsSectionsFromAvailableResults() = runTest {
         val fakeRepositories = FakeHomeRepositories()
@@ -252,6 +254,47 @@ class HomeViewModelTest {
         assertEquals("Show B - S2E4", nextEpisodes.items[1].title)
     }
 
+    @Test
+    fun refresh_silent_updatesRecentlyAddedWithoutLeavingContentState() = runTest {
+        val fakeRepositories = FakeHomeRepositories()
+        val oldMovie = mockBaseItemDto("Old Movie")
+        val newMovie = mockBaseItemDto("New Movie")
+
+        coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
+        } returnsMany listOf(
+            ApiResult.Success(listOf(oldMovie)),
+            ApiResult.Success(listOf(newMovie)),
+        )
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
+        every { fakeRepositories.stream.getBackdropUrl(any()) } returns "https://img/backdrop.jpg"
+
+        val viewModel = HomeViewModel(fakeRepositories.coordinator, updateBus)
+        advanceUntilIdle()
+
+        val initialState = viewModel.uiState.value as HomeUiState.Content
+        assertEquals("Old Movie", initialState.featuredItems.first().title)
+
+        viewModel.refresh(silent = true)
+        assertTrue(viewModel.uiState.value is HomeUiState.Content)
+        advanceUntilIdle()
+
+        val refreshedState = viewModel.uiState.value as HomeUiState.Content
+        assertEquals("New Movie", refreshedState.featuredItems.first().title)
+    }
+
     private fun mockBaseItemDto(
         name: String,
         type: BaseItemKind = BaseItemKind.MOVIE,
@@ -272,7 +315,7 @@ class HomeViewModelTest {
         every { item.seriesName } returns null
         every { item.parentIndexNumber } returns null
         every { item.indexNumber } returns null
+        every { item.parentId } returns null
         return item
     }
 }
-    private val updateBus = MediaUpdateBus()

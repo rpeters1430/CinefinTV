@@ -72,7 +72,11 @@ import com.rpeters.cinefintv.ui.theme.ThemeSeedColorCache
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 import com.rpeters.cinefintv.utils.coerceAlpha
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+
+private const val HOME_AUTO_REFRESH_INTERVAL_MS = 60_000L
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -94,7 +98,7 @@ fun HomeScreen(
                 Lifecycle.Event.ON_PAUSE  -> hasBeenPaused = true
                 Lifecycle.Event.ON_RESUME -> if (hasBeenPaused) {
                     hasBeenPaused = false
-                    viewModel.refresh()
+                    viewModel.refresh(silent = true)
                 }
                 else -> {}
             }
@@ -103,13 +107,20 @@ fun HomeScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    LaunchedEffect(viewModel) {
+        while (isActive) {
+            delay(HOME_AUTO_REFRESH_INTERVAL_MS)
+            viewModel.refresh(silent = true)
+        }
+    }
+
     HomeScreenContent(
         uiState = uiState,
         onOpenItem = onOpenItem,
         onPlayItem = onPlayItem,
         onOpenSeries = onOpenSeries,
         onOpenSeason = onOpenSeason,
-        onRetry = viewModel::refresh,
+        onRetry = { viewModel.refresh() },
     )
 }
 
