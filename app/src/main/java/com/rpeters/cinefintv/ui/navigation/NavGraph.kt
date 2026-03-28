@@ -129,33 +129,13 @@ fun CinefinTvNavGraph(
         composable(NavRoutes.HOME) {
             HomeScreen(
                 onOpenItem = { item ->
-                    when {
-                        item.itemType?.equals("CollectionFolder", ignoreCase = true) == true -> {
-                            when (item.collectionType?.lowercase()) {
-                                "movies" -> navController.navigate(NavRoutes.LIBRARY_MOVIES)
-                                "tvshows" -> navController.navigate(NavRoutes.LIBRARY_TVSHOWS)
-                                "music" -> navController.navigate(NavRoutes.LIBRARY_MUSIC)
-                                "homevideos" -> navController.navigate(NavRoutes.LIBRARY_COLLECTIONS)
-                                else -> navController.navigate(NavRoutes.stuffDetail(item.id))
-                            }
-                        }
-                        item.itemType?.equals("Movie", ignoreCase = true) == true -> {
-                            navController.navigate(NavRoutes.movieDetail(item.id))
-                        }
-                        item.itemType?.equals("Series", ignoreCase = true) == true || 
-                        item.itemType?.equals("TV Show", ignoreCase = true) == true -> {
-                            navController.navigate(NavRoutes.tvShowDetail(item.id))
-                        }
-                        item.itemType?.equals("Season", ignoreCase = true) == true -> {
-                            navController.navigate(NavRoutes.seasonDetail(item.id))
-                        }
-                        item.itemType?.equals("Episode", ignoreCase = true) == true -> {
-                            navController.navigate(NavRoutes.player(item.id))
-                        }
-                        else -> {
-                            navController.navigate(NavRoutes.stuffDetail(item.id))
-                        }
-                    }
+                    navController.navigate(
+                        routeForBrowsableItem(
+                            itemId = item.id,
+                            itemType = item.itemType,
+                            collectionType = item.collectionType,
+                        )
+                    )
                 },
                 onPlayItem = { itemId ->
                     navController.navigate(NavRoutes.player(itemId))
@@ -165,33 +145,13 @@ fun CinefinTvNavGraph(
         composable(NavRoutes.SEARCH) {
             SearchScreen(
                 onOpenItem = { item ->
-                    when {
-                        item.itemType?.equals("CollectionFolder", ignoreCase = true) == true -> {
-                            when (item.collectionType?.lowercase()) {
-                                "movies" -> navController.navigate(NavRoutes.LIBRARY_MOVIES)
-                                "tvshows" -> navController.navigate(NavRoutes.LIBRARY_TVSHOWS)
-                                "music" -> navController.navigate(NavRoutes.LIBRARY_MUSIC)
-                                "homevideos" -> navController.navigate(NavRoutes.LIBRARY_COLLECTIONS)
-                                else -> navController.navigate(NavRoutes.stuffDetail(item.id))
-                            }
-                        }
-                        item.itemType?.equals("Movie", ignoreCase = true) == true -> {
-                            navController.navigate(NavRoutes.movieDetail(item.id))
-                        }
-                        item.itemType?.equals("Series", ignoreCase = true) == true || 
-                        item.itemType?.equals("TV Show", ignoreCase = true) == true -> {
-                            navController.navigate(NavRoutes.tvShowDetail(item.id))
-                        }
-                        item.itemType?.equals("Season", ignoreCase = true) == true -> {
-                            navController.navigate(NavRoutes.seasonDetail(item.id))
-                        }
-                        item.itemType?.equals("Episode", ignoreCase = true) == true -> {
-                            navController.navigate(NavRoutes.player(item.id))
-                        }
-                        else -> {
-                            navController.navigate(NavRoutes.stuffDetail(item.id))
-                        }
-                    }
+                    navController.navigate(
+                        routeForBrowsableItem(
+                            itemId = item.id,
+                            itemType = item.itemType,
+                            collectionType = item.collectionType,
+                        )
+                    )
                 },
             )
         }
@@ -283,13 +243,7 @@ fun CinefinTvNavGraph(
         ) {
             StuffDetailScreen(
                 onOpenItem = { id, type ->
-                    when (type) {
-                        "Movie" -> navController.navigate(NavRoutes.movieDetail(id))
-                        "Series" -> navController.navigate(NavRoutes.tvShowDetail(id))
-                        "Season" -> navController.navigate(NavRoutes.seasonDetail(id))
-                        "Episode" -> navController.navigate(NavRoutes.player(id))
-                        else -> navController.navigate(NavRoutes.stuffDetail(id))
-                    }
+                    navController.navigate(routeForLinkedDetailItem(id, type))
                 },
                 onPlayItem = { itemId ->
                     navController.navigate(NavRoutes.player(itemId))
@@ -303,24 +257,7 @@ fun CinefinTvNavGraph(
         ) {
             PersonScreen(
                 onOpenItem = { id, type ->
-                    when {
-                        type?.equals("Movie", ignoreCase = true) == true -> {
-                            navController.navigate(NavRoutes.movieDetail(id))
-                        }
-                        type?.equals("Series", ignoreCase = true) == true || 
-                        type?.equals("TV Show", ignoreCase = true) == true -> {
-                            navController.navigate(NavRoutes.tvShowDetail(id))
-                        }
-                        type?.equals("Season", ignoreCase = true) == true -> {
-                            navController.navigate(NavRoutes.seasonDetail(id))
-                        }
-                        type?.equals("Episode", ignoreCase = true) == true -> {
-                            navController.navigate(NavRoutes.player(id))
-                        }
-                        else -> {
-                            navController.navigate(NavRoutes.stuffDetail(id))
-                        }
-                    }
+                    navController.navigate(routeForLinkedDetailItem(id, type))
                 },
                 onBack = {
                     navController.popBackStack()

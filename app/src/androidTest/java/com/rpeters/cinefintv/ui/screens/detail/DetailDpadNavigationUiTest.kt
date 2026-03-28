@@ -2,6 +2,9 @@ package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -12,6 +15,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailTestTags
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.MovieDetailLayout
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowDetailLayout
@@ -103,7 +107,15 @@ class DetailDpadNavigationUiTest {
         setMovieContent(
             listState = LazyListState(firstVisibleItemIndex = 2),
             primaryActionFocusRequester = focus,
-            similarItems = listOf(SimilarMovieModel(id = "s1", title = "Similar", imageUrl = null)),
+            similarItems = listOf(
+                SimilarMovieModel(
+                    id = "s1",
+                    title = "Similar",
+                    imageUrl = null,
+                    watchStatus = WatchStatus.NONE,
+                    playbackProgress = null,
+                )
+            ),
         )
 
         composeRule.runOnIdle { focus.requestFocus() }
@@ -123,7 +135,15 @@ class DetailDpadNavigationUiTest {
             listState = LazyListState(firstVisibleItemIndex = 3),
             primaryActionFocusRequester = focus,
             castItems = listOf(CastModel(id = "c1", name = "Actor", role = "Lead", imageUrl = null)),
-            similarItems = listOf(SimilarMovieModel(id = "s1", title = "Similar", imageUrl = null)),
+            similarItems = listOf(
+                SimilarMovieModel(
+                    id = "s1",
+                    title = "Similar",
+                    imageUrl = null,
+                    watchStatus = WatchStatus.NONE,
+                    playbackProgress = null,
+                )
+            ),
         )
 
         composeRule.runOnIdle { focus.requestFocus() }
@@ -147,7 +167,15 @@ class DetailDpadNavigationUiTest {
         setMovieContent(
             listState = LazyListState(firstVisibleItemIndex = 2),
             primaryActionFocusRequester = focus,
-            similarItems = listOf(SimilarMovieModel(id = "s1", title = "Similar", imageUrl = null)),
+            similarItems = listOf(
+                SimilarMovieModel(
+                    id = "s1",
+                    title = "Similar",
+                    imageUrl = null,
+                    watchStatus = WatchStatus.NONE,
+                    playbackProgress = null,
+                )
+            ),
         )
 
         composeRule.runOnIdle { focus.requestFocus() }
@@ -180,12 +208,18 @@ class DetailDpadNavigationUiTest {
     @Test
     fun movieDetail_scrollDown_upFromPlayButton_returnsToTop() {
         val focus = FocusRequester()
+        val topFocus = FocusRequester()
+        val restoreSignal = mutableIntStateOf(0)
         val listState = LazyListState()
         setMovieContent(
             listState = listState,
             primaryActionFocusRequester = focus,
+            topFocusRequester = topFocus,
+            restoreSignal = restoreSignal,
             castItems = (1..10).map { CastModel("c$it", "Actor $it", "Role", null) },
-            similarItems = (1..10).map { SimilarMovieModel("s$it", "Similar $it", null) }
+            similarItems = (1..10).map {
+                SimilarMovieModel("s$it", "Similar $it", null, WatchStatus.NONE, null)
+            }
         )
 
         // 1. Initial focus on play button
@@ -201,8 +235,10 @@ class DetailDpadNavigationUiTest {
         composeRule.waitForIdle()
         assertTrue("Should be scrolled down. Current index: ${listState.firstVisibleItemIndex}", listState.firstVisibleItemIndex > 0)
 
-        // 3. Focus the play button again (it's part of item 0, which is now offscreen)
-        composeRule.runOnIdle { focus.requestFocus() }
+        // 3. Trigger the same top-restore routine the real detail screen uses.
+        composeRule.runOnIdle {
+            restoreSignal.intValue += 1
+        }
         composeRule.waitForIdle()
 
         // 4. Press UP
@@ -248,7 +284,17 @@ class DetailDpadNavigationUiTest {
         setTvShowContent(
             listState = LazyListState(firstVisibleItemIndex = 2),
             primaryActionFocusRequester = focus,
-            seasons = listOf(SeasonModel(id = "s1", title = "Season 1", imageUrl = null, episodeCount = 5, unwatchedCount = 2)),
+            seasons = listOf(
+                SeasonModel(
+                    id = "s1",
+                    title = "Season 1",
+                    imageUrl = null,
+                    episodeCount = 5,
+                    unwatchedCount = 2,
+                    watchStatus = WatchStatus.NONE,
+                    playbackProgress = null,
+                )
+            ),
         )
 
         composeRule.runOnIdle { focus.requestFocus() }
@@ -267,7 +313,17 @@ class DetailDpadNavigationUiTest {
         setTvShowContent(
             listState = LazyListState(firstVisibleItemIndex = 2),
             primaryActionFocusRequester = focus,
-            seasons = listOf(SeasonModel(id = "s1", title = "Season 1", imageUrl = null, episodeCount = 5, unwatchedCount = 2)),
+            seasons = listOf(
+                SeasonModel(
+                    id = "s1",
+                    title = "Season 1",
+                    imageUrl = null,
+                    episodeCount = 5,
+                    unwatchedCount = 2,
+                    watchStatus = WatchStatus.NONE,
+                    playbackProgress = null,
+                )
+            ),
         )
 
         composeRule.runOnIdle { focus.requestFocus() }
@@ -308,7 +364,17 @@ class DetailDpadNavigationUiTest {
         setTvShowContent(
             listState = LazyListState(firstVisibleItemIndex = 3),
             primaryActionFocusRequester = focus,
-            seasons = listOf(SeasonModel(id = "s1", title = "Season 1", imageUrl = null, episodeCount = 5, unwatchedCount = 2)),
+            seasons = listOf(
+                SeasonModel(
+                    id = "s1",
+                    title = "Season 1",
+                    imageUrl = null,
+                    episodeCount = 5,
+                    unwatchedCount = 2,
+                    watchStatus = WatchStatus.NONE,
+                    playbackProgress = null,
+                )
+            ),
             castItems = listOf(CastModel(id = "c1", name = "Actor", role = "Lead", imageUrl = null)),
         )
 
@@ -333,9 +399,27 @@ class DetailDpadNavigationUiTest {
         setTvShowContent(
             listState = LazyListState(firstVisibleItemIndex = 4),
             primaryActionFocusRequester = focus,
-            seasons = listOf(SeasonModel(id = "s1", title = "Season 1", imageUrl = null, episodeCount = 5, unwatchedCount = 2)),
+            seasons = listOf(
+                SeasonModel(
+                    id = "s1",
+                    title = "Season 1",
+                    imageUrl = null,
+                    episodeCount = 5,
+                    unwatchedCount = 2,
+                    watchStatus = WatchStatus.NONE,
+                    playbackProgress = null,
+                )
+            ),
             castItems = listOf(CastModel(id = "c1", name = "Actor", role = "Lead", imageUrl = null)),
-            similarItems = listOf(SimilarMovieModel(id = "sim1", title = "Similar Show", imageUrl = null)),
+            similarItems = listOf(
+                SimilarMovieModel(
+                    id = "sim1",
+                    title = "Similar Show",
+                    imageUrl = null,
+                    watchStatus = WatchStatus.NONE,
+                    playbackProgress = null,
+                )
+            ),
         )
 
         // Navigate: play → overview → season → cast → similar
@@ -362,8 +446,26 @@ class DetailDpadNavigationUiTest {
         setTvShowContent(
             listState = LazyListState(firstVisibleItemIndex = 3),
             primaryActionFocusRequester = focus,
-            seasons = listOf(SeasonModel(id = "s1", title = "Season 1", imageUrl = null, episodeCount = 5, unwatchedCount = 2)),
-            similarItems = listOf(SimilarMovieModel(id = "sim1", title = "Similar Show", imageUrl = null)),
+            seasons = listOf(
+                SeasonModel(
+                    id = "s1",
+                    title = "Season 1",
+                    imageUrl = null,
+                    episodeCount = 5,
+                    unwatchedCount = 2,
+                    watchStatus = WatchStatus.NONE,
+                    playbackProgress = null,
+                )
+            ),
+            similarItems = listOf(
+                SimilarMovieModel(
+                    id = "sim1",
+                    title = "Similar Show",
+                    imageUrl = null,
+                    watchStatus = WatchStatus.NONE,
+                    playbackProgress = null,
+                )
+            ),
         )
 
         // Navigate: play → overview → season → similar
@@ -388,7 +490,15 @@ class DetailDpadNavigationUiTest {
         setTvShowContent(
             listState = LazyListState(firstVisibleItemIndex = 2),
             primaryActionFocusRequester = focus,
-            similarItems = listOf(SimilarMovieModel(id = "sim1", title = "Similar Show", imageUrl = null)),
+            similarItems = listOf(
+                SimilarMovieModel(
+                    id = "sim1",
+                    title = "Similar Show",
+                    imageUrl = null,
+                    watchStatus = WatchStatus.NONE,
+                    playbackProgress = null,
+                )
+            ),
         )
 
         composeRule.runOnIdle { focus.requestFocus() }
@@ -461,11 +571,25 @@ class DetailDpadNavigationUiTest {
     private fun setMovieContent(
         listState: LazyListState,
         primaryActionFocusRequester: FocusRequester,
+        topFocusRequester: FocusRequester = FocusRequester(),
+        restoreSignal: MutableIntState? = null,
         castItems: List<CastModel> = emptyList(),
         similarItems: List<SimilarMovieModel> = emptyList(),
     ) {
         composeRule.setContent {
+            val restoreToken = restoreSignal?.intValue ?: 0
+
             DetailTestHost {
+                LaunchedEffect(restoreToken) {
+                    if (restoreSignal != null && restoreToken > 0) {
+                        focusDetailScreenAtTop(
+                            listState = listState,
+                            initialFocusRequester = primaryActionFocusRequester,
+                            anchorFocusRequester = topFocusRequester,
+                        )
+                    }
+                }
+
                 MovieDetailLayout(
                     backdropUrl = null,
                     posterUrl = null,
@@ -478,6 +602,7 @@ class DetailDpadNavigationUiTest {
                     onPrimaryAction = {},
                     secondaryActions = emptyList(),
                     primaryActionFocusRequester = primaryActionFocusRequester,
+                    topFocusRequester = topFocusRequester,
                     description = "Test overview.",
                     factItems = emptyList(),
                     factSummary = "",

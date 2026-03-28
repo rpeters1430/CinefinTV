@@ -478,7 +478,8 @@ internal fun SkipActionCard(
                 onClick = onSkip,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 2.dp),
+                    .padding(top = 2.dp)
+                    .testTag(PlayerTestTags.SkipActionButton),
                 colors = ButtonDefaults.colors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = expressiveColors.playerContentPrimary,
@@ -597,6 +598,7 @@ internal fun NextEpisodeCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 4.dp)
+                        .testTag(PlayerTestTags.NextEpisodeButton)
                         .focusRequester(playNowFocusRequester)
                         .onFocusChanged { onActionFocusChanged(it.hasFocus) },
                     colors = ButtonDefaults.colors(

@@ -3,8 +3,14 @@ package com.rpeters.cinefintv.ui.screens.home
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
@@ -18,6 +24,10 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.tv.material3.Button
+import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.AppChromeFocusController
+import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
@@ -129,6 +139,25 @@ class HomeScreenUiTest {
     }
 
     @Test
+    fun featuredPlayUp_movesFocusToTopNav() {
+        composeRule.setContent {
+            HomeTestHost(showTopNav = true) {
+                HomeScreenContent(
+                    uiState = sampleContentState(featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))),
+                    onOpenItem = {},
+                    onPlayItem = {},
+                    onRetry = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton).requestFocus()
+        composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton)
+            .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithTag("top_nav").assertIsFocused()
+    }
+
+    @Test
     fun firstSectionDown_movesFocusToSecondSectionFirstItem() {
         composeRule.setContent {
             HomeTestHost {
@@ -149,6 +178,44 @@ class HomeScreenUiTest {
             .performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(1, 0))
             .assertIsFocused()
+    }
+
+    @Test
+    fun firstSectionUp_withFeatured_movesFocusToFeaturedPlay() {
+        composeRule.setContent {
+            HomeTestHost(showTopNav = true) {
+                HomeScreenContent(
+                    uiState = sampleContentState(featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))),
+                    onOpenItem = {},
+                    onPlayItem = {},
+                    onRetry = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0)).requestFocus()
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
+            .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton).assertIsFocused()
+    }
+
+    @Test
+    fun firstSectionUp_withoutFeatured_movesFocusToTopNav() {
+        composeRule.setContent {
+            HomeTestHost(showTopNav = true) {
+                HomeScreenContent(
+                    uiState = sampleContentState(featuredItems = emptyList()),
+                    onOpenItem = {},
+                    onPlayItem = {},
+                    onRetry = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0)).requestFocus()
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
+            .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithTag("top_nav").assertIsFocused()
     }
 
     @Test
@@ -201,6 +268,25 @@ class HomeScreenUiTest {
         }
 
         composeRule.onNodeWithText("Featured title from your library").assertIsDisplayed()
+    }
+
+    @Test
+    fun topNavDown_movesFocusToFeaturedPlay() {
+        composeRule.setContent {
+            HomeTestHost(showTopNav = true) {
+                HomeScreenContent(
+                    uiState = sampleContentState(featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))),
+                    onOpenItem = {},
+                    onPlayItem = {},
+                    onRetry = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("top_nav").requestFocus()
+        composeRule.onNodeWithTag("top_nav")
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton).assertIsFocused()
     }
 }
 
@@ -255,14 +341,37 @@ private fun SemanticsNodeInteraction.requestFocus(): SemanticsNodeInteraction =
     apply { performSemanticsAction(SemanticsActions.RequestFocus) }
 
 @Composable
-private fun HomeTestHost(content: @Composable () -> Unit) {
+private fun HomeTestHost(
+    showTopNav: Boolean = false,
+    content: @Composable () -> Unit,
+) {
     CinefinTvTheme(useDynamicColors = false) {
+        val chromeFocusController = remember { AppChromeFocusController() }
+        val topNavFocusRequester = remember { FocusRequester() }
+        chromeFocusController.topNavFocusRequester = if (showTopNav) topNavFocusRequester else null
+
         CompositionLocalProvider(
+            LocalAppChromeFocusController provides chromeFocusController,
             LocalCinefinThemeController provides object : ThemeColorController {
                 override fun updateSeedColor(color: Color?) = Unit
             }
         ) {
-            content()
+            androidx.compose.foundation.layout.Column {
+                if (showTopNav) {
+                    Button(
+                        onClick = {},
+                        modifier = Modifier
+                            .focusRequester(topNavFocusRequester)
+                            .focusProperties {
+                                chromeFocusController.primaryContentFocusRequester?.let { down = it }
+                            }
+                            .testTag("top_nav"),
+                    ) {
+                        Text("Top Nav")
+                    }
+                }
+                content()
+            }
         }
     }
 }

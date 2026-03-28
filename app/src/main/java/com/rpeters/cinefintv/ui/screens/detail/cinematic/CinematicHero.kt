@@ -298,11 +298,10 @@ fun CinematicHero(
                                 val activeListState = currentListState
                                 if (it.isFocused && activeListState != null) {
                                     coroutineScope.launch {
-                                        val farFromTop = activeListState.firstVisibleItemIndex > 0
-                                        val hasMeaningfulOffset = activeListState.firstVisibleItemScrollOffset > 48
-                                        if (farFromTop) {
-                                            activeListState.animateScrollToItem(0)
-                                        } else if (hasMeaningfulOffset) {
+                                        val needsTopReset =
+                                            activeListState.firstVisibleItemIndex != 0 ||
+                                                activeListState.firstVisibleItemScrollOffset > 0
+                                        if (needsTopReset) {
                                             activeListState.scrollToItem(0)
                                         }
                                     }

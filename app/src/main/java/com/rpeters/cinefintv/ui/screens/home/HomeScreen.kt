@@ -21,6 +21,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,6 +59,7 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.toBitmap
+import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
@@ -115,9 +117,8 @@ internal fun HomeScreenContent(
 ) {
     val listState = rememberLazyListState()
     val spacing = LocalCinefinSpacing.current
-
-    val primaryContentRequester = remember { FocusRequester() }
-    val firstRowFocusRequester = remember { FocusRequester() }
+    val chromeFocusController = LocalAppChromeFocusController.current
+    val navUpRequester = chromeFocusController?.topNavFocusRequester
 
     when (val state = uiState) {
         HomeUiState.Loading -> {
@@ -171,8 +172,27 @@ internal fun HomeScreenContent(
             val sectionFocusRequesters = remember(state.sections.size) {
                 List(state.sections.size) { FocusRequester() }
             }
+            val featuredPrimaryActionRequester = remember { FocusRequester() }
             var lastFocusedSectionTitle by rememberSaveable { mutableStateOf<String?>(null) }
             var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(null) }
+
+            SideEffect {
+                chromeFocusController?.primaryContentFocusRequester = when {
+                    state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
+                    sectionFocusRequesters.isNotEmpty() -> sectionFocusRequesters.first()
+                    else -> null
+                }
+            }
+            DisposableEffect(chromeFocusController) {
+                onDispose {
+                    val focusController = chromeFocusController ?: return@onDispose
+                    if (focusController.primaryContentFocusRequester == featuredPrimaryActionRequester ||
+                        focusController.primaryContentFocusRequester in sectionFocusRequesters
+                    ) {
+                        focusController.primaryContentFocusRequester = null
+                    }
+                }
+            }
 
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
@@ -187,15 +207,12 @@ internal fun HomeScreenContent(
                                 items = state.featuredItems,
                                 onMoreInfo = onOpenItem,
                                 onPlay = onPlayItem,
+                                primaryActionFocusRequester = featuredPrimaryActionRequester,
+                                upRequester = navUpRequester,
+                                downRequester = sectionFocusRequesters.firstOrNull(),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 0.dp, start = spacing.gutter, end = spacing.gutter)
-                                    .focusRequester(primaryContentRequester)
-                                    .focusProperties {
-                                        if (state.sections.isNotEmpty()) {
-                                            down = firstRowFocusRequester
-                                        }
-                                    },
+                                    .padding(top = 0.dp, start = spacing.gutter, end = spacing.gutter),
                             )
                         }
                     }
@@ -204,16 +221,9 @@ internal fun HomeScreenContent(
                         state.sections,
                         key = { _, section -> section.title }
                     ) { index, section ->
-                        val rowRequester = if (index == 0) {
-                            if (state.featuredItems.isEmpty()) primaryContentRequester else firstRowFocusRequester
-                        } else {
-                            sectionFocusRequesters[index]
-                        }
-
                         val upRequester = when {
-                            index == 0 && state.featuredItems.isNotEmpty() -> primaryContentRequester
-                            index == 0 -> null
-                            index == 1 -> if (state.featuredItems.isEmpty()) primaryContentRequester else firstRowFocusRequester
+                            index == 0 && state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
+                            index == 0 -> navUpRequester
                             else -> sectionFocusRequesters[index - 1]
                         }
 
@@ -231,7 +241,7 @@ internal fun HomeScreenContent(
                                 lastFocusedSectionTitle = section.title
                                 lastFocusedItemId = itemId
                             },
-                            firstItemFocusRequester = rowRequester,
+                            firstItemFocusRequester = sectionFocusRequesters[index],
                             upRequester = upRequester,
                             downRequester = sectionFocusRequesters.getOrNull(index + 1),
                         )
@@ -248,6 +258,9 @@ private fun FeaturedCarousel(
     items: List<HomeCardModel>,
     onMoreInfo: (HomeCardModel) -> Unit,
     onPlay: (String) -> Unit,
+    primaryActionFocusRequester: FocusRequester,
+    upRequester: FocusRequester?,
+    downRequester: FocusRequester?,
     modifier: Modifier = Modifier,
 ) {
     val carouselState = rememberCarouselState()
@@ -266,6 +279,9 @@ private fun FeaturedCarousel(
             item = item,
             onMoreInfo = { onMoreInfo(item) },
             onPlay = { onPlay(item.id) },
+            primaryActionFocusRequester = primaryActionFocusRequester,
+            upRequester = upRequester,
+            downRequester = downRequester,
             modifier = Modifier.fillMaxSize()
         )
     }
@@ -277,6 +293,9 @@ private fun HeroItem(
     item: HomeCardModel,
     onMoreInfo: () -> Unit,
     onPlay: () -> Unit,
+    primaryActionFocusRequester: FocusRequester,
+    upRequester: FocusRequester?,
+    downRequester: FocusRequester?,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -284,7 +303,7 @@ private fun HeroItem(
     val performanceProfile = LocalPerformanceProfile.current
     val spacing = LocalCinefinSpacing.current
     val themeController = LocalCinefinThemeController.current
-    val playButtonRequester = remember { FocusRequester() }
+    val detailsButtonRequester = remember { FocusRequester() }
     val coroutineScope = rememberCoroutineScope()
     val heroImageUrl = item.backdropUrl ?: item.imageUrl
     val shouldExtractPalette = performanceProfile.tier == DevicePerformanceProfile.Tier.HIGH
@@ -399,14 +418,26 @@ private fun HeroItem(
                 Button(
                     onClick = onPlay,
                     modifier = Modifier
-                        .focusRequester(playButtonRequester)
+                        .focusRequester(primaryActionFocusRequester)
+                        .focusProperties {
+                            upRequester?.let { up = it }
+                            downRequester?.let { down = it }
+                            right = detailsButtonRequester
+                        }
                         .testTag(HomeTestTags.FeaturedPlayButton)
                 ) {
                     Text("Play")
                 }
                 OutlinedButton(
                     onClick = onMoreInfo,
-                    modifier = Modifier.testTag(HomeTestTags.FeaturedDetailsButton),
+                    modifier = Modifier
+                        .focusRequester(detailsButtonRequester)
+                        .focusProperties {
+                            upRequester?.let { up = it }
+                            downRequester?.let { down = it }
+                            left = primaryActionFocusRequester
+                        }
+                        .testTag(HomeTestTags.FeaturedDetailsButton),
                 ) {
                     Text("Details")
                 }

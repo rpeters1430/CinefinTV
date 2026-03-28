@@ -2,6 +2,7 @@ package com.rpeters.cinefintv.data.repository
 
 import com.rpeters.cinefintv.data.JellyfinServer
 import com.rpeters.cinefintv.data.cache.JellyfinCache
+import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.data.repository.common.LibraryHealthChecker
 import com.rpeters.cinefintv.data.session.JellyfinSessionManager
@@ -38,7 +39,8 @@ class JellyfinMediaRepositoryTest {
         authRepository = authRepository,
         sessionManager = sessionManager,
         cache = cache,
-        healthChecker = healthChecker
+        healthChecker = healthChecker,
+        updateBus = MediaUpdateBus(),
     )
 
     @Test

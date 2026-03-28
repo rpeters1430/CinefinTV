@@ -1,8 +1,12 @@
 package com.rpeters.cinefintv.ui.screens.library
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -43,6 +47,7 @@ class LibraryScreenUiTest {
                     emptyTitle = "No movies found",
                     columnCount = 5,
                     aspectRatio = 2f / 3f,
+                    gridState = rememberLazyGridState(),
                     onOpenItem = {},
                     onRetry = {},
                 )
@@ -64,6 +69,7 @@ class LibraryScreenUiTest {
                     emptyTitle = "No movies found",
                     columnCount = 5,
                     aspectRatio = 2f / 3f,
+                    gridState = rememberLazyGridState(),
                     onOpenItem = {},
                     onRetry = { retryCount++ },
                 )
@@ -89,6 +95,7 @@ class LibraryScreenUiTest {
                     emptyTitle = "No collections found",
                     columnCount = 4,
                     aspectRatio = 16f / 9f,
+                    gridState = rememberLazyGridState(),
                     onOpenItem = {},
                     onRetry = {},
                 )
@@ -111,6 +118,7 @@ class LibraryScreenUiTest {
                     emptyTitle = "No TV shows found",
                     columnCount = 5,
                     aspectRatio = 2f / 3f,
+                    gridState = rememberLazyGridState(),
                     onOpenItem = { openedId = it.id },
                     onRetry = {},
                 )
@@ -136,6 +144,7 @@ class LibraryScreenUiTest {
                     emptyTitle = "No movies found",
                     columnCount = 4,
                     aspectRatio = 16f / 9f,
+                    gridState = rememberLazyGridState(),
                     onOpenItem = {},
                     onRetry = {},
                 )
@@ -148,21 +157,115 @@ class LibraryScreenUiTest {
             .performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.onNodeWithTag(LibraryTestTags.item(4)).assertIsFocused()
     }
+
+    @Test
+    fun focusedItem_isRestoredAfterRecomposition() {
+        var highlightedTitle by mutableStateOf("Movie 2")
+
+        composeRule.setContent {
+            LibraryTestHost {
+                val items = listOf(
+                    sampleLibraryItem(id = "movie-1", title = "Movie 1"),
+                    sampleLibraryItem(id = "movie-2", title = highlightedTitle),
+                    sampleLibraryItem(id = "movie-3", title = "Movie 3"),
+                )
+                LibraryGridContent(
+                    uiState = LibraryGridUiState.Content(items = items),
+                    errorTitle = "Failed to load movies",
+                    emptyTitle = "No movies found",
+                    columnCount = 3,
+                    aspectRatio = 16f / 9f,
+                    gridState = rememberLazyGridState(),
+                    onOpenItem = {},
+                    onRetry = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(LibraryTestTags.item(1)).requestFocus()
+        composeRule.onNodeWithTag(LibraryTestTags.item(1)).assertIsFocused()
+
+        composeRule.runOnIdle {
+            highlightedTitle = "Movie 2 Updated"
+        }
+
+        composeRule.onNodeWithTag(LibraryTestTags.item(1)).assertIsFocused()
+    }
+
+    @Test
+    fun menuKey_invokesItemMenuAction() {
+        var menuItemId: String? = null
+        composeRule.setContent {
+            LibraryTestHost {
+                LibraryGridContent(
+                    uiState = LibraryGridUiState.Content(items = sampleLibraryItems()),
+                    errorTitle = "Failed to load movies",
+                    emptyTitle = "No movies found",
+                    columnCount = 3,
+                    aspectRatio = 16f / 9f,
+                    gridState = rememberLazyGridState(),
+                    onOpenItem = {},
+                    onItemMenuAction = { menuItemId = it.id },
+                    onRetry = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(LibraryTestTags.item(0)).requestFocus()
+        composeRule.onNodeWithTag(LibraryTestTags.item(0))
+            .performKeyInput { pressKey(Key.Menu) }
+
+        composeRule.runOnIdle {
+            assertEquals("movie-1", menuItemId)
+        }
+    }
+
+    @Test
+    fun appendingState_keepsGridVisible() {
+        composeRule.setContent {
+            LibraryTestHost {
+                LibraryGridContent(
+                    uiState = LibraryGridUiState.Content(
+                        items = sampleLibraryItems(count = 6),
+                        isAppending = true,
+                    ),
+                    errorTitle = "Failed to load movies",
+                    emptyTitle = "No movies found",
+                    columnCount = 3,
+                    aspectRatio = 16f / 9f,
+                    gridState = rememberLazyGridState(),
+                    onOpenItem = {},
+                    onRetry = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(LibraryTestTags.Grid).assertIsDisplayed()
+        composeRule.onNodeWithTag(LibraryTestTags.item(0)).assertIsDisplayed()
+    }
 }
 
 private fun sampleLibraryItems(count: Int = 2): List<LibraryCardModel> =
     List(count) { index ->
-        LibraryCardModel(
+        sampleLibraryItem(
             id = "movie-${index + 1}",
             title = if (index == 0) "Movie One" else "Movie ${index + 1}",
-            subtitle = "2026",
-            imageUrl = null,
-            itemType = "Movie",
-            watchStatus = WatchStatus.NONE,
-            playbackProgress = null,
-            unwatchedCount = null,
         )
     }
+
+private fun sampleLibraryItem(
+    id: String,
+    title: String,
+): LibraryCardModel = LibraryCardModel(
+    id = id,
+    title = title,
+    subtitle = "2026",
+    imageUrl = null,
+    itemType = "Movie",
+    watchStatus = WatchStatus.NONE,
+    playbackProgress = null,
+    unwatchedCount = null,
+)
 
 private fun SemanticsNodeInteraction.requestFocus(): SemanticsNodeInteraction =
     apply { performSemanticsAction(SemanticsActions.RequestFocus) }

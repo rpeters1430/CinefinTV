@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.lifecycle.SavedStateHandle
+import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.testutil.FakeSeasonDetailRepositories
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
@@ -63,7 +64,7 @@ class SeasonViewModelTest {
         every { fakeRepos.stream.getBackdropUrlWithFallback(any(), any()) } returns null
         every { fakeRepos.stream.getBackdropUrl(any()) } returns null
 
-        val vm = SeasonViewModel(fakeRepos.coordinator, makeSavedStateHandle(seasonId))
+        val vm = SeasonViewModel(fakeRepos.coordinator, updateBus, makeSavedStateHandle(seasonId))
         advanceUntilIdle()
 
         val state = vm.uiState.value
@@ -91,7 +92,7 @@ class SeasonViewModelTest {
         every { fakeRepos.stream.getBackdropUrlWithFallback(any(), any()) } returns null
         every { fakeRepos.stream.getBackdropUrl(any()) } returns null
 
-        val vm = SeasonViewModel(fakeRepos.coordinator, makeSavedStateHandle(seasonId))
+        val vm = SeasonViewModel(fakeRepos.coordinator, updateBus, makeSavedStateHandle(seasonId))
         advanceUntilIdle()
 
         vm.refreshWatchStatus()
@@ -102,3 +103,4 @@ class SeasonViewModelTest {
         assertEquals(3, (state as SeasonUiState.Content).episodes.size)
     }
 }
+    private val updateBus = MediaUpdateBus()

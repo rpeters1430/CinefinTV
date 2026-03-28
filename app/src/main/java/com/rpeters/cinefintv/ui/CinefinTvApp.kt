@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -83,6 +84,13 @@ import kotlinx.coroutines.launch
 val LocalCinefinThemeController = compositionLocalOf<ThemeColorController> {
     error("No ThemeColorController provided")
 }
+
+class AppChromeFocusController {
+    var topNavFocusRequester: FocusRequester? by mutableStateOf(null)
+    var primaryContentFocusRequester: FocusRequester? by mutableStateOf(null)
+}
+
+val LocalAppChromeFocusController = compositionLocalOf<AppChromeFocusController?> { null }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @UnstableApi
@@ -286,85 +294,98 @@ internal fun CinefinAppScaffold(
     val tabFocusRequesters = remember {
         List(navTabItems.size) { FocusRequester() }
     }
+    val chromeFocusController = remember { AppChromeFocusController() }
+    val selectedTabFocusRequester = tabFocusRequesters[selectedTabIndex]
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        if (showNav) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = spacing.gutter, vertical = 16.dp),
-                shape = RoundedCornerShape(spacing.cornerContainer),
-                colors = androidx.tv.material3.SurfaceDefaults.colors(
-                    containerColor = expressiveColors.chromeSurface.copy(alpha = 0.92f),
-                ),
-                border = androidx.tv.material3.Border(
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = expressiveColors.borderSubtle.copy(alpha = 0.75f),
-                    ),
-                ),
-                tonalElevation = 8.dp,
-            ) {
-                Column(
+    SideEffect {
+        chromeFocusController.topNavFocusRequester = if (showNav) selectedTabFocusRequester else null
+    }
+
+    CompositionLocalProvider(LocalAppChromeFocusController provides chromeFocusController) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            if (showNav) {
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    expressiveColors.accentSurface.copy(alpha = 0.28f),
-                                ),
-                            ),
-                        )
-                        .padding(horizontal = 12.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.Center,
+                        .padding(horizontal = spacing.gutter, vertical = 16.dp),
+                    shape = RoundedCornerShape(spacing.cornerContainer),
+                    colors = androidx.tv.material3.SurfaceDefaults.colors(
+                        containerColor = expressiveColors.chromeSurface.copy(alpha = 0.92f),
+                    ),
+                    border = androidx.tv.material3.Border(
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = expressiveColors.borderSubtle.copy(alpha = 0.75f),
+                        ),
+                    ),
+                    tonalElevation = 8.dp,
                 ) {
-                    TabRow(
-                        selectedTabIndex = selectedTabIndex,
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .focusProperties {
-                                enter = { tabFocusRequesters[selectedTabIndex] }
-                            }
-                            .testTag(AppTestTags.NavBar),
-                        indicator = { tabPositions, doesTabRowHaveFocus ->
-                            TabRowDefaults.UnderlinedIndicator(
-                                currentTabPosition = tabPositions[selectedTabIndex],
-                                doesTabRowHaveFocus = doesTabRowHaveFocus
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        expressiveColors.accentSurface.copy(alpha = 0.28f),
+                                    ),
+                                ),
                             )
-                        }
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.Center,
                     ) {
-                        navTabItems.forEachIndexed { index, item ->
-                            Tab(
-                                selected = index == selectedTabIndex,
-                                onFocus = { onNavigateToTab(item.route) },
-                                modifier = Modifier
-                                    .focusRequester(tabFocusRequesters[index])
-                                    .testTag(AppTestTags.tab(item.route)),
-                                onClick = { onNavigateToTab(item.route) }
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        TabRow(
+                            selectedTabIndex = selectedTabIndex,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusProperties {
+                                    enter = { selectedTabFocusRequester }
+                                }
+                                .testTag(AppTestTags.NavBar),
+                            indicator = { tabPositions, doesTabRowHaveFocus ->
+                                TabRowDefaults.UnderlinedIndicator(
+                                    currentTabPosition = tabPositions[selectedTabIndex],
+                                    doesTabRowHaveFocus = doesTabRowHaveFocus
+                                )
+                            }
+                        ) {
+                            navTabItems.forEachIndexed { index, item ->
+                                Tab(
+                                    selected = index == selectedTabIndex,
+                                    onFocus = { onNavigateToTab(item.route) },
+                                    modifier = Modifier
+                                        .focusRequester(tabFocusRequesters[index])
+                                        .focusProperties {
+                                            chromeFocusController.primaryContentFocusRequester?.let {
+                                                down = it
+                                            }
+                                        }
+                                        .testTag(AppTestTags.tab(item.route)),
+                                    onClick = { onNavigateToTab(item.route) }
                                 ) {
-                                    Icon(
-                                        imageVector = item.icon,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Text(
-                                        text = item.label,
-                                        style = MaterialTheme.typography.labelMedium
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = item.icon,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = item.label,
+                                            style = MaterialTheme.typography.labelMedium
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+            content()
         }
-        content()
     }
 }
 

@@ -6,13 +6,12 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import com.rpeters.cinefintv.data.repository.common.ApiResult
-import com.rpeters.cinefintv.testutil.DeterministicDispatcherProvider
 import com.rpeters.cinefintv.testutil.FakeMusicRepositories
+import com.rpeters.cinefintv.testutil.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -20,15 +19,16 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AudioPlayerViewModelTest {
 
-    private lateinit var dispatcherProvider: DeterministicDispatcherProvider
-    private val testDispatcher = StandardTestDispatcher()
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val appContext: Context = mockk(relaxed = true)
 
     companion object {
@@ -36,13 +36,8 @@ class AudioPlayerViewModelTest {
         private const val TRACK_TWO_ID = "00000000-0000-0000-0000-000000000002"
     }
 
-    @Before
-    fun setup() {
-        dispatcherProvider = DeterministicDispatcherProvider(testDispatcher)
-    }
-
     @Test
-    fun init_withoutItemId_showsError() = runTest(testDispatcher) {
+    fun init_withoutItemId_showsError() = runTest {
         val fakeRepositories = FakeMusicRepositories()
         val controller = mockk<AudioPlaybackController>(relaxed = true)
         val connector = FakeAudioControllerConnector(controller)
@@ -57,6 +52,7 @@ class AudioPlayerViewModelTest {
             playbackPositionRepository = positionRepository,
             mediaItemFactory = mediaItemFactory,
         )
+        advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertFalse(state.isConnecting)
@@ -64,7 +60,7 @@ class AudioPlayerViewModelTest {
     }
 
     @Test
-    fun togglePlayPause_callsController() = runTest(testDispatcher) {
+    fun togglePlayPause_callsController() = runTest {
         val fakeRepositories = FakeMusicRepositories()
         val controller = FakeAudioPlaybackController(
             currentMediaItem = null,
@@ -92,17 +88,17 @@ class AudioPlayerViewModelTest {
         advanceUntilIdle()
 
         viewModel.togglePlayPause()
-        assertTrue(controller.isPlaying)
-        assertEquals(1, controller.playCalls)
-
-        viewModel.togglePlayPause()
         assertFalse(controller.isPlaying)
         assertEquals(1, controller.pauseCalls)
+
+        viewModel.togglePlayPause()
+        assertTrue(controller.isPlaying)
+        assertEquals(2, controller.playCalls)
         clearViewModel(viewModel)
     }
 
     @Test
-    fun skipAndSeek_callsController() = runTest(testDispatcher) {
+    fun skipAndSeek_callsController() = runTest {
         val fakeRepositories = FakeMusicRepositories()
         val controller = FakeAudioPlaybackController(
             currentMediaItem = null,
@@ -143,7 +139,7 @@ class AudioPlayerViewModelTest {
     }
 
     @Test
-    fun init_withQueue_loadsMediaItemsAndStartsPlayback() = runTest(testDispatcher) {
+    fun init_withQueue_loadsMediaItemsAndStartsPlayback() = runTest {
         val fakeRepositories = FakeMusicRepositories()
         val controller = FakeAudioPlaybackController(
             currentMediaItem = null,

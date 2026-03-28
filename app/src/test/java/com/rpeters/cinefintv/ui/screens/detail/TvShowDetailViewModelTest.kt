@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.lifecycle.SavedStateHandle
+import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.testutil.FakeTvShowDetailRepositories
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
@@ -72,7 +73,7 @@ class TvShowDetailViewModelTest {
         every { fakeRepos.stream.getWideCardImageUrl(any()) } returns null
         every { fakeRepos.stream.getImageUrl(any(), any()) } returns null
 
-        val vm = TvShowDetailViewModel(fakeRepos.coordinator, makeSavedStateHandle(seriesId))
+        val vm = TvShowDetailViewModel(fakeRepos.coordinator, updateBus, makeSavedStateHandle(seriesId))
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value is TvShowDetailUiState.Content)
@@ -101,7 +102,7 @@ class TvShowDetailViewModelTest {
         coEvery { fakeRepos.media.getSimilarSeries(seriesId) } returns ApiResult.Success(emptyList())
         coEvery { fakeRepos.media.getNextUpForSeries(seriesId) } returns ApiResult.Error("none")
 
-        val vm = TvShowDetailViewModel(fakeRepos.coordinator, makeSavedStateHandle(seriesId))
+        val vm = TvShowDetailViewModel(fakeRepos.coordinator, updateBus, makeSavedStateHandle(seriesId))
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value is TvShowDetailUiState.Error)
@@ -128,7 +129,7 @@ class TvShowDetailViewModelTest {
         every { fakeRepos.stream.getWideCardImageUrl(any()) } returns null
         every { fakeRepos.stream.getImageUrl(any(), any()) } returns null
 
-        val vm = TvShowDetailViewModel(fakeRepos.coordinator, makeSavedStateHandle(seriesId))
+        val vm = TvShowDetailViewModel(fakeRepos.coordinator, updateBus, makeSavedStateHandle(seriesId))
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value is TvShowDetailUiState.Content)
@@ -144,3 +145,4 @@ class TvShowDetailViewModelTest {
         assertTrue(vm.uiState.value is TvShowDetailUiState.Content)
     }
 }
+    private val updateBus = MediaUpdateBus()

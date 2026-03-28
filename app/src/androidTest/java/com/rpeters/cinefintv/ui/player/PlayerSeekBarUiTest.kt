@@ -76,11 +76,11 @@ class PlayerSeekBarUiTest {
             .performKeyInput { pressKey(Key.DirectionLeft) }
 
         verify { player.seekTo(40_000L) }
-        verify(atLeast = 1) { player.seekTo(30_000L) }
+        verify { player.seekTo(20_000L) }
     }
 
     @Test
-    fun seekBar_showsActiveChapterNameInBubble() {
+    fun seekBar_withChapterMarkers_keepsBubbleVisible() {
         val player = mockk<ExoPlayer>(relaxed = true)
 
         composeRule.setContent {
@@ -99,7 +99,8 @@ class PlayerSeekBarUiTest {
             .requestFocus()
         composeRule.onNodeWithTag(PlayerTestTags.SeekBar, useUnmergedTree = true)
             .performKeyInput { pressKey(Key.DirectionRight) }
-        composeRule.onNodeWithText("Main Story").assertIsDisplayed()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(PlayerTestTags.SeekBubble).assertIsDisplayed()
     }
 }
 

@@ -3,6 +3,7 @@ package com.rpeters.cinefintv.ui.player
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import com.rpeters.cinefintv.data.PlaybackPositionStore
+import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferences
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
@@ -47,6 +48,7 @@ class PlayerViewModelTest {
         coEvery { getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.Error("mock error")
     }
     private val adaptiveBitrateMonitor: com.rpeters.cinefintv.data.playback.AdaptiveBitrateMonitor = mockk(relaxed = true)
+    private val updateBus = MediaUpdateBus()
 
     init {
         mockkObject(PlaybackPositionStore)
@@ -63,6 +65,7 @@ class PlayerViewModelTest {
             subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
         )
         advanceUntilIdle()
 
@@ -89,6 +92,7 @@ class PlayerViewModelTest {
             subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
         )
         advanceUntilIdle()
 
@@ -115,6 +119,7 @@ class PlayerViewModelTest {
             subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
         )
         advanceUntilIdle()
 
@@ -160,6 +165,7 @@ class PlayerViewModelTest {
             subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
         )
         advanceUntilIdle()
 
@@ -203,6 +209,7 @@ class PlayerViewModelTest {
             subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
         )
         advanceUntilIdle()
 
@@ -233,6 +240,7 @@ class PlayerViewModelTest {
             subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
         )
         advanceUntilIdle()
 
@@ -263,6 +271,7 @@ class PlayerViewModelTest {
             subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
         )
         advanceUntilIdle()
 
@@ -293,6 +302,7 @@ class PlayerViewModelTest {
             subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
         )
         advanceUntilIdle()
 
@@ -319,6 +329,7 @@ class PlayerViewModelTest {
             subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
         )
         advanceUntilIdle()
 
@@ -353,6 +364,7 @@ class PlayerViewModelTest {
             subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
         )
         advanceUntilIdle()
 
@@ -390,6 +402,7 @@ class PlayerViewModelTest {
             subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
             appContext = appContext,
             okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
         )
         advanceUntilIdle()
 

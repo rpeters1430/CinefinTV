@@ -15,6 +15,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.MovieDetailLayout
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowDetailLayout
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
@@ -191,12 +192,6 @@ class DetailScrollStabilityUiTest {
                                 primaryActionLabel = "Play",
                                 onPrimaryAction = {},
                                 primaryActionFocusRequester = focusRequester,
-                                // description parameter name was actually correct, 
-                                // it seems the compilation error was due to another parameter or context.
-                                // Re-checking CinematicHero: it has description as String? 
-                                // Actually, CinematicHero DOES NOT have a description parameter. 
-                                // It uses title, eyebrow, etc. 
-                                // Let me re-read CinematicHero parameters.
                             )
                         }
                     }
@@ -254,7 +249,9 @@ class DetailScrollStabilityUiTest {
                     factItems = emptyList(),
                     factSummary = "",
                     castItems = (1..10).map { CastModel("p$it", "Person $it", "Role", null) },
-                    similarItems = (1..10).map { SimilarMovieModel("m$it", "Similar $it", null) },
+                    similarItems = (1..10).map {
+                        SimilarMovieModel("m$it", "Similar $it", null, WatchStatus.NONE, null)
+                    },
                     onCastClick = {},
                     onSimilarClick = {},
                     listState = listState,
@@ -305,10 +302,14 @@ class DetailScrollStabilityUiTest {
                     onPrimaryAction = {},
                     secondaryActions = emptyList(),
                     primaryActionFocusRequester = focusRequester,
-                    seasons = (1..5).map { SeasonModel("s$it", "Season $it", null, 10, 5) },
+                    seasons = (1..5).map {
+                        SeasonModel("s$it", "Season $it", null, 10, 5, WatchStatus.NONE, null)
+                    },
                     onSeasonClick = {},
                     castItems = (1..10).map { CastModel("p$it", "Person $it", "Role", null) },
-                    similarItems = (1..10).map { SimilarMovieModel("m$it", "Similar $it", null) },
+                    similarItems = (1..10).map {
+                        SimilarMovieModel("m$it", "Similar $it", null, WatchStatus.NONE, null)
+                    },
                     onCastClick = {},
                     onSimilarClick = {},
                     description = "A long description." + " Lorem ipsum ".repeat(50),

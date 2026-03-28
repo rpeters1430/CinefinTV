@@ -1,5 +1,6 @@
 package com.rpeters.cinefintv.ui.screens.home
 
+import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.testutil.FakeHomeRepositories
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
@@ -45,7 +46,7 @@ class HomeViewModelTest {
         every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
         every { fakeRepositories.stream.getBackdropUrl(any()) } returns null
 
-        val viewModel = HomeViewModel(fakeRepositories.coordinator)
+        val viewModel = HomeViewModel(fakeRepositories.coordinator, updateBus)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value as HomeUiState.Content
@@ -74,7 +75,7 @@ class HomeViewModelTest {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12)
         } returns ApiResult.Success(emptyList())
 
-        val viewModel = HomeViewModel(fakeRepositories.coordinator)
+        val viewModel = HomeViewModel(fakeRepositories.coordinator, updateBus)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -105,7 +106,7 @@ class HomeViewModelTest {
         every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
         every { fakeRepositories.stream.getBackdropUrl(any()) } returns "https://img/backdrop.jpg"
 
-        val viewModel = HomeViewModel(fakeRepositories.coordinator)
+        val viewModel = HomeViewModel(fakeRepositories.coordinator, updateBus)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value as HomeUiState.Content
@@ -136,7 +137,7 @@ class HomeViewModelTest {
         every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
         every { fakeRepositories.stream.getBackdropUrl(any()) } returns null
 
-        val viewModel = HomeViewModel(fakeRepositories.coordinator)
+        val viewModel = HomeViewModel(fakeRepositories.coordinator, updateBus)
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value is HomeUiState.Content)
@@ -167,7 +168,7 @@ class HomeViewModelTest {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12)
         } returns ApiResult.Success(emptyList())
 
-        val viewModel = HomeViewModel(fakeRepositories.coordinator)
+        val viewModel = HomeViewModel(fakeRepositories.coordinator, updateBus)
 
         // Call refreshWatchStatus before advancing (state may still be Loading)
         viewModel.refreshWatchStatus()
@@ -200,7 +201,7 @@ class HomeViewModelTest {
         every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
         every { fakeRepositories.stream.getBackdropUrl(any()) } returns null
 
-        val viewModel = HomeViewModel(fakeRepositories.coordinator)
+        val viewModel = HomeViewModel(fakeRepositories.coordinator, updateBus)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value as HomeUiState.Content
@@ -228,3 +229,4 @@ class HomeViewModelTest {
         return item
     }
 }
+    private val updateBus = MediaUpdateBus()

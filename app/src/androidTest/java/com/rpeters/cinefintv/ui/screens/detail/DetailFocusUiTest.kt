@@ -15,6 +15,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailTestTags
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.MovieDetailLayout
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowDetailLayout
@@ -94,6 +95,8 @@ class DetailFocusUiTest {
                             imageUrl = null,
                             episodeCount = 2,
                             unwatchedCount = 1,
+                            watchStatus = WatchStatus.NONE,
+                            playbackProgress = null,
                         )
                     ),
                     onSeasonClick = {},
@@ -139,7 +142,13 @@ class DetailFocusUiTest {
                         CastModel(id = "person-1", name = "Jane Doe", role = "Lead", imageUrl = null),
                     ),
                     similarItems = listOf(
-                        SimilarMovieModel(id = "movie-2", title = "Another Movie", imageUrl = null),
+                        SimilarMovieModel(
+                            id = "movie-2",
+                            title = "Another Movie",
+                            imageUrl = null,
+                            watchStatus = WatchStatus.NONE,
+                            playbackProgress = null,
+                        ),
                     ),
                     onCastClick = {},
                     onSimilarClick = {},

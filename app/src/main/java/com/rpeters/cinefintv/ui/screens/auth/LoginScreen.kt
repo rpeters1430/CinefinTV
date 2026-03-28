@@ -25,9 +25,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -137,16 +136,19 @@ fun LoginScreen(
                         placeholder = "Username",
                         imeAction = ImeAction.Next,
                         keyboardType = KeyboardType.Text,
+                        modifier = Modifier.testTag(AuthTestTags.UsernameField),
                     )
 
                     AuthPasswordField(
                         value = password,
                         onValueChange = { password = it },
+                        modifier = Modifier.testTag(AuthTestTags.PasswordField),
                     )
 
                     if (errorMessage != null) {
                         Text(
                             text = errorMessage,
+                            modifier = Modifier.testTag(AuthTestTags.LoginError),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -154,14 +156,19 @@ fun LoginScreen(
 
                     WideButton(
                         onClick = { onLogin(username.trim(), password) },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(AuthTestTags.SignInButton),
                         enabled = canSignIn,
                     ) {
                         Text(if (isAuthenticating) "Signing In..." else "Sign In")
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        OutlinedButton(onClick = onBack) {
+                        OutlinedButton(
+                            onClick = onBack,
+                            modifier = Modifier.testTag(AuthTestTags.BackButton),
+                        ) {
                             Text("Back")
                         }
 
@@ -171,6 +178,7 @@ fun LoginScreen(
                                     showQuickConnectPanel = true
                                     onUseQuickConnect()
                                 },
+                                modifier = Modifier.testTag(AuthTestTags.QuickConnectButton),
                                 enabled = !isAuthenticating,
                             ) {
                                 Text("Use Quick Connect")
@@ -228,6 +236,7 @@ private fun QuickConnectPanel(
         ) {
             Column(
                 modifier = Modifier
+                    .testTag(AuthTestTags.QuickConnectPanel)
                     .verticalScroll(scrollState)
                     .padding(horizontal = 28.dp, vertical = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
@@ -250,6 +259,7 @@ private fun QuickConnectPanel(
                     error != null -> {
                         Text(
                             text = error,
+                            modifier = Modifier.testTag(AuthTestTags.QuickConnectError),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -264,6 +274,7 @@ private fun QuickConnectPanel(
                     code != null -> {
                         Text(
                             text = code.toCharArray().joinToString("    "),
+                            modifier = Modifier.testTag(AuthTestTags.QuickConnectCode),
                             style = MaterialTheme.typography.displayLarge,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
@@ -273,6 +284,7 @@ private fun QuickConnectPanel(
                 if (pollStatus != null) {
                     Text(
                         text = pollStatus,
+                        modifier = Modifier.testTag(AuthTestTags.QuickConnectStatus),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -282,12 +294,16 @@ private fun QuickConnectPanel(
                     WideButton(
                         onClick = onNewCode,
                         modifier = Modifier
-                            .weight(1f),
+                            .weight(1f)
+                            .testTag(AuthTestTags.QuickConnectNewCodeButton),
                         enabled = !isLoading,
                     ) {
                         Text("New Code")
                     }
-                    OutlinedButton(onClick = onCancel) {
+                    OutlinedButton(
+                        onClick = onCancel,
+                        modifier = Modifier.testTag(AuthTestTags.QuickConnectCancelButton),
+                    ) {
                         Text("Cancel")
                     }
                 }

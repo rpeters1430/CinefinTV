@@ -19,9 +19,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
@@ -101,11 +100,13 @@ fun ServerConnectionScreen(
                     placeholder = "https://media.example.com",
                     imeAction = ImeAction.Done,
                     keyboardType = KeyboardType.Uri,
+                    modifier = Modifier.testTag(AuthTestTags.ServerField),
                 )
 
                 if (errorMessage != null) {
                     Text(
                         text = errorMessage.orEmpty(),
+                        modifier = Modifier.testTag(AuthTestTags.ServerError),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -113,7 +114,9 @@ fun ServerConnectionScreen(
 
                 WideButton(
                     onClick = onContinue,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(AuthTestTags.ContinueButton),
                     enabled = !isLoading,
                 ) {
                     Text(if (isLoading) "Connecting..." else "Continue")
