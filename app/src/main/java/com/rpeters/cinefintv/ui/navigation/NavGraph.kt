@@ -140,6 +140,12 @@ fun CinefinTvNavGraph(
                 onPlayItem = { itemId ->
                     navController.navigate(NavRoutes.player(itemId))
                 },
+                onOpenSeries = { seriesId ->
+                    navController.navigate(NavRoutes.tvShowDetail(seriesId))
+                },
+                onOpenSeason = { seasonId ->
+                    navController.navigate(NavRoutes.seasonDetail(seasonId))
+                },
             )
         }
         composable(NavRoutes.SEARCH) {

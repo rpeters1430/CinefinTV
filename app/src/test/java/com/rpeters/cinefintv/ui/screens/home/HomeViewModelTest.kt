@@ -31,6 +31,7 @@ class HomeViewModelTest {
 
         coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
         coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(listOf(movie))
+        coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
         } returns ApiResult.Success(emptyList())
@@ -62,6 +63,7 @@ class HomeViewModelTest {
 
         coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
         coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Error("backend unavailable")
+        coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
         } returns ApiResult.Success(emptyList())
@@ -91,6 +93,7 @@ class HomeViewModelTest {
 
         coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
         coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
         } returns ApiResult.Success(listOf(movie1, movie2))
@@ -122,6 +125,7 @@ class HomeViewModelTest {
 
         coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
         coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(listOf(movie))
+        coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
         } returns ApiResult.Success(emptyList())
@@ -155,6 +159,7 @@ class HomeViewModelTest {
 
         coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
         coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Error("backend unavailable")
+        coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
         } returns ApiResult.Success(emptyList())
@@ -186,6 +191,7 @@ class HomeViewModelTest {
 
         coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
         coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
         } returns ApiResult.Success(emptyList())
@@ -209,6 +215,43 @@ class HomeViewModelTest {
         assertEquals("Clip 1", state.sections.single().items.single().title)
     }
 
+    @Test
+    fun refresh_nextEpisodes_usesGlobalNextUpNotContinueWatchingEpisodesOnly() = runTest {
+        val fakeRepositories = FakeHomeRepositories()
+        val movie = mockBaseItemDto("Movie 1")
+        val nextEpisode1 = mockBaseItemDto("Show A - S1E2", BaseItemKind.EPISODE)
+        val nextEpisode2 = mockBaseItemDto("Show B - S2E4", BaseItemKind.EPISODE)
+
+        coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(listOf(movie))
+        coEvery {
+            fakeRepositories.media.getNextUp(limit = 12)
+        } returns ApiResult.Success(listOf(nextEpisode1, nextEpisode2))
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
+        every { fakeRepositories.stream.getBackdropUrl(any()) } returns null
+
+        val viewModel = HomeViewModel(fakeRepositories.coordinator, updateBus)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as HomeUiState.Content
+        val nextEpisodes = state.sections.first { it.title == "Next Episodes" }
+        assertEquals(2, nextEpisodes.items.size)
+        assertEquals("Show A - S1E2", nextEpisodes.items[0].title)
+        assertEquals("Show B - S2E4", nextEpisodes.items[1].title)
+    }
+
     private fun mockBaseItemDto(
         name: String,
         type: BaseItemKind = BaseItemKind.MOVIE,
@@ -226,6 +269,9 @@ class HomeViewModelTest {
         every { item.collectionType } returns null
         every { item.mediaSources } returns null
         every { item.seriesId } returns null
+        every { item.seriesName } returns null
+        every { item.parentIndexNumber } returns null
+        every { item.indexNumber } returns null
         return item
     }
 }

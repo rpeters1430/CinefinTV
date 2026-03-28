@@ -7,7 +7,6 @@ import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
-import com.rpeters.cinefintv.utils.getEpisodeCardDetailLine
 import com.rpeters.cinefintv.utils.getEpisodeCode
 import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getItemTypeString
@@ -22,7 +21,6 @@ import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,6 +47,8 @@ data class HomeCardModel(
     val playbackProgress: Float? = null,
     val unwatchedCount: Int? = null,
     val mediaQuality: String? = null,
+    val seriesId: String? = null,
+    val seasonId: String? = null,
 )
 
 data class HomeSectionModel(
@@ -104,6 +104,7 @@ class HomeViewModel @Inject constructor(
 
             val librariesDeferred = async { repositories.media.getUserLibraries() }
             val continueDeferred = async { repositories.media.getContinueWatching(limit = 12) }
+            val nextUpDeferred = async { repositories.media.getNextUp(limit = 12) }
             val moviesDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12) }
             val episodesDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12) }
             val videosDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12) }
@@ -112,14 +113,14 @@ class HomeViewModel @Inject constructor(
             val results = awaitAll(
                 librariesDeferred,
                 continueDeferred,
+                nextUpDeferred,
                 moviesDeferred,
                 episodesDeferred,
                 videosDeferred,
                 musicDeferred,
             )
 
-            val continueWatchingResult = results[1]
-            val nextEpisodesSectionItems = buildNextEpisodeSectionItems(continueWatchingResult)
+            val nextEpisodesSectionItems = buildNextEpisodeSectionItems(results[2])
 
             val sections = buildList {
                 val librariesResult = results[0]
@@ -141,13 +142,13 @@ class HomeViewModel @Inject constructor(
                 if (nextEpisodesSectionItems.isNotEmpty()) {
                     add(HomeSectionModel(title = "Next Episodes", items = nextEpisodesSectionItems))
                 }
-                addSection("Recently Added TV Episodes", results[3])
-                addSection("Recently Added Movies", results[2])
-                addSection("Recently Added Music", results[5])
-                addSection("Recently Added Stuff", results[4])
+                addSection("Recently Added TV Episodes", results[4])
+                addSection("Recently Added Movies", results[3])
+                addSection("Recently Added Music", results[6])
+                addSection("Recently Added Stuff", results[5])
             }
 
-            val featuredItems = (results[2] as? ApiResult.Success<List<BaseItemDto>>)
+            val featuredItems = (results[3] as? ApiResult.Success<List<BaseItemDto>>)
                 ?.data?.take(6)?.map { toCardModel(it) }
                 ?: emptyList()
 
@@ -171,17 +172,20 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             // Give server a moment to process the stop report
             delay(500)
-            when (val result = repositories.media.getContinueWatching(limit = 12)) {
+            val continueDeferred = async { repositories.media.getContinueWatching(limit = 12) }
+            val nextUpDeferred = async { repositories.media.getNextUp(limit = 12) }
+
+            when (val continueResult = continueDeferred.await()) {
                 is ApiResult.Success -> {
                     // Re-read state after the suspension point to avoid overwriting concurrent mutations
                     val latestState = _uiState.value as? HomeUiState.Content ?: return@launch
-                    val nextEpisodeItems = buildNextEpisodeSectionItems(result)
+                    val nextEpisodeItems = buildNextEpisodeSectionItems(nextUpDeferred.await())
                     val updatedSections = buildList {
                         for (section in latestState.sections) {
                             when (section.title) {
                                 "Continue Watching" -> {
-                                    if (result.data.isNotEmpty()) {
-                                        add(section.copy(items = result.data.take(12).map(::toCardModel)))
+                                    if (continueResult.data.isNotEmpty()) {
+                                        add(section.copy(items = continueResult.data.take(12).map(::toCardModel)))
                                     }
                                     // If empty, omit the section (nothing to continue watching)
                                 }
@@ -196,7 +200,7 @@ class HomeViewModel @Inject constructor(
                     // Insert Continue Watching + Next Episodes at correct positions
                     // They were not added inside the loop if section didn't exist before;
                     // find the insertion index (after "My Libraries" if present)
-                    val continueWatchingItems = result.data.take(12).map(::toCardModel)
+                    val continueWatchingItems = continueResult.data.take(12).map(::toCardModel)
                     val myLibrariesIdx = updatedSections.indexOfFirst { it.title == "My Libraries" }
                     val insertAfter = if (myLibrariesIdx >= 0) myLibrariesIdx else -1
 
@@ -246,33 +250,17 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun buildNextEpisodeSectionItems(
-        continueWatchingResult: ApiResult<List<BaseItemDto>>,
-    ): List<HomeCardModel> = coroutineScope {
-        val continueItems = (continueWatchingResult as? ApiResult.Success<List<BaseItemDto>>)
+        nextUpResult: ApiResult<List<BaseItemDto>>,
+    ): List<HomeCardModel> {
+        val nextUpItems = (nextUpResult as? ApiResult.Success<List<BaseItemDto>>)
             ?.data
             .orEmpty()
 
-        if (continueItems.isEmpty()) return@coroutineScope emptyList()
-
-        val uniqueContinueEpisodes = continueItems
+        return nextUpItems
             .filter { it.isEpisode() }
-            .distinctBy { it.seriesId?.toString() ?: it.id.toString() }
+            .distinctBy { it.id.toString() }
             .take(12)
-
-        val seenEpisodeIds = mutableSetOf<String>()
-
-        val nextEpisodeResults = uniqueContinueEpisodes.map { currentEpisode ->
-            async {
-                when (val result = repositories.media.getNextEpisode(currentEpisode.id.toString())) {
-                    is ApiResult.Success -> result.data
-                    else -> null
-                }
-            }
-        }.awaitAll()
-
-        nextEpisodeResults.mapNotNull { nextEpisode ->
-            nextEpisode?.takeIf { seenEpisodeIds.add(it.id.toString()) }?.let(::toCardModel)
-        }
+            .map(::toCardModel)
     }
 
     private fun toCardModel(item: BaseItemDto): HomeCardModel {
@@ -340,6 +328,8 @@ class HomeViewModel @Inject constructor(
             playbackProgress = playbackProgress,
             unwatchedCount = unwatchedCount,
             mediaQuality = item.getMediaQualityLabel(),
+            seriesId = item.seriesId?.toString(),
+            seasonId = item.parentId?.toString(),
         )
     }
 }

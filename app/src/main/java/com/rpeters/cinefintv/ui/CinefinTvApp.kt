@@ -352,7 +352,7 @@ internal fun CinefinAppScaffold(
                             navTabItems.forEachIndexed { index, item ->
                                 Tab(
                                     selected = index == selectedTabIndex,
-                                    onFocus = { onNavigateToTab(item.route) },
+                                    onFocus = { },
                                     modifier = Modifier
                                         .focusRequester(tabFocusRequesters[index])
                                         .focusProperties {

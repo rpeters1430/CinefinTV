@@ -63,6 +63,8 @@ import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
+import com.rpeters.cinefintv.ui.components.MediaActionDialog
+import com.rpeters.cinefintv.ui.components.MediaActionDialogItem
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
@@ -77,6 +79,8 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     onOpenItem: (HomeCardModel) -> Unit,
     onPlayItem: (String) -> Unit,
+    onOpenSeries: (String) -> Unit,
+    onOpenSeason: (String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -103,6 +107,8 @@ fun HomeScreen(
         uiState = uiState,
         onOpenItem = onOpenItem,
         onPlayItem = onPlayItem,
+        onOpenSeries = onOpenSeries,
+        onOpenSeason = onOpenSeason,
         onRetry = viewModel::refresh,
     )
 }
@@ -113,6 +119,8 @@ internal fun HomeScreenContent(
     uiState: HomeUiState,
     onOpenItem: (HomeCardModel) -> Unit,
     onPlayItem: (String) -> Unit,
+    onOpenSeries: (String) -> Unit,
+    onOpenSeason: (String) -> Unit,
     onRetry: () -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -175,6 +183,48 @@ internal fun HomeScreenContent(
             val featuredPrimaryActionRequester = remember { FocusRequester() }
             var lastFocusedSectionTitle by rememberSaveable { mutableStateOf<String?>(null) }
             var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(null) }
+            var selectedEpisodeMenuItem by remember { mutableStateOf<HomeCardModel?>(null) }
+
+            selectedEpisodeMenuItem?.let { item ->
+                MediaActionDialog(
+                    title = item.title,
+                    actions = buildList {
+                        add(
+                            MediaActionDialogItem(
+                                label = "Play episode",
+                                supportingText = "Start playback immediately.",
+                                onClick = { onPlayItem(item.id) },
+                            )
+                        )
+                        item.seriesId?.let { seriesId ->
+                            add(
+                                MediaActionDialogItem(
+                                    label = "Open show",
+                                    supportingText = "Go to the TV show detail screen.",
+                                    onClick = { onOpenSeries(seriesId) },
+                                )
+                            )
+                        }
+                        item.seasonId?.let { seasonId ->
+                            add(
+                                MediaActionDialogItem(
+                                    label = "Open season",
+                                    supportingText = "Go to the season detail screen.",
+                                    onClick = { onOpenSeason(seasonId) },
+                                )
+                            )
+                        }
+                        add(
+                            MediaActionDialogItem(
+                                label = "Open item",
+                                supportingText = "Open the default destination for this card.",
+                                onClick = { onOpenItem(item) },
+                            )
+                        )
+                    },
+                    onDismissRequest = { selectedEpisodeMenuItem = null },
+                )
+            }
 
             SideEffect {
                 chromeFocusController?.primaryContentFocusRequester = when {
@@ -241,6 +291,7 @@ internal fun HomeScreenContent(
                                 lastFocusedSectionTitle = section.title
                                 lastFocusedItemId = itemId
                             },
+                            onEpisodeMenuRequested = { selectedEpisodeMenuItem = it },
                             firstItemFocusRequester = sectionFocusRequesters[index],
                             upRequester = upRequester,
                             downRequester = sectionFocusRequesters.getOrNull(index + 1),
@@ -454,6 +505,7 @@ private fun HomeSection(
     onOpenItem: (HomeCardModel) -> Unit,
     restoredFocusedItemId: String?,
     onItemFocused: (String) -> Unit,
+    onEpisodeMenuRequested: (HomeCardModel) -> Unit,
     firstItemFocusRequester: FocusRequester,
     upRequester: FocusRequester?,
     downRequester: FocusRequester?,
@@ -490,6 +542,11 @@ private fun HomeSection(
                         subtitle = item.subtitle ?: item.year?.toString(),
                         imageUrl = item.imageUrl,
                         onClick = { onOpenItem(item) },
+                        onMenuAction = if (item.itemType == "Episode") {
+                            { onEpisodeMenuRequested(item) }
+                        } else {
+                            null
+                        },
                         watchStatus = item.watchStatus,
                         unwatchedCount = item.unwatchedCount,
                         playbackProgress = item.playbackProgress,

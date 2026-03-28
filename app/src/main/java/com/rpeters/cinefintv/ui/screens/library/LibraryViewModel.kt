@@ -8,6 +8,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.map
 import com.rpeters.cinefintv.data.paging.LibraryItemPagingSource
+import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
@@ -21,7 +22,10 @@ import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.isSeries
 import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -41,26 +45,41 @@ data class LibraryCardModel(
 
 abstract class BaseLibraryViewModel(
     protected val repositories: JellyfinRepositoryCoordinator,
+    private val updateBus: MediaUpdateBus,
     private val itemTypes: List<BaseItemKind>,
 ) : ViewModel() {
 
-    val pagedItems: Flow<PagingData<LibraryCardModel>> = Pager(
-        config = PagingConfig(
-            pageSize = 30,
-            enablePlaceholders = false,
-            initialLoadSize = 60
-        ),
-        pagingSourceFactory = {
-            LibraryItemPagingSource(
-                mediaRepository = repositories.media,
-                itemTypes = itemTypes
-            )
+    private val refreshSignal = MutableStateFlow(0)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val pagedItems: Flow<PagingData<LibraryCardModel>> = refreshSignal
+        .flatMapLatest {
+            Pager(
+                config = PagingConfig(
+                    pageSize = 30,
+                    enablePlaceholders = false,
+                    initialLoadSize = 60
+                ),
+                pagingSourceFactory = {
+                    LibraryItemPagingSource(
+                        mediaRepository = repositories.media,
+                        itemTypes = itemTypes
+                    )
+                }
+            ).flow
         }
-    ).flow
         .map { pagingData ->
             pagingData.map { toCardModel(it) }
         }
         .cachedIn(viewModelScope)
+
+    init {
+        viewModelScope.launch {
+            updateBus.events.collect {
+                refreshSignal.value += 1
+            }
+        }
+    }
 
     private fun toCardModel(item: BaseItemDto): LibraryCardModel {
         val id = item.id.toString()
@@ -99,19 +118,21 @@ abstract class BaseLibraryViewModel(
 
 @HiltViewModel
 class MovieLibraryViewModel @Inject constructor(
-    repositories: JellyfinRepositoryCoordinator
-) : BaseLibraryViewModel(repositories, listOf(BaseItemKind.MOVIE))
+    repositories: JellyfinRepositoryCoordinator,
+    updateBus: MediaUpdateBus,
+) : BaseLibraryViewModel(repositories, updateBus, listOf(BaseItemKind.MOVIE))
 
 @HiltViewModel
 class TvShowLibraryViewModel @Inject constructor(
-    repositories: JellyfinRepositoryCoordinator
-) : BaseLibraryViewModel(repositories, listOf(BaseItemKind.SERIES))
+    repositories: JellyfinRepositoryCoordinator,
+    updateBus: MediaUpdateBus,
+) : BaseLibraryViewModel(repositories, updateBus, listOf(BaseItemKind.SERIES))
 
 @HiltViewModel
 class StuffLibraryViewModel @Inject constructor(
     repositories: JellyfinRepositoryCoordinator,
-    private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
-) : BaseLibraryViewModel(repositories, listOf(BaseItemKind.VIDEO, BaseItemKind.COLLECTION_FOLDER))
+    private val updateBus: MediaUpdateBus,
+) : BaseLibraryViewModel(repositories, updateBus, listOf(BaseItemKind.VIDEO, BaseItemKind.COLLECTION_FOLDER))
 
 {
     fun markWatched(itemId: String, onComplete: (() -> Unit)? = null) {
