@@ -21,8 +21,11 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.rpeters.cinefintv.ui.AppTestTags
+import com.rpeters.cinefintv.ui.CinefinAppScaffold
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.WatchStatus
+import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.ThemeColorController
 import org.junit.Assert.assertEquals
@@ -242,6 +245,35 @@ class LibraryScreenUiTest {
 
         composeRule.onNodeWithTag(LibraryTestTags.Grid).assertIsDisplayed()
         composeRule.onNodeWithTag(LibraryTestTags.item(0)).assertIsDisplayed()
+    }
+
+    @Test
+    fun selectedTabDown_movesFocusIntoLibraryGrid() {
+        composeRule.setContent {
+            LibraryTestHost {
+                CinefinAppScaffold(
+                    showNav = true,
+                    selectedTabIndex = 1,
+                    onNavigateToTab = {},
+                ) {
+                    LibraryGridContent(
+                        uiState = LibraryGridUiState.Content(items = sampleLibraryItems(count = 6)),
+                        errorTitle = "Failed to load movies",
+                        emptyTitle = "No movies found",
+                        columnCount = 3,
+                        aspectRatio = 2f / 3f,
+                        gridState = rememberLazyGridState(),
+                        onOpenItem = {},
+                        onRetry = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.LIBRARY_MOVIES)).requestFocus()
+        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.LIBRARY_MOVIES))
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag(LibraryTestTags.item(0)).assertIsFocused()
     }
 }
 

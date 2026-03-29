@@ -70,6 +70,7 @@ import coil3.request.crossfade
 import coil3.toBitmap
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
+import com.rpeters.cinefintv.ui.RegisterPrimaryContentFocusRequester
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.MediaActionDialog
@@ -173,6 +174,8 @@ internal fun HomeScreenContent(
         }
 
         is HomeUiState.Error -> {
+            val retryFocusRequester = remember { FocusRequester() }
+            RegisterPrimaryContentFocusRequester(retryFocusRequester)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -191,7 +194,9 @@ internal fun HomeScreenContent(
                 )
                 Button(
                     onClick = onRetry,
-                    modifier = Modifier.testTag(HomeTestTags.RetryButton),
+                    modifier = Modifier
+                        .focusRequester(retryFocusRequester)
+                        .testTag(HomeTestTags.RetryButton),
                 ) {
                     Text("Retry")
                 }
@@ -259,23 +264,13 @@ internal fun HomeScreenContent(
                 )
             }
 
-            SideEffect {
-                chromeFocusController?.primaryContentFocusRequester = when {
+            RegisterPrimaryContentFocusRequester(
+                when {
                     state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
                     sectionFocusRequesters.isNotEmpty() -> sectionFocusRequesters.first()
                     else -> null
                 }
-            }
-            DisposableEffect(chromeFocusController) {
-                onDispose {
-                    val focusController = chromeFocusController ?: return@onDispose
-                    if (focusController.primaryContentFocusRequester == featuredPrimaryActionRequester ||
-                        focusController.primaryContentFocusRequester in sectionFocusRequesters
-                    ) {
-                        focusController.primaryContentFocusRequester = null
-                    }
-                }
-            }
+            )
 
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->

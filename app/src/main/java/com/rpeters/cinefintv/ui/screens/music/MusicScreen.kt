@@ -42,8 +42,9 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
+import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
+import com.rpeters.cinefintv.ui.RegisterPrimaryContentFocusRequester
 import com.rpeters.cinefintv.ui.components.TvMediaCard
-import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import org.jellyfin.sdk.model.api.BaseItemDto
 import androidx.compose.foundation.lazy.grid.items as gridItems
@@ -59,6 +60,7 @@ fun MusicScreen(
     val expressiveColors = LocalCinefinExpressiveColors.current
     val gridState = rememberLazyGridState()
     val albumDetailListState = rememberLazyListState()
+    val retryFocusRequester = remember { FocusRequester() }
 
     BackHandler(enabled = uiState is MusicUiState.AlbumDetail) {
         viewModel.backToGrid()
@@ -88,6 +90,7 @@ fun MusicScreen(
         }
 
         is MusicUiState.Error -> {
+            RegisterPrimaryContentFocusRequester(retryFocusRequester)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -112,7 +115,10 @@ fun MusicScreen(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Button(onClick = { viewModel.loadGrid(state.viewType) }) {
+                Button(
+                    onClick = { viewModel.loadGrid(state.viewType) },
+                    modifier = Modifier.focusRequester(retryFocusRequester),
+                ) {
                     Text("Retry")
                 }
             }
@@ -155,6 +161,10 @@ private fun MusicGridContent(
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     val primaryContentRequester = remember { FocusRequester() }
+    val chromeFocusController = LocalAppChromeFocusController.current
+    val navUpRequester = chromeFocusController?.topNavFocusRequester
+
+    RegisterPrimaryContentFocusRequester(primaryContentRequester)
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 160.dp),
@@ -180,6 +190,9 @@ private fun MusicGridContent(
                         onClick = { onViewTypeChange(MusicViewType.ALBUMS) },
                         modifier = Modifier
                             .focusRequester(primaryContentRequester)
+                            .focusProperties {
+                                navUpRequester?.let { up = it }
+                            }
                     ) {
                         Text("Albums")
                     }
@@ -191,6 +204,9 @@ private fun MusicGridContent(
                         onClick = { onViewTypeChange(MusicViewType.ALBUMS) },
                         modifier = Modifier
                             .focusRequester(primaryContentRequester)
+                            .focusProperties {
+                                navUpRequester?.let { up = it }
+                            }
                     ) {
                         Text("Albums")
                     }
@@ -246,6 +262,10 @@ private fun AlbumDetailContent(
     val albumYear = album.productionYear?.toString()
     val expressiveColors = LocalCinefinExpressiveColors.current
     val primaryContentRequester = remember { FocusRequester() }
+    val chromeFocusController = LocalAppChromeFocusController.current
+    val navUpRequester = chromeFocusController?.topNavFocusRequester
+
+    RegisterPrimaryContentFocusRequester(primaryContentRequester)
 
     LazyColumn(
         state = listState,
@@ -293,7 +313,10 @@ private fun AlbumDetailContent(
                         onClick = onBack,
                         modifier = Modifier
                             .padding(top = 8.dp)
-                            .focusRequester(primaryContentRequester),
+                            .focusRequester(primaryContentRequester)
+                            .focusProperties {
+                                navUpRequester?.let { up = it }
+                            },
                     ) {
                         Text("Back")
                     }

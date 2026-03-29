@@ -95,6 +95,24 @@ class AppChromeFocusController {
 
 val LocalAppChromeFocusController = compositionLocalOf<AppChromeFocusController?> { null }
 
+@Composable
+fun RegisterPrimaryContentFocusRequester(focusRequester: FocusRequester?) {
+    val chromeFocusController = LocalAppChromeFocusController.current
+
+    SideEffect {
+        chromeFocusController?.primaryContentFocusRequester = focusRequester
+    }
+
+    DisposableEffect(chromeFocusController, focusRequester) {
+        onDispose {
+            val controller = chromeFocusController ?: return@onDispose
+            if (controller.primaryContentFocusRequester == focusRequester) {
+                controller.primaryContentFocusRequester = null
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @UnstableApi
 @Composable

@@ -43,6 +43,8 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinTextInputField
+import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
+import com.rpeters.cinefintv.ui.RegisterPrimaryContentFocusRequester
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
@@ -74,6 +76,10 @@ internal fun SearchScreenContent(
     val primaryContentRequester = remember { FocusRequester() }
     val firstResultFocusRequester = remember { FocusRequester() }
     var lastFocusedResultId by rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    val chromeFocusController = LocalAppChromeFocusController.current
+    val navUpRequester = chromeFocusController?.topNavFocusRequester
+
+    RegisterPrimaryContentFocusRequester(primaryContentRequester)
 
     Box(
         modifier = Modifier
@@ -110,6 +116,7 @@ internal fun SearchScreenContent(
                         .padding(bottom = spacing.elementGap)
                         .focusRequester(primaryContentRequester)
                         .focusProperties {
+                            navUpRequester?.let { up = it }
                             if (uiState.results.isNotEmpty()) {
                                 down = firstResultFocusRequester
                             }

@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -27,6 +28,8 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
+import com.rpeters.cinefintv.ui.RegisterPrimaryContentFocusRequester
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 
 sealed class LibraryGridUiState {
@@ -63,6 +66,8 @@ internal fun LibraryGridContent(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
+    val chromeFocusController = LocalAppChromeFocusController.current
+    val navUpRequester = chromeFocusController?.topNavFocusRequester
     Box(modifier = modifier.fillMaxSize()) {
         when (uiState) {
             LibraryGridUiState.Loading -> {
@@ -77,6 +82,8 @@ internal fun LibraryGridContent(
             }
 
             is LibraryGridUiState.Error -> {
+                val retryFocusRequester = remember { FocusRequester() }
+                RegisterPrimaryContentFocusRequester(retryFocusRequester)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -102,7 +109,9 @@ internal fun LibraryGridContent(
                         )
                         Button(
                             onClick = onRetry,
-                            modifier = Modifier.testTag(LibraryTestTags.RetryButton),
+                            modifier = Modifier
+                                .focusRequester(retryFocusRequester)
+                                .testTag(LibraryTestTags.RetryButton),
                             scale = androidx.tv.material3.ButtonDefaults.scale(focusedScale = 1.1f)
                         ) {
                             Text("Try Again", style = MaterialTheme.typography.titleMedium)
@@ -142,6 +151,7 @@ internal fun LibraryGridContent(
                 var lastFocusedItemId by rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
                 val restoredFocusIndex = uiState.items.indexOfFirst { it.id == lastFocusedItemId }
                     .takeIf { it >= 0 } ?: 0
+                RegisterPrimaryContentFocusRequester(firstItemFocusRequester)
                 LazyVerticalGrid(
                     state = gridState,
                     columns = GridCells.Fixed(columnCount),
@@ -175,8 +185,23 @@ internal fun LibraryGridContent(
                                 Modifier
                                     .testTag(LibraryTestTags.item(index))
                                     .focusRequester(firstItemFocusRequester)
+                                    .then(
+                                        if (index < columnCount && navUpRequester != null) {
+                                            Modifier.focusProperties { up = navUpRequester }
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
                             } else {
-                                Modifier.testTag(LibraryTestTags.item(index))
+                                Modifier
+                                    .testTag(LibraryTestTags.item(index))
+                                    .then(
+                                        if (index < columnCount && navUpRequester != null) {
+                                            Modifier.focusProperties { up = navUpRequester }
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
                             },
                         )
                     }

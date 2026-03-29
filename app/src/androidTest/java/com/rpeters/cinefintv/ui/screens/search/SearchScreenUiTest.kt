@@ -17,8 +17,11 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.rpeters.cinefintv.ui.AppTestTags
+import com.rpeters.cinefintv.ui.CinefinAppScaffold
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.WatchStatus
+import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.screens.home.HomeCardModel
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.ThemeColorController
@@ -132,6 +135,30 @@ class SearchScreenUiTest {
         composeRule.runOnIdle {
             assertEquals("movie-1", openedId)
         }
+    }
+
+    @Test
+    fun selectedTabDown_movesFocusIntoSearchField() {
+        composeRule.setContent {
+            SearchTestHost {
+                CinefinAppScaffold(
+                    showNav = true,
+                    selectedTabIndex = 5,
+                    onNavigateToTab = {},
+                ) {
+                    SearchScreenContent(
+                        uiState = SearchUiState(),
+                        onQueryChange = {},
+                        onOpenItem = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.SEARCH)).requestFocus()
+        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.SEARCH))
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag(SearchTestTags.Field).assertIsFocused()
     }
 }
 
