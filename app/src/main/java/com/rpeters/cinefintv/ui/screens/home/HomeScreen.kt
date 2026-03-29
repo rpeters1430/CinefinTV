@@ -402,7 +402,7 @@ private fun FeaturedCarousel(
         modifier = modifier
             .testTag(HomeTestTags.FeaturedCarousel)
             .fillMaxWidth()
-            .height(480.dp),
+            .height(376.dp),
     ) { index ->
         val item = items[index]
         HeroItem(
@@ -519,8 +519,8 @@ private fun HeroItem(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(horizontal = 32.dp, vertical = 28.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(horizontal = 32.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
@@ -539,10 +539,12 @@ private fun HeroItem(
                 }
                 Text(
                     text = item.title,
-                    style = MaterialTheme.typography.displayMedium,
+                    style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Black,
                     modifier = Modifier.testTag(HomeTestTags.FeaturedTitle),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 val carouselMeta = listOfNotNull(
                     item.year?.toString(),

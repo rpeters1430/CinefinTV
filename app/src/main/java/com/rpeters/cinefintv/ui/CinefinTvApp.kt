@@ -310,7 +310,7 @@ internal fun CinefinAppScaffold(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = spacing.gutter, vertical = 20.dp),
+                        .padding(horizontal = spacing.gutter, vertical = 12.dp),
                     shape = RoundedCornerShape(32.dp),
                     colors = androidx.tv.material3.SurfaceDefaults.colors(
                         containerColor = Color.Black.copy(alpha = 0.45f),
@@ -334,7 +334,7 @@ internal fun CinefinAppScaffold(
                                     ),
                                 ),
                             )
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
                     ) {
                         TabRow(
                             selectedTabIndex = selectedTabIndex,
