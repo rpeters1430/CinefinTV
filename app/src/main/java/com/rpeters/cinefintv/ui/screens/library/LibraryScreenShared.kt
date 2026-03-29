@@ -20,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
@@ -60,6 +62,7 @@ internal fun LibraryGridContent(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val spacing = LocalCinefinSpacing.current
     Box(modifier = modifier.fillMaxSize()) {
         when (uiState) {
             LibraryGridUiState.Loading -> {
@@ -81,25 +84,28 @@ internal fun LibraryGridContent(
                     contentAlignment = Alignment.Center,
                 ) {
                     androidx.compose.foundation.layout.Column(
-                        modifier = Modifier.padding(48.dp),
+                        modifier = Modifier.padding(spacing.gutter),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+                        verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
                     ) {
                         Text(
                             text = errorTitle,
-                            style = MaterialTheme.typography.headlineMedium,
+                            style = MaterialTheme.typography.displaySmall,
                             color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Black
                         )
                         Text(
                             text = uiState.message,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            textAlign = TextAlign.Center
                         )
                         Button(
                             onClick = onRetry,
                             modifier = Modifier.testTag(LibraryTestTags.RetryButton),
+                            scale = androidx.tv.material3.ButtonDefaults.scale(focusedScale = 1.1f)
                         ) {
-                            Text("Retry")
+                            Text("Try Again", style = MaterialTheme.typography.titleMedium)
                         }
                     }
                 }
@@ -112,16 +118,26 @@ internal fun LibraryGridContent(
                         .testTag(LibraryTestTags.Empty),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = emptyTitle,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    androidx.compose.foundation.layout.Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = emptyTitle,
+                            style = MaterialTheme.typography.displaySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            fontWeight = FontWeight.Black
+                        )
+                        Text(
+                            text = "Check your library or server connection.",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        )
+                    }
                 }
             }
 
             is LibraryGridUiState.Content -> {
-                val spacing = LocalCinefinSpacing.current
                 val firstItemFocusRequester = remember { FocusRequester() }
                 var lastFocusedItemId by rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
                 val restoredFocusIndex = uiState.items.indexOfFirst { it.id == lastFocusedItemId }
@@ -131,10 +147,10 @@ internal fun LibraryGridContent(
                     columns = GridCells.Fixed(columnCount),
                     contentPadding = PaddingValues(
                         horizontal = spacing.gridContentPadding,
-                        vertical = 32.dp,
+                        vertical = spacing.gutter,
                     ),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                    verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag(LibraryTestTags.Grid),

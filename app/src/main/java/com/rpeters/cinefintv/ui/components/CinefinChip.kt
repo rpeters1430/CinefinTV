@@ -15,7 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
@@ -43,25 +45,33 @@ fun CinefinChip(
     val expressiveColors = LocalCinefinExpressiveColors.current
     val spacing = LocalCinefinSpacing.current
     
-    val backgroundColor = if (strong) expressiveColors.pillStrong else expressiveColors.pillMuted
-    val contentColor = if (strong) Color(0xFF0F1115) else MaterialTheme.colorScheme.onSurface
+    val backgroundColor = if (strong) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.92f)
+    } else {
+        Color.White.copy(alpha = 0.12f)
+    }
+    val contentColor = if (strong) {
+        MaterialTheme.colorScheme.onPrimary 
+    } else {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+    }
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(spacing.cornerPill))
+            .clip(RoundedCornerShape(8.dp))
             .background(backgroundColor)
             .border(
                 border = androidx.compose.foundation.BorderStroke(
                     width = 1.dp, 
                     color = if (strong) {
-                        expressiveColors.pillStrong.copy(alpha = 0.92f)
+                        Color.White.copy(alpha = 0.25f)
                     } else {
-                        expressiveColors.borderSubtle.copy(alpha = 0.45f)
+                        Color.White.copy(alpha = 0.08f)
                     }
                 ),
-                shape = RoundedCornerShape(spacing.cornerPill),
+                shape = RoundedCornerShape(8.dp),
             )
-            .padding(horizontal = 12.dp, vertical = 5.dp),
+            .padding(horizontal = 14.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -70,13 +80,17 @@ fun CinefinChip(
                     imageVector = icon,
                     contentDescription = null,
                     tint = contentColor,
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(5.dp))
+                Spacer(modifier = Modifier.width(6.dp))
             }
             Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
+                text = label.uppercase(),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.8.sp
+                ),
                 color = contentColor,
                 maxLines = 1,
             )

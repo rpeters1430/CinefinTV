@@ -60,7 +60,9 @@ import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.theme.BackgroundDark
 import com.rpeters.cinefintv.ui.theme.CinefinRed
+import com.rpeters.cinefintv.ui.theme.CinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import com.rpeters.cinefintv.ui.theme.LocalCinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.ui.theme.ThemeSeedColorCache
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
@@ -284,6 +286,7 @@ fun CinematicHero(
                     horizontalArrangement = Arrangement.spacedBy(spacing.elementGap),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    val motion = LocalCinefinMotion.current
                     Button(
                         onClick = onPrimaryAction,
                         colors = ButtonDefaults.colors(
@@ -291,6 +294,9 @@ fun CinematicHero(
                             contentColor = Color.White,
                             focusedContainerColor = Color.White,
                             focusedContentColor = CinefinRed,
+                        ),
+                        scale = ButtonDefaults.scale(
+                            focusedScale = 1.15f
                         ),
                         modifier = Modifier
                             .focusRequester(primaryActionFocusRequester)
@@ -317,19 +323,28 @@ fun CinematicHero(
                             }
                             .testTag(DetailTestTags.PrimaryAction),
                     ) {
-                        Text(primaryActionLabel, fontWeight = FontWeight.ExtraBold)
+                        Text(
+                            text = primaryActionLabel, 
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black)
+                        )
                     }
 
                     secondaryActions.forEach { (label, action) ->
                         OutlinedButton(
                             onClick = action,
+                            scale = ButtonDefaults.scale(
+                                focusedScale = 1.1f
+                            ),
                             modifier = Modifier.focusProperties {
                                 if (primaryActionDownFocusRequester != null) {
                                     down = primaryActionDownFocusRequester
                                 }
                             },
                         ) {
-                            Text(label, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = label, 
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            )
                         }
                     }
                 }

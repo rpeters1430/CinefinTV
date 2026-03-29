@@ -40,7 +40,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -307,32 +309,31 @@ internal fun CinefinAppScaffold(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = spacing.gutter, vertical = 16.dp),
-                    shape = RoundedCornerShape(spacing.cornerContainer),
+                        .padding(horizontal = spacing.gutter, vertical = 20.dp),
+                    shape = RoundedCornerShape(32.dp),
                     colors = androidx.tv.material3.SurfaceDefaults.colors(
-                        containerColor = expressiveColors.chromeSurface.copy(alpha = 0.92f),
+                        containerColor = Color.Black.copy(alpha = 0.45f),
                     ),
                     border = androidx.tv.material3.Border(
                         border = BorderStroke(
                             width = 1.dp,
-                            color = expressiveColors.borderSubtle.copy(alpha = 0.75f),
+                            color = Color.White.copy(alpha = 0.12f),
                         ),
                     ),
-                    tonalElevation = 8.dp,
+                    tonalElevation = 12.dp,
                 ) {
-                    Column(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(
-                                Brush.horizontalGradient(
+                                Brush.verticalGradient(
                                     colors = listOf(
+                                        Color.White.copy(alpha = 0.05f),
                                         Color.Transparent,
-                                        expressiveColors.accentSurface.copy(alpha = 0.28f),
                                     ),
                                 ),
                             )
-                            .padding(horizontal = 12.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.Center,
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
                     ) {
                         TabRow(
                             selectedTabIndex = selectedTabIndex,
@@ -345,16 +346,21 @@ internal fun CinefinAppScaffold(
                             indicator = { tabPositions, doesTabRowHaveFocus ->
                                 TabRowDefaults.UnderlinedIndicator(
                                     currentTabPosition = tabPositions[selectedTabIndex],
-                                    doesTabRowHaveFocus = doesTabRowHaveFocus
+                                    doesTabRowHaveFocus = doesTabRowHaveFocus,
+                                    activeColor = MaterialTheme.colorScheme.primary,
+                                    inactiveColor = Color.Transparent
                                 )
-                            }
+                            },
+                            containerColor = Color.Transparent
                         ) {
                             navTabItems.forEachIndexed { index, item ->
+                                var isFocused by remember { mutableStateOf(false) }
                                 Tab(
                                     selected = index == selectedTabIndex,
-                                    onFocus = { },
+                                    onFocus = { isFocused = true },
                                     modifier = Modifier
                                         .focusRequester(tabFocusRequesters[index])
+                                        .onFocusChanged { isFocused = it.isFocused || it.hasFocus }
                                         .focusProperties {
                                             chromeFocusController.primaryContentFocusRequester?.let {
                                                 down = it
@@ -365,17 +371,32 @@ internal fun CinefinAppScaffold(
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
                                     ) {
                                         Icon(
                                             imageVector = item.icon,
                                             contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(20.dp),
+                                            tint = if (index == selectedTabIndex || isFocused) 
+                                                MaterialTheme.colorScheme.primary 
+                                            else 
+                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                         )
                                         Text(
                                             text = item.label,
-                                            style = MaterialTheme.typography.labelMedium
+                                            style = MaterialTheme.typography.labelLarge.copy(
+                                                fontSize = 18.sp,
+                                                fontWeight = if (index == selectedTabIndex || isFocused) 
+                                                    FontWeight.ExtraBold 
+                                                else 
+                                                    FontWeight.Medium,
+                                                letterSpacing = 0.5.sp
+                                            ),
+                                            color = if (index == selectedTabIndex || isFocused) 
+                                                MaterialTheme.colorScheme.onSurface 
+                                            else 
+                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                         )
                                     }
                                 }

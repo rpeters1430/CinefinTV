@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -37,7 +38,9 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.rpeters.cinefintv.ui.theme.CinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import com.rpeters.cinefintv.ui.theme.LocalCinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
@@ -55,16 +58,17 @@ fun TvPersonCard(
     val performanceProfile = LocalPerformanceProfile.current
     val expressiveColors = LocalCinefinExpressiveColors.current
     val spacing = LocalCinefinSpacing.current
+    val motion = LocalCinefinMotion.current
     var isFocused by remember { mutableStateOf(false) }
 
     val nameColor by animateColorAsState(
         targetValue = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface,
-        animationSpec = tween(durationMillis = 180),
+        animationSpec = tween(durationMillis = CinefinMotion.DurationShort),
         label = "PersonCardNameColor",
     )
     val roleColor by animateColorAsState(
         targetValue = if (isFocused) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(durationMillis = 180),
+        animationSpec = tween(durationMillis = CinefinMotion.DurationShort),
         label = "PersonCardRoleColor",
     )
 
@@ -82,18 +86,18 @@ fun TvPersonCard(
                             if (focused) onFocus()
                         }
                     },
-                scale = CardDefaults.scale(focusedScale = 1.08f),
+                scale = CardDefaults.scale(focusedScale = 1.1f),
                 glow = CardDefaults.glow(
                     focusedGlow = Glow(
                         elevation = 16.dp,
-                        elevationColor = expressiveColors.focusGlow,
+                        elevationColor = expressiveColors.focusGlow.copy(alpha = 0.5f),
                     ),
                 ),
                 border = CardDefaults.border(
                     focusedBorder = Border(
                         border = androidx.compose.foundation.BorderStroke(
-                            width = 2.dp,
-                            color = expressiveColors.focusRing,
+                            width = 3.dp,
+                            color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f),
                         ),
                     ),
                 ),
@@ -128,7 +132,7 @@ fun TvPersonCard(
         title = {
             Text(
                 text = name,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = 18.sp),
                 fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
                 color = nameColor,
                 maxLines = 2,
@@ -141,7 +145,7 @@ fun TvPersonCard(
             if (!role.isNullOrBlank()) {
                 Text(
                     text = role,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 16.sp),
                     color = roleColor,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,

@@ -49,10 +49,13 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Carousel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.tv.material3.rememberCarouselState
 import coil3.compose.AsyncImage
@@ -374,7 +377,7 @@ private fun FeaturedCarousel(
         modifier = modifier
             .testTag(HomeTestTags.FeaturedCarousel)
             .fillMaxWidth()
-            .height(360.dp),
+            .height(480.dp),
     ) { index ->
         val item = items[index]
         HeroItem(
@@ -449,10 +452,9 @@ private fun HeroItem(
                 .background(
                     Brush.horizontalGradient(
                         colorStops = arrayOf(
-                            0.0f to expressiveColors.surfaceContainerHighest.coerceAlpha(0.98f),
-                            0.28f to Color.Black.copy(alpha = 0.78f),
-                            0.62f to expressiveColors.surfaceContainer.coerceAlpha(0.4f),
-                            1.0f to Color.Transparent,
+                            0.0f to Color.Black.copy(alpha = 0.85f),
+                            0.35f to Color.Black.copy(alpha = 0.45f),
+                            0.65f to Color.Transparent,
                         ),
                     ),
                 ),
@@ -464,84 +466,119 @@ private fun HeroItem(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
                             0.0f to Color.Transparent,
-                            0.72f to Color.Black.copy(alpha = 0.24f),
-                            1.0f to Color.Black.copy(alpha = 0.76f),
+                            0.65f to Color.Black.copy(alpha = 0.35f),
+                            1.0f to Color.Black.copy(alpha = 0.85f),
                         ),
                     ),
                 ),
         )
-        Column(
+        // Content glass panel
+        val onBackgroundColor = MaterialTheme.colorScheme.onBackground
+        Surface(
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .padding(start = 40.dp, end = 40.dp, top = 36.dp, bottom = 36.dp)
-                .widthIn(max = 560.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(spacing.chipGap)) {
-                CinefinChip(label = "Featured")
-                item.officialRating?.let { CinefinChip(label = it) }
-            }
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.ExtraBold,
-                modifier = Modifier.testTag(HomeTestTags.FeaturedTitle),
-            )
-            val carouselMeta = listOfNotNull(
-                item.year?.toString(),
-                item.runtime,
-                item.rating?.let { "★ $it" },
-            ).joinToString("  •  ")
-            if (carouselMeta.isNotBlank()) {
-                Text(
-                    text = carouselMeta,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                .padding(start = 48.dp)
+                .widthIn(max = 620.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = SurfaceDefaults.colors(
+                containerColor = Color.Black.copy(alpha = 0.35f),
+                contentColor = onBackgroundColor
+            ),
+            border = androidx.tv.material3.Border(
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp, 
+                    Color.White.copy(alpha = 0.15f)
                 )
-            }
-            item.subtitle?.let {
+            ),
+            tonalElevation = 8.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 32.dp, vertical = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CinefinChip(label = "Featured", strong = true)
+                    item.officialRating?.let { CinefinChip(label = it) }
+                    item.mediaQuality?.let { 
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = expressiveColors.titleAccent.copy(alpha = 0.9f),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
                 Text(
-                    text = it,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = expressiveColors.titleAccent,
-                    maxLines = 1,
+                    text = item.title,
+                    style = MaterialTheme.typography.displayMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.testTag(HomeTestTags.FeaturedTitle),
+                )
+                val carouselMeta = listOfNotNull(
+                    item.year?.toString(),
+                    item.runtime,
+                    item.rating?.let { "★ $it" },
+                ).joinToString("  •  ")
+                if (carouselMeta.isNotBlank()) {
+                    Text(
+                        text = carouselMeta,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                item.subtitle?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = expressiveColors.titleAccent,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Text(
+                    text = item.description ?: "Featured title from your library",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
-            }
-            Text(
-                text = item.mediaQuality ?: item.description ?: "Featured title from your library",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(spacing.elementGap)) {
-                Button(
-                    onClick = onPlay,
-                    modifier = Modifier
-                        .focusRequester(primaryActionFocusRequester)
-                        .focusProperties {
-                            upRequester?.let { up = it }
-                            downRequester?.let { down = it }
-                            right = detailsButtonRequester
-                        }
-                        .testTag(HomeTestTags.FeaturedPlayButton)
+                Row(
+                    modifier = Modifier.padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.elementGap)
                 ) {
-                    Text("Play")
-                }
-                OutlinedButton(
-                    onClick = onMoreInfo,
-                    modifier = Modifier
-                        .focusRequester(detailsButtonRequester)
-                        .focusProperties {
-                            upRequester?.let { up = it }
-                            downRequester?.let { down = it }
-                            left = primaryActionFocusRequester
-                        }
-                        .testTag(HomeTestTags.FeaturedDetailsButton),
-                ) {
-                    Text("Details")
+                    Button(
+                        onClick = onPlay,
+                        modifier = Modifier
+                            .focusRequester(primaryActionFocusRequester)
+                            .focusProperties {
+                                upRequester?.let { up = it }
+                                downRequester?.let { down = it }
+                                right = detailsButtonRequester
+                            }
+                            .testTag(HomeTestTags.FeaturedPlayButton),
+                        scale = ButtonDefaults.scale(focusedScale = 1.1f),
+                    ) {
+                        Text("Play", style = MaterialTheme.typography.titleMedium)
+                    }
+                    OutlinedButton(
+                        onClick = onMoreInfo,
+                        modifier = Modifier
+                            .focusRequester(detailsButtonRequester)
+                            .focusProperties {
+                                upRequester?.let { up = it }
+                                downRequester?.let { down = it }
+                                left = primaryActionFocusRequester
+                            }
+                            .testTag(HomeTestTags.FeaturedDetailsButton),
+                        scale = ButtonDefaults.scale(focusedScale = 1.1f),
+                    ) {
+                        Text("Details", style = MaterialTheme.typography.titleMedium)
+                    }
                 }
             }
         }

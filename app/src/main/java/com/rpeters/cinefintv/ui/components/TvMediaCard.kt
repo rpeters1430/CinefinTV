@@ -46,7 +46,9 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.rpeters.cinefintv.ui.theme.CinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import com.rpeters.cinefintv.ui.theme.LocalCinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
@@ -74,16 +76,17 @@ fun TvMediaCard(
     val performanceProfile = LocalPerformanceProfile.current
     val expressiveColors = LocalCinefinExpressiveColors.current
     val spacing = LocalCinefinSpacing.current
+    val motion = LocalCinefinMotion.current
     var isFocused by remember { mutableStateOf(false) }
 
     val titleColor by animateColorAsState(
         targetValue = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface,
-        animationSpec = tween(durationMillis = 180),
+        animationSpec = tween(durationMillis = CinefinMotion.DurationShort),
         label = "MediaCardTitleColor",
     )
     val subtitleColor by animateColorAsState(
         targetValue = if (isFocused) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(durationMillis = 180),
+        animationSpec = tween(durationMillis = CinefinMotion.DurationShort),
         label = "MediaCardSubtitleColor",
     )
 
@@ -122,14 +125,22 @@ fun TvMediaCard(
                             if (focused) onFocus()
                         }
                     },
-                scale = CardDefaults.scale(focusedScale = focusedScale),
+                scale = CardDefaults.scale(
+                    focusedScale = focusedScale
+                ),
                 border = CardDefaults.border(
                     focusedBorder = Border(
                         border = androidx.compose.foundation.BorderStroke(
                             width = 3.dp,
-                            color = Color.White,
+                            color = Color.White.copy(alpha = 0.95f),
                         ),
                     ),
+                ),
+                glow = CardDefaults.glow(
+                    focusedGlow = androidx.tv.material3.Glow(
+                        elevationColor = expressiveColors.focusGlow.copy(alpha = 0.5f),
+                        elevation = 12.dp
+                    )
                 ),
                 shape = CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),
             ) {

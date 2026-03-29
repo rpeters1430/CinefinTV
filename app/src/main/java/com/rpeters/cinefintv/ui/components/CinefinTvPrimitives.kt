@@ -1,5 +1,6 @@
 package com.rpeters.cinefintv.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,11 +29,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
@@ -58,22 +61,30 @@ fun CinefinDialogSurface(
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     val spacing = LocalCinefinSpacing.current
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
 
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
-            modifier = modifier.widthIn(min = 420.dp, max = 760.dp),
-            shape = RoundedCornerShape(spacing.cornerContainer),
+            modifier = modifier.widthIn(min = 420.dp, max = 820.dp),
+            shape = RoundedCornerShape(28.dp),
             colors = SurfaceDefaults.colors(
-                containerColor = expressiveColors.elevatedSurface.copy(alpha = 0.98f),
+                containerColor = Color.Black.copy(alpha = 0.45f),
+                contentColor = onSurfaceColor
             ),
-            tonalElevation = 10.dp,
+            border = Border(
+                border = BorderStroke(
+                    1.dp, 
+                    Color.White.copy(alpha = 0.12f)
+                )
+            ),
+            tonalElevation = 12.dp,
         ) {
             Box(
                 modifier = Modifier.background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            expressiveColors.chromeSurface.copy(alpha = 0.95f),
-                            expressiveColors.elevatedSurface.copy(alpha = 0.98f),
+                            Color.White.copy(alpha = 0.05f),
+                            Color.Transparent,
                         ),
                     ),
                 )
@@ -291,31 +302,27 @@ fun CinefinShelfTitle(
     val expressiveColors = LocalCinefinExpressiveColors.current
     val spacing = LocalCinefinSpacing.current
 
-    Surface(
-            modifier = modifier,
-            shape = RoundedCornerShape(spacing.cornerCard),
-            colors = SurfaceDefaults.colors(
-                containerColor = expressiveColors.chromeSurface.copy(alpha = 0.76f),
-            ),
-        tonalElevation = 2.dp,
+    Column(
+        modifier = modifier.padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            if (!eyebrow.isNullOrBlank()) {
-                Text(
-                    text = eyebrow,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = expressiveColors.titleAccent,
-                )
-            }
+        if (!eyebrow.isNullOrBlank()) {
             Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground,
+                text = eyebrow.uppercase(),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    letterSpacing = 1.2.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                color = expressiveColors.titleAccent.copy(alpha = 0.8f),
             )
         }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontWeight = FontWeight.Black
+            ),
+            color = MaterialTheme.colorScheme.onBackground,
+        )
     }
 }
 
@@ -346,7 +353,7 @@ fun CinefinTextInputField(
             },
         ),
         border = Border(
-            border = androidx.compose.foundation.BorderStroke(
+            border = BorderStroke(
                 width = if (isFocused) 3.dp else 1.dp,
                 color = if (isFocused) expressiveColors.focusRing else expressiveColors.borderSubtle,
             ),
