@@ -45,6 +45,19 @@ object TrickplayTileBitmapCache {
     }
 }
 
+data class PlayerContentItem(
+    val id: String,
+    val title: String,
+    val subtitle: String?,
+    val imageUrl: String?,
+)
+
+sealed class PlayerContentRow {
+    data class Chapters(val chapters: List<ChapterMarker>) : PlayerContentRow()
+    data class Episodes(val items: List<PlayerContentItem>, val currentItemId: String) : PlayerContentRow()
+    data class Recommendations(val items: List<PlayerContentItem>) : PlayerContentRow()
+}
+
 data class PlayerUiState(
     val itemId: String = "",
     val title: String = "Player",
@@ -73,6 +86,7 @@ data class PlayerUiState(
     val creditsSkipRange: SkipRange? = null,
     val trickplayManifest: TrickplayManifest? = null,
     val trickplayBaseUrl: String? = null,
+    val contentRow: PlayerContentRow? = null,
     val isLoading: Boolean = true,
     val isRetrying: Boolean = false,
     val retryCount: Int = 0,

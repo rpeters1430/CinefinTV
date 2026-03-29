@@ -494,6 +494,7 @@ internal fun PlayerPlaybackContent(
                 isTrackPanelVisible = true
             },
             onBack = onBack,
+            onOpenItem = onOpenItem,
         )
 
         if (renderState.isBuffering) {
@@ -585,9 +586,9 @@ internal fun PlayerPlaybackContent(
                         exoPlayer.seekTo(activeSkipTargetMs)
                         onInteract()
                     },
+                    buttonFocusRequester = skipFocusRequester,
                     modifier = Modifier
                         .testTag(PlayerTestTags.SkipAction)
-                        .focusRequester(skipFocusRequester)
                         .onFocusChanged { overlayActionFocused = it.hasFocus },
                 )
             }
@@ -603,6 +604,7 @@ internal fun PlayerPlaybackContent(
                     thumbnailUrl = uiState.nextEpisodeThumbnailUrl,
                     remainingMs = remaining.coerceAtLeast(0L),
                     autoPlayEnabled = uiState.autoPlayNextEpisode,
+                    autoFocusPlayNow = showNextUp,
                     onActionFocusChanged = { overlayActionFocused = it },
                     onPlayNow = {
                         uiState.nextEpisodeId?.let { onOpenItem(it) }

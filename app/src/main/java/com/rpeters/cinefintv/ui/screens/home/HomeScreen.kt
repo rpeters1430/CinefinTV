@@ -35,6 +35,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -306,6 +311,18 @@ internal fun HomeScreenContent(
                     contentPadding = PaddingValues(top = 0.dp, bottom = 120.dp),
                     verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
                 ) {
+                    val navigateToFirstSection: (() -> Unit)? =
+                        if (sectionFocusRequesters.isNotEmpty()) {
+                            {
+                                coroutineScope.launch {
+                                    val targetIndex = if (state.featuredItems.isNotEmpty()) 1 else 0
+                                    listState.animateScrollToItem(targetIndex)
+                                    withFrameNanos {}
+                                    runCatching { sectionFocusRequesters[0].requestFocus() }
+                                }
+                            }
+                        } else null
+
                     if (state.featuredItems.isNotEmpty()) {
                         item {
                             FeaturedCarousel(
@@ -314,7 +331,7 @@ internal fun HomeScreenContent(
                                 onPlay = onPlayItem,
                                 primaryActionFocusRequester = featuredPrimaryActionRequester,
                                 upRequester = navUpRequester,
-                                downRequester = sectionFocusRequesters.firstOrNull(),
+                                onNavigateDown = navigateToFirstSection,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = 0.dp, start = spacing.gutter, end = spacing.gutter),
@@ -373,11 +390,11 @@ private fun FeaturedCarousel(
     onPlay: (String) -> Unit,
     primaryActionFocusRequester: FocusRequester,
     upRequester: FocusRequester?,
-    downRequester: FocusRequester?,
+    onNavigateDown: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val carouselState = rememberCarouselState()
-    
+
     Carousel(
         itemCount = items.size,
         carouselState = carouselState,
@@ -394,7 +411,7 @@ private fun FeaturedCarousel(
             onPlay = { onPlay(item.id) },
             primaryActionFocusRequester = primaryActionFocusRequester,
             upRequester = upRequester,
-            downRequester = downRequester,
+            onNavigateDown = onNavigateDown,
             modifier = Modifier.fillMaxSize()
         )
     }
@@ -408,7 +425,7 @@ private fun HeroItem(
     onPlay: () -> Unit,
     primaryActionFocusRequester: FocusRequester,
     upRequester: FocusRequester?,
-    downRequester: FocusRequester?,
+    onNavigateDown: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -565,8 +582,13 @@ private fun HeroItem(
                             .focusRequester(primaryActionFocusRequester)
                             .focusProperties {
                                 upRequester?.let { up = it }
-                                downRequester?.let { down = it }
                                 right = detailsButtonRequester
+                            }
+                            .onKeyEvent { keyEvent ->
+                                if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.DirectionDown) {
+                                    onNavigateDown?.invoke()
+                                    onNavigateDown != null
+                                } else false
                             }
                             .testTag(HomeTestTags.FeaturedPlayButton),
                         scale = ButtonDefaults.scale(focusedScale = 1.1f),
@@ -579,8 +601,13 @@ private fun HeroItem(
                             .focusRequester(detailsButtonRequester)
                             .focusProperties {
                                 upRequester?.let { up = it }
-                                downRequester?.let { down = it }
                                 left = primaryActionFocusRequester
+                            }
+                            .onKeyEvent { keyEvent ->
+                                if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.DirectionDown) {
+                                    onNavigateDown?.invoke()
+                                    onNavigateDown != null
+                                } else false
                             }
                             .testTag(HomeTestTags.FeaturedDetailsButton),
                         scale = ButtonDefaults.scale(focusedScale = 1.1f),

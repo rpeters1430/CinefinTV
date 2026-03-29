@@ -1,6 +1,9 @@
 package com.rpeters.cinefintv.ui.player
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -80,8 +83,11 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
@@ -115,6 +121,7 @@ internal fun PlayerControls(
     onInteract: () -> Unit,
     onSettingsClick: (SettingsSection, Rect?) -> Unit,
     onBack: () -> Unit,
+    onOpenItem: (String) -> Unit,
 ) {
     val spacing = LocalCinefinSpacing.current
     val expressiveColors = LocalCinefinExpressiveColors.current
@@ -137,6 +144,8 @@ internal fun PlayerControls(
     val settingsFocusRequester = remember { FocusRequester() }
     val skipBackFocusRequester = remember { FocusRequester() }
     val skipForwardFocusRequester = remember { FocusRequester() }
+    val contentRowFocusRequester = remember { FocusRequester() }
+    val hasContentRow = uiState.contentRow != null
 
     AnimatedVisibility(
         visible = isVisible,
@@ -309,6 +318,7 @@ internal fun PlayerControls(
                             .focusRequester(skipBackFocusRequester)
                             .focusProperties {
                                 up = seekBarFocusRequester
+                                if (hasContentRow) down = contentRowFocusRequester
                                 left = skipBackFocusRequester
                                 right = playPauseFocusRequester
                             }
@@ -326,6 +336,7 @@ internal fun PlayerControls(
                             .focusRequester(playPauseFocusRequester)
                             .focusProperties {
                                 up = seekBarFocusRequester
+                                if (hasContentRow) down = contentRowFocusRequester
                                 left = skipBackFocusRequester
                                 right = skipForwardFocusRequester
                             }
@@ -343,6 +354,7 @@ internal fun PlayerControls(
                                 .focusRequester(skipForwardFocusRequester)
                                 .focusProperties {
                                     up = seekBarFocusRequester
+                                    if (hasContentRow) down = contentRowFocusRequester
                                     left = playPauseFocusRequester
                                     right = audioFocusRequester
                                 }
@@ -364,6 +376,7 @@ internal fun PlayerControls(
                                 .testTag(PlayerTestTags.AudioButton)
                                 .focusProperties {
                                     up = seekBarFocusRequester
+                                    if (hasContentRow) down = contentRowFocusRequester
                                     left = skipForwardFocusRequester
                                     right = subtitleFocusRequester
                                 }
@@ -378,6 +391,7 @@ internal fun PlayerControls(
                                 .testTag(PlayerTestTags.SubtitleButton)
                                 .focusProperties {
                                     up = seekBarFocusRequester
+                                    if (hasContentRow) down = contentRowFocusRequester
                                     left = audioFocusRequester
                                     right = qualityFocusRequester
                                 }
@@ -392,6 +406,7 @@ internal fun PlayerControls(
                                 .testTag(PlayerTestTags.QualityButton)
                                 .focusProperties {
                                     up = seekBarFocusRequester
+                                    if (hasContentRow) down = contentRowFocusRequester
                                     left = subtitleFocusRequester
                                     right = speedFocusRequester
                                 }
@@ -407,6 +422,7 @@ internal fun PlayerControls(
                                 .testTag(PlayerTestTags.SpeedButton)
                                 .focusProperties {
                                     up = seekBarFocusRequester
+                                    if (hasContentRow) down = contentRowFocusRequester
                                     left = qualityFocusRequester
                                     right = settingsFocusRequester
                                 }
@@ -421,12 +437,246 @@ internal fun PlayerControls(
                                 .testTag(PlayerTestTags.SettingsButton)
                                 .focusProperties {
                                     up = seekBarFocusRequester
+                                    if (hasContentRow) down = contentRowFocusRequester
                                     left = speedFocusRequester
                                     right = settingsFocusRequester
                                 }
                                 .onGloballyPositioned { setSettingsButtonBounds(it.boundsInRoot()) }
                         )
                     }
+                }
+
+                val contentRow = uiState.contentRow
+                if (contentRow != null) {
+                    PlayerContentShelf(
+                        contentRow = contentRow,
+                        currentPosition = position,
+                        trickplayManifest = uiState.trickplayManifest,
+                        trickplayBaseUrl = uiState.trickplayBaseUrl,
+                        firstItemFocusRequester = contentRowFocusRequester,
+                        upRequester = playPauseFocusRequester,
+                        onInteract = onInteract,
+                        onSeekToChapter = { player.seekTo(it) },
+                        onOpenItem = onOpenItem,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun PlayerContentShelf(
+    contentRow: PlayerContentRow,
+    currentPosition: Long,
+    trickplayManifest: TrickplayManifest?,
+    trickplayBaseUrl: String?,
+    firstItemFocusRequester: FocusRequester,
+    upRequester: FocusRequester,
+    onInteract: () -> Unit,
+    onSeekToChapter: (Long) -> Unit,
+    onOpenItem: (String) -> Unit,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    val label = when (contentRow) {
+        is PlayerContentRow.Chapters -> "Chapters"
+        is PlayerContentRow.Episodes -> "Season Episodes"
+        is PlayerContentRow.Recommendations -> "More Like This"
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            fontSize = 18.sp,
+            color = expressiveColors.playerContentPrimary.copy(alpha = 0.6f),
+            fontWeight = FontWeight.SemiBold,
+        )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(end = 16.dp),
+        ) {
+            when (contentRow) {
+                is PlayerContentRow.Chapters -> {
+                    val activeIndex = contentRow.chapters.indexOfLast { it.positionMs <= currentPosition }
+                        .coerceAtLeast(0)
+                    itemsIndexed(contentRow.chapters) { index, chapter ->
+                        PlayerChapterCard(
+                            chapter = chapter,
+                            isActive = index == activeIndex,
+                            trickplayManifest = trickplayManifest,
+                            trickplayBaseUrl = trickplayBaseUrl,
+                            onClick = { onInteract(); onSeekToChapter(chapter.positionMs) },
+                            modifier = Modifier.focusProperties { up = upRequester }
+                                .then(if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier),
+                        )
+                    }
+                }
+                is PlayerContentRow.Episodes -> {
+                    itemsIndexed(contentRow.items, key = { _, item -> item.id }) { index, item ->
+                        val isCurrent = item.id == contentRow.currentItemId
+                        PlayerContentItemCard(
+                            title = item.title,
+                            subtitle = item.subtitle,
+                            imageUrl = item.imageUrl,
+                            isCurrent = isCurrent,
+                            onClick = { if (!isCurrent) { onInteract(); onOpenItem(item.id) } },
+                            modifier = Modifier.focusProperties { up = upRequester }
+                                .then(if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier),
+                        )
+                    }
+                }
+                is PlayerContentRow.Recommendations -> {
+                    itemsIndexed(contentRow.items, key = { _, item -> item.id }) { index, item ->
+                        PlayerContentItemCard(
+                            title = item.title,
+                            subtitle = item.subtitle,
+                            imageUrl = item.imageUrl,
+                            isCurrent = false,
+                            onClick = { onInteract(); onOpenItem(item.id) },
+                            modifier = Modifier.focusProperties { up = upRequester }
+                                .then(if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun PlayerChapterCard(
+    chapter: ChapterMarker,
+    isActive: Boolean,
+    trickplayManifest: TrickplayManifest?,
+    trickplayBaseUrl: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    Card(
+        onClick = onClick,
+        modifier = modifier.width(160.dp),
+        shape = CardDefaults.shape(RoundedCornerShape(8.dp)),
+        colors = CardDefaults.colors(
+            containerColor = if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else SurfaceDark,
+            focusedContainerColor = MaterialTheme.colorScheme.primary,
+        ),
+        border = if (isActive) CardDefaults.border(
+            border = Border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary)),
+            focusedBorder = Border(border = BorderStroke(2.dp, Color.White)),
+        ) else CardDefaults.border(
+            focusedBorder = Border(border = BorderStroke(2.dp, Color.White.copy(alpha = 0.8f))),
+        ),
+        scale = CardDefaults.scale(focusedScale = 1.05f),
+    ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(90.dp)
+                    .background(Color.Black.copy(alpha = 0.8f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (trickplayManifest != null && trickplayBaseUrl != null) {
+                    TrickplayPreview(
+                        seekPosition = chapter.positionMs,
+                        manifest = trickplayManifest,
+                        baseUrl = trickplayBaseUrl,
+                    )
+                } else {
+                    Text(
+                        text = formatMs(chapter.positionMs),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontSize = 18.sp,
+                        color = expressiveColors.playerContentPrimary.copy(alpha = 0.7f),
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = chapter.name ?: "Chapter",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontSize = 18.sp,
+                    color = expressiveColors.playerContentPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                )
+                Text(
+                    text = formatMs(chapter.positionMs),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 16.sp,
+                    color = expressiveColors.playerContentPrimary.copy(alpha = 0.5f),
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun PlayerContentItemCard(
+    title: String,
+    subtitle: String?,
+    imageUrl: String?,
+    isCurrent: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    Card(
+        onClick = onClick,
+        modifier = modifier.width(160.dp),
+        shape = CardDefaults.shape(RoundedCornerShape(8.dp)),
+        colors = CardDefaults.colors(
+            containerColor = if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else SurfaceDark,
+            focusedContainerColor = MaterialTheme.colorScheme.primary,
+        ),
+        border = if (isCurrent) CardDefaults.border(
+            border = Border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary)),
+            focusedBorder = Border(border = BorderStroke(2.dp, Color.White)),
+        ) else CardDefaults.border(
+            focusedBorder = Border(border = BorderStroke(2.dp, Color.White.copy(alpha = 0.8f))),
+        ),
+        scale = CardDefaults.scale(focusedScale = 1.05f),
+    ) {
+        Column {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(90.dp)
+                    .background(SurfaceDark),
+            )
+            Column(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontSize = 18.sp,
+                    color = expressiveColors.playerContentPrimary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 16.sp,
+                        color = expressiveColors.playerContentPrimary.copy(alpha = 0.5f),
+                        maxLines = 1,
+                    )
                 }
             }
         }
@@ -439,6 +689,7 @@ internal fun SkipActionCard(
     label: String,
     subtitle: String,
     onSkip: () -> Unit,
+    buttonFocusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
@@ -479,6 +730,7 @@ internal fun SkipActionCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 2.dp)
+                    .then(if (buttonFocusRequester != null) Modifier.focusRequester(buttonFocusRequester) else Modifier)
                     .testTag(PlayerTestTags.SkipActionButton),
                 colors = ButtonDefaults.colors(
                     containerColor = MaterialTheme.colorScheme.primary,

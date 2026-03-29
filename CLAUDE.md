@@ -8,6 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Build debug APK
 ./gradlew :app:assembleDebug
 
+# Build release APK (requires signing config in local.properties or env vars)
+./gradlew :app:assembleRelease
+
 # Install on connected Android TV device/emulator
 adb install app/build/outputs/apk/debug/app-debug.apk
 
@@ -97,6 +100,32 @@ class XxxViewModel @Inject constructor(
 
 ### Other Repositories
 `JellyfinSystemRepository` (not in the coordinator) handles server info / system-level API calls and is injected independently where needed.
+
+Preference repositories (`PlaybackPreferencesRepository`, `ThemePreferencesRepository`, `SubtitleAppearancePreferencesRepository`, `LibraryActionsPreferencesRepository`) are also injected independently and backed by DataStore.
+
+### Cross-Screen State Updates
+`MediaUpdateBus` (`data/common/MediaUpdateBus.kt`) is a `SharedFlow`-based event bus for propagating media state changes (e.g. watched status) across screens without reloading. ViewModels subscribe in `init {}`:
+
+```kotlin
+mediaUpdateBus.events.collect { event ->
+    when (event) {
+        is MediaUpdateEvent.RefreshItem -> { /* update single item */ }
+        is MediaUpdateEvent.RefreshAll -> loadData()
+    }
+}
+```
+
+### Session Management
+`JellyfinSessionManager` (`data/session/`) is the central provider of authenticated Jellyfin API clients. It uses a single-flight mutex to prevent concurrent re-auth races. `OptimizedClientFactory` creates token-aware clients per server. `BaseJellyfinRepository.withServerClient` delegates to this — don't bypass it.
+
+### Playback Decisions
+`EnhancedPlaybackManager` (`data/playback/`) determines whether to direct-play or transcode based on network quality (`ConnectivityChecker` bandwidth estimation), device capabilities, and HDR/bitrate limits. It emits structured reason codes. `ConnectivityChecker` (`network/`) exposes a Flow of `NetworkQuality` (EXCELLENT/GOOD/FAIR/POOR) via `ConnectivityManager` callbacks.
+
+### Library Paging
+`LibraryItemPagingSource` implements Paging 3 for library browsing with server-side filtering. Use this (not manual pagination) for any screen that lists large library collections.
+
+### Logging
+Use `SecureLogger` (`utils/SecureLogger.kt`) instead of `Log.*` — it redacts tokens/passwords via regex and handles chunking for long messages. Never log credentials directly.
 
 ### BaseItemDto Extensions
 `utils/Extensions.kt` provides rich extension functions on `BaseItemDto` — prefer these over direct field access:

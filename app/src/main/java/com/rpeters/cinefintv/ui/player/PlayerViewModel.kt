@@ -28,6 +28,8 @@ import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.utils.getDisplayTitle
+import com.rpeters.cinefintv.utils.getEpisodeCode
+import com.rpeters.cinefintv.utils.getYear
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -278,9 +280,66 @@ class PlayerViewModel @Inject constructor(
             isHdrPlayback = resolvedPlayback?.isHdrPlayback ?: false,
             trickplayManifest = trickplayManifest,
             trickplayBaseUrl = trickplayBaseUrl,
+            // Chapters are instant (already loaded); episodes/recommendations load below.
+            contentRow = if (chapters.size >= 2) PlayerContentRow.Chapters(chapters) else null,
             isLoading = false,
         )
+
+        // Load episode list or recommendations after unblocking playback.
+        if (chapters.size < 2) {
+            val contentRow = loadContentRow(isEpisodicContent, item, itemId)
+            if (contentRow != null) {
+                _uiState.value = _uiState.value.copy(contentRow = contentRow)
+            }
+        }
+
         return true
+    }
+
+    private suspend fun loadContentRow(
+        isEpisodicContent: Boolean,
+        item: org.jellyfin.sdk.model.api.BaseItemDto?,
+        itemId: String,
+    ): PlayerContentRow? {
+        return when {
+            isEpisodicContent -> {
+                val seasonId = item?.seasonId?.toString() ?: return null
+                val result = repositories.media.getEpisodesForSeason(seasonId)
+                (result as? ApiResult.Success)?.data
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { episodes ->
+                        PlayerContentRow.Episodes(
+                            items = episodes.map { ep ->
+                                PlayerContentItem(
+                                    id = ep.id.toString(),
+                                    title = ep.getDisplayTitle(),
+                                    subtitle = ep.getEpisodeCode(),
+                                    imageUrl = repositories.stream.getImageUrl(ep.id.toString()),
+                                )
+                            },
+                            currentItemId = itemId,
+                        )
+                    }
+            }
+            item != null -> {
+                val result = repositories.media.getSimilarMovies(itemId, limit = 15)
+                (result as? ApiResult.Success)?.data
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { movies ->
+                        PlayerContentRow.Recommendations(
+                            items = movies.map { movie ->
+                                PlayerContentItem(
+                                    id = movie.id.toString(),
+                                    title = movie.getDisplayTitle(),
+                                    subtitle = movie.getYear()?.toString(),
+                                    imageUrl = repositories.stream.getImageUrl(movie.id.toString()),
+                                )
+                            }
+                        )
+                    }
+            }
+            else -> null
+        }
     }
 
     fun setupPlayer(context: Context): ExoPlayer {
