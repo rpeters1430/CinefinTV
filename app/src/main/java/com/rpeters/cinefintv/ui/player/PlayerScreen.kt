@@ -356,6 +356,7 @@ internal fun PlayerPlaybackContent(
     val skipFocusRequester = remember { FocusRequester() }
     var overlayActionFocused by remember { mutableStateOf(false) }
     var controlsVisible by remember { mutableStateOf(initialControlsVisible) }
+    var isContentShelfVisible by remember { mutableStateOf(false) }
     var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val expressiveColors = LocalCinefinExpressiveColors.current
 
@@ -369,6 +370,7 @@ internal fun PlayerPlaybackContent(
         if (renderState.isPlaying && !isTrackPanelVisible) {
             delay(controlsHideDelayMs)
             controlsVisible = false
+            isContentShelfVisible = false
         }
     }
 
@@ -382,6 +384,7 @@ internal fun PlayerPlaybackContent(
             seekBarFocusRequester.requestFocus()
         } else if (!controlsVisible) {
             playerFocusRequester.requestFocus()
+            isContentShelfVisible = false
         }
     }
 
@@ -431,6 +434,11 @@ internal fun PlayerPlaybackContent(
                                     isTrackPanelVisible = false
                                     true
                                 }
+                                isContentShelfVisible -> {
+                                    isContentShelfVisible = false
+                                    onInteract()
+                                    true
+                                }
                                 controlsVisible -> {
                                     onInteract()
                                     controlsVisible = false
@@ -452,7 +460,33 @@ internal fun PlayerPlaybackContent(
                             }
                             true
                         }
-                        Key.DirectionLeft, Key.DirectionRight, Key.DirectionUp, Key.DirectionDown -> {
+                        Key.DirectionDown -> {
+                            if (!controlsVisible) {
+                                onInteract()
+                                true
+                            } else if (!isContentShelfVisible && uiState.contentRow != null) {
+                                isContentShelfVisible = true
+                                onInteract()
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        Key.DirectionUp -> {
+                            if (!controlsVisible) {
+                                onInteract()
+                                true
+                            } else if (isContentShelfVisible) {
+                                // We check if we should hide it manually. 
+                                // But PlayerControls also calls onHideShelf via focus movement.
+                                // For safety we can handle it here too if focus doesn't move.
+                                false
+                            } else {
+                                onInteract()
+                                true
+                            }
+                        }
+                        Key.DirectionLeft, Key.DirectionRight -> {
                             if (!controlsVisible) {
                                 onInteract()
                                 true
@@ -487,6 +521,8 @@ internal fun PlayerPlaybackContent(
             player = exoPlayer,
             playPauseFocusRequester = playPauseFocusRequester,
             seekBarFocusRequester = seekBarFocusRequester,
+            isContentShelfVisible = isContentShelfVisible,
+            onHideShelf = { isContentShelfVisible = false },
             onInteract = ::onInteract,
             onSettingsClick = { section, anchor ->
                 trackPanelSection = section

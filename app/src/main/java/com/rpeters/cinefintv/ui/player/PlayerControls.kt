@@ -10,6 +10,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -69,6 +71,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
@@ -118,6 +121,8 @@ internal fun PlayerControls(
     player: ExoPlayer,
     playPauseFocusRequester: FocusRequester,
     seekBarFocusRequester: FocusRequester,
+    isContentShelfVisible: Boolean,
+    onHideShelf: () -> Unit,
     onInteract: () -> Unit,
     onSettingsClick: (SettingsSection, Rect?) -> Unit,
     onBack: () -> Unit,
@@ -145,7 +150,7 @@ internal fun PlayerControls(
     val skipBackFocusRequester = remember { FocusRequester() }
     val skipForwardFocusRequester = remember { FocusRequester() }
     val contentRowFocusRequester = remember { FocusRequester() }
-    val hasContentRow = uiState.contentRow != null
+    val hasContentRow = uiState.contentRow != null && isContentShelfVisible
 
     AnimatedVisibility(
         visible = isVisible,
@@ -447,18 +452,25 @@ internal fun PlayerControls(
                 }
 
                 val contentRow = uiState.contentRow
-                if (contentRow != null) {
-                    PlayerContentShelf(
-                        contentRow = contentRow,
-                        currentPosition = position,
-                        trickplayManifest = uiState.trickplayManifest,
-                        trickplayBaseUrl = uiState.trickplayBaseUrl,
-                        firstItemFocusRequester = contentRowFocusRequester,
-                        upRequester = playPauseFocusRequester,
-                        onInteract = onInteract,
-                        onSeekToChapter = { player.seekTo(it) },
-                        onOpenItem = onOpenItem,
-                    )
+                AnimatedVisibility(
+                    visible = contentRow != null && isContentShelfVisible,
+                    enter = fadeIn() + slideInVertically { it / 2 },
+                    exit = fadeOut() + slideOutVertically { it / 2 },
+                ) {
+                    if (contentRow != null) {
+                        PlayerContentShelf(
+                            contentRow = contentRow,
+                            currentPosition = position,
+                            trickplayManifest = uiState.trickplayManifest,
+                            trickplayBaseUrl = uiState.trickplayBaseUrl,
+                            firstItemFocusRequester = contentRowFocusRequester,
+                            upRequester = playPauseFocusRequester,
+                            onInteract = onInteract,
+                            onSeekToChapter = { player.seekTo(it) },
+                            onOpenItem = onOpenItem,
+                            onHideShelf = onHideShelf
+                        )
+                    }
                 }
             }
         }
@@ -477,6 +489,7 @@ private fun PlayerContentShelf(
     onInteract: () -> Unit,
     onSeekToChapter: (Long) -> Unit,
     onOpenItem: (String) -> Unit,
+    onHideShelf: () -> Unit,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     val label = when (contentRow) {
@@ -508,7 +521,14 @@ private fun PlayerContentShelf(
                             trickplayManifest = trickplayManifest,
                             trickplayBaseUrl = trickplayBaseUrl,
                             onClick = { onInteract(); onSeekToChapter(chapter.positionMs) },
-                            modifier = Modifier.focusProperties { up = upRequester }
+                            modifier = Modifier
+                                .focusProperties { up = upRequester }
+                                .onKeyEvent {
+                                    if (it.type == KeyEventType.KeyDown && it.key == Key.DirectionUp) {
+                                        onHideShelf()
+                                        false
+                                    } else false
+                                }
                                 .then(if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier),
                         )
                     }
@@ -522,7 +542,14 @@ private fun PlayerContentShelf(
                             imageUrl = item.imageUrl,
                             isCurrent = isCurrent,
                             onClick = { if (!isCurrent) { onInteract(); onOpenItem(item.id) } },
-                            modifier = Modifier.focusProperties { up = upRequester }
+                            modifier = Modifier
+                                .focusProperties { up = upRequester }
+                                .onKeyEvent {
+                                    if (it.type == KeyEventType.KeyDown && it.key == Key.DirectionUp) {
+                                        onHideShelf()
+                                        false
+                                    } else false
+                                }
                                 .then(if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier),
                         )
                     }
@@ -535,7 +562,14 @@ private fun PlayerContentShelf(
                             imageUrl = item.imageUrl,
                             isCurrent = false,
                             onClick = { onInteract(); onOpenItem(item.id) },
-                            modifier = Modifier.focusProperties { up = upRequester }
+                            modifier = Modifier
+                                .focusProperties { up = upRequester }
+                                .onKeyEvent {
+                                    if (it.type == KeyEventType.KeyDown && it.key == Key.DirectionUp) {
+                                        onHideShelf()
+                                        false
+                                    } else false
+                                }
                                 .then(if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier),
                         )
                     }
