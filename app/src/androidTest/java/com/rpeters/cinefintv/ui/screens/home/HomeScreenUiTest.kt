@@ -26,12 +26,14 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.tv.material3.Button
 import androidx.tv.material3.Text
+import androidx.compose.ui.unit.dp
 import com.rpeters.cinefintv.ui.AppChromeFocusController
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
@@ -150,6 +152,32 @@ class HomeScreenUiTest {
             .performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
             .assertIsFocused()
+    }
+
+    @Test
+    fun featuredPlayDown_scrollsShelfIntoViewInConstrainedViewport() {
+        composeRule.setContent {
+            HomeTestHost {
+                Box(modifier = Modifier.height(520.dp)) {
+                    HomeScreenContent(
+                        uiState = sampleContentState(featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))),
+                        onOpenItem = {},
+                        onPlayItem = {},
+                        onOpenSeries = {},
+                        onOpenSeason = {},
+                        onRetry = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton)
+            .requestFocus()
+        composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton)
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
+            .assertIsFocused()
+            .assertIsDisplayed()
     }
 
     @Test

@@ -143,6 +143,7 @@ internal fun HomeScreenContent(
     val chromeFocusController = LocalAppChromeFocusController.current
     val navUpRequester = chromeFocusController?.topNavFocusRequester
     val lifecycleOwner = LocalLifecycleOwner.current
+    val coroutineScope = rememberCoroutineScope()
 
     when (val state = uiState) {
         HomeUiState.Loading -> {
@@ -344,6 +345,13 @@ internal fun HomeScreenContent(
                             onItemFocused = { itemId ->
                                 lastFocusedSectionTitle = section.title
                                 lastFocusedItemId = itemId
+                                val listIndex = if (state.featuredItems.isNotEmpty()) index + 1 else index
+                                val isSectionVisible = listState.layoutInfo.visibleItemsInfo.any { it.index == listIndex }
+                                if (!isSectionVisible) {
+                                    coroutineScope.launch {
+                                        listState.animateScrollToItem(listIndex)
+                                    }
+                                }
                             },
                             onEpisodeMenuRequested = { selectedEpisodeMenuItem = it },
                             firstItemFocusRequester = sectionFocusRequesters[index],

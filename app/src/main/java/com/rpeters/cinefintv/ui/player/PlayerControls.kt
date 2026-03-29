@@ -797,6 +797,10 @@ private fun SeekBarControl(
 
     val barHeight by animateDpAsState(if (isFocused) 8.dp else 3.dp, label = "BarHeight")
     val thumbScale by animateFloatAsState(if (isFocused) 1f else 0f, label = "ThumbScale")
+    val seekOverlayHeight by animateDpAsState(
+        targetValue = if (isFocused) 104.dp else 32.dp,
+        label = "SeekOverlayHeight",
+    )
 
     // Visual progress animation for smooth bar/thumb movement
     val progressFractionRaw = if (duration > 0L) (seekPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
@@ -812,7 +816,7 @@ private fun SeekBarControl(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(32.dp)
+            .height(seekOverlayHeight)
             .testTag(PlayerTestTags.SeekBar)
             .focusRequester(focusRequester)
             .focusProperties {
@@ -855,7 +859,7 @@ private fun SeekBarControl(
                 }
             }
             .focusable(),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.BottomCenter,
     ) {
         BoxWithConstraints(
             modifier = Modifier
@@ -925,7 +929,7 @@ private fun SeekBarControl(
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.TopCenter)
+                    .align(Alignment.BottomCenter)
             ) {
                 val bubbleWidth = 110.dp
                 val previewWidth = 160.dp
@@ -939,7 +943,7 @@ private fun SeekBarControl(
                         seekPosition = seekPosition,
                         manifest = trickplayManifest,
                         baseUrl = trickplayBaseUrl,
-                        modifier = Modifier.offset(x = previewClampedX, y = (-128).dp)
+                        modifier = Modifier.offset(x = previewClampedX, y = (-136).dp)
                     )
                 }
 
@@ -954,7 +958,7 @@ private fun SeekBarControl(
                 Surface(
                     modifier = Modifier
                         .testTag(PlayerTestTags.SeekBubble)
-                        .offset(x = bubbleClampedX, y = (-30).dp)
+                        .offset(x = bubbleClampedX, y = (-44).dp)
                         .width(if (activeChapterName != null) 180.dp else bubbleWidth),
                     shape = RoundedCornerShape(6.dp),
                     colors = SurfaceDefaults.colors(
@@ -987,6 +991,7 @@ private fun SeekBarControl(
                                 color = expressiveColors.playerContentPrimary.copy(alpha = 0.72f),
                                 maxLines = 1,
                                 textAlign = TextAlign.Center,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }

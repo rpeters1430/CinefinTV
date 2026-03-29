@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -371,13 +372,13 @@ internal fun CinefinAppScaffold(
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
                                     ) {
                                         Icon(
                                             imageVector = item.icon,
                                             contentDescription = null,
-                                            modifier = Modifier.size(20.dp),
+                                            modifier = Modifier.size(18.dp),
                                             tint = if (index == selectedTabIndex || isFocused) 
                                                 MaterialTheme.colorScheme.primary 
                                             else 
@@ -386,13 +387,15 @@ internal fun CinefinAppScaffold(
                                         Text(
                                             text = item.label,
                                             style = MaterialTheme.typography.labelLarge.copy(
-                                                fontSize = 18.sp,
+                                                fontSize = 16.sp,
                                                 fontWeight = if (index == selectedTabIndex || isFocused) 
                                                     FontWeight.ExtraBold 
                                                 else 
                                                     FontWeight.Medium,
                                                 letterSpacing = 0.5.sp
                                             ),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                             color = if (index == selectedTabIndex || isFocused) 
                                                 MaterialTheme.colorScheme.onSurface 
                                             else 

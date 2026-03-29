@@ -101,6 +101,7 @@ class PlayerSeekBarUiTest {
             .performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(PlayerTestTags.SeekBubble).assertIsDisplayed()
+        composeRule.onNodeWithText("Main Story").assertIsDisplayed()
     }
 }
 
