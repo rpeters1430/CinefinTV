@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.ui.player
 
 import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import androidx.lifecycle.SavedStateHandle
 import com.rpeters.cinefintv.data.PlaybackPositionStore
 import com.rpeters.cinefintv.data.common.MediaUpdateEvent
@@ -36,14 +37,21 @@ import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import java.util.UUID
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.LooperMode
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@LooperMode(LooperMode.Mode.PAUSED)
+@Config(application = android.app.Application::class)
 class PlayerViewModelTest {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private val appContext: Context = mockk(relaxed = true)
+    private val appContext: Context = ApplicationProvider.getApplicationContext()
     private val playbackPreferencesRepository: PlaybackPreferencesRepository = mockk {
         every { preferences } returns flowOf(PlaybackPreferences.DEFAULT)
     }
@@ -138,7 +146,7 @@ class PlayerViewModelTest {
     @Test
     fun load_whenEpisodeItem_populatesSeasonAndEpisodeNumbers() = runTest {
         val fakeRepositories = FakePlayerRepositories()
-        every { fakeRepositories.stream.getStreamUrl("ep-1") } returns "https://stream/ep-1"
+        every { fakeRepositories.stream.getStreamUrl("00000000-0000-0000-0000-000000000001") } returns "https://stream/ep-1"
         every { fakeRepositories.stream.getLogoUrl(any()) } returns null
         coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.DirectPlay(
             url = "https://stream/ep-1",
@@ -156,12 +164,13 @@ class PlayerViewModelTest {
         every { episodeItem.parentIndexNumber } returns 2
         every { episodeItem.indexNumber } returns 5
         every { episodeItem.seriesId } returns null
+        every { episodeItem.seasonId } returns UUID.fromString("00000000-0000-0000-0000-000000000010")
         every { episodeItem.userData } returns null
         every { episodeItem.chapters } returns null
 
         coEvery { fakeRepositories.media.getItemDetails("ep-1") } returns ApiResult.Success(episodeItem)
-        coEvery { fakeRepositories.media.getNextEpisode("ep-1") } returns ApiResult.Error("none")
-        coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "ep-1") } returns 0L
+        coEvery { fakeRepositories.media.getNextEpisode("00000000-0000-0000-0000-000000000001") } returns ApiResult.Error("none")
+        coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "00000000-0000-0000-0000-000000000001") } returns 0L
 
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "ep-1")),
@@ -180,6 +189,82 @@ class PlayerViewModelTest {
         assertEquals(2, state.seasonNumber)
         assertEquals(5, state.episodeNumber)
         assertEquals("Test Episode", state.title)
+    }
+
+    @Test
+    fun load_whenSeriesIdProvided_resolvesNextUpEpisodeForPlaybackMetadata() = runTest {
+        val fakeRepositories = FakePlayerRepositories()
+        every { fakeRepositories.stream.getStreamUrl("00000000-0000-0000-0000-000000000102") } returns "https://stream/episode"
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
+        every { fakeRepositories.stream.getImageUrl("00000000-0000-0000-0000-000000000103") } returns "https://image/next"
+        coEvery { fakeRepositories.stream.getTrickplayManifest("00000000-0000-0000-0000-000000000102") } returns null
+        coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns
+            com.rpeters.cinefintv.data.playback.PlaybackResult.DirectPlay(
+                url = "https://stream/episode",
+                container = "mkv",
+                videoCodec = "h264",
+                audioCodec = "aac",
+                bitrate = 1000,
+                reason = "test",
+            )
+
+        val seriesItem: BaseItemDto = mockk()
+        every { seriesItem.id } returns UUID.fromString("00000000-0000-0000-0000-000000000101")
+        every { seriesItem.name } returns "Test Show"
+        every { seriesItem.type } returns BaseItemKind.SERIES
+        every { seriesItem.userData } returns null
+        every { seriesItem.chapters } returns null
+
+        val currentEpisode: BaseItemDto = mockk()
+        every { currentEpisode.id } returns UUID.fromString("00000000-0000-0000-0000-000000000102")
+        every { currentEpisode.name } returns "Episode 2"
+        every { currentEpisode.type } returns BaseItemKind.EPISODE
+        every { currentEpisode.parentIndexNumber } returns 1
+        every { currentEpisode.indexNumber } returns 2
+        every { currentEpisode.seriesId } returns UUID.fromString("00000000-0000-0000-0000-000000000101")
+        every { currentEpisode.userData } returns null
+        every { currentEpisode.chapters } returns listOf(
+            mockk {
+                every { startPositionTicks } returns 5_000L * 10_000L
+                every { name } returns "Intro"
+            },
+            mockk {
+                every { startPositionTicks } returns 25_000L * 10_000L
+                every { name } returns "Scene 1"
+            },
+        )
+
+        val nextEpisode: BaseItemDto = mockk()
+        every { nextEpisode.id } returns UUID.fromString("00000000-0000-0000-0000-000000000103")
+        every { nextEpisode.name } returns "Episode 3"
+        every { nextEpisode.type } returns BaseItemKind.EPISODE
+
+        coEvery { fakeRepositories.media.getItemDetails("series-1") } returns ApiResult.Success(seriesItem)
+        coEvery { fakeRepositories.media.getNextUpForSeries("00000000-0000-0000-0000-000000000101") } returns ApiResult.Success(currentEpisode)
+        coEvery { fakeRepositories.media.getNextEpisode("00000000-0000-0000-0000-000000000102") } returns ApiResult.Success(nextEpisode)
+        coEvery { fakeRepositories.media.getEpisodesForSeason(any()) } returns ApiResult.Error("unused")
+        coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "00000000-0000-0000-0000-000000000102") } returns 0L
+
+        val viewModel = PlayerViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("itemId" to "series-1")),
+            repositories = fakeRepositories.coordinator,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
+            playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
+            appContext = appContext,
+            okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("00000000-0000-0000-0000-000000000102", state.itemId)
+        assertEquals("Episode 2", state.title)
+        assertEquals(true, state.isEpisodicContent)
+        assertEquals("Episode 3", state.nextEpisodeTitle)
+        assertEquals("00000000-0000-0000-0000-000000000103", state.nextEpisodeId)
+        assertEquals(SkipRange(startMs = 5_000L, endMs = 25_000L), state.introSkipRange)
     }
 
     @Test
@@ -425,10 +510,31 @@ class PlayerViewModelTest {
         val userRepository: JellyfinUserRepository = mockk(relaxed = true)
         val fakeRepositories = FakePlayerRepositories(user = userRepository)
         val syncGate = CompletableDeferred<Unit>()
+        val movieItem: BaseItemDto = mockk()
+
+        every { movieItem.id } returns UUID.fromString("00000000-0000-0000-0000-000000000201")
+        every { movieItem.name } returns "Tracked Movie"
+        every { movieItem.type } returns BaseItemKind.MOVIE
+        every { movieItem.seriesId } returns null
+        every { movieItem.userData } returns null
+        every { movieItem.chapters } returns null
+        every { fakeRepositories.stream.getStreamUrl("00000000-0000-0000-0000-000000000201") } returns "https://stream/movie-1"
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
+        coEvery { fakeRepositories.media.getItemDetails("movie-1") } returns ApiResult.Success(movieItem)
+        coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "00000000-0000-0000-0000-000000000201") } returns 0L
+        coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns
+            com.rpeters.cinefintv.data.playback.PlaybackResult.DirectPlay(
+                url = "https://stream/movie-1",
+                container = "mkv",
+                videoCodec = "h264",
+                audioCodec = "aac",
+                bitrate = 1000,
+                reason = "test",
+            )
 
         coEvery {
             userRepository.reportPlaybackProgress(
-                itemId = "movie-1",
+                itemId = "00000000-0000-0000-0000-000000000201",
                 sessionId = any(),
                 positionTicks = 5_000L * 10_000L,
                 mediaSourceId = any(),
@@ -441,7 +547,13 @@ class PlayerViewModelTest {
             syncGate.await()
             ApiResult.Success(Unit)
         }
-        coEvery { PlaybackPositionStore.savePlaybackPosition(appContext, "movie-1", 5_000L) } returns Unit
+        coEvery {
+            PlaybackPositionStore.savePlaybackPosition(
+                appContext,
+                "00000000-0000-0000-0000-000000000201",
+                5_000L,
+            )
+        } returns Unit
 
         val viewModel = PlayerViewModel(
             savedStateHandle = SavedStateHandle(mapOf("itemId" to "movie-1")),
@@ -471,7 +583,7 @@ class PlayerViewModelTest {
         syncGate.complete(Unit)
         advanceUntilIdle()
 
-        assertEquals(MediaUpdateEvent.RefreshItem("movie-1"), eventDeferred.await())
+        assertEquals(MediaUpdateEvent.RefreshItem("00000000-0000-0000-0000-000000000201"), eventDeferred.await())
     }
 
     @org.junit.After

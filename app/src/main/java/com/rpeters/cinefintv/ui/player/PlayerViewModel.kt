@@ -27,9 +27,11 @@ import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferencesRepos
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
+import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getEpisodeCode
 import com.rpeters.cinefintv.utils.getYear
+import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -79,6 +81,7 @@ class PlayerViewModel @Inject constructor(
     private var activePlaySessionId: String? = null
     private var activePlayMethod: PlayMethod = PlayMethod.DIRECT_PLAY
     private var currentItem: BaseItemDto? = null
+    private var resolvedItemId: String = itemId
     private var playbackStartReported = false
     private var pendingPlaybackStartPositionMs: Long? = null
 
@@ -142,9 +145,13 @@ class PlayerViewModel @Inject constructor(
     }
 
     private suspend fun loadInternal(): Boolean {
-        val localPlaybackPositionMs = PlaybackPositionStore.getPlaybackPosition(appContext, itemId)
+        resolvedItemId = itemId
         val detailResult = repositories.media.getItemDetails(itemId)
-        val item = (detailResult as? ApiResult.Success)?.data
+        val requestedItem = (detailResult as? ApiResult.Success)?.data
+        val item = resolvePlayableItem(requestedItem) ?: requestedItem
+        resolvedItemId = item?.id?.toString()?.takeIf(String::isNotBlank) ?: itemId
+
+        val localPlaybackPositionMs = PlaybackPositionStore.getPlaybackPosition(appContext, resolvedItemId)
         currentItem = item
         val chapters = item?.chapters.orEmpty().map { chapter ->
             ChapterMarker(positionMs = chapter.startPositionTicks / TICKS_PER_MILLISECOND, name = chapter.name)
@@ -188,7 +195,7 @@ class PlayerViewModel @Inject constructor(
         val title = item?.getDisplayTitle() ?: "Now Playing"
         val playbackInfo = runCatching {
             repositories.stream.getPlaybackInfo(
-                itemId = itemId,
+                itemId = resolvedItemId,
                 startPositionMs = if (shouldShowResumeDialog) 0L else savedPlaybackPositionMs,
             )
         }.getOrNull()
@@ -211,7 +218,7 @@ class PlayerViewModel @Inject constructor(
             subtitleStreamIndex = null,
             startPositionMs = if (shouldShowResumeDialog) 0L else savedPlaybackPositionMs,
         )
-        val streamUrl = resolvedPlayback?.url ?: repositories.stream.getStreamUrl(itemId)
+        val streamUrl = resolvedPlayback?.url ?: repositories.stream.getStreamUrl(resolvedItemId)
 
         if (streamUrl == null) {
             _uiState.value = _uiState.value.copy(
@@ -244,7 +251,7 @@ class PlayerViewModel @Inject constructor(
         var nextEpisodeThumbnailUrl: String? = null
 
         if (isEpisodicContent) {
-            val nextResult = repositories.media.getNextEpisode(itemId)
+            val nextResult = repositories.media.getNextEpisode(resolvedItemId)
             if (nextResult is ApiResult.Success) {
                 val nextEpisode = nextResult.data
                 if (nextEpisode != null) {
@@ -255,10 +262,11 @@ class PlayerViewModel @Inject constructor(
             }
         }
 
-        val trickplayManifest = repositories.stream.getTrickplayManifest(itemId)
-        val trickplayBaseUrl = if (trickplayManifest != null) repositories.stream.getTrickplayBaseUrl(itemId) else null
+        val trickplayManifest = repositories.stream.getTrickplayManifest(resolvedItemId)
+        val trickplayBaseUrl = if (trickplayManifest != null) repositories.stream.getTrickplayBaseUrl(resolvedItemId) else null
 
         _uiState.value = _uiState.value.copy(
+            itemId = resolvedItemId,
             title = title,
             logoUrl = logoUrl,
             seasonNumber = seasonNumber,
@@ -287,13 +295,35 @@ class PlayerViewModel @Inject constructor(
 
         // Load episode list or recommendations after unblocking playback.
         if (chapters.size < 2) {
-            val contentRow = loadContentRow(isEpisodicContent, item, itemId)
+            val contentRow = loadContentRow(isEpisodicContent, item, resolvedItemId)
             if (contentRow != null) {
                 _uiState.value = _uiState.value.copy(contentRow = contentRow)
             }
         }
 
         return true
+    }
+
+    private suspend fun resolvePlayableItem(requestedItem: BaseItemDto?): BaseItemDto? {
+        requestedItem ?: return null
+
+        return when (requestedItem.type) {
+            BaseItemKind.SERIES -> {
+                val seriesId = requestedItem.id.toString()
+                (repositories.media.getNextUpForSeries(seriesId) as? ApiResult.Success)?.data ?: requestedItem
+            }
+            BaseItemKind.SEASON -> {
+                val seasonId = requestedItem.id.toString()
+                val episodes = (repositories.media.getEpisodesForSeason(seasonId) as? ApiResult.Success)
+                    ?.data
+                    .orEmpty()
+                episodes.firstOrNull { it.canResume() } ?:
+                    episodes.firstOrNull { !it.isWatched() } ?:
+                    episodes.firstOrNull() ?:
+                    requestedItem
+            }
+            else -> requestedItem
+        }
     }
 
     private suspend fun loadContentRow(
@@ -618,7 +648,7 @@ class PlayerViewModel @Inject constructor(
 
     suspend fun getNextEpisodeId(): String? {
         if (!uiState.value.isEpisodicContent || !uiState.value.autoPlayNextEpisode) return null
-        return when (val result = repositories.media.getNextEpisode(itemId)) {
+        return when (val result = repositories.media.getNextEpisode(resolvedItemId)) {
             is ApiResult.Success -> result.data?.id?.toString()
             else -> null
         }
@@ -630,26 +660,27 @@ class PlayerViewModel @Inject constructor(
         isPaused: Boolean = true,
         shouldSyncToServer: Boolean = true,
     ) {
-        if (itemId.isBlank()) return
+        if (resolvedItemId.isBlank()) return
 
         viewModelScope.launch {
             val isCompleted = durationMs > 0L && positionMs >= (durationMs * COMPLETION_THRESHOLD_PERCENT)
             val persistedPosition = if (isCompleted) 0L else positionMs.coerceAtLeast(0L)
-            PlaybackPositionStore.savePlaybackPosition(appContext, itemId, persistedPosition)
+            PlaybackPositionStore.savePlaybackPosition(appContext, resolvedItemId, persistedPosition)
 
-            if (shouldSyncToServer) {                try {
+            if (shouldSyncToServer) {
+                try {
                     val positionTicks = if (persistedPosition <= 0L) null else persistedPosition * TICKS_PER_MILLISECOND
                     val sessionId = activePlaySessionId?.takeIf { it.isNotBlank() } ?: playbackSessionId
                     if (isCompleted) {
                         repositories.user.reportPlaybackStopped(
-                            itemId = itemId,
+                            itemId = resolvedItemId,
                             sessionId = sessionId,
                             positionTicks = positionTicks,
                             mediaSourceId = activeMediaSourceId,
                         )
                     } else {
                         repositories.user.reportPlaybackProgress(
-                            itemId = itemId,
+                            itemId = resolvedItemId,
                             sessionId = sessionId,
                             positionTicks = positionTicks,
                             mediaSourceId = activeMediaSourceId,
@@ -662,14 +693,14 @@ class PlayerViewModel @Inject constructor(
                 } catch (e: Exception) {
                     Log.w(
                         "PlayerViewModel",
-                        "Failed to sync playback position for item $itemId: ${e.message}",
+                        "Failed to sync playback position for item $resolvedItemId: ${e.message}",
                         e,
                     )
                 }
             }
 
             // Broadcast after the sync attempt so listeners pull the latest server state.
-            updateBus.refreshItem(itemId)
+            updateBus.refreshItem(resolvedItemId)
         }
     }
 
@@ -733,7 +764,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun queuePlaybackStartReport(positionMs: Long) {
-        if (itemId.isBlank()) return
+        if (resolvedItemId.isBlank()) return
         pendingPlaybackStartPositionMs = positionMs.coerceAtLeast(0L)
     }
 
@@ -743,7 +774,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun reportPlaybackStart(positionMs: Long) {
-        if (playbackStartReported || itemId.isBlank()) return
+        if (playbackStartReported || resolvedItemId.isBlank()) return
 
         playbackStartReported = true
         pendingPlaybackStartPositionMs = null
@@ -752,7 +783,7 @@ class PlayerViewModel @Inject constructor(
 
         viewModelScope.launch {
             repositories.user.reportPlaybackStart(
-                itemId = itemId,
+                itemId = resolvedItemId,
                 sessionId = sessionId,
                 positionTicks = positionTicks,
                 mediaSourceId = activeMediaSourceId,
