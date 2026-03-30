@@ -281,10 +281,10 @@ fun CinematicHero(
                     }
                 }
 
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(spacing.elementGap),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
                 ) {
                     val motion = LocalCinefinMotion.current
                     Button(

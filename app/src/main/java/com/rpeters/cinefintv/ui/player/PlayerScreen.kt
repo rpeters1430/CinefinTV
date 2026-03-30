@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -407,6 +408,7 @@ internal fun PlayerPlaybackContent(
 
     LaunchedEffect(activeSkipLabel, controlsVisible) {
         if (activeSkipLabel != null && !controlsVisible) {
+            withFrameNanos { }
             runCatching { skipFocusRequester.requestFocus() }
         }
     }
