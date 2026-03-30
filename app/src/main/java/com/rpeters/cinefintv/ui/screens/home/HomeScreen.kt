@@ -88,6 +88,13 @@ import kotlinx.coroutines.launch
 
 private const val HOME_AUTO_REFRESH_INTERVAL_MS = 60_000L
 
+// When the user returns to home from a detail screen, a silent data refresh is
+// triggered simultaneously with the focus restoration. This delay keeps the
+// restoration flag active long enough for that refresh to complete and cancel
+// this effect, so the re-run lands on the updated list rather than an item
+// that was just deleted.
+private const val HOME_FOCUS_RESTORE_SETTLE_MS = 1_000L
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -288,14 +295,33 @@ internal fun HomeScreenContent(
                 shouldRestoreFocus,
                 preferredFocusRequester,
                 state.featuredItems.size,
-                state.sections.size,
+                state.sections,
             ) {
-                if (!shouldRestoreFocus || preferredFocusRequester == null) {
+                if (!shouldRestoreFocus) {
                     return@LaunchedEffect
                 }
 
+                // Resolve a focus target: use the preferred requester (last-focused item
+                // within a known section), fall back to the featured carousel primary
+                // action, then to the first section's first item.  A null preferred
+                // requester happens when the last-focused section was removed (e.g. the
+                // deleted video emptied a section entirely).
+                //
+                // If this effect is cancelled and restarted because state.sections changed
+                // (a concurrent silent refresh on the same ON_RESUME), shouldRestoreFocus
+                // is still true so we re-run and land on the correct post-refresh item.
+                val fallbackRequester = when {
+                    state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
+                    else -> sectionFocusRequesters.firstOrNull()
+                }
+                val requester = preferredFocusRequester ?: fallbackRequester
+                    ?: return@LaunchedEffect
+
                 withFrameNanos { }
-                runCatching { preferredFocusRequester.requestFocus() }
+                runCatching { requester.requestFocus() }
+                // Hold the restoration flag long enough for any concurrent data refresh
+                // to complete and restart this effect so focus lands on the updated list.
+                delay(HOME_FOCUS_RESTORE_SETTLE_MS)
                 shouldRestoreFocus = false
             }
 
