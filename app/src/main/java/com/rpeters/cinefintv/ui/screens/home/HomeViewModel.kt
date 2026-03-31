@@ -5,19 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.ui.components.WatchStatus
-import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
-import com.rpeters.cinefintv.utils.getEpisodeCode
 import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getItemTypeString
 import com.rpeters.cinefintv.utils.getMediaQualityLabel
-import com.rpeters.cinefintv.utils.getSeriesCardDetailLine
-import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
-import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.isEpisode
 import com.rpeters.cinefintv.utils.isSeries
-import com.rpeters.cinefintv.utils.isWatched
+import com.rpeters.cinefintv.utils.toMediaCardPresentation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -263,54 +258,12 @@ class HomeViewModel @Inject constructor(
 
     private fun toCardModel(item: BaseItemDto): HomeCardModel {
         val id = item.id.toString()
-        val watchedPercentage = item.getWatchedPercentage()
-        val isResumable = item.canResume()
-        val isWatched = item.isWatched()
-        
-        val watchStatus = when {
-            isWatched -> WatchStatus.WATCHED
-            isResumable -> WatchStatus.IN_PROGRESS
-            else -> WatchStatus.NONE
-        }
-        val playbackProgress = if (isResumable) watchedPercentage.toFloat() / 100f else null
-        val unwatchedCount = if (item.isSeries()) item.getUnwatchedEpisodeCount().takeIf { it > 0 } else null
-
-        val subtitle = when {
-            item.type == org.jellyfin.sdk.model.api.BaseItemKind.COLLECTION_FOLDER -> null
-            isResumable -> {
-                val pct = watchedPercentage
-                val ticks = item.runTimeTicks
-                if (ticks != null && ticks > 0) {
-                    val remainingTicks = (ticks * (1.0 - pct / 100.0)).toLong()
-                    val totalSeconds = remainingTicks / 10_000_000L
-                    val hours = totalSeconds / 3600
-                    val minutes = (totalSeconds % 3600) / 60
-                    when {
-                        hours > 0 -> "${hours}h ${minutes}m left"
-                        minutes > 0 -> "${minutes}m left"
-                        else -> "< 1m left"
-                    }
-                } else {
-                    "${pct.toInt()}% watched"
-                }
-            }
-            item.isEpisode() -> {
-                val series = item.seriesName?.takeIf { it.isNotBlank() }
-                val code = item.getEpisodeCode()?.replace(" · ", " ") // S1 E2
-                listOfNotNull(series, code).joinToString("  ·  ").ifBlank { null }
-            }
-            item.isSeries() -> item.getSeriesCardDetailLine()
-                ?: item.getYear()?.toString()
-                ?: item.type.toString().replace('_', ' ')
-            item.getYear() != null -> item.getYear().toString()
-            item.getFormattedDuration() != null -> item.getFormattedDuration()
-            else -> item.type.toString().replace('_', ' ')
-        }
+        val presentation = item.toMediaCardPresentation()
 
         return HomeCardModel(
             id = id,
             title = item.getDisplayTitle(),
-            subtitle = subtitle,
+            subtitle = presentation.subtitle,
             imageUrl = repositories.stream.getLandscapeImageUrl(item),
             backdropUrl = repositories.stream.getBackdropUrl(item),
             description = item.overview?.take(140),
@@ -322,9 +275,9 @@ class HomeViewModel @Inject constructor(
             officialRating = item.officialRating?.takeIf { it.isNotBlank() },
             itemType = item.getItemTypeString(),
             collectionType = item.collectionType?.toString(),
-            watchStatus = watchStatus,
-            playbackProgress = playbackProgress,
-            unwatchedCount = unwatchedCount,
+            watchStatus = presentation.watchStatus,
+            playbackProgress = presentation.playbackProgress,
+            unwatchedCount = presentation.unwatchedCount,
             mediaQuality = item.getMediaQualityLabel(),
             seriesId = item.seriesId?.toString(),
             seasonId = item.parentId?.toString(),

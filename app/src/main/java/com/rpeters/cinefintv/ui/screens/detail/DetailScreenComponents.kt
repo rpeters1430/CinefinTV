@@ -67,6 +67,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.CinefinChip
+import com.rpeters.cinefintv.ui.components.shouldOpenCardMenu
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import kotlinx.coroutines.flow.first
@@ -641,6 +642,7 @@ fun EpisodeListRow(
     val expressiveColors = LocalCinefinExpressiveColors.current
     val spacing = LocalCinefinSpacing.current
     var isFocused by remember { mutableStateOf(false) }
+    var menuHandledForCurrentPress by remember { mutableStateOf(false) }
 
     androidx.tv.material3.Card(
         onClick = onClick,
@@ -650,15 +652,19 @@ fun EpisodeListRow(
             .testTag(DetailTestTags.EpisodeItem)
             .onPreviewKeyEvent { keyEvent ->
                 val nativeEvent = keyEvent.nativeKeyEvent
-                if (
-                    onMenuAction != null &&
-                    nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_MENU
-                ) {
-                    onMenuAction()
-                    true
-                } else {
-                    false
+                when {
+                    onMenuAction == null -> false
+                    nativeEvent.action == android.view.KeyEvent.ACTION_UP -> {
+                        menuHandledForCurrentPress = false
+                        false
+                    }
+                    shouldOpenCardMenu(nativeEvent) && !menuHandledForCurrentPress -> {
+                        menuHandledForCurrentPress = true
+                        onMenuAction()
+                        true
+                    }
+                    shouldOpenCardMenu(nativeEvent) -> true
+                    else -> false
                 }
             }
             .onFocusChanged {

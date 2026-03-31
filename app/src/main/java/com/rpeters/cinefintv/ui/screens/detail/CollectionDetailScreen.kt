@@ -315,6 +315,7 @@ private fun CollectionFolderContent(
                             ),
                         watchStatus = item.watchStatus,
                         playbackProgress = item.playbackProgress,
+                        unwatchedCount = item.unwatchedCount,
                         onFocus = { lastFocusedItemId = item.id },
                         onClick = { onOpenItem(item.id, item.itemType) },
                     )

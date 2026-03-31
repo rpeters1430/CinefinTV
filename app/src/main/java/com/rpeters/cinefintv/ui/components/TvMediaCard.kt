@@ -78,6 +78,7 @@ fun TvMediaCard(
     val spacing = LocalCinefinSpacing.current
     val motion = LocalCinefinMotion.current
     var isFocused by remember { mutableStateOf(false) }
+    var menuHandledForCurrentPress by remember { mutableStateOf(false) }
 
     val titleColor by animateColorAsState(
         targetValue = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface,
@@ -107,15 +108,19 @@ fun TvMediaCard(
                     .aspectRatio(aspectRatio)
                     .onPreviewKeyEvent { keyEvent ->
                         val nativeEvent = keyEvent.nativeKeyEvent
-                        if (
-                            onMenuAction != null &&
-                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                            nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_MENU
-                        ) {
-                            onMenuAction()
-                            true
-                        } else {
-                            false
+                        when {
+                            onMenuAction == null -> false
+                            nativeEvent.action == android.view.KeyEvent.ACTION_UP -> {
+                                menuHandledForCurrentPress = false
+                                false
+                            }
+                            shouldOpenCardMenu(nativeEvent) && !menuHandledForCurrentPress -> {
+                                menuHandledForCurrentPress = true
+                                onMenuAction()
+                                true
+                            }
+                            shouldOpenCardMenu(nativeEvent) -> true
+                            else -> false
                         }
                     }
                     .onFocusChanged {

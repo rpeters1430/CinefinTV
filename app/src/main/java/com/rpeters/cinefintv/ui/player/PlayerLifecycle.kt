@@ -3,6 +3,7 @@ package com.rpeters.cinefintv.ui.player
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -25,6 +26,8 @@ internal fun PlayerLifecycleManager(
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val view = LocalView.current
+    val latestUiState by androidx.compose.runtime.rememberUpdatedState(uiState)
+    val latestNextEpisodeRequest by androidx.compose.runtime.rememberUpdatedState(onNextEpisodeRequest)
 
     // Keep screen on while playing
     DisposableEffect(isPlaying) {
@@ -59,12 +62,13 @@ internal fun PlayerLifecycleManager(
                         isPaused = true,
                     )
 
-                    if (uiState.isEpisodicContent && uiState.autoPlayNextEpisode && !uiState.nextEpisodeId.isNullOrBlank()) {
+                    val nextTarget = nextPlaybackCompletionTarget(latestUiState)
+                    if (!nextTarget.isNullOrBlank()) {
                         player.pause()
-                        onNextEpisodeRequest(uiState.nextEpisodeId)
+                        latestNextEpisodeRequest(nextTarget)
                     } else {
                         // For non-episodic content or when auto-play is off, navigate back
-                        onNextEpisodeRequest("")
+                        latestNextEpisodeRequest("")
                     }
                 }
             }
@@ -101,5 +105,14 @@ internal fun PlayerLifecycleManager(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
+    }
+}
+
+internal fun nextPlaybackCompletionTarget(uiState: PlayerUiState): String? {
+    return when {
+        !uiState.isEpisodicContent -> null
+        !uiState.autoPlayNextEpisode -> null
+        uiState.nextEpisodeId.isNullOrBlank() -> null
+        else -> uiState.nextEpisodeId
     }
 }

@@ -132,8 +132,8 @@ class CollectionDetailViewModelTest {
         assertTrue(state.stuff.isCollection)
         assertEquals(2, state.items.size)
         assertEquals(2, state.stuff.itemCount)
-        assertEquals("Video  ·  10m  ·  2022", state.items[0].subtitle)
-        assertEquals("Video  ·  20m  ·  2023", state.items[1].subtitle)
+        assertEquals("Unwatched  ·  10m", state.items[0].subtitle)
+        assertEquals("Watched  ·  20m", state.items[1].subtitle)
     }
 
     @Test

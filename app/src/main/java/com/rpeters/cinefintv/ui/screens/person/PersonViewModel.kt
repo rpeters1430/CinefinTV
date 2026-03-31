@@ -6,14 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.ui.components.WatchStatus
-import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getItemTypeString
-import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCardLabel
-import com.rpeters.cinefintv.utils.getWatchedPercentage
-import com.rpeters.cinefintv.utils.getYear
-import com.rpeters.cinefintv.utils.isSeries
-import com.rpeters.cinefintv.utils.isWatched
+import com.rpeters.cinefintv.utils.toMediaCardPresentation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,6 +33,7 @@ data class PersonMediaModel(
     val itemType: String?,
     val watchStatus: WatchStatus = WatchStatus.NONE,
     val playbackProgress: Float? = null,
+    val unwatchedCount: Int? = null,
 )
 
 sealed class PersonUiState {
@@ -106,41 +102,18 @@ class PersonViewModel @Inject constructor(
     }
 
     private fun BaseItemDto.toMediaModel(): PersonMediaModel {
-        val year = getYear()
-        val typeLabel = when (type) {
-            org.jellyfin.sdk.model.api.BaseItemKind.MOVIE -> "Movie"
-            org.jellyfin.sdk.model.api.BaseItemKind.SERIES -> "TV Show"
-            org.jellyfin.sdk.model.api.BaseItemKind.EPISODE -> "Episode"
-            else -> null
-        }
-        
-        val subtitle = if (isSeries()) {
-            getUnwatchedEpisodeCardLabel()
-                ?: listOfNotNull(year?.toString(), typeLabel).joinToString(" | ")
-        } else {
-            listOfNotNull(year?.toString(), typeLabel).joinToString(" | ")
-        }
-
-        val isResumable = canResume()
-        val isWatched = isWatched()
-        val watchStatus = when {
-            isWatched -> WatchStatus.WATCHED
-            isResumable -> WatchStatus.IN_PROGRESS
-            else -> WatchStatus.NONE
-        }
-        val playbackProgress = if (isResumable) {
-            getWatchedPercentage().toFloat() / 100f
-        } else null
+        val presentation = toMediaCardPresentation()
 
         return PersonMediaModel(
             id = id.toString(),
             title = getDisplayTitle(),
-            subtitle = subtitle.ifBlank { null },
+            subtitle = presentation.subtitle,
             overview = overview,
             imageUrl = repositories.stream.getPosterCardImageUrl(this),
             itemType = getItemTypeString(),
-            watchStatus = watchStatus,
-            playbackProgress = playbackProgress,
+            watchStatus = presentation.watchStatus,
+            playbackProgress = presentation.playbackProgress,
+            unwatchedCount = presentation.unwatchedCount,
         )
     }
 }

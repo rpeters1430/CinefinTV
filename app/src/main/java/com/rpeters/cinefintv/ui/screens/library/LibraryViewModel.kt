@@ -11,16 +11,9 @@ import com.rpeters.cinefintv.data.paging.LibraryItemPagingSource
 import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.ui.components.WatchStatus
-import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
-import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getItemTypeString
-import com.rpeters.cinefintv.utils.getSeriesCardDetailLine
-import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
-import com.rpeters.cinefintv.utils.getWatchedPercentage
-import com.rpeters.cinefintv.utils.getYear
-import com.rpeters.cinefintv.utils.isSeries
-import com.rpeters.cinefintv.utils.isWatched
+import com.rpeters.cinefintv.utils.toMediaCardPresentation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -83,35 +76,17 @@ abstract class BaseLibraryViewModel(
 
     private fun toCardModel(item: BaseItemDto): LibraryCardModel {
         val id = item.id.toString()
-        val watchedPercentage = item.getWatchedPercentage()
-        val isResumable = item.canResume()
-        val isWatched = item.isWatched()
-        
-        val watchStatus = when {
-            isWatched -> WatchStatus.WATCHED
-            isResumable -> WatchStatus.IN_PROGRESS
-            else -> WatchStatus.NONE
-        }
-        val playbackProgress = if (isResumable) watchedPercentage.toFloat() / 100f else null
-        val unwatchedCount = if (item.isSeries()) item.getUnwatchedEpisodeCount().takeIf { it > 0 } else null
-
-        val subtitle = when {
-            item.isSeries() -> item.getSeriesCardDetailLine()
-                ?: item.getYear()?.toString()
-            item.getYear() != null -> item.getYear().toString()
-            item.getFormattedDuration() != null -> item.getFormattedDuration()
-            else -> null
-        }
+        val presentation = item.toMediaCardPresentation()
 
         return LibraryCardModel(
             id = id,
             title = item.getDisplayTitle(),
-            subtitle = subtitle,
+            subtitle = presentation.subtitle,
             imageUrl = repositories.stream.getPosterCardImageUrl(item),
             itemType = item.getItemTypeString(),
-            watchStatus = watchStatus,
-            playbackProgress = playbackProgress,
-            unwatchedCount = unwatchedCount,
+            watchStatus = presentation.watchStatus,
+            playbackProgress = presentation.playbackProgress,
+            unwatchedCount = presentation.unwatchedCount,
         )
     }
 }

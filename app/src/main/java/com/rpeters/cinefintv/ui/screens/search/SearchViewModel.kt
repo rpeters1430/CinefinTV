@@ -4,17 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
-import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.ui.screens.home.HomeCardModel
-import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
-import com.rpeters.cinefintv.utils.getFormattedDuration
-import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCardLabel
-import com.rpeters.cinefintv.utils.getUnwatchedEpisodeCount
-import com.rpeters.cinefintv.utils.getWatchedPercentage
-import com.rpeters.cinefintv.utils.getYear
-import com.rpeters.cinefintv.utils.isSeries
-import com.rpeters.cinefintv.utils.isWatched
+import com.rpeters.cinefintv.utils.toMediaCardPresentation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -106,38 +98,16 @@ class SearchViewModel @Inject constructor(
 
     private fun toCardModel(item: BaseItemDto): HomeCardModel? {
         val id = item.id.toString()
-        val isResumable = item.canResume()
-        val isWatched = item.isWatched()
-        val watchStatus = when {
-            isWatched -> WatchStatus.WATCHED
-            isResumable -> WatchStatus.IN_PROGRESS
-            else -> WatchStatus.NONE
-        }
-        val playbackProgress = if (isResumable) {
-            item.getWatchedPercentage().toFloat() / 100f
-        } else null
-        val unwatchedCount = if (item.isSeries()) {
-            item.getUnwatchedEpisodeCount().takeIf { it > 0 }
-        } else null
-
-        val subtitle = if (item.isSeries()) {
-            item.getUnwatchedEpisodeCardLabel()
-                ?: item.getYear()?.toString()
-                ?: item.type.toString().replace('_', ' ')
-        } else {
-            item.getYear()?.toString()
-                ?: item.getFormattedDuration()
-                ?: item.type.toString().replace('_', ' ')
-        }
+        val presentation = item.toMediaCardPresentation()
 
         return HomeCardModel(
             id = id,
             title = item.getDisplayTitle(),
-            subtitle = subtitle,
+            subtitle = presentation.subtitle,
             imageUrl = repositories.stream.getSearchCardImageUrl(item),
-            watchStatus = watchStatus,
-            playbackProgress = playbackProgress,
-            unwatchedCount = unwatchedCount,
+            watchStatus = presentation.watchStatus,
+            playbackProgress = presentation.playbackProgress,
+            unwatchedCount = presentation.unwatchedCount,
             itemType = item.type.toString(),
             collectionType = item.collectionType?.toString(),
         )

@@ -14,6 +14,7 @@ import com.rpeters.cinefintv.utils.getMediaQualityLabel
 import com.rpeters.cinefintv.utils.getWatchedPercentage
 import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.isWatched
+import com.rpeters.cinefintv.utils.toMediaCardPresentation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,6 +49,7 @@ data class CollectionItemModel(
     val itemType: String?,
     val watchStatus: WatchStatus,
     val playbackProgress: Float?,
+    val unwatchedCount: Int?,
 )
 
 sealed class CollectionDetailUiState {
@@ -175,26 +177,17 @@ class CollectionDetailViewModel @Inject constructor(
     }
 
     private fun BaseItemDto.toCollectionItemModel(): CollectionItemModel {
-        val watchedPercentage = getWatchedPercentage()
-        val watchStatus = when {
-            isWatched() -> WatchStatus.WATCHED
-            canResume() -> WatchStatus.IN_PROGRESS
-            else -> WatchStatus.NONE
-        }
-        val playbackProgress = if (canResume()) watchedPercentage.toFloat() / 100f else null
+        val presentation = toMediaCardPresentation()
 
         return CollectionItemModel(
             id = id.toString(),
             title = getDisplayTitle(),
-            subtitle = listOfNotNull(
-                getItemTypeString().takeIf { it.isNotBlank() },
-                getFormattedDuration(),
-                getYear()?.toString(),
-            ).joinToString("  ·  ").ifBlank { null },
+            subtitle = presentation.subtitle,
             imageUrl = repositories.stream.getPosterCardImageUrl(this),
             itemType = getItemTypeString(),
-            watchStatus = watchStatus,
-            playbackProgress = playbackProgress
+            watchStatus = presentation.watchStatus,
+            playbackProgress = presentation.playbackProgress,
+            unwatchedCount = presentation.unwatchedCount,
         )
     }
 }

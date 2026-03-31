@@ -366,6 +366,7 @@ private fun PersonImmersiveSection(
                         onClick = { onOpenItem(item.id, item.itemType) },
                         watchStatus = item.watchStatus,
                         playbackProgress = item.playbackProgress,
+                        unwatchedCount = item.unwatchedCount,
                         onFocus = { onItemFocused(item) },
                         aspectRatio = 16f / 9f,
                         cardWidth = 240.dp,
