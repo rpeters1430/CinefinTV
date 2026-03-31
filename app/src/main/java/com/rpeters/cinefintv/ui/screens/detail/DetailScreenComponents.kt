@@ -421,8 +421,8 @@ fun DetailActionRow(
             colors = ButtonDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                focusedContainerColor = Color.White,
-                focusedContentColor = MaterialTheme.colorScheme.primary,
+                focusedContainerColor = expressiveColors.focusGlow.copy(alpha = 0.9f),
+                focusedContentColor = MaterialTheme.colorScheme.onSurface,
             ),
         ) {
             Text(primaryLabel)
@@ -445,7 +445,7 @@ fun DetailActionRow(
                     containerColor = expressiveColors.chromeSurface.copy(alpha = 0.7f),
                     contentColor = MaterialTheme.colorScheme.onBackground,
                     focusedContainerColor = expressiveColors.focusGlow.copy(alpha = 0.24f),
-                    focusedContentColor = Color.White,
+                    focusedContentColor = MaterialTheme.colorScheme.onSurface,
                 ),
                 border = ButtonDefaults.border(
                     border = Border(
@@ -520,7 +520,11 @@ fun DetailContentSection(
                             Text(
                                 text = it,
                                 style = MaterialTheme.typography.labelMedium,
-                                color = if (isHeaderFocused) Color.White else MaterialTheme.colorScheme.primary,
+                                color = if (isHeaderFocused) {
+                                    MaterialTheme.colorScheme.onBackground
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
                             )
                         }
                         Row(
@@ -667,7 +671,7 @@ fun EpisodeListRow(
         scale = androidx.tv.material3.CardDefaults.scale(focusedScale = 1.02f),
         border = androidx.tv.material3.CardDefaults.border(
             focusedBorder = androidx.tv.material3.Border(
-                border = androidx.compose.foundation.BorderStroke(2.dp, Color.White),
+                border = androidx.compose.foundation.BorderStroke(2.dp, expressiveColors.focusRing),
             ),
         ),
         shape = androidx.tv.material3.CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),
@@ -683,7 +687,7 @@ fun EpisodeListRow(
                 .background(
                     Brush.horizontalGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = if (isFocused) 0.06f else 0.02f),
+                            expressiveColors.focusGlow.copy(alpha = if (isFocused) 0.16f else 0.07f),
                             Color.Transparent,
                         )
                     )
@@ -766,7 +770,7 @@ fun EpisodeListRow(
                             .align(Alignment.BottomStart)
                             .fillMaxWidth()
                             .height(3.dp)
-                            .background(Color.Black.copy(alpha = 0.5f))
+                            .background(expressiveColors.playerSurface.copy(alpha = 0.5f))
                     ) {
                         Box(
                             modifier = Modifier

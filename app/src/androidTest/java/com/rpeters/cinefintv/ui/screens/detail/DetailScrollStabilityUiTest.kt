@@ -1,26 +1,41 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.ComponentActivity
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.rpeters.cinefintv.ui.components.WatchStatus
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.MovieDetailLayout
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowDetailLayout
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailTestTags
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -28,6 +43,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
+@OptIn(ExperimentalTestApi::class)
 class DetailScrollStabilityUiTest {
 
     @get:Rule
@@ -399,5 +415,112 @@ class DetailScrollStabilityUiTest {
         
         // Check for specific episode text to be sure mapping worked
         composeRule.onNodeWithText("Episode 1").assertExists()
+    }
+
+    @Test
+    fun seasonDetail_overviewDown_focusesFirstEpisode_withoutOverscrollingPastEpisodesHeader() {
+        val listState = LazyListState()
+        val overviewFocusRequester = FocusRequester()
+        val firstEpisodeFocusRequester = FocusRequester()
+        val episodes = (1..5).map {
+            EpisodeModel(
+                id = "e$it",
+                title = "Episode $it",
+                number = it,
+                overview = "Overview $it",
+                imageUrl = null,
+                duration = "45m",
+                videoQuality = "HD",
+                audioLabel = "5.1",
+                isWatched = false,
+                playbackProgress = 0f,
+                episodeCode = "S01E0$it"
+            )
+        }
+
+        composeRule.setContent {
+            DetailTestHost {
+                val coroutineScope = rememberCoroutineScope()
+
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    item {
+                        Column {
+                            DetailAnchor(FocusRequester(), onFocused = {})
+                            CinematicHero(
+                                backdropUrl = null,
+                                logoUrl = null,
+                                title = "Season 1",
+                                eyebrow = "5 episodes",
+                                ratingText = null,
+                                genres = emptyList(),
+                                primaryActionLabel = "Play",
+                                onPrimaryAction = {},
+                            )
+                        }
+                    }
+                    item {
+                        DetailOverviewSection(
+                            title = "Season 1",
+                            posterUrl = null,
+                            description = "Overview",
+                            factItems = emptyList(),
+                            chips = emptyList(),
+                            focusRequester = overviewFocusRequester,
+                            modifier = Modifier.onPreviewKeyEvent { event ->
+                                if (
+                                    event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                    event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                                ) {
+                                    coroutineScope.launch {
+                                        listState.scrollToItem(2)
+                                        yield()
+                                        firstEpisodeFocusRequester.requestFocus()
+                                    }
+                                    true
+                                } else {
+                                    false
+                                }
+                            },
+                        )
+                    }
+                    item {
+                        DetailContentSection(
+                            title = "Episodes",
+                            eyebrow = "5 unwatched",
+                            icon = Icons.Default.VideoLibrary,
+                        ) {}
+                    }
+                    items(episodes, key = { it.id }) { episode ->
+                        EpisodeListRow(
+                            episode = episode,
+                            modifier = if (episode.id == episodes.first().id) {
+                                Modifier
+                                    .focusRequester(firstEpisodeFocusRequester)
+                                    .focusProperties { up = overviewFocusRequester }
+                            } else {
+                                Modifier
+                            },
+                            onClick = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        composeRule.runOnIdle { overviewFocusRequester.requestFocus() }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(DetailTestTags.Overview).assertIsFocused()
+
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Episode 1").assertIsDisplayed()
+        assertTrue(
+            "Season handoff should stop before overscrolling into the episode rows. Current index: ${listState.firstVisibleItemIndex}",
+            listState.firstVisibleItemIndex < 3
+        )
     }
 }

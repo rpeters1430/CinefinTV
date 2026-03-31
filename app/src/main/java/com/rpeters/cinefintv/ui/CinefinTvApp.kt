@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,7 +39,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -245,7 +245,7 @@ fun CinefinTvApp(
                 !currentRoute.startsWith("tvshow/detail/") &&
                 !currentRoute.startsWith("season/detail/") &&
                 !currentRoute.startsWith("episode/detail/") &&
-                !currentRoute.startsWith("stuff/detail/") &&
+                !currentRoute.startsWith("collections/detail/") &&
                 !currentRoute.startsWith("detail/person/")
 
             val selectedTabIndex = navTabItems.indexOfFirst { item ->
@@ -255,7 +255,8 @@ fun CinefinTvApp(
             .coerceAtLeast(0)
 
             fun navigateToTab(route: String) {
-                if (currentRoute != route) {
+                val activeRoute = navController.currentDestination?.route
+                if (activeRoute != route) {
                     val homeDestinationId = navController.graph.findNode(NavRoutes.HOME)?.id
                     navController.navigate(route) {
                         if (homeDestinationId != null) {
@@ -331,12 +332,12 @@ internal fun CinefinAppScaffold(
                         .padding(horizontal = spacing.gutter, vertical = 12.dp),
                     shape = RoundedCornerShape(32.dp),
                     colors = androidx.tv.material3.SurfaceDefaults.colors(
-                        containerColor = Color.Black.copy(alpha = 0.45f),
+                        containerColor = expressiveColors.chromeSurface.copy(alpha = 0.84f),
                     ),
                     border = androidx.tv.material3.Border(
                         border = BorderStroke(
                             width = 1.dp,
-                            color = Color.White.copy(alpha = 0.12f),
+                            color = expressiveColors.borderSubtle.copy(alpha = 0.7f),
                         ),
                     ),
                     tonalElevation = 12.dp,
@@ -347,7 +348,7 @@ internal fun CinefinAppScaffold(
                             .background(
                                 Brush.verticalGradient(
                                     colors = listOf(
-                                        Color.White.copy(alpha = 0.05f),
+                                        expressiveColors.playerContentPrimary.copy(alpha = 0.05f),
                                         Color.Transparent,
                                     ),
                                 ),
@@ -359,8 +360,11 @@ internal fun CinefinAppScaffold(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .focusProperties {
-                                    enter = { selectedTabFocusRequester }
+                                    onEnter = {
+                                        selectedTabFocusRequester.requestFocus()
+                                    }
                                 }
+                                .focusGroup()
                                 .testTag(AppTestTags.NavBar),
                             indicator = { tabPositions, doesTabRowHaveFocus ->
                                 TabRowDefaults.UnderlinedIndicator(

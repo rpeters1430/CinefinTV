@@ -601,9 +601,9 @@ private fun PlayerChapterCard(
         ),
         border = if (isActive) CardDefaults.border(
             border = Border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary)),
-            focusedBorder = Border(border = BorderStroke(2.dp, Color.White)),
+            focusedBorder = Border(border = BorderStroke(2.dp, expressiveColors.playerContentPrimary)),
         ) else CardDefaults.border(
-            focusedBorder = Border(border = BorderStroke(2.dp, Color.White.copy(alpha = 0.8f))),
+            focusedBorder = Border(border = BorderStroke(2.dp, expressiveColors.playerContentPrimary.copy(alpha = 0.8f))),
         ),
         scale = CardDefaults.scale(focusedScale = 1.05f),
     ) {
@@ -612,7 +612,7 @@ private fun PlayerChapterCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(90.dp)
-                    .background(Color.Black.copy(alpha = 0.8f)),
+                    .background(expressiveColors.playerSurface.copy(alpha = 0.8f)),
                 contentAlignment = Alignment.Center,
             ) {
                 if (trickplayManifest != null && trickplayBaseUrl != null) {
@@ -675,9 +675,9 @@ private fun PlayerContentItemCard(
         ),
         border = if (isCurrent) CardDefaults.border(
             border = Border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary)),
-            focusedBorder = Border(border = BorderStroke(2.dp, Color.White)),
+            focusedBorder = Border(border = BorderStroke(2.dp, expressiveColors.playerContentPrimary)),
         ) else CardDefaults.border(
-            focusedBorder = Border(border = BorderStroke(2.dp, Color.White.copy(alpha = 0.8f))),
+            focusedBorder = Border(border = BorderStroke(2.dp, expressiveColors.playerContentPrimary.copy(alpha = 0.8f))),
         ),
         scale = CardDefaults.scale(focusedScale = 1.05f),
     ) {
@@ -978,6 +978,7 @@ private fun TrickplayPreview(
     baseUrl: String,
     modifier: Modifier = Modifier
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     val interval = manifest.intervalMs.toLong()
     if (interval <= 0) return
 
@@ -1001,8 +1002,12 @@ private fun TrickplayPreview(
         modifier = modifier
             .size(width = 160.dp, height = 90.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color.Black)
-            .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+            .background(expressiveColors.playerSurface)
+            .border(
+                1.dp,
+                expressiveColors.playerContentPrimary.copy(alpha = 0.2f),
+                RoundedCornerShape(8.dp)
+            )
     ) {
         val bitmap = cachedBitmap
         if (bitmap != null) {
@@ -1031,7 +1036,11 @@ private fun TrickplayPreview(
                 },
             )
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
         }
     }

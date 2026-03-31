@@ -187,7 +187,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun refresh_recentlyAddedVideoSection_usesStuffTitle() = runTest {
+    fun refresh_recentlyAddedVideoSection_usesCollectionsTitle() = runTest {
         val fakeRepositories = FakeHomeRepositories()
         val video = mockBaseItemDto("Clip 1", BaseItemKind.VIDEO)
 
@@ -213,7 +213,7 @@ class HomeViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value as HomeUiState.Content
-        assertEquals("Recently Added Stuff", state.sections.single().title)
+        assertEquals("Recently Added Collections", state.sections.single().title)
         assertEquals("Clip 1", state.sections.single().items.single().title)
     }
 

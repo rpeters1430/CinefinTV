@@ -12,12 +12,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.input.key.Key
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -72,6 +76,34 @@ class AppNavigationSmokeUiTest {
         composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.SETTINGS))
             .performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Screen: Settings").assertIsDisplayed()
+    }
+
+    @Test
+    fun topTabs_canReturnToHomeAfterNavigatingAwayWithDpad() {
+        composeRule.setContent {
+            AppSmokeTestHost {
+                AppNavigationSmokeHarness()
+            }
+        }
+
+        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.HOME))
+            .requestFocus()
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionRight) }
+
+        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.LIBRARY_MOVIES))
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        composeRule.onNodeWithText("Screen: Movies").assertIsDisplayed()
+
+        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.LIBRARY_MOVIES))
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+
+        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.HOME))
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        composeRule.onNodeWithText("Screen: Home").assertIsDisplayed()
     }
 
     @Test
@@ -197,7 +229,8 @@ private fun AppNavigationSmokeHarness() {
         .coerceAtLeast(0)
 
     fun navigateToTab(route: String) {
-        if (currentRoute != route) {
+        val activeRoute = navController.currentDestination?.route
+        if (activeRoute != route) {
             navController.navigate(route) {
                 popUpTo(navController.graph.findStartDestination().id) {
                     saveState = true
@@ -260,7 +293,7 @@ private fun AppNavigationSmokeHarness() {
                     }
                 }
             }
-            composable(NavRoutes.LIBRARY_COLLECTIONS) { SmokeScreen("Stuff") }
+            composable(NavRoutes.LIBRARY_COLLECTIONS) { SmokeScreen("Collections") }
             composable(NavRoutes.LIBRARY_MUSIC) { SmokeScreen("Music") }
             composable(NavRoutes.SEARCH) { SmokeScreen("Search") }
             composable(NavRoutes.SETTINGS) { SmokeScreen("Settings") }
@@ -315,7 +348,7 @@ private fun String.isFullscreenRoute(): Boolean {
         startsWith("tvshow/detail/") ||
         startsWith("season/detail/") ||
         startsWith("episode/detail/") ||
-        startsWith("stuff/detail/") ||
+        startsWith("collections/detail/") ||
         startsWith("detail/person/")
 }
 
@@ -348,3 +381,7 @@ private fun AppSmokeTestHost(content: @Composable () -> Unit) {
         }
     }
 }
+
+private fun androidx.compose.ui.test.SemanticsNodeInteraction.requestFocus():
+    androidx.compose.ui.test.SemanticsNodeInteraction =
+    apply { performSemanticsAction(SemanticsActions.RequestFocus) }

@@ -46,11 +46,11 @@ import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
 
 @Composable
-fun StuffDetailScreen(
+fun CollectionDetailScreen(
     onOpenItem: (String, String?) -> Unit,
     onPlayItem: (String) -> Unit,
     onBack: () -> Unit,
-    viewModel: StuffDetailViewModel = hiltViewModel(),
+    viewModel: CollectionDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -74,20 +74,20 @@ fun StuffDetailScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
-            is StuffDetailUiState.Loading -> DetailLoadingState()
-            is StuffDetailUiState.Error -> DetailErrorState(
+            is CollectionDetailUiState.Loading -> DetailLoadingState()
+            is CollectionDetailUiState.Error -> DetailErrorState(
                 message = state.message,
                 onRetry = { viewModel.load() },
             )
-            is StuffDetailUiState.Content -> {
+            is CollectionDetailUiState.Content -> {
                 if (state.stuff.isCollection) {
-                    StuffCollectionContent(
+                    CollectionFolderContent(
                         stuff = state.stuff,
                         items = state.items,
                         onOpenItem = onOpenItem,
                     )
                 } else {
-                    StuffVideoContent(
+                    CollectionVideoContent(
                         stuff = state.stuff,
                         onPlayItem = onPlayItem,
                         onBack = onBack,
@@ -100,11 +100,11 @@ fun StuffDetailScreen(
 }
 
 @Composable
-private fun StuffVideoContent(
-    stuff: StuffDetailModel,
+private fun CollectionVideoContent(
+    stuff: CollectionDetailModel,
     onPlayItem: (String) -> Unit,
     onBack: () -> Unit,
-    viewModel: StuffDetailViewModel,
+    viewModel: CollectionDetailViewModel,
 ) {
     val primaryActionFocusRequester = remember { FocusRequester() }
     val overviewFocusRequester = remember { FocusRequester() }
@@ -205,9 +205,9 @@ private fun StuffVideoContent(
 }
 
 @Composable
-private fun StuffCollectionContent(
-    stuff: StuffDetailModel,
-    items: List<StuffItemModel>,
+private fun CollectionFolderContent(
+    stuff: CollectionDetailModel,
+    items: List<CollectionItemModel>,
     onOpenItem: (String, String?) -> Unit,
 ) {
     val primaryActionFocusRequester = remember { FocusRequester() }

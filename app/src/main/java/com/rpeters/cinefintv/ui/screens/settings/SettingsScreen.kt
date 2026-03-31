@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -126,11 +124,7 @@ fun SettingsScreen(
             up = categoryFocusRequesters.getValue(selectedCategory)
         }
 
-    RegisterPrimaryContentFocusRequester(categoryFocusRequesters.getValue(selectedCategory))
-
-    LaunchedEffect(selectedCategory) {
-        categoryFocusRequesters.getValue(selectedCategory).requestFocus()
-    }
+    RegisterPrimaryContentFocusRequester(firstSectionItemRequester)
 
     when (activeDialog) {
         SettingsChoiceDialog.THEME_MODE -> CinefinOptionDialog(
@@ -494,11 +488,6 @@ private fun SettingsCategorySelector(
                 onClick = { onCategorySelected(category) },
                 modifier = Modifier
                     .focusRequester(categoryFocusRequesters.getValue(category))
-                    .onFocusChanged { state ->
-                        if (state.hasFocus && !isSelected) {
-                            onCategorySelected(category)
-                        }
-                    }
                     .focusProperties {
                         up = navUpRequester ?: FocusRequester.Cancel
                         down = sectionFocusRequester
@@ -510,8 +499,16 @@ private fun SettingsCategorySelector(
                 colors = androidx.tv.material3.ButtonDefaults.colors(
                     containerColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
                     contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                    focusedContainerColor = if (isSelected) Color.White else expressiveColors.focusGlow.copy(alpha = 0.24f),
-                    focusedContentColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.White,
+                    focusedContainerColor = if (isSelected) {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.88f)
+                    } else {
+                        expressiveColors.focusGlow.copy(alpha = 0.24f)
+                    },
+                    focusedContentColor = if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
                 ),
                 border = androidx.tv.material3.ButtonDefaults.border(
                     border = androidx.tv.material3.Border(

@@ -97,7 +97,7 @@ fun TvPersonCard(
                     focusedBorder = Border(
                         border = androidx.compose.foundation.BorderStroke(
                             width = 3.dp,
-                            color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f),
+                            color = expressiveColors.focusRing.copy(alpha = 0.9f),
                         ),
                     ),
                 ),

@@ -132,7 +132,7 @@ fun TvMediaCard(
                     focusedBorder = Border(
                         border = androidx.compose.foundation.BorderStroke(
                             width = 3.dp,
-                            color = Color.White.copy(alpha = 0.95f),
+                            color = expressiveColors.focusRing.copy(alpha = 0.95f),
                         ),
                     ),
                 ),
@@ -177,8 +177,8 @@ fun TvMediaCard(
                                 Brush.verticalGradient(
                                     colors = listOf(
                                         Color.Transparent,
-                                        Color.Black.copy(alpha = 0.08f),
-                                        Color.Black.copy(alpha = 0.28f),
+                                        expressiveColors.playerOverlayStart.copy(alpha = 0.08f),
+                                        expressiveColors.playerOverlayEnd.copy(alpha = 0.28f),
                                     ),
                                 ),
                             ),
@@ -201,7 +201,7 @@ fun TvMediaCard(
                                 .fillMaxWidth()
                                 .height(7.dp)
                                 .background(
-                                    color = Color.Black.copy(alpha = 0.8f),
+                                    color = expressiveColors.playerSurface.copy(alpha = 0.8f),
                                     shape = progressTrackShape,
                                 )
                         ) {
@@ -213,7 +213,7 @@ fun TvMediaCard(
                                         brush = Brush.horizontalGradient(
                                             colors = listOf(
                                                 MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
-                                                Color.White,
+                                                expressiveColors.playerContentPrimary,
                                             ),
                                         ),
                                         shape = progressTrackShape,

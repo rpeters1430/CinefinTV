@@ -14,7 +14,7 @@ object NavRoutes {
     const val TV_SHOW_DETAIL = "tvshow/detail/{itemId}"
     const val SEASON_DETAIL = "season/detail/{itemId}"
     const val EPISODE_DETAIL = "episode/detail/{itemId}"
-    const val STUFF_DETAIL = "stuff/detail/{itemId}"
+    const val COLLECTION_DETAIL = "collections/detail/{itemId}"
     const val PERSON_DETAIL = "detail/person/{personId}"
     const val PLAYER = "player/{itemId}?start={start}"
     const val AUDIO_PLAYER = "audio-player/{itemId}?queue={queue}"
@@ -23,7 +23,7 @@ object NavRoutes {
     fun tvShowDetail(itemId: String) = "tvshow/detail/$itemId"
     fun seasonDetail(itemId: String) = "season/detail/$itemId"
     fun episodeDetail(itemId: String) = "episode/detail/$itemId"
-    fun stuffDetail(itemId: String) = "stuff/detail/$itemId"
+    fun collectionDetail(itemId: String) = "collections/detail/$itemId"
     fun personDetail(personId: String) = "detail/person/$personId"
     fun player(itemId: String, startPositionMs: Long? = null) = 
         if (startPositionMs != null) "player/$itemId?start=$startPositionMs" else "player/$itemId"

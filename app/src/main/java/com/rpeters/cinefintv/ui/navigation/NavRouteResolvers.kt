@@ -12,7 +12,7 @@ internal fun routeForBrowsableItem(
                 "tvshows" -> NavRoutes.LIBRARY_TVSHOWS
                 "music" -> NavRoutes.LIBRARY_MUSIC
                 "homevideos" -> NavRoutes.LIBRARY_COLLECTIONS
-                else -> NavRoutes.stuffDetail(itemId)
+                else -> NavRoutes.collectionDetail(itemId)
             }
         }
         itemType.equals("Movie", ignoreCase = true) -> NavRoutes.movieDetail(itemId)
@@ -20,7 +20,7 @@ internal fun routeForBrowsableItem(
             itemType.equals("TV Show", ignoreCase = true) -> NavRoutes.tvShowDetail(itemId)
         itemType.equals("Season", ignoreCase = true) -> NavRoutes.seasonDetail(itemId)
         itemType.equals("Episode", ignoreCase = true) -> NavRoutes.player(itemId)
-        else -> NavRoutes.stuffDetail(itemId)
+        else -> NavRoutes.collectionDetail(itemId)
     }
 }
 
@@ -34,6 +34,6 @@ internal fun routeForLinkedDetailItem(
             itemType.equals("TV Show", ignoreCase = true) -> NavRoutes.tvShowDetail(itemId)
         itemType.equals("Season", ignoreCase = true) -> NavRoutes.seasonDetail(itemId)
         itemType.equals("Episode", ignoreCase = true) -> NavRoutes.player(itemId)
-        else -> NavRoutes.stuffDetail(itemId)
+        else -> NavRoutes.collectionDetail(itemId)
     }
 }

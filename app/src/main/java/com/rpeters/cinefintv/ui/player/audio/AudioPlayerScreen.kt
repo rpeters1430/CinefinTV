@@ -99,21 +99,35 @@ fun AudioPlayerScreen(
     BackHandler(onBack = onBack)
 
     if (uiState.isConnecting || uiState.isLoadingQueue) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(expressiveColors.playerSurface),
+            contentAlignment = Alignment.Center
+        ) {
             Text(
                 text = if (uiState.isConnecting) "Connecting to playback..." else "Loading queue...",
                 style = MaterialTheme.typography.headlineMedium,
-                color = Color.White
+                color = expressiveColors.playerContentPrimary
             )
         }
         return
     }
 
     if (uiState.errorMessage != null) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(expressiveColors.playerSurface),
+            contentAlignment = Alignment.Center
+        ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(text = "Playback Error", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.error)
-                Text(text = uiState.errorMessage!!, style = MaterialTheme.typography.bodyLarge, color = Color.White)
+                Text(
+                    text = uiState.errorMessage!!,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = expressiveColors.playerContentPrimary
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(onClick = viewModel::retry) { Text("Retry") }
                     OutlinedButton(onClick = onBack) { Text("Back") }
@@ -137,7 +151,7 @@ fun AudioPlayerScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    Box(modifier = Modifier.fillMaxSize().background(expressiveColors.playerSurface)) {
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(uiState.currentTrackImageUrl)
@@ -154,7 +168,10 @@ fun AudioPlayerScreen(
         
         Box(modifier = Modifier.fillMaxSize().background(
             Brush.verticalGradient(
-                listOf(Color.Black.copy(alpha = 0.3f), Color.Black.copy(alpha = 0.85f))
+                listOf(
+                    expressiveColors.playerOverlayStart.copy(alpha = 0.3f),
+                    expressiveColors.playerOverlayEnd.copy(alpha = 0.85f),
+                )
             )
         ))
 
@@ -168,8 +185,8 @@ fun AudioPlayerScreen(
                 IconButton(
                     onClick = onBack,
                     colors = IconButtonDefaults.colors(
-                        containerColor = Color.White.copy(alpha = 0.1f),
-                        contentColor = Color.White
+                        containerColor = expressiveColors.playerContentPrimary.copy(alpha = 0.1f),
+                        contentColor = expressiveColors.playerContentPrimary
                     )
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -184,7 +201,7 @@ fun AudioPlayerScreen(
                     Surface(
                         shape = RoundedCornerShape(spacing.cornerCard),
                         modifier = Modifier.size(320.dp),
-                        colors = SurfaceDefaults.colors(containerColor = Color.DarkGray)
+                        colors = SurfaceDefaults.colors(containerColor = expressiveColors.accentSurface)
                     ) {
                         if (uiState.currentTrackImageUrl != null) {
                             AsyncImage(
@@ -195,7 +212,12 @@ fun AudioPlayerScreen(
                             )
                         } else {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.size(120.dp), tint = Color.Gray)
+                                Icon(
+                                    Icons.Default.MusicNote,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(120.dp),
+                                    tint = expressiveColors.playerContentSecondary,
+                                )
                             }
                         }
                     }
@@ -204,7 +226,7 @@ fun AudioPlayerScreen(
                         Text(
                             text = uiState.title,
                             style = MaterialTheme.typography.displayMedium,
-                            color = Color.White,
+                            color = expressiveColors.playerContentPrimary,
                             fontWeight = FontWeight.Bold,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
@@ -217,7 +239,7 @@ fun AudioPlayerScreen(
                         Text(
                             text = uiState.albumName ?: "Unknown Album",
                             style = MaterialTheme.typography.titleMedium,
-                            color = Color.White.copy(alpha = 0.6f)
+                            color = expressiveColors.playerContentSecondary
                         )
                         
                         if (uiState.year != null || uiState.genre != null) {
@@ -238,8 +260,12 @@ fun AudioPlayerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(spacing.cornerContainer))
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(spacing.cornerContainer))
+                        .background(expressiveColors.playerContentPrimary.copy(alpha = 0.08f))
+                        .border(
+                            1.dp,
+                            expressiveColors.playerContentPrimary.copy(alpha = 0.12f),
+                            RoundedCornerShape(spacing.cornerContainer)
+                        )
                         .padding(24.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -259,7 +285,7 @@ fun AudioPlayerScreen(
                                 IconButton(
                                     onClick = viewModel::skipToPrevious,
                                     enabled = uiState.canSkipPrevious,
-                                    colors = IconButtonDefaults.colors(contentColor = Color.White)
+                                    colors = IconButtonDefaults.colors(contentColor = expressiveColors.playerContentPrimary)
                                 ) {
                                     Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", modifier = Modifier.size(32.dp))
                                 }
@@ -274,10 +300,10 @@ fun AudioPlayerScreen(
                                         },
                                     scale = IconButtonDefaults.scale(focusedScale = 1.15f),
                                     colors = IconButtonDefaults.colors(
-                                        containerColor = Color.White,
-                                        contentColor = Color.Black,
+                                        containerColor = expressiveColors.playerContentPrimary,
+                                        contentColor = expressiveColors.playerSurface,
                                         focusedContainerColor = MaterialTheme.colorScheme.primary,
-                                        focusedContentColor = Color.White
+                                        focusedContentColor = MaterialTheme.colorScheme.onPrimary
                                     )
                                 ) {
                                     Icon(
@@ -290,7 +316,7 @@ fun AudioPlayerScreen(
                                 IconButton(
                                     onClick = viewModel::skipToNext,
                                     enabled = uiState.canSkipNext,
-                                    colors = IconButtonDefaults.colors(contentColor = Color.White)
+                                    colors = IconButtonDefaults.colors(contentColor = expressiveColors.playerContentPrimary)
                                 ) {
                                     Icon(Icons.Default.SkipNext, contentDescription = "Next", modifier = Modifier.size(32.dp))
                                 }
@@ -299,7 +325,7 @@ fun AudioPlayerScreen(
                             Text(
                                 text = "${formatMs(uiState.positionMs)} / ${formatMs(uiState.durationMs)}",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Color.White.copy(alpha = 0.8f)
+                                color = expressiveColors.playerContentSecondary
                             )
                         }
                     }
@@ -320,10 +346,10 @@ fun AudioPlayerScreen(
                         .padding(bottom = 16.dp),
                 )
                 
-                Surface(
-                    shape = RoundedCornerShape(spacing.cornerCard),
-                    colors = SurfaceDefaults.colors(
-                        containerColor = expressiveColors.chromeSurface.copy(alpha = 0.74f)
+                    Surface(
+                        shape = RoundedCornerShape(spacing.cornerCard),
+                        colors = SurfaceDefaults.colors(
+                            containerColor = expressiveColors.chromeSurface.copy(alpha = 0.74f)
                     ),
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -386,7 +412,11 @@ private fun QueueItem(
                 Text(
                     text = it,
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else Color.Gray,
+                    color = if (isCurrent) {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -411,12 +441,19 @@ private fun AudioSeekBar(
     onSeek: (Long) -> Unit
 ) {
     val progress = if (duration > 0) position.toFloat() / duration.toFloat() else 0f
+    val expressiveColors = LocalCinefinExpressiveColors.current
     
     Box(
-        modifier = Modifier.fillMaxWidth().height(6.dp).background(Color.White.copy(alpha = 0.2f), CircleShape)
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(6.dp)
+            .background(expressiveColors.playerContentPrimary.copy(alpha = 0.2f), CircleShape)
     ) {
         Box(
-            modifier = Modifier.fillMaxHeight().fillMaxWidth(progress.coerceIn(0f, 1f)).background(MaterialTheme.colorScheme.primary, CircleShape)
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                .background(MaterialTheme.colorScheme.primary, CircleShape)
         )
     }
 }

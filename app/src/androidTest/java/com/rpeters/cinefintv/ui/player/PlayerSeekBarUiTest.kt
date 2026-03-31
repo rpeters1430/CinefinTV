@@ -129,9 +129,12 @@ private fun SpeedButtonHarness(
         player = player,
         playPauseFocusRequester = playPauseFocusRequester,
         seekBarFocusRequester = seekBarFocusRequester,
+        isContentShelfVisible = false,
+        onHideShelf = {},
         onInteract = {},
         onSettingsClick = { section, _ -> onSectionOpened(section) },
         onBack = {},
+        onOpenItem = {},
     )
 }
 
@@ -159,9 +162,12 @@ private fun SeekBarHarness(
         player = player,
         playPauseFocusRequester = playPauseFocusRequester,
         seekBarFocusRequester = seekBarFocusRequester,
+        isContentShelfVisible = false,
+        onHideShelf = {},
         onInteract = {},
         onSettingsClick = { _, _ -> },
         onBack = {},
+        onOpenItem = {},
     )
 }
 

@@ -88,12 +88,15 @@ private fun PlayerControlsVisibilityHarness() {
         player = player,
         playPauseFocusRequester = playPauseFocusRequester,
         seekBarFocusRequester = seekBarFocusRequester,
+        isContentShelfVisible = false,
+        onHideShelf = {},
         onInteract = {
             controlsVisible = true
             lastInteraction = System.currentTimeMillis()
         },
         onSettingsClick = { _, _ -> },
         onBack = {},
+        onOpenItem = {},
     )
 }
 

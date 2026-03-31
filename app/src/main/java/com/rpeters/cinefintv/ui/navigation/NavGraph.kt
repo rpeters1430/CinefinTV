@@ -34,11 +34,11 @@ import com.rpeters.cinefintv.ui.screens.auth.LoginScreen
 import com.rpeters.cinefintv.ui.screens.auth.ServerConnectionScreen
 import com.rpeters.cinefintv.ui.screens.detail.MovieDetailScreen
 import com.rpeters.cinefintv.ui.screens.detail.SeasonScreen
-import com.rpeters.cinefintv.ui.screens.detail.StuffDetailScreen
+import com.rpeters.cinefintv.ui.screens.detail.CollectionDetailScreen
 import com.rpeters.cinefintv.ui.screens.detail.TvShowDetailScreen
 import com.rpeters.cinefintv.ui.screens.home.HomeScreen
 import com.rpeters.cinefintv.ui.screens.library.MovieLibraryScreen
-import com.rpeters.cinefintv.ui.screens.library.StuffLibraryScreen
+import com.rpeters.cinefintv.ui.screens.library.CollectionLibraryScreen
 import com.rpeters.cinefintv.ui.screens.library.TvShowLibraryScreen
 import com.rpeters.cinefintv.ui.screens.music.MusicScreen
 import com.rpeters.cinefintv.ui.screens.person.PersonScreen
@@ -176,9 +176,9 @@ fun CinefinTvNavGraph(
             )
         }
         composable(NavRoutes.LIBRARY_COLLECTIONS) {
-            StuffLibraryScreen(
+            CollectionLibraryScreen(
                 onOpenItem = { item ->
-                    navController.navigate(NavRoutes.stuffDetail(item.id))
+                    navController.navigate(NavRoutes.collectionDetail(item.id))
                 },
                 onPlayItem = { item ->
                     navController.navigate(NavRoutes.player(item.id))
@@ -244,10 +244,10 @@ fun CinefinTvNavGraph(
             )
         }
         composable(
-            NavRoutes.STUFF_DETAIL,
+            NavRoutes.COLLECTION_DETAIL,
             arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
         ) {
-            StuffDetailScreen(
+            CollectionDetailScreen(
                 onOpenItem = { id, type ->
                     navController.navigate(routeForLinkedDetailItem(id, type))
                 },

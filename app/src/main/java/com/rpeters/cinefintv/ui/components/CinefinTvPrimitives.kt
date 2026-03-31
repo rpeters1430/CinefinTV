@@ -68,13 +68,13 @@ fun CinefinDialogSurface(
             modifier = modifier.widthIn(min = 420.dp, max = 820.dp),
             shape = RoundedCornerShape(28.dp),
             colors = SurfaceDefaults.colors(
-                containerColor = Color.Black.copy(alpha = 0.45f),
+                containerColor = expressiveColors.chromeSurface.copy(alpha = 0.9f),
                 contentColor = onSurfaceColor
             ),
             border = Border(
                 border = BorderStroke(
                     1.dp, 
-                    Color.White.copy(alpha = 0.12f)
+                    expressiveColors.borderSubtle.copy(alpha = 0.7f)
                 )
             ),
             tonalElevation = 12.dp,
@@ -83,7 +83,7 @@ fun CinefinDialogSurface(
                 modifier = Modifier.background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = 0.05f),
+                            expressiveColors.playerContentPrimary.copy(alpha = 0.05f),
                             Color.Transparent,
                         ),
                     ),

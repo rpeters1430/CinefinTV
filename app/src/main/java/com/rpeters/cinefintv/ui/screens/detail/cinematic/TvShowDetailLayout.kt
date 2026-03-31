@@ -20,6 +20,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
@@ -65,6 +66,7 @@ fun TvShowDetailLayout(
     val firstSeasonFocusRequester = remember { FocusRequester() }
     val firstCastFocusRequester = remember { FocusRequester() }
     val firstSimilarFocusRequester = remember { FocusRequester() }
+    val similarCardWidth: Dp = 196.dp
     val firstContentFocusRequester = when {
         seasons.isNotEmpty() -> firstSeasonFocusRequester
         castItems.isNotEmpty() -> firstCastFocusRequester
@@ -223,13 +225,14 @@ fun TvShowDetailLayout(
                         contentPadding = PaddingValues(horizontal = spacing.gutter),
                         horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
                     ) {
-                        items(similarItems) { item ->
+                        items(similarItems, key = { it.id }) { item ->
                             TvMediaCard(
                                 title = item.title,
                                 imageUrl = item.imageUrl,
                                 watchStatus = item.watchStatus,
                                 playbackProgress = item.playbackProgress,
                                 aspectRatio = 2f / 3f,
+                                cardWidth = similarCardWidth,
                                 modifier = if (item.id == similarItems.firstOrNull()?.id) {
                                     Modifier
                                         .focusRequester(firstSimilarFocusRequester)

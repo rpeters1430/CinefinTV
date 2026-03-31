@@ -60,9 +60,7 @@ import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.theme.BackgroundDark
 import com.rpeters.cinefintv.ui.theme.CinefinRed
-import com.rpeters.cinefintv.ui.theme.CinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
-import com.rpeters.cinefintv.ui.theme.LocalCinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.ui.theme.ThemeSeedColorCache
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
@@ -286,14 +284,13 @@ fun CinematicHero(
                     horizontalArrangement = Arrangement.spacedBy(spacing.elementGap),
                     verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
                 ) {
-                    val motion = LocalCinefinMotion.current
                     Button(
                         onClick = onPrimaryAction,
                         colors = ButtonDefaults.colors(
-                            containerColor = CinefinRed,
-                            contentColor = Color.White,
-                            focusedContainerColor = Color.White,
-                            focusedContentColor = CinefinRed,
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            focusedContainerColor = expressiveColors.focusGlow.copy(alpha = 0.9f),
+                            focusedContentColor = MaterialTheme.colorScheme.onSurface,
                         ),
                         scale = ButtonDefaults.scale(
                             focusedScale = 1.15f

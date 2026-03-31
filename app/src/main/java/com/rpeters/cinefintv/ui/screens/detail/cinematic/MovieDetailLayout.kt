@@ -20,6 +20,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
@@ -64,6 +65,7 @@ fun MovieDetailLayout(
     val overviewFocusRequester = remember { FocusRequester() }
     val firstCastFocusRequester = remember { FocusRequester() }
     val firstSimilarFocusRequester = remember { FocusRequester() }
+    val similarCardWidth: Dp = 196.dp
     val firstContentFocusRequester = when {
         castItems.isNotEmpty() -> firstCastFocusRequester
         similarItems.isNotEmpty() -> firstSimilarFocusRequester
@@ -173,13 +175,14 @@ fun MovieDetailLayout(
                         contentPadding = PaddingValues(horizontal = spacing.gutter),
                         horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
                     ) {
-                        items(similarItems) { mediaItem ->
+                        items(similarItems, key = { it.id }) { mediaItem ->
                             TvMediaCard(
                                 title = mediaItem.title,
                                 imageUrl = mediaItem.imageUrl,
                                 watchStatus = mediaItem.watchStatus,
                                 playbackProgress = mediaItem.playbackProgress,
                                 aspectRatio = 2f / 3f, // Standard poster ratio
+                                cardWidth = similarCardWidth,
                                 modifier = if (mediaItem.id == similarItems.firstOrNull()?.id) {
                                     Modifier
                                         .focusRequester(firstSimilarFocusRequester)

@@ -13,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,12 +42,10 @@ fun CinefinChip(
     modifier: Modifier = Modifier,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
-    val spacing = LocalCinefinSpacing.current
-    
     val backgroundColor = if (strong) {
         MaterialTheme.colorScheme.primary.copy(alpha = 0.92f)
     } else {
-        Color.White.copy(alpha = 0.12f)
+        expressiveColors.chromeSurface.copy(alpha = 0.72f)
     }
     val contentColor = if (strong) {
         MaterialTheme.colorScheme.onPrimary 
@@ -64,9 +61,9 @@ fun CinefinChip(
                 border = androidx.compose.foundation.BorderStroke(
                     width = 1.dp, 
                     color = if (strong) {
-                        Color.White.copy(alpha = 0.25f)
+                        expressiveColors.borderSubtle.copy(alpha = 0.9f)
                     } else {
-                        Color.White.copy(alpha = 0.08f)
+                        expressiveColors.borderSubtle.copy(alpha = 0.55f)
                     }
                 ),
                 shape = RoundedCornerShape(8.dp),

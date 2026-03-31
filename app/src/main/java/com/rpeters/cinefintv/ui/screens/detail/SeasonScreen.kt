@@ -41,6 +41,7 @@ import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 
 @Composable
 fun SeasonScreen(
@@ -100,7 +101,7 @@ private fun SeasonContent(
     val primaryActionFocusRequester = remember { FocusRequester() }
     val overviewFocusRequester = remember { FocusRequester() }
     val firstEpisodeFocusRequester = remember { FocusRequester() }
-    val firstEpisodeItemIndex = 3
+    val episodesSectionIndex = 2
     var selectedEpisode by remember { mutableStateOf<EpisodeModel?>(null) }
     var pendingDeleteEpisode by remember { mutableStateOf<EpisodeModel?>(null) }
 
@@ -235,7 +236,10 @@ private fun SeasonContent(
                             event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
                         ) {
                             coroutineScope.launch {
-                                listState.scrollToItem(firstEpisodeItemIndex)
+                                // Anchor to the section header before moving focus so the first
+                                // episode enters in a stable position without a second nudge.
+                                listState.scrollToItem(episodesSectionIndex)
+                                yield()
                                 firstEpisodeFocusRequester.requestFocus()
                             }
                             true
