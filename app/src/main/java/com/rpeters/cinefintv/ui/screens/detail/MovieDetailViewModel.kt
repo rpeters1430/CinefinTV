@@ -123,9 +123,12 @@ class MovieDetailViewModel @Inject constructor(
         }
     }
 
-    fun load() {
+    fun load(silent: Boolean = false) {
         viewModelScope.launch {
-            _uiState.value = MovieDetailUiState.Loading
+            val hasContent = _uiState.value is MovieDetailUiState.Content
+            if (!silent || !hasContent) {
+                _uiState.value = MovieDetailUiState.Loading
+            }
 
             val movieResult = repositories.media.getMovieDetails(movieId)
             val similarResult = repositories.media.getSimilarMovies(movieId)

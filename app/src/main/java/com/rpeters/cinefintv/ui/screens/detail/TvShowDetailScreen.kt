@@ -51,7 +51,7 @@ fun TvShowDetailScreen(
                 Lifecycle.Event.ON_PAUSE  -> hasBeenPaused = true
                 Lifecycle.Event.ON_RESUME -> if (hasBeenPaused) {
                     hasBeenPaused = false
-                    viewModel.load()
+                    viewModel.load(silent = true)
                 }
                 else -> {}
             }
@@ -65,13 +65,12 @@ fun TvShowDetailScreen(
     val primaryActionFocus = remember { FocusRequester() }
 
     LaunchedEffect((uiState as? TvShowDetailUiState.Content)?.show?.id) {
-        if (uiState is TvShowDetailUiState.Content) {
-            focusDetailScreenAtTop(
-                listState = listState,
-                initialFocusRequester = primaryActionFocus,
-                anchorFocusRequester = topFocus,
-            )
-        }
+        val content = uiState as? TvShowDetailUiState.Content ?: return@LaunchedEffect
+        focusDetailScreenAtTop(
+            listState = listState,
+            initialFocusRequester = primaryActionFocus,
+            anchorFocusRequester = topFocus,
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

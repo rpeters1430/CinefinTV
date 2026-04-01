@@ -273,7 +273,16 @@ fun CinefinDialogActions(
     onConfirm: () -> Unit,
     modifier: Modifier = Modifier,
     confirmEnabled: Boolean = true,
+    requestFocusOnConfirm: Boolean = true,
 ) {
+    val confirmFocusRequester = remember { FocusRequester() }
+    
+    if (requestFocusOnConfirm) {
+        LaunchedEffect(Unit) {
+            confirmFocusRequester.requestFocus()
+        }
+    }
+
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.End),
@@ -286,6 +295,7 @@ fun CinefinDialogActions(
         Button(
             onClick = onConfirm,
             enabled = confirmEnabled,
+            modifier = Modifier.focusRequester(confirmFocusRequester)
         ) {
             Text(confirmLabel)
         }

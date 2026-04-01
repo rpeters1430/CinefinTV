@@ -63,7 +63,7 @@ fun CollectionDetailScreen(
                 Lifecycle.Event.ON_PAUSE -> hasBeenPaused = true
                 Lifecycle.Event.ON_RESUME -> if (hasBeenPaused) {
                     hasBeenPaused = false
-                    viewModel.load()
+                    viewModel.load(silent = true)
                 }
                 else -> Unit
             }

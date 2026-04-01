@@ -97,9 +97,12 @@ class CollectionDetailViewModel @Inject constructor(
         }
     }
 
-    fun load() {
+    fun load(silent: Boolean = false) {
         viewModelScope.launch {
-            _uiState.value = CollectionDetailUiState.Loading
+            val hasContent = _uiState.value is CollectionDetailUiState.Content
+            if (!silent || !hasContent) {
+                _uiState.value = CollectionDetailUiState.Loading
+            }
 
             val itemResult = repositories.media.getItemDetails(itemId)
 

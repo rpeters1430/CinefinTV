@@ -50,7 +50,7 @@ fun MovieDetailScreen(
                 Lifecycle.Event.ON_PAUSE  -> hasBeenPaused = true
                 Lifecycle.Event.ON_RESUME -> if (hasBeenPaused) {
                     hasBeenPaused = false
-                    viewModel.load()
+                    viewModel.load(silent = true)
                 }
                 else -> {}
             }
@@ -64,13 +64,12 @@ fun MovieDetailScreen(
     val primaryActionFocus = remember { FocusRequester() }
 
     LaunchedEffect((uiState as? MovieDetailUiState.Content)?.movie?.id) {
-        if (uiState is MovieDetailUiState.Content) {
-            focusDetailScreenAtTop(
-                listState = listState,
-                initialFocusRequester = primaryActionFocus,
-                anchorFocusRequester = topFocus,
-            )
-        }
+        val content = uiState as? MovieDetailUiState.Content ?: return@LaunchedEffect
+        focusDetailScreenAtTop(
+            listState = listState,
+            initialFocusRequester = primaryActionFocus,
+            anchorFocusRequester = topFocus,
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

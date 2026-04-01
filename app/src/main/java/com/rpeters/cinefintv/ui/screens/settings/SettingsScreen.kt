@@ -124,7 +124,7 @@ fun SettingsScreen(
             up = categoryFocusRequesters.getValue(selectedCategory)
         }
 
-    RegisterPrimaryContentFocusRequester(firstSectionItemRequester)
+    RegisterPrimaryContentFocusRequester(categoryFocusRequesters.getValue(selectedCategory))
 
     when (activeDialog) {
         SettingsChoiceDialog.THEME_MODE -> CinefinOptionDialog(
@@ -489,7 +489,7 @@ private fun SettingsCategorySelector(
                 modifier = Modifier
                     .focusRequester(categoryFocusRequesters.getValue(category))
                     .focusProperties {
-                        up = navUpRequester ?: FocusRequester.Cancel
+                        navUpRequester?.let { up = it }
                         down = sectionFocusRequester
                         left = categoryFocusRequesters[SettingsCategory.entries.getOrNull(index - 1)]
                             ?: FocusRequester.Cancel

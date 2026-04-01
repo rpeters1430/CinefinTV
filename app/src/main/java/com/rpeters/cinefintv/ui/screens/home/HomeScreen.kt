@@ -21,7 +21,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,11 +34,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -81,18 +75,11 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.ui.theme.ThemeSeedColorCache
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
-import com.rpeters.cinefintv.utils.coerceAlpha
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val HOME_AUTO_REFRESH_INTERVAL_MS = 60_000L
-
-// When the user returns to home from a detail screen, a silent data refresh is
-// triggered simultaneously with the focus restoration. This delay keeps the
-// restoration flag active long enough for that refresh to complete and cancel
-// this effect, so the re-run lands on the updated list rather than an item
-// that was just deleted.
 private const val HOME_FOCUS_RESTORE_SETTLE_MS = 1_000L
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -138,6 +125,7 @@ fun HomeScreen(
         onOpenSeries = onOpenSeries,
         onOpenSeason = onOpenSeason,
         onRetry = { viewModel.refresh() },
+        hasBeenPaused = hasBeenPaused
     )
 }
 
@@ -150,6 +138,7 @@ internal fun HomeScreenContent(
     onOpenSeries: (String) -> Unit,
     onOpenSeason: (String) -> Unit,
     onRetry: () -> Unit,
+    hasBeenPaused: Boolean
 ) {
     val listState = rememberLazyListState()
     val spacing = LocalCinefinSpacing.current
@@ -271,17 +260,11 @@ internal fun HomeScreenContent(
                 )
             }
 
-            RegisterPrimaryContentFocusRequester(
-                when {
-                    state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
-                    sectionFocusRequesters.isNotEmpty() -> sectionFocusRequesters.first()
-                    else -> null
-                }
-            )
+            RegisterPrimaryContentFocusRequester(preferredFocusRequester)
 
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_RESUME) {
+                    if (event == Lifecycle.Event.ON_RESUME && hasBeenPaused) {
                         shouldRestoreFocus = true
                     }
                 }
@@ -301,15 +284,6 @@ internal fun HomeScreenContent(
                     return@LaunchedEffect
                 }
 
-                // Resolve a focus target: use the preferred requester (last-focused item
-                // within a known section), fall back to the featured carousel primary
-                // action, then to the first section's first item.  A null preferred
-                // requester happens when the last-focused section was removed (e.g. the
-                // deleted video emptied a section entirely).
-                //
-                // If this effect is cancelled and restarted because state.sections changed
-                // (a concurrent silent refresh on the same ON_RESUME), shouldRestoreFocus
-                // is still true so we re-run and land on the correct post-refresh item.
                 val fallbackRequester = when {
                     state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
                     else -> sectionFocusRequesters.firstOrNull()
@@ -319,8 +293,6 @@ internal fun HomeScreenContent(
 
                 withFrameNanos { }
                 runCatching { requester.requestFocus() }
-                // Hold the restoration flag long enough for any concurrent data refresh
-                // to complete and restart this effect so focus lands on the updated list.
                 delay(HOME_FOCUS_RESTORE_SETTLE_MS)
                 shouldRestoreFocus = false
             }
@@ -332,27 +304,16 @@ internal fun HomeScreenContent(
                     contentPadding = PaddingValues(top = 0.dp, bottom = 120.dp),
                     verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
                 ) {
-                    val navigateToFirstSection: (() -> Unit)? =
-                        if (sectionFocusRequesters.isNotEmpty()) {
-                            {
-                                coroutineScope.launch {
-                                    val targetIndex = if (state.featuredItems.isNotEmpty()) 1 else 0
-                                    listState.animateScrollToItem(targetIndex)
-                                    withFrameNanos {}
-                                    runCatching { sectionFocusRequesters[0].requestFocus() }
-                                }
-                            }
-                        } else null
-
                     if (state.featuredItems.isNotEmpty()) {
                         item {
+                            val firstSectionRequester = sectionFocusRequesters.firstOrNull()
                             FeaturedCarousel(
                                 items = state.featuredItems,
                                 onMoreInfo = onOpenItem,
                                 onPlay = onPlayItem,
                                 primaryActionFocusRequester = featuredPrimaryActionRequester,
                                 upRequester = navUpRequester,
-                                onNavigateDown = navigateToFirstSection,
+                                downRequester = firstSectionRequester,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = 0.dp, start = spacing.gutter, end = spacing.gutter),
@@ -364,7 +325,7 @@ internal fun HomeScreenContent(
                         state.sections,
                         key = { _, section -> section.title }
                     ) { index, section ->
-                        val upRequester = when {
+                        val upFocusRequester = when {
                             index == 0 && state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
                             index == 0 -> navUpRequester
                             else -> sectionFocusRequesters[index - 1]
@@ -393,8 +354,7 @@ internal fun HomeScreenContent(
                             },
                             onEpisodeMenuRequested = { selectedEpisodeMenuItem = it },
                             firstItemFocusRequester = sectionFocusRequesters[index],
-                            upRequester = upRequester,
-                            downRequester = sectionFocusRequesters.getOrNull(index + 1),
+                            upFocusRequester = upFocusRequester,
                         )
                     }
                 }
@@ -411,7 +371,7 @@ private fun FeaturedCarousel(
     onPlay: (String) -> Unit,
     primaryActionFocusRequester: FocusRequester,
     upRequester: FocusRequester?,
-    onNavigateDown: (() -> Unit)?,
+    downRequester: FocusRequester?,
     modifier: Modifier = Modifier,
 ) {
     val carouselState = rememberCarouselState()
@@ -432,7 +392,7 @@ private fun FeaturedCarousel(
             onPlay = { onPlay(item.id) },
             primaryActionFocusRequester = primaryActionFocusRequester,
             upRequester = upRequester,
-            onNavigateDown = onNavigateDown,
+            downRequester = downRequester,
             modifier = Modifier.fillMaxSize()
         )
     }
@@ -446,7 +406,7 @@ private fun HeroItem(
     onPlay: () -> Unit,
     primaryActionFocusRequester: FocusRequester,
     upRequester: FocusRequester?,
-    onNavigateDown: (() -> Unit)?,
+    downRequester: FocusRequester?,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -518,7 +478,6 @@ private fun HeroItem(
                     ),
                 ),
         )
-        // Content glass panel
         val onBackgroundColor = MaterialTheme.colorScheme.onBackground
         Surface(
             modifier = Modifier
@@ -605,13 +564,8 @@ private fun HeroItem(
                             .focusRequester(primaryActionFocusRequester)
                             .focusProperties {
                                 upRequester?.let { up = it }
+                                downRequester?.let { down = it }
                                 right = detailsButtonRequester
-                            }
-                            .onKeyEvent { keyEvent ->
-                                if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.DirectionDown) {
-                                    onNavigateDown?.invoke()
-                                    onNavigateDown != null
-                                } else false
                             }
                             .testTag(HomeTestTags.FeaturedPlayButton),
                         scale = ButtonDefaults.scale(focusedScale = 1.1f),
@@ -624,13 +578,8 @@ private fun HeroItem(
                             .focusRequester(detailsButtonRequester)
                             .focusProperties {
                                 upRequester?.let { up = it }
+                                downRequester?.let { down = it }
                                 left = primaryActionFocusRequester
-                            }
-                            .onKeyEvent { keyEvent ->
-                                if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.DirectionDown) {
-                                    onNavigateDown?.invoke()
-                                    onNavigateDown != null
-                                } else false
                             }
                             .testTag(HomeTestTags.FeaturedDetailsButton),
                         scale = ButtonDefaults.scale(focusedScale = 1.1f),
@@ -653,8 +602,7 @@ private fun HomeSection(
     onItemFocused: (String) -> Unit,
     onEpisodeMenuRequested: (HomeCardModel) -> Unit,
     firstItemFocusRequester: FocusRequester,
-    upRequester: FocusRequester?,
-    downRequester: FocusRequester?,
+    upFocusRequester: FocusRequester?,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
@@ -679,10 +627,10 @@ private fun HomeSection(
                 contentPadding = PaddingValues(horizontal = spacing.gutter),
             ) {
                 itemsIndexed(visibleItems, key = { _, item -> item.id }) { index, item ->
-                    val focusModifier = Modifier.focusProperties {
-                        upRequester?.let { up = it }
-                        downRequester?.let { down = it }
-                    }
+                    val focusModifier = if (upFocusRequester != null) {
+                        Modifier.focusProperties { up = upFocusRequester }
+                    } else Modifier
+
                     TvMediaCard(
                         title = item.title,
                         subtitle = item.subtitle ?: item.year?.toString(),
@@ -699,16 +647,10 @@ private fun HomeSection(
                         onFocus = { onItemFocused(item.id) },
                         aspectRatio = 16f / 9f,
                         cardWidth = cardWidth,
-                        modifier = if (index == restoredFocusIndex) {
-                            Modifier
-                                .testTag(HomeTestTags.sectionItem(sectionIndex, index))
-                                .focusRequester(firstItemFocusRequester)
-                                .then(focusModifier)
-                        } else {
-                            Modifier
-                                .testTag(HomeTestTags.sectionItem(sectionIndex, index))
-                                .then(focusModifier)
-                        }
+                        modifier = Modifier
+                            .testTag(HomeTestTags.sectionItem(sectionIndex, index))
+                            .then(if (index == restoredFocusIndex) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
+                            .then(focusModifier)
                     )
                 }
             }

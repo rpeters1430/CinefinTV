@@ -123,9 +123,12 @@ class SeasonViewModel @Inject constructor(
         }
     }
 
-    fun load() {
+    fun load(silent: Boolean = false) {
         viewModelScope.launch {
-            _uiState.value = SeasonUiState.Loading
+            val hasContent = _uiState.value is SeasonUiState.Content
+            if (!silent || !hasContent) {
+                _uiState.value = SeasonUiState.Loading
+            }
 
             val seasonResult = repositories.media.getItemDetails(seasonId)
             val episodesResult = repositories.media.getEpisodesForSeason(seasonId)

@@ -371,10 +371,7 @@ private fun PersonImmersiveSection(
                         aspectRatio = 16f / 9f,
                         cardWidth = 240.dp,
                         modifier = Modifier
-                            .then(if (item == items.first()) Modifier.focusRequester(firstItemRequester) else Modifier)
-                            .focusProperties {
-                                up = upRequester
-                            },
+                            .then(if (item == items.first()) Modifier.focusRequester(firstItemRequester) else Modifier),
                     )
                 }
             }
