@@ -98,7 +98,6 @@ fun MovieDetailLayout(
                     secondaryActions = secondaryActions,
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     primaryActionDownFocusRequester = overviewFocusRequester,
-                    upFocusRequester = topFocusRequester,
                     listState = listState,
                 )
             }
@@ -113,7 +112,6 @@ fun MovieDetailLayout(
                 chips = genres,
                 focusRequester = overviewFocusRequester,
                 upFocusRequester = primaryActionFocusRequester,
-                downFocusRequester = firstContentFocusRequester,
                 modifier = Modifier.padding(top = spacing.rowGap),
             )
         }
@@ -144,7 +142,7 @@ fun MovieDetailLayout(
                                 modifier = if (person.id == castItems.firstOrNull()?.id) {
                                     Modifier
                                         .focusRequester(firstCastFocusRequester)
-                                        .focusProperties { up = overviewFocusRequester }
+                                        .focusProperties { up = primaryActionFocusRequester }
                                         .testTag(DetailTestTags.FirstCastItem)
                                 } else {
                                     Modifier
@@ -190,7 +188,7 @@ fun MovieDetailLayout(
                                             up = if (castItems.isNotEmpty()) {
                                                 firstCastFocusRequester
                                             } else {
-                                                overviewFocusRequester
+                                                primaryActionFocusRequester
                                             }
                                         }
                                         .testTag(DetailTestTags.FirstSimilarItem)

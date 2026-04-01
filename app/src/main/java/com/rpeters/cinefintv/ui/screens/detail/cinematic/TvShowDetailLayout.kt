@@ -100,7 +100,6 @@ fun TvShowDetailLayout(
                     secondaryActions = secondaryActions,
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     primaryActionDownFocusRequester = overviewFocusRequester,
-                    upFocusRequester = topFocusRequester,
                     listState = listState,
                 )
             }
@@ -115,7 +114,6 @@ fun TvShowDetailLayout(
                 chips = genres,
                 focusRequester = overviewFocusRequester,
                 upFocusRequester = primaryActionFocusRequester,
-                downFocusRequester = firstContentFocusRequester,
                 modifier = Modifier.padding(top = spacing.rowGap),
             )
         }
@@ -149,7 +147,7 @@ fun TvShowDetailLayout(
                                 modifier = if (season.id == seasons.firstOrNull()?.id) {
                                     Modifier
                                         .focusRequester(firstSeasonFocusRequester)
-                                        .focusProperties { up = overviewFocusRequester }
+                                        .focusProperties { up = primaryActionFocusRequester }
                                         .testTag(DetailTestTags.FirstSeasonItem)
                                 } else {
                                     Modifier
@@ -192,7 +190,7 @@ fun TvShowDetailLayout(
                                             up = if (seasons.isNotEmpty()) {
                                                 firstSeasonFocusRequester
                                             } else {
-                                                overviewFocusRequester
+                                                primaryActionFocusRequester
                                             }
                                         }
                                         .testTag(DetailTestTags.FirstCastItem)
@@ -240,7 +238,7 @@ fun TvShowDetailLayout(
                                             up = when {
                                                 castItems.isNotEmpty() -> firstCastFocusRequester
                                                 seasons.isNotEmpty() -> firstSeasonFocusRequester
-                                                else -> overviewFocusRequester
+                                                else -> primaryActionFocusRequester
                                             }
                                         }
                                         .testTag(DetailTestTags.FirstSimilarItem)

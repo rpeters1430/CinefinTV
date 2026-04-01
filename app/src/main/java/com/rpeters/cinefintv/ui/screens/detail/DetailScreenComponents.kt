@@ -49,6 +49,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailTestTags
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -125,7 +126,11 @@ fun MetaFactItem(
                 modifier = modifier
                     .border(
                         width = 1.dp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                        color = LocalCinefinExpressiveColors.current.borderSubtle.copy(alpha = 0.7f),
+                        shape = RoundedCornerShape(18.dp),
+                    )
+                    .background(
+                        color = LocalCinefinExpressiveColors.current.detailPanelMuted,
                         shape = RoundedCornerShape(18.dp),
                     )
                     .padding(12.dp),
@@ -161,7 +166,7 @@ fun MetaFactItem(
             Row(
                 modifier = modifier
                     .background(
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.18f),
+                        color = LocalCinefinExpressiveColors.current.detailBadge,
                         shape = RoundedCornerShape(20.dp),
                     )
                     .padding(horizontal = 14.dp, vertical = 12.dp),
@@ -205,7 +210,7 @@ fun DetailPosterArt(
             shadowElevation = 28.dp.toPx()
         },
         shape = RoundedCornerShape(spacing.cornerContainer),
-        colors = SurfaceDefaults.colors(containerColor = expressiveColors.accentSurface.copy(alpha = 0.92f)),
+        colors = SurfaceDefaults.colors(containerColor = expressiveColors.detailPanel),
         tonalElevation = 10.dp,
     ) {
         Box(
@@ -384,14 +389,18 @@ fun DetailActionRow(
     primaryLabel: String,
     onPrimaryClick: () -> Unit,
     modifier: Modifier = Modifier,
-    secondaryLabel: String? = null,
-    onSecondaryClick: (() -> Unit)? = null,
+    secondaryActions: List<Pair<String, () -> Unit>> = emptyList(),
     primaryFocusRequester: FocusRequester? = null,
     primaryDownFocusRequester: FocusRequester? = null,
+    primaryButtonModifier: Modifier = Modifier,
+    onDownNavigation: (() -> Unit)? = null,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
-    val secondaryFocusRequester = remember { FocusRequester() }
-    val hasSecondaryAction = !secondaryLabel.isNullOrBlank() && onSecondaryClick != null
+    val primaryTextColor = MaterialTheme.colorScheme.onPrimary
+    val secondaryFocusRequesters = remember(secondaryActions.size) {
+        List(secondaryActions.size) { FocusRequester() }
+    }
+    val hasSecondaryAction = secondaryActions.isNotEmpty()
 
     Row(
         modifier = modifier,
@@ -409,44 +418,97 @@ fun DetailActionRow(
                     }
                 )
                 .focusProperties {
-                    if (primaryDownFocusRequester != null) {
+                    if (primaryDownFocusRequester != null && onDownNavigation == null) {
                         down = primaryDownFocusRequester
                     }
                     if (hasSecondaryAction) {
-                        right = secondaryFocusRequester
+                        right = secondaryFocusRequesters.first()
                     }
                 }
+                .onPreviewKeyEvent { keyEvent ->
+                    val nativeEvent = keyEvent.nativeKeyEvent
+                    if (
+                        onDownNavigation != null &&
+                        nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                        nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                    ) {
+                        onDownNavigation()
+                        true
+                    } else {
+                        false
+                    }
+                }
+                .then(primaryButtonModifier)
                 .defaultMinSize(minWidth = 200.dp, minHeight = 50.dp),
             scale = ButtonDefaults.scale(focusedScale = 1.03f),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
             colors = ButtonDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                focusedContainerColor = expressiveColors.focusGlow.copy(alpha = 0.9f),
-                focusedContentColor = MaterialTheme.colorScheme.onSurface,
+                contentColor = primaryTextColor,
+                focusedContainerColor = MaterialTheme.colorScheme.primary,
+                focusedContentColor = primaryTextColor,
+            ),
+            glow = ButtonDefaults.glow(
+                focusedGlow = androidx.tv.material3.Glow(
+                    elevationColor = expressiveColors.focusGlow.copy(alpha = 0.48f),
+                    elevation = 12.dp,
+                ),
+            ),
+            border = ButtonDefaults.border(
+                focusedBorder = Border(
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = 2.dp,
+                        color = expressiveColors.focusRing,
+                    ),
+                ),
             ),
         ) {
             Text(primaryLabel)
         }
-        if (hasSecondaryAction) {
+        secondaryActions.forEachIndexed { index, (label, onClick) ->
             OutlinedButton(
-                onClick = onSecondaryClick,
+                onClick = onClick,
                 modifier = Modifier
-                    .focusRequester(secondaryFocusRequester)
+                    .focusRequester(secondaryFocusRequesters[index])
                     .defaultMinSize(minWidth = 200.dp, minHeight = 50.dp)
                     .focusProperties {
-                        left = primaryFocusRequester ?: FocusRequester.Default
-                        if (primaryDownFocusRequester != null) {
+                        left = when (index) {
+                            0 -> primaryFocusRequester ?: FocusRequester.Default
+                            else -> secondaryFocusRequesters[index - 1]
+                        }
+                        if (index < secondaryFocusRequesters.lastIndex) {
+                            right = secondaryFocusRequesters[index + 1]
+                        }
+                        if (primaryDownFocusRequester != null && onDownNavigation == null) {
                             down = primaryDownFocusRequester
+                        }
+                    }
+                    .onPreviewKeyEvent { keyEvent ->
+                        val nativeEvent = keyEvent.nativeKeyEvent
+                        if (
+                            onDownNavigation != null &&
+                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                            nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                        ) {
+                            onDownNavigation()
+                            true
+                        } else {
+                            false
                         }
                     },
                 scale = ButtonDefaults.scale(focusedScale = 1.03f),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
                 colors = ButtonDefaults.colors(
-                    containerColor = expressiveColors.chromeSurface.copy(alpha = 0.7f),
+                    containerColor = expressiveColors.detailBadge,
                     contentColor = MaterialTheme.colorScheme.onBackground,
-                    focusedContainerColor = expressiveColors.focusGlow.copy(alpha = 0.24f),
-                    focusedContentColor = MaterialTheme.colorScheme.onSurface,
+                    focusedContainerColor = expressiveColors.detailPanelFocused,
+                    focusedContentColor = MaterialTheme.colorScheme.onBackground,
+                ),
+                glow = ButtonDefaults.glow(
+                    focusedGlow = androidx.tv.material3.Glow(
+                        elevationColor = expressiveColors.focusGlow.copy(alpha = 0.34f),
+                        elevation = 10.dp,
+                    ),
                 ),
                 border = ButtonDefaults.border(
                     border = Border(
@@ -463,7 +525,7 @@ fun DetailActionRow(
                     ),
                 ),
             ) {
-                Text(secondaryLabel)
+                Text(label)
             }
         }
     }
@@ -502,8 +564,8 @@ fun DetailContentSection(
                         .background(
                             brush = Brush.horizontalGradient(
                                 colors = listOf(
-                                    expressiveColors.chromeSurface.copy(alpha = 0.78f),
-                                    expressiveColors.chromeSurface.copy(alpha = 0.36f),
+                                    expressiveColors.detailPanel,
+                                    expressiveColors.detailPanelMuted,
                                     Color.Transparent,
                                 )
                             ),
@@ -682,8 +744,8 @@ fun EpisodeListRow(
         ),
         shape = androidx.tv.material3.CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),
         colors = androidx.tv.material3.CardDefaults.colors(
-            containerColor = if (isFocused) expressiveColors.accentSurface else expressiveColors.chromeSurface.copy(alpha = 0.62f),
-            focusedContainerColor = expressiveColors.accentSurface,
+            containerColor = expressiveColors.detailPanelMuted,
+            focusedContainerColor = expressiveColors.detailPanelFocused,
         ),
     ) {
         Row(
@@ -861,7 +923,7 @@ private fun EpisodeMetaBadge(
     Row(
         modifier = modifier
             .background(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.22f),
+                color = LocalCinefinExpressiveColors.current.detailBadge,
                 shape = RoundedCornerShape(999.dp),
             )
             .padding(horizontal = 10.dp, vertical = 6.dp),

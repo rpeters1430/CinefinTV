@@ -270,6 +270,17 @@ fun CinefinTvTheme(
         pillMuted = palette.pillMuted,
         pillStrong = expressiveColorScheme.primary.copy(alpha = 0.7f),
         titleAccent = palette.titleAccent,
+        detailHeroScrimStart = palette.backgroundTop.copy(alpha = if (isDarkTheme) 0.96f else 0.88f),
+        detailHeroScrimEnd = palette.backgroundBottom.copy(alpha = if (isDarkTheme) 0.9f else 0.78f),
+        detailHeroPanel = if (isDarkTheme) {
+            palette.chromeSurface.copy(alpha = 0.84f)
+        } else {
+            expressiveColorScheme.surfaceContainerHigh.copy(alpha = 0.9f)
+        },
+        detailPanel = expressiveColorScheme.surfaceContainerHigh.copy(alpha = if (isDarkTheme) 0.94f else 0.96f),
+        detailPanelMuted = expressiveColorScheme.surfaceContainer.copy(alpha = if (isDarkTheme) 0.9f else 0.94f),
+        detailPanelFocused = expressiveColorScheme.surface.copy(alpha = if (isDarkTheme) 0.98f else 1f),
+        detailBadge = expressiveColorScheme.surfaceContainerHighest.copy(alpha = if (isDarkTheme) 0.96f else 0.98f),
         watchedGreen = WatchedIndicator,
     )
 

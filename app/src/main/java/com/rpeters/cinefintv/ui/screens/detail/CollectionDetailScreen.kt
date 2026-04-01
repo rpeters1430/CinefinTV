@@ -262,7 +262,6 @@ private fun CollectionFolderContent(
             chips = chips,
             focusRequester = overviewFocusRequester,
             upFocusRequester = primaryActionFocusRequester,
-            downFocusRequester = if (items.isNotEmpty()) gridEntryFocusRequester else null,
             modifier = Modifier.padding(top = 28.dp),
         )
 
@@ -308,7 +307,7 @@ private fun CollectionFolderContent(
                             )
                             .then(
                                 if (item.id == items.firstOrNull()?.id) {
-                                    Modifier.focusProperties { up = overviewFocusRequester }
+                                    Modifier.focusProperties { up = primaryActionFocusRequester }
                                 } else {
                                     Modifier
                                 }

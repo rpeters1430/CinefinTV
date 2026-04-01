@@ -2,15 +2,16 @@
 
 package com.rpeters.cinefintv.ui.screens.detail.cinematic
 
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -28,7 +29,6 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -53,7 +53,6 @@ fun DetailOverviewSection(
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
     upFocusRequester: FocusRequester? = null,
-    downFocusRequester: FocusRequester? = null,
     posterUrl: String? = null,
     posterTitle: String = title,
 ) {
@@ -66,35 +65,37 @@ fun DetailOverviewSection(
             .testTag(DetailTestTags.Overview)
             .fillMaxWidth()
             .padding(horizontal = spacing.gutter)
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .focusProperties {
-                if (upFocusRequester != null) {
-                    up = upFocusRequester
-                }
-                if (downFocusRequester != null) {
-                    down = downFocusRequester
-                }
-            }
-            .onFocusChanged { state ->
-                isFocused = state.isFocused || state.hasFocus
-            }
-            .focusable()
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        expressiveColors.chromeSurface.copy(alpha = 0.88f),
-                        expressiveColors.chromeSurface.copy(alpha = 0.58f),
+                        expressiveColors.detailPanel,
+                        expressiveColors.detailPanelMuted,
                     )
                 ),
                 shape = RoundedCornerShape(spacing.cornerContainer),
             )
             .border(
                 width = 1.dp,
-                color = if (isFocused) expressiveColors.focusRing else expressiveColors.borderSubtle.copy(alpha = 0.55f),
+                color = if (isFocused) expressiveColors.focusRing else expressiveColors.borderSubtle.copy(alpha = 0.6f),
                 shape = RoundedCornerShape(spacing.cornerContainer),
             )
             .padding(spacing.gutter),
     ) {
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+                .focusProperties {
+                    if (upFocusRequester != null) {
+                        up = upFocusRequester
+                    }
+                }
+                .onFocusChanged { state ->
+                    isFocused = state.isFocused || state.hasFocus
+                }
+                .focusable(),
+        )
         Row(
             horizontalArrangement = Arrangement.spacedBy(spacing.gutter),
             verticalAlignment = Alignment.Top,
@@ -117,7 +118,7 @@ fun DetailOverviewSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
-                            color = expressiveColors.chromeSurface.copy(alpha = 0.42f),
+                            color = expressiveColors.detailPanelMuted,
                             shape = RoundedCornerShape(spacing.cornerContainer),
                         )
                         .border(

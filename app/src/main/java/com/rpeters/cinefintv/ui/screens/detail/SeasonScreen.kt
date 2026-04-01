@@ -96,12 +96,10 @@ private fun SeasonContent(
 ) {
     val spacing = LocalCinefinSpacing.current
     val listState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope()
     val topFocusRequester = remember { FocusRequester() }
     val primaryActionFocusRequester = remember { FocusRequester() }
     val overviewFocusRequester = remember { FocusRequester() }
     val firstEpisodeFocusRequester = remember { FocusRequester() }
-    val episodesSectionIndex = 2
     var selectedEpisode by remember { mutableStateOf<EpisodeModel?>(null) }
     var pendingDeleteEpisode by remember { mutableStateOf<EpisodeModel?>(null) }
 
@@ -211,7 +209,6 @@ private fun SeasonContent(
                     else emptyList(),
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     primaryActionDownFocusRequester = overviewFocusRequester,
-                    upFocusRequester = topFocusRequester,
                     listState = listState,
                 )
             }
@@ -226,27 +223,7 @@ private fun SeasonContent(
                 chips = emptyList(),
                 focusRequester = overviewFocusRequester,
                 upFocusRequester = primaryActionFocusRequester,
-                downFocusRequester = null,
-                modifier = Modifier
-                    .padding(top = spacing.rowGap)
-                    .onPreviewKeyEvent { event ->
-                        if (
-                            episodes.isNotEmpty() &&
-                            event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                            event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
-                        ) {
-                            coroutineScope.launch {
-                                // Anchor to the section header before moving focus so the first
-                                // episode enters in a stable position without a second nudge.
-                                listState.scrollToItem(episodesSectionIndex)
-                                yield()
-                                firstEpisodeFocusRequester.requestFocus()
-                            }
-                            true
-                        } else {
-                            false
-                        }
-                    },
+                modifier = Modifier.padding(top = spacing.rowGap),
             )
         }
 
@@ -265,7 +242,7 @@ private fun SeasonContent(
                 modifier = if (episode.id == episodes.firstOrNull()?.id) {
                     Modifier
                         .focusRequester(firstEpisodeFocusRequester)
-                        .focusProperties { up = overviewFocusRequester }
+                        .focusProperties { up = primaryActionFocusRequester }
                 } else {
                     Modifier
                 },

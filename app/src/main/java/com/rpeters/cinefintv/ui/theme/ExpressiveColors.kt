@@ -21,6 +21,13 @@ data class CinefinExpressiveColors(
     val pillMuted: Color,
     val pillStrong: Color,
     val titleAccent: Color,
+    val detailHeroScrimStart: Color,
+    val detailHeroScrimEnd: Color,
+    val detailHeroPanel: Color,
+    val detailPanel: Color,
+    val detailPanelMuted: Color,
+    val detailPanelFocused: Color,
+    val detailBadge: Color,
     // Semantic Status Tokens
     val watchedGreen: Color,
     
@@ -70,6 +77,13 @@ val LocalCinefinExpressiveColors = staticCompositionLocalOf {
         pillMuted = ProgressGray,
         pillStrong = CinefinRed.copy(alpha = 0.7f),
         titleAccent = CinefinGold,
+        detailHeroScrimStart = BackgroundTop.copy(alpha = 0.96f),
+        detailHeroScrimEnd = BackgroundBottom.copy(alpha = 0.88f),
+        detailHeroPanel = SurfaceDark.copy(alpha = 0.84f),
+        detailPanel = SurfaceContainerHigh.copy(alpha = 0.94f),
+        detailPanelMuted = SurfaceContainer.copy(alpha = 0.9f),
+        detailPanelFocused = SurfaceContainerHighest.copy(alpha = 0.98f),
+        detailBadge = SurfaceContainerHighest.copy(alpha = 0.96f),
         watchedGreen = WatchedIndicator,
     )
 }

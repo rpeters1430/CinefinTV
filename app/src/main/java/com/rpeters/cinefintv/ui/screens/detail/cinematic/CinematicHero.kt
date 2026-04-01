@@ -30,12 +30,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusProperties
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -46,11 +44,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -58,13 +53,13 @@ import coil3.request.allowHardware
 import coil3.toBitmap
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.CinefinChip
-import com.rpeters.cinefintv.ui.theme.BackgroundDark
-import com.rpeters.cinefintv.ui.theme.CinefinRed
+import com.rpeters.cinefintv.ui.screens.detail.DetailActionRow
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.ui.theme.ThemeSeedColorCache
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -84,7 +79,6 @@ fun CinematicHero(
     secondaryActions: List<Pair<String, () -> Unit>> = emptyList(),
     primaryActionFocusRequester: FocusRequester = remember { FocusRequester() },
     primaryActionDownFocusRequester: FocusRequester? = null,
-    upFocusRequester: FocusRequester? = null,
     listState: androidx.compose.foundation.lazy.LazyListState? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -101,6 +95,22 @@ fun CinematicHero(
     val shouldExtractPalette = performanceProfile.tier == DevicePerformanceProfile.Tier.HIGH
     val cachedSeedColor = ThemeSeedColorCache.getCached(backdropUrl)
     val currentListState by rememberUpdatedState(listState)
+    val manualDownNavigation = rememberUpdatedState<(() -> Unit)?>(newValue = if (listState != null && primaryActionDownFocusRequester != null) {
+        {
+            val activeListState = currentListState
+            if (activeListState != null) {
+                coroutineScope.launch {
+                    activeListState.animateScrollToItem(1)
+                    snapshotFlow {
+                        val layoutInfo = activeListState.layoutInfo
+                        layoutInfo.viewportEndOffset > layoutInfo.viewportStartOffset &&
+                            layoutInfo.visibleItemsInfo.any { it.index == 1 }
+                    }.first { it }
+                    runCatching { primaryActionDownFocusRequester.requestFocus() }
+                }
+            }
+        }
+    } else null)
 
     var logoLoaded by remember(logoUrl) { mutableStateOf(false) }
     var logoFailed by remember { mutableStateOf(false) }
@@ -152,8 +162,8 @@ fun CinematicHero(
                 .background(
                     Brush.verticalGradient(
                         0.0f to Color.Transparent,
-                        0.4f to BackgroundDark.copy(alpha = 0.3f),
-                        1.0f to BackgroundDark,
+                        0.4f to expressiveColors.detailHeroScrimEnd.copy(alpha = 0.34f),
+                        1.0f to expressiveColors.detailHeroScrimEnd,
                     )
                 )
         )
@@ -163,9 +173,9 @@ fun CinematicHero(
                 .matchParentSize()
                 .background(
                     Brush.horizontalGradient(
-                        0.0f to BackgroundDark.copy(alpha = 0.96f),
-                        0.3f to BackgroundDark.copy(alpha = 0.7f),
-                        0.6f to BackgroundDark.copy(alpha = 0.2f),
+                        0.0f to expressiveColors.detailHeroScrimStart,
+                        0.3f to expressiveColors.detailHeroScrimStart.copy(alpha = 0.72f),
+                        0.6f to expressiveColors.detailHeroScrimEnd.copy(alpha = 0.22f),
                         1.0f to Color.Transparent,
                     )
                 )
@@ -199,8 +209,8 @@ fun CinematicHero(
                     .background(
                         brush = Brush.verticalGradient(
                             listOf(
-                                expressiveColors.chromeSurface.copy(alpha = 0.88f),
-                                expressiveColors.chromeSurface.copy(alpha = 0.72f),
+                                expressiveColors.detailHeroPanel,
+                                expressiveColors.detailPanel,
                             )
                         ),
                         shape = MaterialTheme.shapes.extraLarge,
@@ -223,7 +233,7 @@ fun CinematicHero(
                             .height(42.dp)
                             .background(
                                 brush = Brush.verticalGradient(
-                                    listOf(CinefinRed, expressiveColors.titleAccent)
+                                    listOf(MaterialTheme.colorScheme.primary, expressiveColors.titleAccent)
                                 ),
                                 shape = RectangleShape,
                             )
@@ -284,19 +294,15 @@ fun CinematicHero(
                     horizontalArrangement = Arrangement.spacedBy(spacing.elementGap),
                     verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
                 ) {
-                    Button(
-                        onClick = onPrimaryAction,
-                        colors = ButtonDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                            focusedContainerColor = expressiveColors.focusGlow.copy(alpha = 0.9f),
-                            focusedContentColor = MaterialTheme.colorScheme.onSurface,
-                        ),
-                        scale = ButtonDefaults.scale(
-                            focusedScale = 1.15f
-                        ),
-                        modifier = Modifier
-                            .focusRequester(primaryActionFocusRequester)
+                    DetailActionRow(
+                        primaryLabel = primaryActionLabel,
+                        onPrimaryClick = onPrimaryAction,
+                        secondaryActions = secondaryActions,
+                        primaryFocusRequester = primaryActionFocusRequester,
+                        primaryDownFocusRequester = if (listState == null) primaryActionDownFocusRequester else null,
+                        onDownNavigation = manualDownNavigation.value,
+                        primaryButtonModifier = Modifier
+                            .testTag(DetailTestTags.PrimaryAction)
                             .onFocusChanged {
                                 val activeListState = currentListState
                                 if (it.isFocused && activeListState != null) {
@@ -309,41 +315,8 @@ fun CinematicHero(
                                         }
                                     }
                                 }
-                            }
-                            .focusProperties {
-                                if (primaryActionDownFocusRequester != null) {
-                                    down = primaryActionDownFocusRequester
-                                }
-                                if (upFocusRequester != null) {
-                                    up = upFocusRequester
-                                }
-                            }
-                            .testTag(DetailTestTags.PrimaryAction),
-                    ) {
-                        Text(
-                            text = primaryActionLabel, 
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black)
-                        )
-                    }
-
-                    secondaryActions.forEach { (label, action) ->
-                        OutlinedButton(
-                            onClick = action,
-                            scale = ButtonDefaults.scale(
-                                focusedScale = 1.1f
-                            ),
-                            modifier = Modifier.focusProperties {
-                                if (primaryActionDownFocusRequester != null) {
-                                    down = primaryActionDownFocusRequester
-                                }
                             },
-                        ) {
-                            Text(
-                                text = label, 
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                            )
-                        }
-                    }
+                    )
                 }
             }
         }
