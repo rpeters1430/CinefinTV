@@ -80,9 +80,7 @@ fun TvShowDetailLayout(
         contentPadding = PaddingValues(bottom = spacing.gutter * 2),
     ) {
         item {
-            Column(
-                modifier = Modifier.blockBringIntoView()
-            ) {
+            Column {
                 DetailAnchor(
                     focusRequester = topFocusRequester,
                     downFocusRequester = primaryActionFocusRequester,
@@ -147,7 +145,7 @@ fun TvShowDetailLayout(
                                 modifier = if (season.id == seasons.firstOrNull()?.id) {
                                     Modifier
                                         .focusRequester(firstSeasonFocusRequester)
-                                        .focusProperties { up = primaryActionFocusRequester }
+                                        .focusProperties { up = overviewFocusRequester }
                                         .testTag(DetailTestTags.FirstSeasonItem)
                                 } else {
                                     Modifier
@@ -190,7 +188,7 @@ fun TvShowDetailLayout(
                                             up = if (seasons.isNotEmpty()) {
                                                 firstSeasonFocusRequester
                                             } else {
-                                                primaryActionFocusRequester
+                                                overviewFocusRequester
                                             }
                                         }
                                         .testTag(DetailTestTags.FirstCastItem)
@@ -238,7 +236,7 @@ fun TvShowDetailLayout(
                                             up = when {
                                                 castItems.isNotEmpty() -> firstCastFocusRequester
                                                 seasons.isNotEmpty() -> firstSeasonFocusRequester
-                                                else -> primaryActionFocusRequester
+                                                else -> overviewFocusRequester
                                             }
                                         }
                                         .testTag(DetailTestTags.FirstSimilarItem)

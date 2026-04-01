@@ -109,6 +109,8 @@ private fun CollectionVideoContent(
     val primaryActionFocusRequester = remember { FocusRequester() }
     val overviewFocusRequester = remember { FocusRequester() }
     var showDeleteDialog by remember(stuff.id) { mutableStateOf(false) }
+    var didInitialFocus by remember { mutableStateOf(false) }
+
     val factItems = remember(stuff) {
         buildList {
             stuff.type?.let {
@@ -152,7 +154,10 @@ private fun CollectionVideoContent(
     }
 
     LaunchedEffect(stuff.id) {
-        primaryActionFocusRequester.requestFocus()
+        if (!didInitialFocus) {
+            primaryActionFocusRequester.requestFocus()
+            didInitialFocus = true
+        }
     }
 
     if (showDeleteDialog) {
@@ -214,6 +219,8 @@ private fun CollectionFolderContent(
     val overviewFocusRequester = remember { FocusRequester() }
     val gridEntryFocusRequester = remember { FocusRequester() }
     var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(items.firstOrNull()?.id) }
+    var didInitialFocus by remember { mutableStateOf(false) }
+
     val factItems = remember(stuff, items) {
         buildList {
             stuff.type?.let {
@@ -233,7 +240,10 @@ private fun CollectionFolderContent(
     }
 
     LaunchedEffect(stuff.id) {
-        primaryActionFocusRequester.requestFocus()
+        if (!didInitialFocus) {
+            primaryActionFocusRequester.requestFocus()
+            didInitialFocus = true
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -307,7 +317,7 @@ private fun CollectionFolderContent(
                             )
                             .then(
                                 if (item.id == items.firstOrNull()?.id) {
-                                    Modifier.focusProperties { up = primaryActionFocusRequester }
+                                    Modifier.focusProperties { up = overviewFocusRequester }
                                 } else {
                                     Modifier
                                 }

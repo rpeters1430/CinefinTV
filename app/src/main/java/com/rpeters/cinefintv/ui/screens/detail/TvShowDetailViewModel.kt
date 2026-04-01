@@ -6,46 +6,64 @@ import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.ui.components.WatchStatus
-import com.rpeters.cinefintv.utils.*
+import com.rpeters.cinefintv.utils.canResume
+import com.rpeters.cinefintv.utils.getDisplayTitle
+import com.rpeters.cinefintv.utils.getWatchedPercentage
+import com.rpeters.cinefintv.utils.getYearRange
+import com.rpeters.cinefintv.utils.isWatched
+import com.rpeters.cinefintv.utils.normalizeOfficialRating
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.ImageType
+import org.jellyfin.sdk.model.api.SeriesStatus
 import javax.inject.Inject
 
 data class TvShowDetailModel(
     val id: String,
     val title: String,
     val yearRange: String?,
-    val airedDate: String?,
+    val premieredDate: String?,
     val endedDate: String?,
     val rating: String?,
-    val secondaryRating: String?,
     val officialRating: String?,
-    val status: String?,
+    val seasonCount: Int,
     val overview: String?,
     val backdropUrl: String?,
     val posterUrl: String?,
     val logoUrl: String?,
     val genres: List<String>,
-    val videoQuality: String?,
-    val audioLabel: String?,
-    val creators: List<String>,
     val networks: List<String>,
+    val status: String?,
+    val creators: List<String>,
     val nextUpEpisodeId: String?,
     val nextUpTitle: String?,
-    val seasonCount: Int,
+    val isWatched: Boolean,
 )
 
 data class SeasonModel(
     val id: String,
     val title: String,
     val imageUrl: String?,
-    val episodeCount: Int?,
-    val unwatchedCount: Int,
     val watchStatus: WatchStatus,
+    val playbackProgress: Float?,
+    val unwatchedCount: Int,
+)
+
+data class EpisodeModel(
+    val id: String,
+    val title: String,
+    val number: Int?,
+    val episodeCode: String?,
+    val duration: String?,
+    val overview: String?,
+    val imageUrl: String?,
+    val videoQuality: String?,
+    val audioLabel: String?,
+    val isWatched: Boolean,
     val playbackProgress: Float?,
 )
 
@@ -55,10 +73,9 @@ sealed class TvShowDetailUiState {
     data class Content(
         val show: TvShowDetailModel,
         val seasons: List<SeasonModel>,
+        val episodes: List<EpisodeModel>,
         val cast: List<CastModel>,
-        val similarShows: List<SimilarMovieModel>, // Reusing SimilarMovieModel for simplicity
-        val episodes: List<EpisodeModel> = emptyList(),
-        val resumeEpisodeIndex: Int = -1,
+        val similarShows: List<SimilarMovieModel>,
     ) : TvShowDetailUiState()
 }
 
@@ -69,13 +86,13 @@ class TvShowDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val seriesId: String = savedStateHandle.get<String>("itemId").orEmpty()
+    private val showId: String = savedStateHandle.get<String>("itemId").orEmpty()
 
     private val _uiState = MutableStateFlow<TvShowDetailUiState>(TvShowDetailUiState.Loading)
     val uiState: StateFlow<TvShowDetailUiState> = _uiState.asStateFlow()
 
     init {
-        if (seriesId.isBlank()) {
+        if (showId.isBlank()) {
             _uiState.value = TvShowDetailUiState.Error("Invalid series ID")
         } else {
             load()
@@ -93,7 +110,7 @@ class TvShowDetailViewModel @Inject constructor(
                         refreshSilently()
                     }
                     is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshAll -> {
-                        load()
+                        load(silent = true)
                     }
                 }
             }
@@ -102,30 +119,17 @@ class TvShowDetailViewModel @Inject constructor(
 
     private fun refreshSilently() {
         viewModelScope.launch {
-            // Re-fetch essential status data
-            val nextUpResult = repositories.media.getNextUpForSeries(seriesId)
-            val seasonsResult = repositories.media.getSeasonsForSeries(seriesId)
-            
-            val currentState = _uiState.value
-            if (currentState is TvShowDetailUiState.Content) {
-                val nextUp = (nextUpResult as? ApiResult.Success)?.data
-                val updatedSeasons = if (seasonsResult is ApiResult.Success) {
-                    seasonsResult.data.map { it.toSeasonModel() }
-                } else {
-                    currentState.seasons
+            // Re-fetch essential status data for the series to update next-up or watched status
+            val showResult = repositories.media.getSeriesDetails(showId)
+            if (showResult is ApiResult.Success) {
+                val showDto = showResult.data
+                val currentState = _uiState.value
+                if (currentState is TvShowDetailUiState.Content) {
+                    // Update only the series metadata
+                    _uiState.value = currentState.copy(
+                        show = showDto.toDetailModel()
+                    )
                 }
-
-                _uiState.value = currentState.copy(
-                    show = currentState.show.copy(
-                        nextUpEpisodeId = nextUp?.id?.toString(),
-                        nextUpTitle = nextUp?.getDisplayTitle()
-                    ),
-                    seasons = updatedSeasons
-                )
-                
-                // Also refresh current episodes list if visible
-                val currentSeasonId = updatedSeasons.firstOrNull()?.id // This is a bit naive, might need tracking current season
-                // But loadEpisodesForSeason already handles state update
             }
         }
     }
@@ -137,28 +141,32 @@ class TvShowDetailViewModel @Inject constructor(
                 _uiState.value = TvShowDetailUiState.Loading
             }
 
-            val seriesResult = repositories.media.getSeriesDetails(seriesId)
-            val seasonsResult = repositories.media.getSeasonsForSeries(seriesId)
-            val similarResult = repositories.media.getSimilarSeries(seriesId)
-            val nextUpResult = repositories.media.getNextUpForSeries(seriesId)
+            val showResult = repositories.media.getSeriesDetails(showId)
+            val seasonsResult = repositories.media.getSeasons(showId)
+            val episodesResult = repositories.media.getEpisodes(showId) // Get all for first-play fallback
+            val similarResult = repositories.media.getSimilarMovies(showId)
 
-            if (seriesResult is ApiResult.Success) {
-                val seriesDto = seriesResult.data
+            if (showResult is ApiResult.Success) {
+                val showDto = showResult.data
                 val seasons = if (seasonsResult is ApiResult.Success) {
                     seasonsResult.data.map { it.toSeasonModel() }
                 } else {
                     emptyList()
                 }
 
-                val similarShows = if (similarResult is ApiResult.Success) {
+                val episodes = if (episodesResult is ApiResult.Success) {
+                    episodesResult.data.map { it.toEpisodeModel() }
+                } else {
+                    emptyList()
+                }
+
+                val similar = if (similarResult is ApiResult.Success) {
                     similarResult.data.map { it.toSimilarModel() }
                 } else {
                     emptyList()
                 }
 
-                val nextUp = (nextUpResult as? ApiResult.Success)?.data
-
-                val cast = seriesDto.people?.map { person ->
+                val cast = showDto.people?.map { person ->
                     CastModel(
                         id = person.id.toString(),
                         name = person.name ?: "Unknown",
@@ -170,109 +178,45 @@ class TvShowDetailViewModel @Inject constructor(
                     )
                 } ?: emptyList()
 
-                val initialContent = TvShowDetailUiState.Content(
-                    show = seriesDto.toDetailModel(nextUp),
+                _uiState.value = TvShowDetailUiState.Content(
+                    show = showDto.toDetailModel(),
                     seasons = seasons,
-                    cast = cast,
-                    similarShows = similarShows,
-                    episodes = emptyList(),
-                    resumeEpisodeIndex = -1,
-                )
-                _uiState.value = initialContent
-                // Load episodes for the first season
-                if (seasons.isNotEmpty()) {
-                    loadEpisodesForSeason(seasons[0].id)
-                }
-            } else if (seriesResult is ApiResult.Error) {
-                _uiState.value = TvShowDetailUiState.Error(seriesResult.message)
-            }
-        }
-    }
-
-    fun loadEpisodesForSeason(seasonId: String) {
-        viewModelScope.launch {
-            val result = repositories.media.getEpisodesForSeason(seasonId)
-            if (result is ApiResult.Success) {
-                val episodes = result.data.map { it.toEpisodeModel() }
-                val resumeIndex = episodes.indexOfFirst { it.playbackProgress != null && it.playbackProgress > 0f }
-                val latestContent = _uiState.value as? TvShowDetailUiState.Content ?: return@launch
-                _uiState.value = latestContent.copy(
                     episodes = episodes,
-                    resumeEpisodeIndex = resumeIndex,
+                    cast = cast,
+                    similarShows = similar
                 )
+            } else if (showResult is ApiResult.Error) {
+                _uiState.value = TvShowDetailUiState.Error(showResult.message)
             }
         }
     }
 
-    // Note: show.nextUpEpisodeId and show.nextUpTitle are not refreshed here to minimize
-    // network calls. They will be updated on the next full load() call (e.g., screen re-entry).
-    fun refreshWatchStatus() {
-        _uiState.value as? TvShowDetailUiState.Content ?: return
-        viewModelScope.launch {
-            val seasonsResult = repositories.media.getSeasonsForSeries(seriesId)
-            if (seasonsResult is ApiResult.Success) {
-                val updatedSeasons = seasonsResult.data.map { it.toSeasonModel() }
-                // Re-read state after the suspension point to avoid overwriting concurrent mutations
-                val latestState = _uiState.value as? TvShowDetailUiState.Content ?: return@launch
-                _uiState.value = latestState.copy(seasons = updatedSeasons)
-            }
-            // no-op on error — stale data is better than a flicker
-        }
-    }
-
-    private fun BaseItemDto.toDetailModel(nextUp: BaseItemDto?): TvShowDetailModel {
+    private fun BaseItemDto.toDetailModel(): TvShowDetailModel {
         return TvShowDetailModel(
             id = id.toString(),
             title = getDisplayTitle(),
             yearRange = getYearRange(),
-            airedDate = premiereDate?.toString()?.substringBefore("T"),
+            premieredDate = premiereDate?.toString()?.substringBefore("T"),
             endedDate = endDate?.toString()?.substringBefore("T"),
             rating = communityRating?.let { String.format(java.util.Locale.US, "%.1f", it) },
-            secondaryRating = criticRating?.takeIf { it > 0 }?.toString(),
             officialRating = normalizeOfficialRating(officialRating),
-            status = status,
+            seasonCount = childCount ?: 0,
             overview = overview,
             backdropUrl = repositories.stream.getBackdropUrl(this),
             posterUrl = repositories.stream.getPosterCardImageUrl(this),
             logoUrl = repositories.stream.getLogoUrl(this),
             genres = genres ?: emptyList(),
-            videoQuality = getMediaQualityLabel(),
-            audioLabel = mediaSources
-                ?.firstOrNull()
-                ?.mediaStreams
-                ?.filter { it.type == org.jellyfin.sdk.model.api.MediaStreamType.AUDIO }
-                ?.firstOrNull()
-                ?.let { stream ->
-                    val codec = when (stream.codec?.uppercase()) {
-                        "EAC3", "E-AC3" -> "EAC3"
-                        "AC3" -> "AC3"
-                        "TRUEHD" -> "TrueHD"
-                        "DTS" -> "DTS"
-                        "AAC" -> "AAC"
-                        "FLAC" -> "FLAC"
-                        "OPUS" -> "Opus"
-                        else -> stream.codec?.uppercase()
-                    }
-                    val channels = when (stream.channels) {
-                        2 -> "Stereo"
-                        6 -> "5.1"
-                        8 -> "7.1"
-                        else -> stream.channels?.let { "$it ch" }
-                    }
-                    listOfNotNull(codec, channels).joinToString(" ").ifBlank { null }
-                },
-            creators = people
-                ?.filter {
-                    it.type.toString().equals("Director", ignoreCase = true) ||
-                        it.type.toString().equals("Writer", ignoreCase = true)
-                }
-                ?.mapNotNull { it.name }
-                ?.distinct()
-                ?: emptyList(),
             networks = studios?.mapNotNull { it.name } ?: emptyList(),
-            nextUpEpisodeId = nextUp?.id?.toString(),
-            nextUpTitle = nextUp?.getDisplayTitle(),
-            seasonCount = childCount ?: 0
+            status = when (status) {
+                SeriesStatus.CONTINUING -> "Airing"
+                SeriesStatus.ENDED -> "Ended"
+                else -> status?.toString()
+            },
+            creators = people?.filter { it.type.toString().equals("Creator", ignoreCase = true) }
+                ?.mapNotNull { it.name } ?: emptyList(),
+            nextUpEpisodeId = nextUpEpisodeId,
+            nextUpTitle = nextUpTitle,
+            isWatched = isWatched(),
         )
     }
 
@@ -287,51 +231,26 @@ class TvShowDetailViewModel @Inject constructor(
         return SeasonModel(
             id = id.toString(),
             title = getDisplayTitle(),
-            imageUrl = repositories.stream.getWideCardImageUrl(this),
-            episodeCount = childCount,
-            unwatchedCount = userData?.unplayedItemCount ?: 0,
+            imageUrl = repositories.stream.getPosterCardImageUrl(this),
             watchStatus = watchStatus,
             playbackProgress = if (canResume()) watchedPercentage.toFloat() / 100f else null,
+            unwatchedCount = userData?.unwatchedItemCount ?: 0,
         )
     }
 
-    // TODO: unify with SeasonViewModel.toEpisodeModel() — identical mapping
     private fun BaseItemDto.toEpisodeModel(): EpisodeModel {
         return EpisodeModel(
             id = id.toString(),
             title = getDisplayTitle(),
             number = indexNumber,
+            episodeCode = "S${parentIndexNumber} E${indexNumber}",
+            duration = com.rpeters.cinefintv.utils.getFormattedDuration(this),
             overview = overview,
-            imageUrl = repositories.stream.getBackdropUrl(this),
-            duration = getFormattedDuration(),
-            videoQuality = getMediaQualityLabel(),
-            audioLabel = mediaSources
-                ?.firstOrNull()
-                ?.mediaStreams
-                ?.filter { it.type == org.jellyfin.sdk.model.api.MediaStreamType.AUDIO }
-                ?.firstOrNull()
-                ?.let { stream ->
-                    val codec = when (stream.codec?.uppercase()) {
-                        "EAC3", "E-AC3" -> "EAC3"
-                        "AC3" -> "AC3"
-                        "TRUEHD" -> "TrueHD"
-                        "DTS" -> "DTS"
-                        "AAC" -> "AAC"
-                        "FLAC" -> "FLAC"
-                        "OPUS" -> "Opus"
-                        else -> stream.codec?.uppercase()
-                    }
-                    val channels = when (stream.channels) {
-                        2 -> "Stereo"
-                        6 -> "5.1"
-                        8 -> "7.1"
-                        else -> stream.channels?.let { "$it ch" }
-                    }
-                    listOfNotNull(codec, channels).joinToString(" ").ifBlank { null }
-                },
+            imageUrl = repositories.stream.getPosterCardImageUrl(this),
+            videoQuality = com.rpeters.cinefintv.utils.getMediaQualityLabel(this),
+            audioLabel = null, // simplified
             isWatched = isWatched(),
-            playbackProgress = (getWatchedPercentage() / 100.0).toFloat(),
-            episodeCode = getEpisodeCode()
+            playbackProgress = if (canResume()) (getWatchedPercentage() / 100.0).toFloat() else null,
         )
     }
 

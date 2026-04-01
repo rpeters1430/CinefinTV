@@ -120,12 +120,17 @@ private fun SeasonContent(
         }
     }
 
+    var didInitialFocus by remember { mutableStateOf(false) }
+
     LaunchedEffect(season.id) {
-        focusDetailScreenAtTop(
-            listState = listState,
-            initialFocusRequester = primaryActionFocusRequester,
-            anchorFocusRequester = topFocusRequester,
-        )
+        if (!didInitialFocus) {
+            focusDetailScreenAtTop(
+                listState = listState,
+                initialFocusRequester = primaryActionFocusRequester,
+                anchorFocusRequester = topFocusRequester,
+            )
+            didInitialFocus = true
+        }
     }
 
     selectedEpisode?.let { episode ->
@@ -184,9 +189,7 @@ private fun SeasonContent(
         contentPadding = PaddingValues(bottom = spacing.gutter * 2),
     ) {
         item {
-            Column(
-                modifier = Modifier.blockBringIntoView()
-            ) {
+            Column {
                 DetailAnchor(
                     focusRequester = topFocusRequester,
                     downFocusRequester = primaryActionFocusRequester,
@@ -242,7 +245,7 @@ private fun SeasonContent(
                 modifier = if (episode.id == episodes.firstOrNull()?.id) {
                     Modifier
                         .focusRequester(firstEpisodeFocusRequester)
-                        .focusProperties { up = primaryActionFocusRequester }
+                        .focusProperties { up = overviewFocusRequester }
                 } else {
                     Modifier
                 },

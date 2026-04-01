@@ -76,7 +76,7 @@ class SeasonViewModel @Inject constructor(
                         refreshWatchStatus()
                     }
                     is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshAll -> {
-                        load()
+                        load(silent = true)
                     }
                 }
             }

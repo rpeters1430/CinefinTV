@@ -88,10 +88,10 @@ class CollectionDetailViewModel @Inject constructor(
                 when (event) {
                     is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshItem -> {
                         if (event.itemId == itemId) {
-                            load()
+                            load(silent = true)
                         }
                     }
-                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshAll -> load()
+                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshAll -> load(silent = true)
                 }
             }
         }

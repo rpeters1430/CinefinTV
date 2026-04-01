@@ -62,14 +62,18 @@ fun MovieDetailScreen(
     val listState = rememberLazyListState()
     val topFocus = remember { FocusRequester() }
     val primaryActionFocus = remember { FocusRequester() }
+    var didInitialFocus by remember { mutableStateOf(false) }
 
     LaunchedEffect((uiState as? MovieDetailUiState.Content)?.movie?.id) {
-        val content = uiState as? MovieDetailUiState.Content ?: return@LaunchedEffect
-        focusDetailScreenAtTop(
-            listState = listState,
-            initialFocusRequester = primaryActionFocus,
-            anchorFocusRequester = topFocus,
-        )
+        if (!didInitialFocus) {
+            val content = uiState as? MovieDetailUiState.Content ?: return@LaunchedEffect
+            focusDetailScreenAtTop(
+                listState = listState,
+                initialFocusRequester = primaryActionFocus,
+                anchorFocusRequester = topFocus,
+            )
+            didInitialFocus = true
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

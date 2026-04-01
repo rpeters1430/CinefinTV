@@ -78,9 +78,7 @@ fun MovieDetailLayout(
         contentPadding = PaddingValues(bottom = spacing.gutter * 2),
     ) {
         item {
-            Column(
-                modifier = Modifier.blockBringIntoView()
-            ) {
+            Column {
                 DetailAnchor(
                     focusRequester = topFocusRequester,
                     downFocusRequester = primaryActionFocusRequester,
@@ -142,7 +140,7 @@ fun MovieDetailLayout(
                                 modifier = if (person.id == castItems.firstOrNull()?.id) {
                                     Modifier
                                         .focusRequester(firstCastFocusRequester)
-                                        .focusProperties { up = primaryActionFocusRequester }
+                                        .focusProperties { up = overviewFocusRequester }
                                         .testTag(DetailTestTags.FirstCastItem)
                                 } else {
                                     Modifier
@@ -188,7 +186,7 @@ fun MovieDetailLayout(
                                             up = if (castItems.isNotEmpty()) {
                                                 firstCastFocusRequester
                                             } else {
-                                                primaryActionFocusRequester
+                                                overviewFocusRequester
                                             }
                                         }
                                         .testTag(DetailTestTags.FirstSimilarItem)

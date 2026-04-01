@@ -63,14 +63,18 @@ fun TvShowDetailScreen(
     val listState = rememberLazyListState()
     val topFocus = remember { FocusRequester() }
     val primaryActionFocus = remember { FocusRequester() }
+    var didInitialFocus by remember { mutableStateOf(false) }
 
     LaunchedEffect((uiState as? TvShowDetailUiState.Content)?.show?.id) {
-        val content = uiState as? TvShowDetailUiState.Content ?: return@LaunchedEffect
-        focusDetailScreenAtTop(
-            listState = listState,
-            initialFocusRequester = primaryActionFocus,
-            anchorFocusRequester = topFocus,
-        )
+        if (!didInitialFocus) {
+            val content = uiState as? TvShowDetailUiState.Content ?: return@LaunchedEffect
+            focusDetailScreenAtTop(
+                listState = listState,
+                initialFocusRequester = primaryActionFocus,
+                anchorFocusRequester = topFocus,
+            )
+            didInitialFocus = true
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
