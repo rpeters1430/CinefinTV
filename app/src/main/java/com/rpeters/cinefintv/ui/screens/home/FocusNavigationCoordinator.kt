@@ -17,7 +17,7 @@ internal class FocusNavigationCoordinator(
 
     fun submit(block: suspend () -> Unit) {
         val now = nowMs()
-        if (now - lastDispatchAtMs < throttleWindowMs) {
+        if (lastDispatchAtMs != Long.MIN_VALUE && now - lastDispatchAtMs < throttleWindowMs) {
             return
         }
         lastDispatchAtMs = now
