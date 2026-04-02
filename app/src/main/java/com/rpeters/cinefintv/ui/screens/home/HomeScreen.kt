@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -208,6 +209,9 @@ internal fun HomeScreenContent(
             var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(null) }
             var selectedEpisodeMenuItem by remember { mutableStateOf<HomeCardModel?>(null) }
             var shouldRestoreFocus by rememberSaveable { mutableStateOf(true) }
+            val focusNavigationCoordinator = remember(coroutineScope) {
+                FocusNavigationCoordinator(coroutineScope)
+            }
 
             val preferredFocusRequester = when {
                 lastFocusedSectionTitle != null -> {
@@ -270,6 +274,7 @@ internal fun HomeScreenContent(
                 lifecycleOwner.lifecycle.addObserver(observer)
                 onDispose {
                     lifecycleOwner.lifecycle.removeObserver(observer)
+                    focusNavigationCoordinator.cancelActiveJob()
                 }
             }
 
@@ -301,7 +306,7 @@ internal fun HomeScreenContent(
                 }
 
                 if (targetListIndex != null) {
-                    listState.scrollToItem(targetListIndex)
+                    listState.scrollToItemIfNeeded(targetListIndex)
                 }
                 withFrameNanos { }
                 withFrameNanos { }
@@ -329,8 +334,8 @@ internal fun HomeScreenContent(
                                 downRequester = firstSectionRequester,
                                 onNavigateDown = firstSectionRequester?.let {
                                     {
-                                        coroutineScope.launch {
-                                            listState.scrollToItem(1)
+                                        focusNavigationCoordinator.submit {
+                                            listState.scrollToItemIfNeeded(1)
                                             withFrameNanos { }
                                             withFrameNanos { }
                                             it.requestFocus()
@@ -368,9 +373,8 @@ internal fun HomeScreenContent(
                                 lastFocusedSectionTitle = section.title
                                 lastFocusedItemId = itemId
                                 val listIndex = if (state.featuredItems.isNotEmpty()) index + 1 else index
-                                val isSectionVisible = listState.layoutInfo.visibleItemsInfo.any { it.index == listIndex }
-                                if (!isSectionVisible) {
-                                    coroutineScope.launch {
+                                if (!listState.isIndexVisible(listIndex)) {
+                                    focusNavigationCoordinator.submit {
                                         listState.animateScrollToItem(listIndex)
                                     }
                                 }
@@ -381,8 +385,8 @@ internal fun HomeScreenContent(
                             onNavigateUp = when {
                                 index == 0 && state.featuredItems.isNotEmpty() -> {
                                     {
-                                        coroutineScope.launch {
-                                            listState.scrollToItem(0)
+                                        focusNavigationCoordinator.submit {
+                                            listState.scrollToItemIfNeeded(0)
                                             withFrameNanos { }
                                             withFrameNanos { }
                                             featuredPrimaryActionRequester.requestFocus()
@@ -391,9 +395,9 @@ internal fun HomeScreenContent(
                                 }
                                 index > 0 -> {
                                     {
-                                        coroutineScope.launch {
+                                        focusNavigationCoordinator.submit {
                                             val previousListIndex = if (state.featuredItems.isNotEmpty()) index else index - 1
-                                            listState.scrollToItem(previousListIndex)
+                                            listState.scrollToItemIfNeeded(previousListIndex)
                                             withFrameNanos { }
                                             withFrameNanos { }
                                             sectionFocusRequesters[index - 1].requestFocus()
@@ -404,9 +408,9 @@ internal fun HomeScreenContent(
                             },
                             onNavigateDown = sectionFocusRequesters.getOrNull(index + 1)?.let { nextRequester ->
                                 {
-                                    coroutineScope.launch {
+                                    focusNavigationCoordinator.submit {
                                         val nextListIndex = if (state.featuredItems.isNotEmpty()) index + 2 else index + 1
-                                        listState.scrollToItem(nextListIndex)
+                                        listState.scrollToItemIfNeeded(nextListIndex)
                                         withFrameNanos { }
                                         withFrameNanos { }
                                         nextRequester.requestFocus()
@@ -759,5 +763,15 @@ private fun HomeSection(
                 }
             }
         }
+    }
+}
+
+
+private fun LazyListState.isIndexVisible(index: Int): Boolean =
+    layoutInfo.visibleItemsInfo.any { it.index == index }
+
+private suspend fun LazyListState.scrollToItemIfNeeded(index: Int) {
+    if (!isIndexVisible(index)) {
+        scrollToItem(index)
     }
 }
