@@ -2,6 +2,11 @@ package com.rpeters.cinefintv.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -276,7 +281,28 @@ internal fun CinefinAppScaffold(
     var navHasFocus by remember { mutableStateOf(false) }
     val railWidth by animateDpAsState(
         targetValue = if (showNav && navHasFocus) 224.dp else 104.dp,
+        animationSpec = tween(durationMillis = 280),
         label = "railWidth",
+    )
+    val logoSize by animateDpAsState(
+        targetValue = if (navHasFocus) 46.dp else 50.dp,
+        animationSpec = tween(durationMillis = 280),
+        label = "logoSize",
+    )
+    val iconSize by animateDpAsState(
+        targetValue = if (navHasFocus) 22.dp else 28.dp,
+        animationSpec = tween(durationMillis = 280),
+        label = "iconSize",
+    )
+    val buttonPaddingVertical by animateDpAsState(
+        targetValue = if (navHasFocus) 10.dp else 14.dp,
+        animationSpec = tween(durationMillis = 280),
+        label = "buttonPaddingVertical",
+    )
+    val buttonPaddingHorizontal by animateDpAsState(
+        targetValue = if (navHasFocus) 10.dp else 0.dp,
+        animationSpec = tween(durationMillis = 280),
+        label = "buttonPaddingHorizontal",
     )
 
     SideEffect {
@@ -320,7 +346,7 @@ internal fun CinefinAppScaffold(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(if (navHasFocus) 46.dp else 50.dp)
+                                .size(logoSize)
                                 .clip(RoundedCornerShape(999.dp))
                                 .background(
                                     Brush.radialGradient(
@@ -399,8 +425,8 @@ internal fun CinefinAppScaffold(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(
-                                            vertical = if (navHasFocus) 10.dp else 14.dp,
-                                            horizontal = if (navHasFocus) 10.dp else 0.dp,
+                                            vertical = buttonPaddingVertical,
+                                            horizontal = buttonPaddingHorizontal,
                                         ),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = if (navHasFocus) {
@@ -412,14 +438,20 @@ internal fun CinefinAppScaffold(
                                     Icon(
                                         imageVector = item.icon,
                                         contentDescription = item.label,
-                                        modifier = Modifier.size(if (navHasFocus) 22.dp else 28.dp),
+                                        modifier = Modifier.size(iconSize),
                                         tint = if (index == selectedTabIndex || isFocused) {
                                             MaterialTheme.colorScheme.primary
                                         } else {
                                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.66f)
                                         }
                                     )
-                                    AnimatedVisibility(visible = navHasFocus) {
+                                    AnimatedVisibility(
+                                        visible = navHasFocus,
+                                        enter = fadeIn(animationSpec = tween(durationMillis = 200)) +
+                                            expandHorizontally(animationSpec = tween(durationMillis = 280)),
+                                        exit = fadeOut(animationSpec = tween(durationMillis = 150)) +
+                                            shrinkHorizontally(animationSpec = tween(durationMillis = 280)),
+                                    ) {
                                         Text(
                                             text = item.label,
                                             style = MaterialTheme.typography.labelLarge.copy(
