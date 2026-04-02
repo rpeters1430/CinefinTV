@@ -23,20 +23,6 @@ data class SeasonDetailModel(
     val backdropUrl: String?,
 )
 
-data class EpisodeModel(
-    val id: String,
-    val title: String,
-    val number: Int?,
-    val overview: String?,
-    val imageUrl: String?,
-    val duration: String?,
-    val videoQuality: String?,
-    val audioLabel: String?,
-    val isWatched: Boolean,
-    val playbackProgress: Float?,
-    val episodeCode: String?,
-)
-
 sealed class SeasonUiState {
     data object Loading : SeasonUiState()
     data class Error(val message: String) : SeasonUiState()

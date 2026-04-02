@@ -98,7 +98,7 @@ fun TvShowDetailScreen(
                         show.endedDate?.let {
                             add(DetailLabeledMetaItem(Icons.Default.Event, "Ends", it))
                         }
-                        show.airedDate?.let {
+                        show.premieredDate?.let {
                             add(DetailLabeledMetaItem(Icons.Default.CalendarToday, "First Aired", it))
                         } ?: show.yearRange?.let {
                             add(DetailLabeledMetaItem(Icons.Default.CalendarToday, "Years", it))

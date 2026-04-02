@@ -45,21 +45,6 @@ data class MovieDetailModel(
     val playbackProgress: Float?,
 )
 
-data class CastModel(
-    val id: String,
-    val name: String,
-    val role: String?,
-    val imageUrl: String?,
-)
-
-data class SimilarMovieModel(
-    val id: String,
-    val title: String,
-    val imageUrl: String?,
-    val watchStatus: WatchStatus,
-    val playbackProgress: Float?,
-)
-
 sealed class MovieDetailUiState {
     data object Loading : MovieDetailUiState()
     data class Error(val message: String) : MovieDetailUiState()
