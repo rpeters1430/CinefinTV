@@ -1,5 +1,7 @@
 package com.rpeters.cinefintv.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -8,10 +10,12 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -58,15 +62,13 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
-import androidx.tv.material3.TabRow
-import androidx.tv.material3.Tab
-import androidx.tv.material3.TabRowDefaults
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinDialogActions
 import com.rpeters.cinefintv.ui.components.CinefinDialogSurface
 import com.rpeters.cinefintv.ui.navigation.AuthRoutes
 import com.rpeters.cinefintv.ui.navigation.CinefinTvNavGraph
 import com.rpeters.cinefintv.ui.navigation.NavRoutes
+import com.rpeters.cinefintv.ui.navigation.appChromeRouteSpec
 import com.rpeters.cinefintv.ui.navigation.navTabItems
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
@@ -80,37 +82,8 @@ import com.rpeters.cinefintv.update.UpdateStatus
 import com.rpeters.cinefintv.update.shouldCheckForUpdate
 import kotlinx.coroutines.launch
 
-/**
- * CompositionLocal to allow any screen to update the theme's seed color
- * for content-based dynamic theming (Material You).
- */
 val LocalCinefinThemeController = compositionLocalOf<ThemeColorController> {
     error("No ThemeColorController provided")
-}
-
-class AppChromeFocusController {
-    var topNavFocusRequester: FocusRequester? by mutableStateOf(null)
-    var primaryContentFocusRequester: FocusRequester? by mutableStateOf(null)
-}
-
-val LocalAppChromeFocusController = compositionLocalOf<AppChromeFocusController?> { null }
-
-@Composable
-fun RegisterPrimaryContentFocusRequester(focusRequester: FocusRequester?) {
-    val chromeFocusController = LocalAppChromeFocusController.current
-
-    SideEffect {
-        chromeFocusController?.primaryContentFocusRequester = focusRequester
-    }
-
-    DisposableEffect(chromeFocusController, focusRequester) {
-        onDispose {
-            val controller = chromeFocusController ?: return@onDispose
-            if (controller.primaryContentFocusRequester == focusRequester) {
-                controller.primaryContentFocusRequester = null
-            }
-        }
-    }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -237,22 +210,7 @@ fun CinefinTvApp(
                 )
             }
 
-            val showNav = currentRoute != null &&
-                !currentRoute.startsWith("auth/") &&
-                !currentRoute.startsWith("player/") &&
-                !currentRoute.startsWith("audio-player/") &&
-                !currentRoute.startsWith("movie/detail/") &&
-                !currentRoute.startsWith("tvshow/detail/") &&
-                !currentRoute.startsWith("season/detail/") &&
-                !currentRoute.startsWith("episode/detail/") &&
-                !currentRoute.startsWith("collections/detail/") &&
-                !currentRoute.startsWith("detail/person/")
-
-            val selectedTabIndex = navTabItems.indexOfFirst { item ->
-                currentRoute != null && (currentRoute == item.route || 
-                    (item.route.isNotEmpty() && currentRoute.startsWith(item.route)))
-            }.let { if (it == -1) navTabItems.indexOfFirst { it.route == NavRoutes.HOME } else it }
-            .coerceAtLeast(0)
+            val appChromeRouteSpec = appChromeRouteSpec(currentRoute)
 
             fun navigateToTab(route: String) {
                 val activeRoute = navController.currentDestination?.route
@@ -287,16 +245,14 @@ fun CinefinTvApp(
                     )
             ) {
                 CinefinAppScaffold(
-                    showNav = showNav,
-                    selectedTabIndex = selectedTabIndex,
+                    showNav = appChromeRouteSpec.showNav,
+                    selectedTabIndex = appChromeRouteSpec.selectedTabIndex,
                     onNavigateToTab = ::navigateToTab,
                 ) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        CinefinTvNavGraph(
-                            navController = navController,
-                            startDestination = if (isAuthenticated) NavRoutes.HOME else AuthRoutes.SERVER_CONNECTION,
-                        )
-                    }
+                    CinefinTvNavGraph(
+                        navController = navController,
+                        startDestination = if (isAuthenticated) NavRoutes.HOME else AuthRoutes.SERVER_CONNECTION,
+                    )
                 }
             }
         }
@@ -309,128 +265,198 @@ internal fun CinefinAppScaffold(
     showNav: Boolean,
     selectedTabIndex: Int,
     onNavigateToTab: (String) -> Unit,
-    content: @Composable ColumnScope.() -> Unit,
+    content: @Composable () -> Unit,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
-    val spacing = LocalCinefinSpacing.current
     val tabFocusRequesters = remember {
         List(navTabItems.size) { FocusRequester() }
     }
     val chromeFocusController = remember { AppChromeFocusController() }
     val selectedTabFocusRequester = tabFocusRequesters[selectedTabIndex]
+    var navHasFocus by remember { mutableStateOf(false) }
+    val railWidth by animateDpAsState(
+        targetValue = if (showNav && navHasFocus) 224.dp else 104.dp,
+        label = "railWidth",
+    )
 
     SideEffect {
         chromeFocusController.topNavFocusRequester = if (showNav) selectedTabFocusRequester else null
     }
 
     CompositionLocalProvider(LocalAppChromeFocusController provides chromeFocusController) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Row(modifier = Modifier.fillMaxSize()) {
             if (showNav) {
                 Surface(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = spacing.gutter, vertical = 12.dp),
-                    shape = RoundedCornerShape(32.dp),
+                        .fillMaxHeight()
+                        .width(railWidth)
+                        .padding(start = 12.dp, top = 12.dp, bottom = 12.dp),
+                    shape = RoundedCornerShape(28.dp),
                     colors = androidx.tv.material3.SurfaceDefaults.colors(
-                        containerColor = expressiveColors.chromeSurface.copy(alpha = 0.84f),
+                        containerColor = expressiveColors.chromeSurface.copy(alpha = 0.46f),
                     ),
                     border = androidx.tv.material3.Border(
                         border = BorderStroke(
                             width = 1.dp,
-                            color = expressiveColors.borderSubtle.copy(alpha = 0.7f),
+                            color = expressiveColors.borderSubtle.copy(alpha = 0.28f),
                         ),
                     ),
-                    tonalElevation = 12.dp,
+                    tonalElevation = 4.dp,
                 ) {
-                    Box(
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        expressiveColors.playerContentPrimary.copy(alpha = 0.05f),
-                                        Color.Transparent,
+                            .fillMaxHeight()
+                            .onFocusChanged { navHasFocus = it.hasFocus || it.isFocused }
+                            .focusProperties {
+                                onEnter = {
+                                    selectedTabFocusRequester.requestFocus()
+                                }
+                            }
+                            .focusGroup()
+                            .testTag(AppTestTags.NavBar)
+                            .padding(vertical = 16.dp, horizontal = 10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(if (navHasFocus) 46.dp else 50.dp)
+                                .clip(RoundedCornerShape(999.dp))
+                                .background(
+                                    Brush.radialGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.88f),
+                                            expressiveColors.titleAccent.copy(alpha = 0.42f),
+                                        )
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "C",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        navTabItems.forEachIndexed { index, item ->
+                            var isFocused by remember { mutableStateOf(false) }
+                            Button(
+                                onClick = { onNavigateToTab(item.route) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(tabFocusRequesters[index])
+                                    .onFocusChanged { isFocused = it.isFocused || it.hasFocus }
+                                    .focusProperties {
+                                        chromeFocusController.primaryContentFocusRequester?.let {
+                                            right = it
+                                        }
+                                    }
+                                    .testTag(AppTestTags.tab(item.route)),
+                                shape = ButtonDefaults.shape(RoundedCornerShape(18.dp)),
+                                scale = ButtonDefaults.scale(
+                                    focusedScale = 1.04f,
+                                ),
+                                colors = ButtonDefaults.colors(
+                                    containerColor = if (index == selectedTabIndex || isFocused) {
+                                        expressiveColors.detailPanelFocused.copy(alpha = if (navHasFocus) 0.82f else 0.72f)
+                                    } else {
+                                        Color.Transparent
+                                    },
+                                    focusedContainerColor = expressiveColors.detailPanelFocused.copy(alpha = 0.82f),
+                                ),
+                                border = ButtonDefaults.border(
+                                    border = if (index == selectedTabIndex && !isFocused) {
+                                        androidx.tv.material3.Border(
+                                            border = BorderStroke(
+                                                width = 1.dp,
+                                                color = expressiveColors.focusRing.copy(alpha = 0.38f),
+                                            ),
+                                        )
+                                    } else {
+                                        androidx.tv.material3.Border(
+                                            border = BorderStroke(1.dp, Color.Transparent),
+                                        )
+                                    },
+                                    focusedBorder = androidx.tv.material3.Border(
+                                        border = BorderStroke(
+                                            width = 1.5.dp,
+                                            color = expressiveColors.focusRing.copy(alpha = 0.72f),
+                                        ),
                                     ),
                                 ),
-                            )
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                    ) {
-                        TabRow(
-                            selectedTabIndex = selectedTabIndex,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusProperties {
-                                    onEnter = {
-                                        selectedTabFocusRequester.requestFocus()
-                                    }
-                                }
-                                .focusGroup()
-                                .testTag(AppTestTags.NavBar),
-                            indicator = { tabPositions, doesTabRowHaveFocus ->
-                                TabRowDefaults.UnderlinedIndicator(
-                                    currentTabPosition = tabPositions[selectedTabIndex],
-                                    doesTabRowHaveFocus = doesTabRowHaveFocus,
-                                    activeColor = MaterialTheme.colorScheme.primary,
-                                    inactiveColor = Color.Transparent
+                                glow = ButtonDefaults.glow(
+                                    focusedGlow = androidx.tv.material3.Glow(
+                                        elevationColor = expressiveColors.focusGlow.copy(alpha = 0.16f),
+                                        elevation = 6.dp,
+                                    )
                                 )
-                            },
-                            containerColor = Color.Transparent
-                        ) {
-                            navTabItems.forEachIndexed { index, item ->
-                                var isFocused by remember { mutableStateOf(false) }
-                                Tab(
-                                    selected = index == selectedTabIndex,
-                                    onFocus = { isFocused = true },
+                            ) {
+                                Row(
                                     modifier = Modifier
-                                        .focusRequester(tabFocusRequesters[index])
-                                        .onFocusChanged { isFocused = it.isFocused || it.hasFocus }
-                                        .focusProperties {
-                                            chromeFocusController.primaryContentFocusRequester?.let {
-                                                down = it
-                                            }
-                                        }
-                                        .testTag(AppTestTags.tab(item.route)),
-                                    onClick = { onNavigateToTab(item.route) }
+                                        .fillMaxWidth()
+                                        .padding(
+                                            vertical = if (navHasFocus) 10.dp else 14.dp,
+                                            horizontal = if (navHasFocus) 10.dp else 0.dp,
+                                        ),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = if (navHasFocus) {
+                                        Arrangement.spacedBy(12.dp)
+                                    } else {
+                                        Arrangement.Center
+                                    },
                                 ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = item.icon,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp),
-                                            tint = if (index == selectedTabIndex || isFocused) 
-                                                MaterialTheme.colorScheme.primary 
-                                            else 
-                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                        )
+                                    Icon(
+                                        imageVector = item.icon,
+                                        contentDescription = item.label,
+                                        modifier = Modifier.size(if (navHasFocus) 22.dp else 28.dp),
+                                        tint = if (index == selectedTabIndex || isFocused) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.66f)
+                                        }
+                                    )
+                                    AnimatedVisibility(visible = navHasFocus) {
                                         Text(
                                             text = item.label,
                                             style = MaterialTheme.typography.labelLarge.copy(
-                                                fontSize = 16.sp,
-                                                fontWeight = if (index == selectedTabIndex || isFocused) 
-                                                    FontWeight.ExtraBold 
-                                                else 
-                                                    FontWeight.Medium,
-                                                letterSpacing = 0.5.sp
+                                                fontSize = 13.sp,
+                                                fontWeight = if (index == selectedTabIndex || isFocused) {
+                                                    FontWeight.SemiBold
+                                                } else {
+                                                    FontWeight.Medium
+                                                },
+                                                letterSpacing = 0.sp,
                                             ),
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
-                                            color = if (index == selectedTabIndex || isFocused) 
-                                                MaterialTheme.colorScheme.onSurface 
-                                            else 
-                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                            color = if (index == selectedTabIndex || isFocused) {
+                                                MaterialTheme.colorScheme.onSurface
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.66f)
+                                            }
                                         )
                                     }
                                 }
                             }
                         }
+
+                        Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }
-            content()
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(start = if (showNav) 8.dp else 0.dp, end = 10.dp),
+            ) {
+                content()
+            }
         }
     }
 }

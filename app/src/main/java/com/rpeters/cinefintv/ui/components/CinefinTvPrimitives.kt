@@ -310,26 +310,26 @@ fun CinefinShelfTitle(
     eyebrow: String? = null,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
-    val spacing = LocalCinefinSpacing.current
 
     Column(
-        modifier = modifier.padding(vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = modifier.padding(vertical = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         if (!eyebrow.isNullOrBlank()) {
             Text(
-                text = eyebrow.uppercase(),
+                text = eyebrow,
                 style = MaterialTheme.typography.labelSmall.copy(
-                    letterSpacing = 1.2.sp,
-                    fontWeight = FontWeight.Bold
+                    letterSpacing = 0.2.sp,
+                    fontWeight = FontWeight.Medium
                 ),
-                color = expressiveColors.titleAccent.copy(alpha = 0.8f),
+                color = expressiveColors.titleAccent.copy(alpha = 0.92f),
             )
         }
         Text(
             text = title,
             style = MaterialTheme.typography.headlineSmall.copy(
-                fontWeight = FontWeight.Black
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.2).sp,
             ),
             color = MaterialTheme.colorScheme.onBackground,
         )

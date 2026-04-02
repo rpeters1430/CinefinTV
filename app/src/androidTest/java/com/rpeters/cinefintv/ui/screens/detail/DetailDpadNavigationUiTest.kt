@@ -61,7 +61,7 @@ class DetailDpadNavigationUiTest {
     }
 
     @Test
-    fun movieDetail_overview_downNavigatesToFirstCastItem() {
+    fun movieDetail_overview_downDoesNotMoveFocus_whenOnlyCastIsAboveOverview() {
         val focus = FocusRequester()
         setMovieContent(
             listState = LazyListState(firstVisibleItemIndex = 2),
@@ -71,33 +71,33 @@ class DetailDpadNavigationUiTest {
 
         composeRule.runOnIdle { focus.requestFocus() }
         composeRule.waitForIdle()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → overview
-        composeRule.waitForIdle()
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → cast
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithTag(DetailTestTags.FirstCastItem).assertIsFocused()
-    }
-
-    @Test
-    fun movieDetail_firstCastItem_upNavigatesToOverview() {
-        val focus = FocusRequester()
-        setMovieContent(
-            listState = LazyListState(firstVisibleItemIndex = 2),
-            primaryActionFocusRequester = focus,
-            castItems = listOf(CastModel(id = "c1", name = "Actor", role = "Lead", imageUrl = null)),
-        )
-
-        composeRule.runOnIdle { focus.requestFocus() }
         composeRule.waitForIdle()
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → overview
         composeRule.waitForIdle()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → cast
-        composeRule.waitForIdle()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // → overview
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // no lower section
         composeRule.waitForIdle()
 
         composeRule.onNodeWithTag(DetailTestTags.Overview).assertIsFocused()
+    }
+
+    @Test
+    fun movieDetail_firstCastItem_upNavigatesToPrimaryAction() {
+        val focus = FocusRequester()
+        setMovieContent(
+            listState = LazyListState(firstVisibleItemIndex = 1),
+            primaryActionFocusRequester = focus,
+            castItems = listOf(CastModel(id = "c1", name = "Actor", role = "Lead", imageUrl = null)),
+        )
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → cast
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // → play
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(DetailTestTags.PrimaryAction).assertIsFocused()
     }
 
     @Test
@@ -129,7 +129,7 @@ class DetailDpadNavigationUiTest {
     }
 
     @Test
-    fun movieDetail_firstSimilarItem_upNavigatesToFirstCast_whenBothPresent() {
+    fun movieDetail_firstSimilarItem_upNavigatesToOverview_whenCastPresent() {
         val focus = FocusRequester()
         setMovieContent(
             listState = LazyListState(firstVisibleItemIndex = 3),
@@ -155,7 +155,41 @@ class DetailDpadNavigationUiTest {
         composeRule.waitForIdle()
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.waitForIdle()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // similar → cast
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // similar → overview
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(DetailTestTags.Overview).assertIsFocused()
+    }
+
+    @Test
+    fun movieDetail_overview_upNavigatesToFirstCast_whenCastPresent() {
+        val focus = FocusRequester()
+        setMovieContent(
+            listState = LazyListState(firstVisibleItemIndex = 3),
+            primaryActionFocusRequester = focus,
+            castItems = listOf(CastModel(id = "c1", name = "Actor", role = "Lead", imageUrl = null)),
+            similarItems = listOf(
+                SimilarMovieModel(
+                    id = "s1",
+                    title = "Similar",
+                    imageUrl = null,
+                    watchStatus = WatchStatus.NONE,
+                    playbackProgress = null,
+                )
+            ),
+        )
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // play -> cast
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // cast -> overview
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // overview -> similar
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) } // similar -> overview
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) } // overview -> cast
         composeRule.waitForIdle()
 
         composeRule.onNodeWithTag(DetailTestTags.FirstCastItem).assertIsFocused()
@@ -279,7 +313,7 @@ class DetailDpadNavigationUiTest {
     }
 
     @Test
-    fun tvShowDetail_overview_downNavigatesToFirstSeason() {
+    fun tvShowDetail_overview_downDoesNotMoveFocus_whenOnlySeasonsAreAboveOverview() {
         val focus = FocusRequester()
         setTvShowContent(
             listState = LazyListState(firstVisibleItemIndex = 2),
@@ -289,57 +323,55 @@ class DetailDpadNavigationUiTest {
                     id = "s1",
                     title = "Season 1",
                     imageUrl = null,
-                    episodeCount = 5,
-                    unwatchedCount = 2,
                     watchStatus = WatchStatus.NONE,
                     playbackProgress = null,
+                    unwatchedCount = 2,
                 )
             ),
         )
 
         composeRule.runOnIdle { focus.requestFocus() }
         composeRule.waitForIdle()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → overview
-        composeRule.waitForIdle()
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → season
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithTag(DetailTestTags.FirstSeasonItem).assertIsFocused()
-    }
-
-    @Test
-    fun tvShowDetail_firstSeason_upNavigatesToOverview() {
-        val focus = FocusRequester()
-        setTvShowContent(
-            listState = LazyListState(firstVisibleItemIndex = 2),
-            primaryActionFocusRequester = focus,
-            seasons = listOf(
-                SeasonModel(
-                    id = "s1",
-                    title = "Season 1",
-                    imageUrl = null,
-                    episodeCount = 5,
-                    unwatchedCount = 2,
-                    watchStatus = WatchStatus.NONE,
-                    playbackProgress = null,
-                )
-            ),
-        )
-
-        composeRule.runOnIdle { focus.requestFocus() }
         composeRule.waitForIdle()
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → overview
         composeRule.waitForIdle()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → season
-        composeRule.waitForIdle()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // → overview
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // no lower section
         composeRule.waitForIdle()
 
         composeRule.onNodeWithTag(DetailTestTags.Overview).assertIsFocused()
     }
 
     @Test
-    fun tvShowDetail_overview_downNavigatesToFirstCast_whenNoSeasons() {
+    fun tvShowDetail_firstSeason_upNavigatesToPrimaryAction() {
+        val focus = FocusRequester()
+        setTvShowContent(
+            listState = LazyListState(firstVisibleItemIndex = 1),
+            primaryActionFocusRequester = focus,
+            seasons = listOf(
+                SeasonModel(
+                    id = "s1",
+                    title = "Season 1",
+                    imageUrl = null,
+                    watchStatus = WatchStatus.NONE,
+                    playbackProgress = null,
+                    unwatchedCount = 2,
+                )
+            ),
+        )
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → season
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // → play
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(DetailTestTags.PrimaryAction).assertIsFocused()
+    }
+
+    @Test
+    fun tvShowDetail_overview_downDoesNotMoveFocus_whenOnlyCastIsAboveOverview() {
         val focus = FocusRequester()
         setTvShowContent(
             listState = LazyListState(firstVisibleItemIndex = 2),
@@ -349,42 +381,36 @@ class DetailDpadNavigationUiTest {
 
         composeRule.runOnIdle { focus.requestFocus() }
         composeRule.waitForIdle()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → overview
-        composeRule.waitForIdle()
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → cast
         composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → overview
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // no lower section
+        composeRule.waitForIdle()
 
-        composeRule.onNodeWithTag(DetailTestTags.FirstCastItem).assertIsFocused()
+        composeRule.onNodeWithTag(DetailTestTags.Overview).assertIsFocused()
     }
 
     @Test
     fun tvShowDetail_firstCast_upNavigatesToFirstSeason_whenBothPresent() {
         val focus = FocusRequester()
-        // firstVisibleItemIndex=3: seasons row at top, cast row (index 4) in prefetch window
         setTvShowContent(
-            listState = LazyListState(firstVisibleItemIndex = 3),
+            listState = LazyListState(firstVisibleItemIndex = 1),
             primaryActionFocusRequester = focus,
             seasons = listOf(
                 SeasonModel(
                     id = "s1",
                     title = "Season 1",
                     imageUrl = null,
-                    episodeCount = 5,
-                    unwatchedCount = 2,
                     watchStatus = WatchStatus.NONE,
                     playbackProgress = null,
+                    unwatchedCount = 2,
                 )
             ),
             castItems = listOf(CastModel(id = "c1", name = "Actor", role = "Lead", imageUrl = null)),
         )
 
-        composeRule.runOnIdle { focus.requestFocus() }
-        composeRule.waitForIdle()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → overview
-        composeRule.waitForIdle()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → season
-        composeRule.waitForIdle()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // → cast
+        composeRule.onNodeWithTag(DetailTestTags.FirstCastItem).requestFocus()
         composeRule.waitForIdle()
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // → season
         composeRule.waitForIdle()
@@ -393,7 +419,7 @@ class DetailDpadNavigationUiTest {
     }
 
     @Test
-    fun tvShowDetail_firstSimilar_upNavigatesToFirstCast_whenCastPresent() {
+    fun tvShowDetail_firstSimilar_upNavigatesToOverview_whenCastPresent() {
         // Seasons + cast + similar all present; similar is at LazyColumn index 5
         val focus = FocusRequester()
         setTvShowContent(
@@ -404,10 +430,9 @@ class DetailDpadNavigationUiTest {
                     id = "s1",
                     title = "Season 1",
                     imageUrl = null,
-                    episodeCount = 5,
-                    unwatchedCount = 2,
                     watchStatus = WatchStatus.NONE,
                     playbackProgress = null,
+                    unwatchedCount = 2,
                 )
             ),
             castItems = listOf(CastModel(id = "c1", name = "Actor", role = "Lead", imageUrl = null)),
@@ -433,14 +458,60 @@ class DetailDpadNavigationUiTest {
         composeRule.waitForIdle()
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.waitForIdle()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // similar → cast
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // similar → overview
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(DetailTestTags.Overview).assertIsFocused()
+    }
+
+    @Test
+    fun tvShowDetail_overview_upNavigatesToFirstCast_whenCastPresent() {
+        val focus = FocusRequester()
+        setTvShowContent(
+            listState = LazyListState(firstVisibleItemIndex = 4),
+            primaryActionFocusRequester = focus,
+            seasons = listOf(
+                SeasonModel(
+                    id = "s1",
+                    title = "Season 1",
+                    imageUrl = null,
+                    watchStatus = WatchStatus.NONE,
+                    playbackProgress = null,
+                    unwatchedCount = 2,
+                )
+            ),
+            castItems = listOf(CastModel(id = "c1", name = "Actor", role = "Lead", imageUrl = null)),
+            similarItems = listOf(
+                SimilarMovieModel(
+                    id = "sim1",
+                    title = "Similar Show",
+                    imageUrl = null,
+                    watchStatus = WatchStatus.NONE,
+                    playbackProgress = null,
+                )
+            ),
+        )
+
+        composeRule.runOnIdle { focus.requestFocus() }
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // play -> season
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // season -> cast
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // cast -> overview
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) } // overview -> similar
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) } // similar -> overview
+        composeRule.waitForIdle()
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) } // overview -> cast
         composeRule.waitForIdle()
 
         composeRule.onNodeWithTag(DetailTestTags.FirstCastItem).assertIsFocused()
     }
 
     @Test
-    fun tvShowDetail_firstSimilar_upNavigatesToFirstSeason_whenNoCast() {
+    fun tvShowDetail_firstSimilar_upNavigatesToOverview_whenNoCast() {
         // Seasons + similar (no cast); similar is at LazyColumn index 4
         val focus = FocusRequester()
         setTvShowContent(
@@ -451,10 +522,9 @@ class DetailDpadNavigationUiTest {
                     id = "s1",
                     title = "Season 1",
                     imageUrl = null,
-                    episodeCount = 5,
-                    unwatchedCount = 2,
                     watchStatus = WatchStatus.NONE,
                     playbackProgress = null,
+                    unwatchedCount = 2,
                 )
             ),
             similarItems = listOf(
@@ -477,10 +547,10 @@ class DetailDpadNavigationUiTest {
         composeRule.waitForIdle()
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.waitForIdle()
-        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // similar → season
+        composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }   // similar → overview
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithTag(DetailTestTags.FirstSeasonItem).assertIsFocused()
+        composeRule.onNodeWithTag(DetailTestTags.Overview).assertIsFocused()
     }
 
     @Test
@@ -548,7 +618,6 @@ class DetailDpadNavigationUiTest {
                     genres = emptyList(),
                     primaryActionLabel = "▶ Play",
                     onPrimaryAction = {},
-                    secondaryActions = emptyList(),
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     seasons = seasons,
                     onSeasonClick = {},
@@ -557,6 +626,9 @@ class DetailDpadNavigationUiTest {
                     onCastClick = {},
                     onSimilarClick = {},
                     description = "Test overview.",
+                    heroTagline = null,
+                    creditLine = null,
+                    heroBadges = emptyList(),
                     factItems = emptyList(),
                     listState = listState,
                 )
@@ -600,12 +672,14 @@ class DetailDpadNavigationUiTest {
                     genres = emptyList(),
                     primaryActionLabel = "▶ Play",
                     onPrimaryAction = {},
-                    secondaryActions = emptyList(),
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     topFocusRequester = topFocusRequester,
                     description = "Test overview.",
+                    heroTagline = null,
+                    directorLine = null,
+                    heroBadges = emptyList(),
+                    heroSecondaryActions = emptyList(),
                     factItems = emptyList(),
-                    factSummary = "",
                     castItems = castItems,
                     similarItems = similarItems,
                     onCastClick = {},

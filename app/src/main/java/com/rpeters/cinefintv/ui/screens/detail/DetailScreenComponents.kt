@@ -99,15 +99,12 @@ suspend fun focusDetailScreenAtTop(
             layoutInfo.visibleItemsInfo.any { it.index == 0 }
     }.first { it }
 
-    if (anchorFocusRequester != null) {
-        runCatching { anchorFocusRequester.requestFocus() }
-        withFrameNanos { }
-    }
-
     runCatching { initialFocusRequester.requestFocus() }
 
     withFrameNanos { }
     if (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0) {
+        listState.scrollToItem(0)
+        withFrameNanos { }
         listState.scrollToItem(0)
     }
 }
@@ -544,18 +541,18 @@ fun DetailContentSection(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
-    var isHeaderFocused by remember(title) { mutableStateOf(false) }
+    var isSectionFocused by remember(title) { mutableStateOf(false) }
 
     Column(
-        modifier = modifier.padding(top = 36.dp),
+        modifier = modifier
+            .padding(top = 36.dp)
+            .onFocusChanged { state ->
+                isSectionFocused = state.hasFocus || state.isFocused
+            },
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         BoxWithConstraints(
-            modifier = Modifier
-                .padding(horizontal = 56.dp)
-                .onFocusChanged { state ->
-                    isHeaderFocused = state.hasFocus || state.isFocused
-                }
+            modifier = Modifier.padding(horizontal = 56.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(
@@ -573,7 +570,7 @@ fun DetailContentSection(
                         )
                         .border(
                             width = 1.dp,
-                            color = expressiveColors.borderSubtle.copy(alpha = if (isHeaderFocused) 0.7f else 0.32f),
+                            color = expressiveColors.borderSubtle.copy(alpha = if (isSectionFocused) 0.7f else 0.32f),
                             shape = RoundedCornerShape(24.dp),
                         )
                         .padding(horizontal = 18.dp, vertical = 16.dp),
@@ -583,7 +580,7 @@ fun DetailContentSection(
                             Text(
                                 text = it,
                                 style = MaterialTheme.typography.labelMedium,
-                                color = if (isHeaderFocused) {
+                                color = if (isSectionFocused) {
                                     MaterialTheme.colorScheme.onBackground
                                 } else {
                                     MaterialTheme.colorScheme.primary
@@ -598,7 +595,7 @@ fun DetailContentSection(
                                 Icon(
                                     imageVector = it,
                                     contentDescription = null,
-                                    tint = if (isHeaderFocused) expressiveColors.focusRing else MaterialTheme.colorScheme.primary,
+                                    tint = if (isSectionFocused) expressiveColors.focusRing else MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(22.dp),
                                 )
                             }
@@ -619,7 +616,7 @@ fun DetailContentSection(
                         .background(
                             Brush.horizontalGradient(
                                 listOf(
-                                    if (isHeaderFocused) expressiveColors.focusRing else expressiveColors.titleAccent,
+                                    if (isSectionFocused) expressiveColors.focusRing else expressiveColors.titleAccent,
                                     expressiveColors.titleAccent.copy(alpha = 0.4f),
                                     Color.Transparent,
                                 )
@@ -675,6 +672,7 @@ fun DetailAnchor(
             .fillMaxWidth()
             .height(1.dp)
             .focusRequester(focusRequester)
+            .blockBringIntoView()
             .focusable()
             .onFocusChanged { if (it.isFocused) onFocused() }
             .focusProperties {

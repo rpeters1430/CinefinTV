@@ -6,32 +6,32 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import com.rpeters.cinefintv.ui.components.CinefinChip
-import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.components.TvPersonCard
-import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.screens.detail.CastModel
 import com.rpeters.cinefintv.ui.screens.detail.DetailAnchor
 import com.rpeters.cinefintv.ui.screens.detail.DetailLabeledMetaItem
 import com.rpeters.cinefintv.ui.screens.detail.SimilarMovieModel
+import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import kotlinx.coroutines.launch
 
 /**
  * Movie detail screen content: CinematicHero + continuous vertical scroll.
@@ -48,11 +48,13 @@ fun MovieDetailLayout(
     genres: List<String>,
     primaryActionLabel: String,
     onPrimaryAction: () -> Unit,
-    secondaryActions: List<Pair<String, () -> Unit>>,
     primaryActionFocusRequester: FocusRequester,
     description: String,
+    heroTagline: String?,
+    directorLine: String?,
+    heroBadges: List<String>,
+    heroSecondaryActions: List<HeroIconAction>,
     factItems: List<DetailLabeledMetaItem>,
-    factSummary: String,
     castItems: List<CastModel>,
     similarItems: List<SimilarMovieModel>,
     onCastClick: (String) -> Unit,
@@ -62,6 +64,7 @@ fun MovieDetailLayout(
     topFocusRequester: FocusRequester = remember { FocusRequester() },
 ) {
     val spacing = LocalCinefinSpacing.current
+    val coroutineScope = rememberCoroutineScope()
     val overviewFocusRequester = remember { FocusRequester() }
     val firstCastFocusRequester = remember { FocusRequester() }
     val firstSimilarFocusRequester = remember { FocusRequester() }
@@ -84,45 +87,44 @@ fun MovieDetailLayout(
                     downFocusRequester = primaryActionFocusRequester,
                     onFocused = {},
                 )
-                CinematicHero(
+                FlatDetailHero(
                     backdropUrl = backdropUrl,
                     logoUrl = logoUrl,
                     title = title,
                     eyebrow = eyebrow,
                     ratingText = ratingText,
-                    genres = genres,
+                    badges = heroBadges,
+                    tagline = heroTagline,
+                    description = description,
+                    creditLine = directorLine,
                     primaryActionLabel = primaryActionLabel,
                     onPrimaryAction = onPrimaryAction,
-                    secondaryActions = secondaryActions,
+                    secondaryIconActions = heroSecondaryActions,
                     primaryActionFocusRequester = primaryActionFocusRequester,
-                    primaryActionDownFocusRequester = overviewFocusRequester,
-                    listState = listState,
+                    primaryActionDownFocusRequester = firstContentFocusRequester ?: overviewFocusRequester,
+                    onDownNavigation = {
+                        if (listState.isScrollInProgress) return@FlatDetailHero
+                        coroutineScope.launch {
+                            listState.animateScrollToItem(1)
+                            androidx.compose.runtime.withFrameNanos { }
+                            runCatching {
+                                (firstContentFocusRequester ?: overviewFocusRequester).requestFocus()
+                            }
+                        }
+                    },
                 )
             }
-        }
-
-        item {
-            DetailOverviewSection(
-                title = title,
-                posterUrl = posterUrl,
-                description = description,
-                factItems = factItems,
-                chips = genres,
-                focusRequester = overviewFocusRequester,
-                upFocusRequester = primaryActionFocusRequester,
-                modifier = Modifier.padding(top = spacing.rowGap),
-            )
         }
 
         if (castItems.isNotEmpty()) {
             item {
                 Column(
                     modifier = Modifier
-                        .padding(top = spacing.rowGap)
+                        .padding(top = spacing.rowGap / 2)
                         .testTag(DetailTestTags.MovieCastSection),
                 ) {
-                    CinefinShelfTitle(
-                        title = "Cast",
+                    DetailStripTitle(
+                        title = "People",
                         modifier = Modifier.padding(
                             horizontal = spacing.gutter,
                             vertical = spacing.elementGap,
@@ -139,8 +141,28 @@ fun MovieDetailLayout(
                                 imageUrl = person.imageUrl,
                                 modifier = if (person.id == castItems.firstOrNull()?.id) {
                                     Modifier
+                                        .blockBringIntoView()
                                         .focusRequester(firstCastFocusRequester)
-                                        .focusProperties { up = overviewFocusRequester }
+                                        .focusProperties {
+                                            up = primaryActionFocusRequester
+                                            down = overviewFocusRequester
+                                        }
+                                        .onPreviewKeyEvent { keyEvent ->
+                                            val nativeEvent = keyEvent.nativeKeyEvent
+                                            when {
+                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                                                    runCatching { primaryActionFocusRequester.requestFocus() }
+                                                    true
+                                                }
+                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                                    runCatching { overviewFocusRequester.requestFocus() }
+                                                    true
+                                                }
+                                                else -> false
+                                            }
+                                        }
                                         .testTag(DetailTestTags.FirstCastItem)
                                 } else {
                                     Modifier
@@ -153,6 +175,39 @@ fun MovieDetailLayout(
             }
         }
 
+        item {
+            DetailOverviewSection(
+                title = title,
+                posterUrl = posterUrl,
+                description = description,
+                factItems = factItems,
+                chips = genres,
+                focusRequester = overviewFocusRequester,
+                upFocusRequester = if (castItems.isNotEmpty()) {
+                    firstCastFocusRequester
+                } else {
+                    primaryActionFocusRequester
+                },
+                onNavigateUp = {
+                    if (listState.isScrollInProgress) return@DetailOverviewSection
+                    coroutineScope.launch {
+                        if (castItems.isNotEmpty()) {
+                            listState.scrollToItem(1)
+                            androidx.compose.runtime.withFrameNanos { }
+                            androidx.compose.runtime.withFrameNanos { }
+                            runCatching { firstCastFocusRequester.requestFocus() }
+                        } else {
+                            listState.scrollToItem(0)
+                            androidx.compose.runtime.withFrameNanos { }
+                            androidx.compose.runtime.withFrameNanos { }
+                            runCatching { primaryActionFocusRequester.requestFocus() }
+                        }
+                    }
+                },
+                modifier = Modifier.padding(top = spacing.rowGap),
+            )
+        }
+
         if (similarItems.isNotEmpty()) {
             item {
                 Column(
@@ -160,7 +215,7 @@ fun MovieDetailLayout(
                         .padding(top = spacing.rowGap)
                         .testTag(DetailTestTags.MovieSimilarSection),
                 ) {
-                    CinefinShelfTitle(
+                    DetailStripTitle(
                         title = "More Like This",
                         modifier = Modifier.padding(
                             horizontal = spacing.gutter,
@@ -181,12 +236,19 @@ fun MovieDetailLayout(
                                 cardWidth = similarCardWidth,
                                 modifier = if (mediaItem.id == similarItems.firstOrNull()?.id) {
                                     Modifier
+                                        .blockBringIntoView()
                                         .focusRequester(firstSimilarFocusRequester)
-                                        .focusProperties {
-                                            up = if (castItems.isNotEmpty()) {
-                                                firstCastFocusRequester
+                                        .focusProperties { up = overviewFocusRequester }
+                                        .onPreviewKeyEvent { keyEvent ->
+                                            val nativeEvent = keyEvent.nativeKeyEvent
+                                            if (
+                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
+                                            ) {
+                                                runCatching { overviewFocusRequester.requestFocus() }
+                                                true
                                             } else {
-                                                overviewFocusRequester
+                                                false
                                             }
                                         }
                                         .testTag(DetailTestTags.FirstSimilarItem)

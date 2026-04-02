@@ -6,6 +6,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apartment
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.foundation.layout.Box
@@ -27,6 +29,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.HeroIconAction
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.MovieDetailLayout
 
 @Composable
@@ -136,16 +139,55 @@ fun MovieDetailScreen(
                     movie.rating?.let { "★ $it" }
                 }
 
-                val factSummary = remember(movie) {
-                    listOfNotNull(
-                        movie.directors.firstOrNull(),
-                        movie.studios.firstOrNull(),
-                    ).joinToString(" · ")
+                val heroTagline = remember(movie) {
+                    movie.overview
+                        ?.substringBefore(".")
+                        ?.trim()
+                        ?.takeIf { it.length in 24..96 }
+                        ?.let { "$it." }
+                }
+
+                val heroBadges = remember(movie) {
+                    buildList {
+                        movie.videoQuality?.let(::add)
+                        movie.audioLabel?.let(::add)
+                        movie.officialRating?.let(::add)
+                        addAll(movie.genres.take(2))
+                    }
+                }
+
+                val directorLine = remember(movie) {
+                    movie.directors
+                        .take(2)
+                        .takeIf { it.isNotEmpty() }
+                        ?.joinToString(", ")
+                        ?.let { "Directed by $it" }
                 }
 
                 val primaryActionLabel = when {
                     movie.playbackProgress != null -> "▶ Resume"
                     else -> "▶ Play"
+                }
+
+                val heroSecondaryActions = remember(movie.isWatched) {
+                    listOf(
+                        HeroIconAction(
+                            icon = Icons.Default.Check,
+                            contentDescription = if (movie.isWatched) "Mark unwatched" else "Mark watched",
+                            onClick = {
+                                if (movie.isWatched) {
+                                    viewModel.markUnwatched()
+                                } else {
+                                    viewModel.markWatched()
+                                }
+                            },
+                        ),
+                        HeroIconAction(
+                            icon = Icons.Default.Delete,
+                            contentDescription = "Delete movie",
+                            onClick = { showDeleteDialog = true },
+                        ),
+                    )
                 }
 
                 MovieDetailLayout(
@@ -158,21 +200,14 @@ fun MovieDetailScreen(
                     genres = movie.genres,
                     primaryActionLabel = primaryActionLabel,
                     onPrimaryAction = { onPlayMovie(movie.id) },
-                    secondaryActions = buildList {
-                        add(
-                            if (movie.isWatched) {
-                                "Mark Unwatched" to { viewModel.markUnwatched() }
-                            } else {
-                                "Mark Watched" to { viewModel.markWatched() }
-                            }
-                        )
-                        add("Delete" to { showDeleteDialog = true })
-                    },
                     topFocusRequester = topFocus,
                     primaryActionFocusRequester = primaryActionFocus,
                     description = movie.overview ?: "",
+                    heroTagline = heroTagline,
+                    directorLine = directorLine,
+                    heroBadges = heroBadges,
+                    heroSecondaryActions = heroSecondaryActions,
                     factItems = factItems,
-                    factSummary = factSummary,
                     castItems = state.cast,
                     similarItems = state.similarMovies,
                     onCastClick = { personId -> onOpenPerson(personId) },

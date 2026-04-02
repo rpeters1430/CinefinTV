@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -28,7 +27,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -40,6 +40,7 @@ import com.rpeters.cinefintv.ui.screens.detail.DetailLabeledMetaItem
 import com.rpeters.cinefintv.ui.screens.detail.DetailPosterArt
 import com.rpeters.cinefintv.ui.screens.detail.MetaFactItem
 import com.rpeters.cinefintv.ui.screens.detail.MetaFactStyle
+import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 
@@ -53,6 +54,7 @@ fun DetailOverviewSection(
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
     upFocusRequester: FocusRequester? = null,
+    onNavigateUp: (() -> Unit)? = null,
     posterUrl: String? = null,
     posterTitle: String = title,
 ) {
@@ -60,42 +62,54 @@ fun DetailOverviewSection(
     val expressiveColors = LocalCinefinExpressiveColors.current
     var isFocused by remember(title) { mutableStateOf(false) }
 
-    Box(
+    Column(
         modifier = modifier
             .testTag(DetailTestTags.Overview)
             .fillMaxWidth()
             .padding(horizontal = spacing.gutter)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .blockBringIntoView()
+            .focusProperties {
+                if (upFocusRequester != null) {
+                    up = upFocusRequester
+                }
+            }
+            .onPreviewKeyEvent { keyEvent ->
+                val nativeEvent = keyEvent.nativeKeyEvent
+                if (
+                    onNavigateUp != null &&
+                    nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
+                ) {
+                    onNavigateUp()
+                    true
+                } else {
+                    false
+                }
+            }
+            .onFocusChanged { state ->
+                isFocused = state.isFocused || state.hasFocus
+            }
+            .focusable()
+            .graphicsLayer {
+                shadowElevation = if (isFocused) 10.dp.toPx() else 0.dp.toPx()
+            }
             .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        expressiveColors.detailPanel,
-                        expressiveColors.detailPanelMuted,
-                    )
-                ),
+                color = expressiveColors.detailPanel.copy(alpha = 0.68f),
                 shape = RoundedCornerShape(spacing.cornerContainer),
             )
             .border(
-                width = 1.dp,
-                color = if (isFocused) expressiveColors.focusRing else expressiveColors.borderSubtle.copy(alpha = 0.6f),
+                width = if (isFocused) 2.dp else 1.dp,
+                color = if (isFocused) {
+                    expressiveColors.focusRing
+                } else {
+                    expressiveColors.borderSubtle.copy(alpha = 0.32f)
+                },
                 shape = RoundedCornerShape(spacing.cornerContainer),
             )
-            .padding(spacing.gutter),
+            .padding(horizontal = spacing.gutter, vertical = 22.dp),
+        verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
     ) {
-        Spacer(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-                .focusProperties {
-                    if (upFocusRequester != null) {
-                        up = upFocusRequester
-                    }
-                }
-                .onFocusChanged { state ->
-                    isFocused = state.isFocused || state.hasFocus
-                }
-                .focusable(),
-        )
         Row(
             horizontalArrangement = Arrangement.spacedBy(spacing.gutter),
             verticalAlignment = Alignment.Top,
@@ -117,41 +131,18 @@ fun DetailOverviewSection(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(
-                            color = expressiveColors.detailPanelMuted,
-                            shape = RoundedCornerShape(spacing.cornerContainer),
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = expressiveColors.borderSubtle.copy(alpha = 0.32f),
-                            shape = RoundedCornerShape(spacing.cornerContainer),
-                        )
-                        .padding(22.dp),
+                        .padding(vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .width(84.dp)
-                            .height(4.dp)
-                            .background(
-                                brush = Brush.horizontalGradient(
-                                    colors = listOf(
-                                        expressiveColors.titleAccent,
-                                        expressiveColors.titleAccent.copy(alpha = 0.2f),
-                                    )
-                                ),
-                                shape = RoundedCornerShape(999.dp),
-                            )
-                    )
                     Text(
                         text = "ABOUT",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (isFocused) expressiveColors.focusRing else MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                     Text(
@@ -165,7 +156,7 @@ fun DetailOverviewSection(
                     Column(verticalArrangement = Arrangement.spacedBy(spacing.elementGap)) {
                         Text(
                             text = "DETAILS",
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
                         )
@@ -189,7 +180,7 @@ fun DetailOverviewSection(
                     Column(verticalArrangement = Arrangement.spacedBy(spacing.elementGap)) {
                         Text(
                             text = "CATEGORIES",
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
                         )

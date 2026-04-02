@@ -48,11 +48,13 @@ class DetailFocusUiTest {
                     genres = listOf("Action", "Thriller"),
                     primaryActionLabel = "▶ Play",
                     onPrimaryAction = {},
-                    secondaryActions = emptyList(),
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     description = "A test movie overview.",
+                    heroTagline = null,
+                    directorLine = "Director · Studio",
+                    heroBadges = emptyList(),
+                    heroSecondaryActions = emptyList(),
                     factItems = emptyList(),
-                    factSummary = "Director · Studio",
                     castItems = emptyList(),
                     similarItems = emptyList(),
                     onCastClick = {},
@@ -86,17 +88,15 @@ class DetailFocusUiTest {
                     genres = listOf("Drama", "Mystery"),
                     primaryActionLabel = "▶ Play",
                     onPrimaryAction = {},
-                    secondaryActions = emptyList(),
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     seasons = listOf(
                         SeasonModel(
                             id = "season-1",
                             title = "Season 1",
                             imageUrl = null,
-                            episodeCount = 2,
-                            unwatchedCount = 1,
                             watchStatus = WatchStatus.NONE,
                             playbackProgress = null,
+                            unwatchedCount = 1,
                         )
                     ),
                     onSeasonClick = {},
@@ -105,6 +105,9 @@ class DetailFocusUiTest {
                     onCastClick = {},
                     onSimilarClick = {},
                     description = "A test show overview.",
+                    heroTagline = null,
+                    creditLine = null,
+                    heroBadges = emptyList(),
                     factItems = emptyList(),
                     listState = listState,
                 )
@@ -119,8 +122,8 @@ class DetailFocusUiTest {
     fun movieDetail_rendersCastAndSimilarSections() {
         composeRule.setContent {
             val primaryActionFocusRequester = remember { FocusRequester() }
-            // Start at cast section (item 3) so similar section (item 4) is in the prefetch window
-            val listState = remember { LazyListState(firstVisibleItemIndex = 3) }
+            // Start near the first post-hero section so People, Overview, and Similar remain composed.
+            val listState = remember { LazyListState(firstVisibleItemIndex = 1) }
 
             DetailTestHost {
                 MovieDetailLayout(
@@ -133,11 +136,13 @@ class DetailFocusUiTest {
                     genres = listOf("Sci-Fi", "Drama"),
                     primaryActionLabel = "▶ Play",
                     onPrimaryAction = {},
-                    secondaryActions = emptyList(),
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     description = "Coverage overview text.",
+                    heroTagline = null,
+                    directorLine = "Writer · Studio",
+                    heroBadges = emptyList(),
+                    heroSecondaryActions = emptyList(),
                     factItems = emptyList(),
-                    factSummary = "Writer · Studio",
                     castItems = listOf(
                         CastModel(id = "person-1", name = "Jane Doe", role = "Lead", imageUrl = null),
                     ),
@@ -180,11 +185,13 @@ class DetailFocusUiTest {
                     genres = listOf("Adventure"),
                     primaryActionLabel = "▶ Play",
                     onPrimaryAction = {},
-                    secondaryActions = emptyList(),
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     description = "Fallback movie overview.",
+                    heroTagline = null,
+                    directorLine = "Studio",
+                    heroBadges = emptyList(),
+                    heroSecondaryActions = emptyList(),
                     factItems = emptyList(),
-                    factSummary = "Studio",
                     castItems = emptyList(),
                     similarItems = emptyList(),
                     onCastClick = {},
@@ -215,11 +222,13 @@ class DetailFocusUiTest {
                     genres = listOf("Comedy"),
                     primaryActionLabel = "▶ Play",
                     onPrimaryAction = {},
-                    secondaryActions = emptyList(),
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     description = "",
+                    heroTagline = null,
+                    directorLine = "Studio",
+                    heroBadges = emptyList(),
+                    heroSecondaryActions = emptyList(),
                     factItems = emptyList(),
-                    factSummary = "Studio",
                     castItems = emptyList(),
                     similarItems = emptyList(),
                     onCastClick = {},

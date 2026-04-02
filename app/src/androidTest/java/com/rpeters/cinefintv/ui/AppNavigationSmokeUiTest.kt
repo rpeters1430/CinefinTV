@@ -79,7 +79,7 @@ class AppNavigationSmokeUiTest {
     }
 
     @Test
-    fun topTabs_canReturnToHomeAfterNavigatingAwayWithDpad() {
+    fun leftRail_canReturnToHomeAfterNavigatingAwayWithDpad() {
         composeRule.setContent {
             AppSmokeTestHost {
                 AppNavigationSmokeHarness()
@@ -89,7 +89,7 @@ class AppNavigationSmokeUiTest {
         composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.HOME))
             .requestFocus()
             .assertIsFocused()
-            .performKeyInput { pressKey(Key.DirectionRight) }
+            .performKeyInput { pressKey(Key.DirectionDown) }
 
         composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.LIBRARY_MOVIES))
             .assertIsFocused()
@@ -98,7 +98,7 @@ class AppNavigationSmokeUiTest {
 
         composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.LIBRARY_MOVIES))
             .assertIsFocused()
-            .performKeyInput { pressKey(Key.DirectionLeft) }
+            .performKeyInput { pressKey(Key.DirectionUp) }
 
         composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.HOME))
             .assertIsFocused()

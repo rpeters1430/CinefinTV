@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.ui.screens.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -37,11 +39,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -53,8 +58,6 @@ import androidx.tv.material3.Carousel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
-import androidx.tv.material3.Surface
-import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.tv.material3.rememberCarouselState
 import coil3.compose.AsyncImage
@@ -62,14 +65,13 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.toBitmap
-import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
-import com.rpeters.cinefintv.ui.RegisterPrimaryContentFocusRequester
+import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.components.CinefinChip
-import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.MediaActionDialog
 import com.rpeters.cinefintv.ui.components.MediaActionDialogItem
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.ui.theme.ThemeSeedColorCache
@@ -142,8 +144,6 @@ internal fun HomeScreenContent(
 ) {
     val listState = rememberLazyListState()
     val spacing = LocalCinefinSpacing.current
-    val chromeFocusController = LocalAppChromeFocusController.current
-    val navUpRequester = chromeFocusController?.topNavFocusRequester
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -171,7 +171,7 @@ internal fun HomeScreenContent(
 
         is HomeUiState.Error -> {
             val retryFocusRequester = remember { FocusRequester() }
-            RegisterPrimaryContentFocusRequester(retryFocusRequester)
+            val destinationFocus = rememberTopLevelDestinationFocus(retryFocusRequester)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -191,7 +191,7 @@ internal fun HomeScreenContent(
                 Button(
                     onClick = onRetry,
                     modifier = Modifier
-                        .focusRequester(retryFocusRequester)
+                        .then(destinationFocus.primaryContentModifier())
                         .testTag(HomeTestTags.RetryButton),
                 ) {
                     Text("Retry")
@@ -218,6 +218,7 @@ internal fun HomeScreenContent(
                 state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
                 else -> sectionFocusRequesters.firstOrNull()
             }
+            val destinationFocus = rememberTopLevelDestinationFocus(preferredFocusRequester)
 
             selectedEpisodeMenuItem?.let { item ->
                 MediaActionDialog(
@@ -260,8 +261,6 @@ internal fun HomeScreenContent(
                 )
             }
 
-            RegisterPrimaryContentFocusRequester(preferredFocusRequester)
-
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME && hasBeenPaused) {
@@ -291,6 +290,20 @@ internal fun HomeScreenContent(
                 val requester = preferredFocusRequester ?: fallbackRequester
                     ?: return@LaunchedEffect
 
+                val targetListIndex = when {
+                    lastFocusedSectionTitle != null -> {
+                        state.sections.indexOfFirst { it.title == lastFocusedSectionTitle }
+                            .takeIf { it >= 0 }
+                            ?.let { if (state.featuredItems.isNotEmpty()) it + 1 else it }
+                    }
+                    state.featuredItems.isNotEmpty() -> 0
+                    else -> 0
+                }
+
+                if (targetListIndex != null) {
+                    listState.scrollToItem(targetListIndex)
+                }
+                withFrameNanos { }
                 withFrameNanos { }
                 runCatching { requester.requestFocus() }
                 delay(HOME_FOCUS_RESTORE_SETTLE_MS)
@@ -311,9 +324,19 @@ internal fun HomeScreenContent(
                                 items = state.featuredItems,
                                 onMoreInfo = onOpenItem,
                                 onPlay = onPlayItem,
+                                destinationFocus = destinationFocus,
                                 primaryActionFocusRequester = featuredPrimaryActionRequester,
-                                upRequester = navUpRequester,
                                 downRequester = firstSectionRequester,
+                                onNavigateDown = firstSectionRequester?.let {
+                                    {
+                                        coroutineScope.launch {
+                                            listState.scrollToItem(1)
+                                            withFrameNanos { }
+                                            withFrameNanos { }
+                                            it.requestFocus()
+                                        }
+                                    }
+                                },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = 0.dp, start = spacing.gutter, end = spacing.gutter),
@@ -327,7 +350,7 @@ internal fun HomeScreenContent(
                     ) { index, section ->
                         val upFocusRequester = when {
                             index == 0 && state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
-                            index == 0 -> navUpRequester
+                            index == 0 -> destinationFocus.drawerFocusRequester
                             else -> sectionFocusRequesters[index - 1]
                         }
 
@@ -355,6 +378,42 @@ internal fun HomeScreenContent(
                             onEpisodeMenuRequested = { selectedEpisodeMenuItem = it },
                             firstItemFocusRequester = sectionFocusRequesters[index],
                             upFocusRequester = upFocusRequester,
+                            onNavigateUp = when {
+                                index == 0 && state.featuredItems.isNotEmpty() -> {
+                                    {
+                                        coroutineScope.launch {
+                                            listState.scrollToItem(0)
+                                            withFrameNanos { }
+                                            withFrameNanos { }
+                                            featuredPrimaryActionRequester.requestFocus()
+                                        }
+                                    }
+                                }
+                                index > 0 -> {
+                                    {
+                                        coroutineScope.launch {
+                                            val previousListIndex = if (state.featuredItems.isNotEmpty()) index else index - 1
+                                            listState.scrollToItem(previousListIndex)
+                                            withFrameNanos { }
+                                            withFrameNanos { }
+                                            sectionFocusRequesters[index - 1].requestFocus()
+                                        }
+                                    }
+                                }
+                                else -> null
+                            },
+                            onNavigateDown = sectionFocusRequesters.getOrNull(index + 1)?.let { nextRequester ->
+                                {
+                                    coroutineScope.launch {
+                                        val nextListIndex = if (state.featuredItems.isNotEmpty()) index + 2 else index + 1
+                                        listState.scrollToItem(nextListIndex)
+                                        withFrameNanos { }
+                                        withFrameNanos { }
+                                        nextRequester.requestFocus()
+                                    }
+                                }
+                            },
+                            destinationFocus = destinationFocus,
                         )
                     }
                 }
@@ -369,9 +428,10 @@ private fun FeaturedCarousel(
     items: List<HomeCardModel>,
     onMoreInfo: (HomeCardModel) -> Unit,
     onPlay: (String) -> Unit,
+    destinationFocus: com.rpeters.cinefintv.ui.TopLevelDestinationFocus,
     primaryActionFocusRequester: FocusRequester,
-    upRequester: FocusRequester?,
     downRequester: FocusRequester?,
+    onNavigateDown: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val carouselState = rememberCarouselState()
@@ -383,16 +443,17 @@ private fun FeaturedCarousel(
         modifier = modifier
             .testTag(HomeTestTags.FeaturedCarousel)
             .fillMaxWidth()
-            .height(376.dp),
+            .height(344.dp),
     ) { index ->
         val item = items[index]
         HeroItem(
             item = item,
             onMoreInfo = { onMoreInfo(item) },
             onPlay = { onPlay(item.id) },
+            destinationFocus = destinationFocus,
             primaryActionFocusRequester = primaryActionFocusRequester,
-            upRequester = upRequester,
             downRequester = downRequester,
+            onNavigateDown = onNavigateDown,
             modifier = Modifier.fillMaxSize()
         )
     }
@@ -404,9 +465,10 @@ private fun HeroItem(
     item: HomeCardModel,
     onMoreInfo: () -> Unit,
     onPlay: () -> Unit,
+    destinationFocus: com.rpeters.cinefintv.ui.TopLevelDestinationFocus,
     primaryActionFocusRequester: FocusRequester,
-    upRequester: FocusRequester?,
     downRequester: FocusRequester?,
+    onNavigateDown: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -426,7 +488,7 @@ private fun HeroItem(
         }
     }
 
-    Box(modifier = modifier.clip(RoundedCornerShape(spacing.cornerContainer))) {
+    Box(modifier = modifier.clip(RoundedCornerShape(20.dp))) {
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(heroImageUrl)
@@ -478,114 +540,118 @@ private fun HeroItem(
                     ),
                 ),
         )
-        val onBackgroundColor = MaterialTheme.colorScheme.onBackground
-        Surface(
+        Column(
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .padding(start = 48.dp)
+                .padding(start = 42.dp, end = 24.dp)
                 .widthIn(max = 620.dp),
-            shape = RoundedCornerShape(24.dp),
-            colors = SurfaceDefaults.colors(
-                containerColor = Color.Black.copy(alpha = 0.35f),
-                contentColor = onBackgroundColor
-            ),
-            border = androidx.tv.material3.Border(
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp, 
-                    Color.White.copy(alpha = 0.15f)
-                )
-            ),
-            tonalElevation = 8.dp
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 32.dp, vertical = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CinefinChip(label = "Featured", strong = true)
-                    item.officialRating?.let { CinefinChip(label = it) }
-                    item.mediaQuality?.let { 
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = expressiveColors.titleAccent.copy(alpha = 0.9f),
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+                CinefinChip(label = "Featured", strong = true)
+                item.officialRating?.let { CinefinChip(label = it) }
+                item.mediaQuality?.let { CinefinChip(label = it) }
+            }
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = (-0.4).sp,
+                ),
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.testTag(HomeTestTags.FeaturedTitle),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val carouselMeta = listOfNotNull(
+                item.year?.toString(),
+                item.runtime,
+                item.rating?.let { "★ $it" },
+            ).joinToString("  •  ")
+            if (carouselMeta.isNotBlank()) {
                 Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontWeight = FontWeight.Black,
-                    modifier = Modifier.testTag(HomeTestTags.FeaturedTitle),
+                    text = carouselMeta,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.86f),
+                )
+            }
+            item.subtitle?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = expressiveColors.titleAccent,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val carouselMeta = listOfNotNull(
-                    item.year?.toString(),
-                    item.runtime,
-                    item.rating?.let { "★ $it" },
-                ).joinToString("  •  ")
-                if (carouselMeta.isNotBlank()) {
-                    Text(
-                        text = carouselMeta,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                item.subtitle?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = expressiveColors.titleAccent,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Text(
-                    text = item.description ?: "Featured title from your library",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Row(
-                    modifier = Modifier.padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.elementGap)
+            }
+            Text(
+                text = item.description ?: "Featured title from your library",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.84f),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 560.dp),
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(spacing.elementGap)
+            ) {
+                Button(
+                    onClick = onPlay,
+                    modifier = Modifier
+                        .blockBringIntoView()
+                        .focusRequester(primaryActionFocusRequester)
+                        .then(destinationFocus.primaryContentModifier(
+                            down = downRequester,
+                            right = detailsButtonRequester,
+                        ))
+                        .onPreviewKeyEvent { keyEvent ->
+                            val nativeEvent = keyEvent.nativeKeyEvent
+                            if (
+                                onNavigateDown != null &&
+                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                            ) {
+                                onNavigateDown()
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        .testTag(HomeTestTags.FeaturedPlayButton),
+                    scale = ButtonDefaults.scale(focusedScale = 1.06f),
                 ) {
-                    Button(
-                        onClick = onPlay,
-                        modifier = Modifier
-                            .focusRequester(primaryActionFocusRequester)
-                            .focusProperties {
-                                upRequester?.let { up = it }
-                                downRequester?.let { down = it }
-                                right = detailsButtonRequester
+                    Text("Play", style = MaterialTheme.typography.titleMedium)
+                }
+                OutlinedButton(
+                    onClick = onMoreInfo,
+                    modifier = Modifier
+                        .blockBringIntoView()
+                        .focusRequester(detailsButtonRequester)
+                        .then(destinationFocus.drawerEscapeModifier(
+                            down = downRequester,
+                            left = primaryActionFocusRequester,
+                        ))
+                        .onPreviewKeyEvent { keyEvent ->
+                            val nativeEvent = keyEvent.nativeKeyEvent
+                            if (
+                                onNavigateDown != null &&
+                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                            ) {
+                                onNavigateDown()
+                                true
+                            } else {
+                                false
                             }
-                            .testTag(HomeTestTags.FeaturedPlayButton),
-                        scale = ButtonDefaults.scale(focusedScale = 1.1f),
-                    ) {
-                        Text("Play", style = MaterialTheme.typography.titleMedium)
-                    }
-                    OutlinedButton(
-                        onClick = onMoreInfo,
-                        modifier = Modifier
-                            .focusRequester(detailsButtonRequester)
-                            .focusProperties {
-                                upRequester?.let { up = it }
-                                downRequester?.let { down = it }
-                                left = primaryActionFocusRequester
-                            }
-                            .testTag(HomeTestTags.FeaturedDetailsButton),
-                        scale = ButtonDefaults.scale(focusedScale = 1.1f),
-                    ) {
-                        Text("Details", style = MaterialTheme.typography.titleMedium)
-                    }
+                        }
+                        .testTag(HomeTestTags.FeaturedDetailsButton),
+                    scale = ButtonDefaults.scale(focusedScale = 1.06f),
+                ) {
+                    Text("Details", style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
@@ -603,6 +669,9 @@ private fun HomeSection(
     onEpisodeMenuRequested: (HomeCardModel) -> Unit,
     firstItemFocusRequester: FocusRequester,
     upFocusRequester: FocusRequester?,
+    onNavigateUp: (() -> Unit)?,
+    onNavigateDown: (() -> Unit)?,
+    destinationFocus: com.rpeters.cinefintv.ui.TopLevelDestinationFocus,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
@@ -612,24 +681,34 @@ private fun HomeSection(
 
     Column(
         modifier = modifier.testTag(HomeTestTags.section(sectionIndex)),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        CinefinShelfTitle(
-            title = title,
-            eyebrow = null,
-            modifier = Modifier
-                .padding(bottom = spacing.elementGap, start = spacing.gutter, end = spacing.gutter),
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontSize = 24.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.01).em,
+            ),
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(start = spacing.gutter, end = spacing.gutter),
         )
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val cardWidth = ((maxWidth - (spacing.gutter * 2) - (spacing.cardGap * 2)) / 3f)
-                .coerceIn(220.dp, 420.dp)
+                .coerceIn(220.dp, 400.dp)
             LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                horizontalArrangement = Arrangement.spacedBy((spacing.cardGap - 4.dp).coerceAtLeast(12.dp)),
                 contentPadding = PaddingValues(horizontal = spacing.gutter),
             ) {
                 itemsIndexed(visibleItems, key = { _, item -> item.id }) { index, item ->
                     val focusModifier = if (upFocusRequester != null) {
-                        Modifier.focusProperties { up = upFocusRequester }
-                    } else Modifier
+                        destinationFocus.drawerEscapeModifier(
+                            isLeftEdge = index == 0,
+                            up = upFocusRequester,
+                        )
+                    } else {
+                        destinationFocus.drawerEscapeModifier(isLeftEdge = index == 0)
+                    }
 
                     TvMediaCard(
                         title = item.title,
@@ -649,8 +728,33 @@ private fun HomeSection(
                         cardWidth = cardWidth,
                         modifier = Modifier
                             .testTag(HomeTestTags.sectionItem(sectionIndex, index))
+                            .then(
+                                if (index == 0 || index == restoredFocusIndex) {
+                                    Modifier.blockBringIntoView()
+                                } else {
+                                    Modifier
+                                }
+                            )
                             .then(if (index == restoredFocusIndex) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
                             .then(focusModifier)
+                            .onPreviewKeyEvent { keyEvent ->
+                                val nativeEvent = keyEvent.nativeKeyEvent
+                                when {
+                                    onNavigateDown != null &&
+                                        nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                        nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                        onNavigateDown()
+                                        true
+                                    }
+                                    onNavigateUp != null &&
+                                        nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                        nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                                        onNavigateUp()
+                                        true
+                                    }
+                                    else -> false
+                                }
+                            }
                     )
                 }
             }

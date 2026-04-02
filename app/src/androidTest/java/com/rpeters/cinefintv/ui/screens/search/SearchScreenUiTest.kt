@@ -138,7 +138,7 @@ class SearchScreenUiTest {
     }
 
     @Test
-    fun selectedTabDown_movesFocusIntoSearchField() {
+    fun selectedTabRight_movesFocusIntoSearchField() {
         composeRule.setContent {
             SearchTestHost {
                 CinefinAppScaffold(
@@ -157,8 +157,62 @@ class SearchScreenUiTest {
 
         composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.SEARCH)).requestFocus()
         composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.SEARCH))
-            .performKeyInput { pressKey(Key.DirectionDown) }
+            .performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.onNodeWithTag(SearchTestTags.Field).assertIsFocused()
+    }
+
+    @Test
+    fun searchFieldLeft_returnsFocusToSelectedDrawerTab() {
+        composeRule.setContent {
+            SearchTestHost {
+                CinefinAppScaffold(
+                    showNav = true,
+                    selectedTabIndex = 5,
+                    onNavigateToTab = {},
+                ) {
+                    SearchScreenContent(
+                        uiState = SearchUiState(),
+                        onQueryChange = {},
+                        onOpenItem = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(SearchTestTags.Field).requestFocus()
+        composeRule.onNodeWithTag(SearchTestTags.Field)
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.SEARCH)).assertIsFocused()
+    }
+
+    @Test
+    fun firstSearchResultLeft_returnsFocusToSelectedDrawerTab() {
+        composeRule.setContent {
+            SearchTestHost {
+                CinefinAppScaffold(
+                    showNav = true,
+                    selectedTabIndex = 5,
+                    onNavigateToTab = {},
+                ) {
+                    SearchScreenContent(
+                        uiState = SearchUiState(
+                            query = "matrix",
+                            results = listOf(
+                                sampleSearchResult("movie-1", "The Matrix"),
+                                sampleSearchResult("movie-2", "The Matrix Reloaded"),
+                            ),
+                        ),
+                        onQueryChange = {},
+                        onOpenItem = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(SearchTestTags.resultItem(0)).requestFocus()
+        composeRule.onNodeWithTag(SearchTestTags.resultItem(0))
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.SEARCH)).assertIsFocused()
     }
 }
 

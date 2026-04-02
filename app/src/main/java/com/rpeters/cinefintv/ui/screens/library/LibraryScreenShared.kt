@@ -28,8 +28,7 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.TvMediaCard
-import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
-import com.rpeters.cinefintv.ui.RegisterPrimaryContentFocusRequester
+import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 
 sealed class LibraryGridUiState {
@@ -66,8 +65,6 @@ internal fun LibraryGridContent(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
-    val chromeFocusController = LocalAppChromeFocusController.current
-    val navUpRequester = chromeFocusController?.topNavFocusRequester
     Box(modifier = modifier.fillMaxSize()) {
         when (uiState) {
             LibraryGridUiState.Loading -> {
@@ -83,7 +80,7 @@ internal fun LibraryGridContent(
 
             is LibraryGridUiState.Error -> {
                 val retryFocusRequester = remember { FocusRequester() }
-                RegisterPrimaryContentFocusRequester(retryFocusRequester)
+                val destinationFocus = rememberTopLevelDestinationFocus(retryFocusRequester)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -110,7 +107,7 @@ internal fun LibraryGridContent(
                         Button(
                             onClick = onRetry,
                             modifier = Modifier
-                                .focusRequester(retryFocusRequester)
+                                .then(destinationFocus.primaryContentModifier())
                                 .testTag(LibraryTestTags.RetryButton),
                             scale = androidx.tv.material3.ButtonDefaults.scale(focusedScale = 1.1f)
                         ) {
@@ -151,16 +148,16 @@ internal fun LibraryGridContent(
                 var lastFocusedItemId by rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
                 val restoredFocusIndex = uiState.items.indexOfFirst { it.id == lastFocusedItemId }
                     .takeIf { it >= 0 } ?: 0
-                RegisterPrimaryContentFocusRequester(firstItemFocusRequester)
+                val destinationFocus = rememberTopLevelDestinationFocus(firstItemFocusRequester)
                 LazyVerticalGrid(
                     state = gridState,
                     columns = GridCells.Fixed(columnCount),
                     contentPadding = PaddingValues(
-                        horizontal = spacing.gridContentPadding,
-                        vertical = spacing.gutter,
+                        horizontal = spacing.gridContentPadding + 8.dp,
+                        vertical = spacing.gutter + 8.dp,
                     ),
                     horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
-                    verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
+                    verticalArrangement = Arrangement.spacedBy(spacing.rowGap + 8.dp),
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag(LibraryTestTags.Grid),
@@ -186,20 +183,30 @@ internal fun LibraryGridContent(
                                     .testTag(LibraryTestTags.item(index))
                                     .focusRequester(firstItemFocusRequester)
                                     .then(
-                                        if (index < columnCount && navUpRequester != null) {
-                                            Modifier.focusProperties { up = navUpRequester }
+                                        if (index < columnCount) {
+                                            destinationFocus.drawerEscapeModifier(
+                                                isLeftEdge = index % columnCount == 0,
+                                                up = destinationFocus.drawerFocusRequester,
+                                            )
                                         } else {
-                                            Modifier
+                                            destinationFocus.drawerEscapeModifier(
+                                                isLeftEdge = index % columnCount == 0,
+                                            )
                                         }
                                     )
                             } else {
                                 Modifier
                                     .testTag(LibraryTestTags.item(index))
                                     .then(
-                                        if (index < columnCount && navUpRequester != null) {
-                                            Modifier.focusProperties { up = navUpRequester }
+                                        if (index < columnCount) {
+                                            destinationFocus.drawerEscapeModifier(
+                                                isLeftEdge = index % columnCount == 0,
+                                                up = destinationFocus.drawerFocusRequester,
+                                            )
                                         } else {
-                                            Modifier
+                                            destinationFocus.drawerEscapeModifier(
+                                                isLeftEdge = index % columnCount == 0,
+                                            )
                                         }
                                     )
                             },

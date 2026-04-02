@@ -24,6 +24,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.ThemeColorController
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.Assert.assertEquals
@@ -76,7 +77,7 @@ class PlayerSeekBarUiTest {
             .performKeyInput { pressKey(Key.DirectionLeft) }
 
         verify { player.seekTo(40_000L) }
-        verify { player.seekTo(20_000L) }
+        verify { player.seekTo(30_000L) }
     }
 
     @Test
@@ -101,7 +102,7 @@ class PlayerSeekBarUiTest {
             .performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(PlayerTestTags.SeekBubble).assertIsDisplayed()
-        composeRule.onNodeWithText("Main Story").assertIsDisplayed()
+        composeRule.onNodeWithText("Main Story", useUnmergedTree = true).assertIsDisplayed()
     }
 }
 
@@ -145,11 +146,20 @@ private fun SeekBarHarness(
 ) {
     val playPauseFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     val seekBarFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    var currentPosition by remember { mutableStateOf(30_000L) }
+
+    remember(player) {
+        every { player.seekTo(any<Long>()) } answers {
+            currentPosition = firstArg()
+            Unit
+        }
+        player
+    }
 
     PlayerControls(
         isVisible = true,
         isPlaying = true,
-        position = 30_000L,
+        position = currentPosition,
         duration = 120_000L,
         bufferedFraction = 0.5f,
         uiState = PlayerUiState(

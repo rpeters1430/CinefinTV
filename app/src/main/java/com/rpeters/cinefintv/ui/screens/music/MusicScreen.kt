@@ -42,9 +42,8 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
-import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
-import com.rpeters.cinefintv.ui.RegisterPrimaryContentFocusRequester
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import org.jellyfin.sdk.model.api.BaseItemDto
 import androidx.compose.foundation.lazy.grid.items as gridItems
@@ -90,7 +89,7 @@ fun MusicScreen(
         }
 
         is MusicUiState.Error -> {
-            RegisterPrimaryContentFocusRequester(retryFocusRequester)
+            val destinationFocus = rememberTopLevelDestinationFocus(retryFocusRequester)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -117,7 +116,8 @@ fun MusicScreen(
                 )
                 Button(
                     onClick = { viewModel.loadGrid(state.viewType) },
-                    modifier = Modifier.focusRequester(retryFocusRequester),
+                    modifier = Modifier
+                        .then(destinationFocus.primaryContentModifier()),
                 ) {
                     Text("Retry")
                 }
@@ -161,10 +161,7 @@ private fun MusicGridContent(
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     val primaryContentRequester = remember { FocusRequester() }
-    val chromeFocusController = LocalAppChromeFocusController.current
-    val navUpRequester = chromeFocusController?.topNavFocusRequester
-
-    RegisterPrimaryContentFocusRequester(primaryContentRequester)
+    val destinationFocus = rememberTopLevelDestinationFocus(primaryContentRequester)
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 160.dp),
@@ -189,10 +186,7 @@ private fun MusicGridContent(
                     Button(
                         onClick = { onViewTypeChange(MusicViewType.ALBUMS) },
                         modifier = Modifier
-                            .focusRequester(primaryContentRequester)
-                            .focusProperties {
-                                navUpRequester?.let { up = it }
-                            }
+                            .then(destinationFocus.primaryContentModifier())
                     ) {
                         Text("Albums")
                     }
@@ -203,10 +197,7 @@ private fun MusicGridContent(
                     OutlinedButton(
                         onClick = { onViewTypeChange(MusicViewType.ALBUMS) },
                         modifier = Modifier
-                            .focusRequester(primaryContentRequester)
-                            .focusProperties {
-                                navUpRequester?.let { up = it }
-                            }
+                            .then(destinationFocus.primaryContentModifier())
                     ) {
                         Text("Albums")
                     }
@@ -227,6 +218,7 @@ private fun MusicGridContent(
             }
         } else {
             gridItems(state.items, key = { it.id }) { item ->
+                val index = state.items.indexOf(item)
                 val yearStr = item.productionYear?.toString()
                 if (state.viewType == MusicViewType.ALBUMS) {
                     TvMediaCard(
@@ -234,6 +226,7 @@ private fun MusicGridContent(
                         subtitle = yearStr,
                         imageUrl = imageUrl(item),
                         onClick = { onOpenAlbum(item) },
+                        modifier = destinationFocus.drawerEscapeModifier(isLeftEdge = index == 0),
                     )
                 } else {
                     TvMediaCard(
@@ -241,6 +234,7 @@ private fun MusicGridContent(
                         subtitle = null,
                         imageUrl = imageUrl(item),
                         onClick = { onOpenArtist(item) },
+                        modifier = destinationFocus.drawerEscapeModifier(isLeftEdge = index == 0),
                     )
                 }
             }
@@ -262,10 +256,7 @@ private fun AlbumDetailContent(
     val albumYear = album.productionYear?.toString()
     val expressiveColors = LocalCinefinExpressiveColors.current
     val primaryContentRequester = remember { FocusRequester() }
-    val chromeFocusController = LocalAppChromeFocusController.current
-    val navUpRequester = chromeFocusController?.topNavFocusRequester
-
-    RegisterPrimaryContentFocusRequester(primaryContentRequester)
+    val destinationFocus = rememberTopLevelDestinationFocus(primaryContentRequester)
 
     LazyColumn(
         state = listState,
@@ -313,10 +304,7 @@ private fun AlbumDetailContent(
                         onClick = onBack,
                         modifier = Modifier
                             .padding(top = 8.dp)
-                            .focusRequester(primaryContentRequester)
-                            .focusProperties {
-                                navUpRequester?.let { up = it }
-                            },
+                            .then(destinationFocus.primaryContentModifier()),
                     ) {
                         Text("Back")
                     }
@@ -338,6 +326,9 @@ private fun AlbumDetailContent(
                 TrackRow(
                     track = track,
                     onPlay = { onPlayTrack(track) },
+                    modifier = destinationFocus.drawerEscapeModifier(
+                        isLeftEdge = state.tracks.firstOrNull()?.id == track.id,
+                    ),
                 )
             }
         }
@@ -349,6 +340,7 @@ private fun AlbumDetailContent(
 private fun TrackRow(
     track: BaseItemDto,
     onPlay: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val trackNumber = track.indexNumber
     val title = track.name ?: "Unknown Track"
@@ -365,7 +357,7 @@ private fun TrackRow(
     ListItem(
         selected = false,
         onClick = onPlay,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         leadingContent = {
             if (trackNumber != null) {
                 Text(

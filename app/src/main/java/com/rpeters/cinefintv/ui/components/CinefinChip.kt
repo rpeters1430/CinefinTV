@@ -43,32 +43,32 @@ fun CinefinChip(
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     val backgroundColor = if (strong) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.92f)
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.88f)
     } else {
-        expressiveColors.chromeSurface.copy(alpha = 0.72f)
+        expressiveColors.chromeSurface.copy(alpha = 0.44f)
     }
     val contentColor = if (strong) {
         MaterialTheme.colorScheme.onPrimary 
     } else {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.92f)
     }
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(6.dp))
             .background(backgroundColor)
             .border(
                 border = androidx.compose.foundation.BorderStroke(
                     width = 1.dp, 
                     color = if (strong) {
-                        expressiveColors.borderSubtle.copy(alpha = 0.9f)
+                        expressiveColors.borderSubtle.copy(alpha = 0.58f)
                     } else {
-                        expressiveColors.borderSubtle.copy(alpha = 0.55f)
+                        expressiveColors.borderSubtle.copy(alpha = 0.24f)
                     }
                 ),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(6.dp),
             )
-            .padding(horizontal = 14.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 5.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -82,11 +82,11 @@ fun CinefinChip(
                 Spacer(modifier = Modifier.width(6.dp))
             }
             Text(
-                text = label.uppercase(),
+                text = label,
                 style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 0.8.sp
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.1.sp
                 ),
                 color = contentColor,
                 maxLines = 1,

@@ -29,6 +29,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -43,9 +44,8 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinTextInputField
-import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
-import com.rpeters.cinefintv.ui.RegisterPrimaryContentFocusRequester
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 
@@ -76,10 +76,7 @@ internal fun SearchScreenContent(
     val primaryContentRequester = remember { FocusRequester() }
     val firstResultFocusRequester = remember { FocusRequester() }
     var lastFocusedResultId by rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
-    val chromeFocusController = LocalAppChromeFocusController.current
-    val navUpRequester = chromeFocusController?.topNavFocusRequester
-
-    RegisterPrimaryContentFocusRequester(primaryContentRequester)
+    val destinationFocus = rememberTopLevelDestinationFocus(primaryContentRequester)
 
     Box(
         modifier = Modifier
@@ -114,11 +111,20 @@ internal fun SearchScreenContent(
                     onValueChange = onQueryChange,
                     modifier = Modifier
                         .padding(bottom = spacing.elementGap)
-                        .focusRequester(primaryContentRequester)
-                        .focusProperties {
-                            navUpRequester?.let { up = it }
-                            if (uiState.results.isNotEmpty()) {
-                                down = firstResultFocusRequester
+                        .then(destinationFocus.primaryContentModifier(
+                            down = if (uiState.results.isNotEmpty()) firstResultFocusRequester else null,
+                        ))
+                        .onPreviewKeyEvent { keyEvent ->
+                            val nativeEvent = keyEvent.nativeKeyEvent
+                            if (
+                                destinationFocus.drawerFocusRequester != null &&
+                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT
+                            ) {
+                                destinationFocus.drawerFocusRequester?.requestFocus()
+                                true
+                            } else {
+                                false
                             }
                         }
                 )
@@ -197,7 +203,10 @@ internal fun SearchScreenContent(
                                 )
                                 .then(
                                     if (index < 6) {
-                                        Modifier.focusProperties { up = primaryContentRequester }
+                                        destinationFocus.drawerEscapeModifier(
+                                            isLeftEdge = index == 0,
+                                            up = primaryContentRequester,
+                                        )
                                     } else {
                                         Modifier
                                     }

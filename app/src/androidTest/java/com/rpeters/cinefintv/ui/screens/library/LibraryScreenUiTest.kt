@@ -248,7 +248,7 @@ class LibraryScreenUiTest {
     }
 
     @Test
-    fun selectedTabDown_movesFocusIntoLibraryGrid() {
+    fun selectedTabRight_movesFocusIntoLibraryGrid() {
         composeRule.setContent {
             LibraryTestHost {
                 CinefinAppScaffold(
@@ -272,8 +272,37 @@ class LibraryScreenUiTest {
 
         composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.LIBRARY_MOVIES)).requestFocus()
         composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.LIBRARY_MOVIES))
-            .performKeyInput { pressKey(Key.DirectionDown) }
+            .performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.onNodeWithTag(LibraryTestTags.item(0)).assertIsFocused()
+    }
+
+    @Test
+    fun firstLibraryItemLeft_returnsFocusToSelectedDrawerTab() {
+        composeRule.setContent {
+            LibraryTestHost {
+                CinefinAppScaffold(
+                    showNav = true,
+                    selectedTabIndex = 1,
+                    onNavigateToTab = {},
+                ) {
+                    LibraryGridContent(
+                        uiState = LibraryGridUiState.Content(items = sampleLibraryItems(count = 6)),
+                        errorTitle = "Failed to load movies",
+                        emptyTitle = "No movies found",
+                        columnCount = 3,
+                        aspectRatio = 2f / 3f,
+                        gridState = rememberLazyGridState(),
+                        onOpenItem = {},
+                        onRetry = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(LibraryTestTags.item(0)).requestFocus()
+        composeRule.onNodeWithTag(LibraryTestTags.item(0))
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.LIBRARY_MOVIES)).assertIsFocused()
     }
 }
 

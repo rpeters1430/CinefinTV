@@ -141,6 +141,31 @@ fun TvShowDetailScreen(
                     }
                 }
 
+                val heroTagline = remember(show) {
+                    show.overview
+                        ?.substringBefore(".")
+                        ?.trim()
+                        ?.takeIf { it.length in 24..96 }
+                        ?.let { "$it." }
+                }
+
+                val heroBadges = remember(show) {
+                    buildList {
+                        show.officialRating?.let(::add)
+                        show.status?.let(::add)
+                        show.networks.firstOrNull()?.let(::add)
+                        addAll(show.genres.take(2))
+                    }
+                }
+
+                val creditLine = remember(show) {
+                    show.creators
+                        .take(2)
+                        .takeIf { it.isNotEmpty() }
+                        ?.joinToString(", ")
+                        ?.let { "Created by $it" }
+                }
+
                 TvShowDetailLayout(
                     backdropUrl = show.backdropUrl,
                     posterUrl = show.posterUrl,
@@ -158,7 +183,6 @@ fun TvShowDetailScreen(
                                 ?: state.seasons.firstOrNull()?.let { onOpenSeason(it.id) }
                         }
                     },
-                    secondaryActions = emptyList(),
                     topFocusRequester = topFocus,
                     primaryActionFocusRequester = primaryActionFocus,
                     seasons = state.seasons,
@@ -168,6 +192,9 @@ fun TvShowDetailScreen(
                     onCastClick = { personId -> onOpenPerson(personId) },
                     onSimilarClick = { showId -> onOpenShow(showId) },
                     description = show.overview ?: "",
+                    heroTagline = heroTagline,
+                    creditLine = creditLine,
+                    heroBadges = heroBadges,
                     factItems = factItems,
                     listState = listState,
                 )

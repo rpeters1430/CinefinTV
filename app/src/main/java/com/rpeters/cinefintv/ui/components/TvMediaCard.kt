@@ -92,11 +92,11 @@ fun TvMediaCard(
     )
 
     val focusedScale = remember(aspectRatio, cardWidth, compactMetadata) {
-        if (compactMetadata) 1.0f 
-        else if (aspectRatio > 1f || (cardWidth != null && cardWidth > 200.dp)) 1.05f 
-        else 1.1f
+        if (compactMetadata) 1.0f
+        else if (aspectRatio > 1f || (cardWidth != null && cardWidth > 200.dp)) 1.03f
+        else 1.05f
     }
-    val metadataTextAlign = if (compactMetadata) TextAlign.Center else TextAlign.Start
+    val metadataTextAlign = TextAlign.Start
 
     StandardCardContainer(
         modifier = if (cardWidth != null) Modifier.width(cardWidth) else Modifier.fillMaxWidth(),
@@ -136,15 +136,15 @@ fun TvMediaCard(
                 border = CardDefaults.border(
                     focusedBorder = Border(
                         border = androidx.compose.foundation.BorderStroke(
-                            width = 3.dp,
-                            color = expressiveColors.focusRing.copy(alpha = 0.95f),
+                            width = 2.dp,
+                            color = expressiveColors.focusRing.copy(alpha = 0.82f),
                         ),
                     ),
                 ),
                 glow = CardDefaults.glow(
                     focusedGlow = androidx.tv.material3.Glow(
-                        elevationColor = expressiveColors.focusGlow.copy(alpha = 0.5f),
-                        elevation = 12.dp
+                        elevationColor = expressiveColors.focusGlow.copy(alpha = 0.22f),
+                        elevation = 8.dp
                     )
                 ),
                 shape = CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),
@@ -153,7 +153,7 @@ fun TvMediaCard(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(expressiveColors.accentSurface),
+                            .background(expressiveColors.accentSurface.copy(alpha = 0.9f)),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (imageUrl != null) {
@@ -182,19 +182,18 @@ fun TvMediaCard(
                                 Brush.verticalGradient(
                                     colors = listOf(
                                         Color.Transparent,
-                                        expressiveColors.playerOverlayStart.copy(alpha = 0.08f),
-                                        expressiveColors.playerOverlayEnd.copy(alpha = 0.28f),
+                                        expressiveColors.playerOverlayStart.copy(alpha = 0.04f),
+                                        expressiveColors.playerOverlayEnd.copy(alpha = 0.18f),
                                     ),
                                 ),
                             ),
                     )
 
-                    // Focus glow overlay — subtle red tint when focused for brand-aligned visual feedback
                     if (isFocused && !compactMetadata) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(expressiveColors.focusGlow.copy(alpha = 0.12f))
+                                .background(expressiveColors.focusGlow.copy(alpha = 0.05f))
                         )
                     }
 
@@ -248,20 +247,24 @@ fun TvMediaCard(
         title = {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall.copy(fontSize = 18.sp),
-                fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontSize = if (compactMetadata) 15.sp else 17.sp
+                ),
+                fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Medium,
                 color = titleColor,
                 maxLines = if (subtitle.isNullOrBlank()) 1 else 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = metadataTextAlign,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                modifier = Modifier.fillMaxWidth().padding(top = if (compactMetadata) 4.dp else 6.dp)
             )
         },
         subtitle = {
             if (!subtitle.isNullOrBlank()) {
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 18.sp),
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontSize = if (compactMetadata) 14.sp else 16.sp
+                    ),
                     color = subtitleColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

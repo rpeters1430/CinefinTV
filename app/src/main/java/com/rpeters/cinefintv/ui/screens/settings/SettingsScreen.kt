@@ -62,8 +62,7 @@ import com.rpeters.cinefintv.data.preferences.SubtitleTextColor
 import com.rpeters.cinefintv.data.preferences.ThemeMode
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.preferences.VideoSeekIncrement
-import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
-import com.rpeters.cinefintv.ui.RegisterPrimaryContentFocusRequester
+import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.components.CinefinOptionDialog
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
@@ -116,15 +115,17 @@ fun SettingsScreen(
     val firstSectionItemRequester = remember { FocusRequester() }
     var activeDialog by remember { mutableStateOf<SettingsChoiceDialog?>(null) }
     var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.PLAYBACK) }
-    val chromeFocusController = LocalAppChromeFocusController.current
-    val navUpRequester = chromeFocusController?.topNavFocusRequester
+    val destinationFocus = rememberTopLevelDestinationFocus(
+        categoryFocusRequesters.getValue(selectedCategory)
+    )
     val firstSectionItemModifier = Modifier
         .focusRequester(firstSectionItemRequester)
-        .focusProperties {
-            up = categoryFocusRequesters.getValue(selectedCategory)
-        }
-
-    RegisterPrimaryContentFocusRequester(categoryFocusRequesters.getValue(selectedCategory))
+        .then(
+            destinationFocus.drawerEscapeModifier(
+                isLeftEdge = true,
+                up = categoryFocusRequesters.getValue(selectedCategory),
+            )
+        )
 
     when (activeDialog) {
         SettingsChoiceDialog.THEME_MODE -> CinefinOptionDialog(
@@ -252,7 +253,7 @@ fun SettingsScreen(
                     onCategorySelected = { selectedCategory = it },
                     categoryFocusRequesters = categoryFocusRequesters,
                     sectionFocusRequester = firstSectionItemRequester,
-                    navUpRequester = navUpRequester,
+                    destinationFocus = destinationFocus,
                 )
             }
 
@@ -478,7 +479,7 @@ private fun SettingsCategorySelector(
     onCategorySelected: (SettingsCategory) -> Unit,
     categoryFocusRequesters: Map<SettingsCategory, FocusRequester>,
     sectionFocusRequester: FocusRequester,
-    navUpRequester: FocusRequester?,
+    destinationFocus: com.rpeters.cinefintv.ui.TopLevelDestinationFocus,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -489,9 +490,10 @@ private fun SettingsCategorySelector(
                 modifier = Modifier
                     .focusRequester(categoryFocusRequesters.getValue(category))
                     .focusProperties {
-                        navUpRequester?.let { up = it }
+                        destinationFocus.drawerFocusRequester?.let { up = it }
                         down = sectionFocusRequester
                         left = categoryFocusRequesters[SettingsCategory.entries.getOrNull(index - 1)]
+                            ?: destinationFocus.drawerFocusRequester
                             ?: FocusRequester.Cancel
                         right = categoryFocusRequesters[SettingsCategory.entries.getOrNull(index + 1)]
                             ?: FocusRequester.Cancel

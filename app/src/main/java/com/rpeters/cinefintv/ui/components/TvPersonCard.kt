@@ -3,6 +3,7 @@ package com.rpeters.cinefintv.ui.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,8 +40,6 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.theme.CinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
-import com.rpeters.cinefintv.ui.theme.LocalCinefinMotion
-import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 
@@ -57,8 +55,6 @@ fun TvPersonCard(
 ) {
     val performanceProfile = LocalPerformanceProfile.current
     val expressiveColors = LocalCinefinExpressiveColors.current
-    val spacing = LocalCinefinSpacing.current
-    val motion = LocalCinefinMotion.current
     var isFocused by remember { mutableStateOf(false) }
 
     val nameColor by animateColorAsState(
@@ -73,12 +69,12 @@ fun TvPersonCard(
     )
 
     StandardCardContainer(
-        modifier = Modifier.width(180.dp),
+        modifier = Modifier.width(164.dp),
         imageCard = {
             Card(
                 onClick = onClick,
                 modifier = modifier
-                    .size(172.dp)
+                    .size(154.dp)
                     .onFocusChanged {
                         val focused = it.isFocused || it.hasFocus
                         if (focused != isFocused) {
@@ -86,18 +82,18 @@ fun TvPersonCard(
                             if (focused) onFocus()
                         }
                     },
-                scale = CardDefaults.scale(focusedScale = 1.1f),
+                scale = CardDefaults.scale(focusedScale = 1.04f),
                 glow = CardDefaults.glow(
                     focusedGlow = Glow(
-                        elevation = 16.dp,
-                        elevationColor = expressiveColors.focusGlow.copy(alpha = 0.5f),
+                        elevation = 8.dp,
+                        elevationColor = expressiveColors.focusGlow.copy(alpha = 0.24f),
                     ),
                 ),
                 border = CardDefaults.border(
                     focusedBorder = Border(
                         border = androidx.compose.foundation.BorderStroke(
-                            width = 3.dp,
-                            color = expressiveColors.focusRing.copy(alpha = 0.9f),
+                            width = 2.dp,
+                            color = expressiveColors.focusRing.copy(alpha = 0.82f),
                         ),
                     ),
                 ),
@@ -106,7 +102,12 @@ fun TvPersonCard(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f))
+                        .border(
+                            width = 1.dp,
+                            color = expressiveColors.borderSubtle.copy(alpha = if (isFocused) 0.48f else 0.18f),
+                            shape = CircleShape,
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (imageUrl != null) {
@@ -132,22 +133,22 @@ fun TvPersonCard(
         title = {
             Text(
                 text = name,
-                style = MaterialTheme.typography.titleSmall.copy(fontSize = 18.sp),
-                fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = 17.sp),
+                fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Medium,
                 color = nameColor,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
             )
         },
         subtitle = {
             if (!role.isNullOrBlank()) {
                 Text(
                     text = role,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 16.sp),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 14.sp),
                     color = roleColor,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()

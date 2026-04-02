@@ -63,6 +63,7 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
+                    hasBeenPaused = false,
                 )
             }
         }
@@ -84,6 +85,7 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = { retryCount++ },
+                    hasBeenPaused = false,
                 )
             }
         }
@@ -112,6 +114,7 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
+                    hasBeenPaused = false,
                 )
             }
         }
@@ -140,6 +143,7 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
+                    hasBeenPaused = false,
                 )
             }
         }
@@ -166,6 +170,7 @@ class HomeScreenUiTest {
                         onOpenSeries = {},
                         onOpenSeason = {},
                         onRetry = {},
+                        hasBeenPaused = false,
                     )
                 }
             }
@@ -191,6 +196,7 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
+                    hasBeenPaused = false,
                 )
             }
         }
@@ -198,6 +204,28 @@ class HomeScreenUiTest {
         composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton).requestFocus()
         composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton)
             .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithTag("top_nav").assertIsFocused()
+    }
+
+    @Test
+    fun featuredPlayLeft_movesFocusToTopNav() {
+        composeRule.setContent {
+            HomeTestHost(showTopNav = true) {
+                HomeScreenContent(
+                    uiState = sampleContentState(featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))),
+                    onOpenItem = {},
+                    onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
+                    onRetry = {},
+                    hasBeenPaused = false,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton).requestFocus()
+        composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton)
+            .performKeyInput { pressKey(Key.DirectionLeft) }
         composeRule.onNodeWithTag("top_nav").assertIsFocused()
     }
 
@@ -212,6 +240,7 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
+                    hasBeenPaused = false,
                 )
             }
         }
@@ -237,6 +266,7 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
+                    hasBeenPaused = false,
                 )
             }
         }
@@ -258,6 +288,7 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
+                    hasBeenPaused = false,
                 )
             }
         }
@@ -265,6 +296,28 @@ class HomeScreenUiTest {
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0)).requestFocus()
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
             .performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithTag("top_nav").assertIsFocused()
+    }
+
+    @Test
+    fun firstSectionLeft_movesFocusToTopNav() {
+        composeRule.setContent {
+            HomeTestHost(showTopNav = true) {
+                HomeScreenContent(
+                    uiState = sampleContentState(featuredItems = emptyList()),
+                    onOpenItem = {},
+                    onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
+                    onRetry = {},
+                    hasBeenPaused = false,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0)).requestFocus()
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
+            .performKeyInput { pressKey(Key.DirectionLeft) }
         composeRule.onNodeWithTag("top_nav").assertIsFocused()
     }
 
@@ -279,6 +332,7 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
+                    hasBeenPaused = false,
                 )
             }
         }
@@ -295,6 +349,62 @@ class HomeScreenUiTest {
             .performKeyInput { pressKey(Key.DirectionUp) }
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
             .assertIsFocused()
+    }
+
+    @Test
+    fun leftEdgeItem_canNavigateUpAcrossMultipleSections() {
+        composeRule.setContent {
+            HomeTestHost(showTopNav = true) {
+                HomeScreenContent(
+                    uiState = HomeUiState.Content(
+                        featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One")),
+                        sections = listOf(
+                            HomeSectionModel(
+                                title = "Next Episodes",
+                                items = listOf(sampleCard(id = "episode-1", title = "Episode One")),
+                            ),
+                            HomeSectionModel(
+                                title = "Recently Added",
+                                items = listOf(sampleCard(id = "recent-1", title = "Recent One")),
+                            ),
+                            HomeSectionModel(
+                                title = "Collections",
+                                items = listOf(sampleCard(id = "collection-1", title = "Collection One")),
+                            ),
+                        ),
+                    ),
+                    onOpenItem = {},
+                    onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
+                    onRetry = {},
+                    hasBeenPaused = false,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
+            .requestFocus()
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(1, 0))
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(2, 0))
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(1, 0))
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton).assertIsFocused()
     }
 
     @Test
@@ -317,6 +427,7 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
+                    hasBeenPaused = false,
                 )
             }
         }
@@ -335,6 +446,7 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
+                    hasBeenPaused = false,
                 )
             }
         }
@@ -442,6 +554,7 @@ private fun HomeNavigationHarness(
                 onOpenSeries = {},
                 onOpenSeason = {},
                 onRetry = {},
+                hasBeenPaused = false,
             )
         }
         composable("player") {
