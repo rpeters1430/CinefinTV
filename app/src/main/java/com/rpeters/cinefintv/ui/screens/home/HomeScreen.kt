@@ -373,8 +373,7 @@ internal fun HomeScreenContent(
                                 lastFocusedSectionTitle = section.title
                                 lastFocusedItemId = itemId
                                 val listIndex = if (state.featuredItems.isNotEmpty()) index + 1 else index
-                                val isSectionVisible = listState.layoutInfo.visibleItemsInfo.any { it.index == listIndex }
-                                if (!isSectionVisible) {
+                                if (!listState.isIndexVisible(listIndex)) {
                                     focusNavigationCoordinator.submit {
                                         listState.animateScrollToItem(listIndex)
                                     }
