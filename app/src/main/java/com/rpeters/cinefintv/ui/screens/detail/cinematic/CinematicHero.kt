@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,14 +48,11 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import coil3.request.allowHardware
-import coil3.toBitmap
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.screens.detail.DetailActionRow
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
-import com.rpeters.cinefintv.ui.theme.ThemeSeedColorCache
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 import kotlinx.coroutines.flow.first
@@ -92,8 +88,6 @@ fun CinematicHero(
     val performanceProfile = LocalPerformanceProfile.current
     val panelWidth = (screenWidth * 0.44f).coerceIn(420.dp, 760.dp)
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
-    val shouldExtractPalette = performanceProfile.tier == DevicePerformanceProfile.Tier.HIGH
-    val cachedSeedColor = ThemeSeedColorCache.getCached(backdropUrl)
     val currentListState by rememberUpdatedState(listState)
     val manualDownNavigation = rememberUpdatedState<(() -> Unit)?>(newValue = if (listState != null && primaryActionDownFocusRequester != null) {
         {
@@ -115,14 +109,6 @@ fun CinematicHero(
     var logoLoaded by remember(logoUrl) { mutableStateOf(false) }
     var logoFailed by remember { mutableStateOf(false) }
 
-    DisposableEffect(Unit) {
-        onDispose { themeController.updateSeedColor(null) }
-    }
-
-    androidx.compose.runtime.LaunchedEffect(backdropUrl, cachedSeedColor) {
-        cachedSeedColor?.let(themeController::updateSeedColor)
-    }
-
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -133,25 +119,10 @@ fun CinematicHero(
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(backdropUrl)
-                    .allowHardware(!shouldExtractPalette)
                     .build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.matchParentSize(),
-                onSuccess = { state ->
-                    if (!shouldExtractPalette) {
-                        return@AsyncImage
-                    }
-                    if (ThemeSeedColorCache.getCached(backdropUrl) != null) {
-                        return@AsyncImage
-                    }
-
-                    coroutineScope.launch {
-                        ThemeSeedColorCache.getOrExtract(backdropUrl) {
-                            state.result.image.toBitmap()
-                        }?.let(themeController::updateSeedColor)
-                    }
-                },
             )
         }
 

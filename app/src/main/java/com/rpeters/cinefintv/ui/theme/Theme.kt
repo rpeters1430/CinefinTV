@@ -43,33 +43,6 @@ data class CinefinSpacing(
 
 val LocalCinefinSpacing = staticCompositionLocalOf { CinefinSpacing() }
 
-/**
- * Generates a Material 3 ColorScheme based on a seed color (Material You for TV).
- * Since system wallpaper is not available on TV, we use content-based seeds.
- */
-@Composable
-fun rememberDynamicColorScheme(seedColor: Color?): ComposeColorScheme {
-    val baseRed = CinefinRed
-    return remember(seedColor) {
-        val primary = seedColor ?: baseRed
-        ComposeDarkColorScheme(
-            primary = primary,
-            onPrimary = Color.White,
-            primaryContainer = primary.copy(alpha = 0.3f),
-            onPrimaryContainer = Color.White,
-            secondary = Color(0xFFD1E4FF), // Muted blue as fallback secondary
-            onSecondary = Color(0xFF003258),
-            surface = SurfaceElevated,
-            onSurface = OnBackground,
-            surfaceVariant = SurfaceAccent,
-            onSurfaceVariant = OnSurfaceMuted,
-            surfaceContainer = SurfaceContainer,
-            surfaceContainerHigh = SurfaceContainerHigh,
-            outline = BorderSubtle,
-        )
-    }
-}
-
 private data class ThemePalette(
     val backgroundTop: Color,
     val backgroundBottom: Color,
@@ -218,8 +191,7 @@ fun CinefinTvTheme(
     }
     val isAmoledBlack = themeMode == ThemeMode.AMOLED_BLACK
     val palette = paletteFor(darkTheme = isDarkTheme, amoledBlack = isAmoledBlack)
-    val dynamicSeed = if (useDynamicColors) seedColor else null
-    val primarySeed = dynamicSeed ?: accentSeedFor(accentColor)
+    val primarySeed = accentSeedFor(accentColor)
 
     val expressiveColorScheme = remember(primarySeed, isDarkTheme, isAmoledBlack, contrastLevel) {
         createColorScheme(
@@ -259,12 +231,12 @@ fun CinefinTvTheme(
         accentSurface = palette.accentSurface,
         chromeSurface = palette.chromeSurface,
         borderSubtle = palette.borderSubtle,
-        focusRing = expressiveColorScheme.primary,
-        focusGlow = expressiveColorScheme.primary.copy(
+        focusRing = Color.White,
+        focusGlow = Color.White.copy(
             alpha = when (contrastLevel) {
-                ContrastLevel.STANDARD -> 0.28f
-                ContrastLevel.MEDIUM -> 0.34f
-                ContrastLevel.HIGH -> 0.42f
+                ContrastLevel.STANDARD -> 0.12f
+                ContrastLevel.MEDIUM -> 0.18f
+                ContrastLevel.HIGH -> 0.24f
             }
         ),
         pillMuted = palette.pillMuted,

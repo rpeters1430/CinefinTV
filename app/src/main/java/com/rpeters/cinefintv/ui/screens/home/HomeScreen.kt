@@ -1,5 +1,6 @@
 package com.rpeters.cinefintv.ui.screens.home
 
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Arrangement
@@ -63,9 +64,7 @@ import androidx.tv.material3.Text
 import androidx.tv.material3.rememberCarouselState
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import coil3.request.allowHardware
 import coil3.request.crossfade
-import coil3.toBitmap
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.components.CinefinChip
@@ -75,7 +74,6 @@ import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
-import com.rpeters.cinefintv.ui.theme.ThemeSeedColorCache
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 import kotlinx.coroutines.delay
@@ -447,7 +445,21 @@ private fun FeaturedCarousel(
         modifier = modifier
             .testTag(HomeTestTags.FeaturedCarousel)
             .fillMaxWidth()
-            .height(344.dp),
+            .height(344.dp)
+            .focusGroup()
+            .onPreviewKeyEvent { keyEvent ->
+                val nativeEvent = keyEvent.nativeKeyEvent
+                if (
+                    onNavigateDown != null &&
+                    nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                ) {
+                    onNavigateDown()
+                    true
+                } else {
+                    false
+                }
+            },
     ) { index ->
         val item = items[index]
         HeroItem(
@@ -483,39 +495,16 @@ private fun HeroItem(
     val detailsButtonRequester = remember { FocusRequester() }
     val coroutineScope = rememberCoroutineScope()
     val heroImageUrl = item.backdropUrl ?: item.imageUrl
-    val shouldExtractPalette = performanceProfile.tier == DevicePerformanceProfile.Tier.HIGH
-    val cachedSeedColor = ThemeSeedColorCache.getCached(heroImageUrl)
-
-    LaunchedEffect(heroImageUrl, cachedSeedColor) {
-        if (cachedSeedColor != null) {
-            themeController.updateSeedColor(cachedSeedColor)
-        }
-    }
 
     Box(modifier = modifier.clip(RoundedCornerShape(20.dp))) {
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(heroImageUrl)
                 .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
-                .allowHardware(!shouldExtractPalette)
                 .size(1280, 720)
                 .build(),
             contentDescription = item.title,
             contentScale = ContentScale.Crop,
-            onSuccess = { state ->
-                if (!shouldExtractPalette || heroImageUrl == null) {
-                    return@AsyncImage
-                }
-                if (ThemeSeedColorCache.getCached(heroImageUrl) != null) {
-                    return@AsyncImage
-                }
-
-                coroutineScope.launch {
-                    ThemeSeedColorCache.getOrExtract(heroImageUrl) {
-                        state.result.image.toBitmap()
-                    }?.let(themeController::updateSeedColor)
-                }
-            },
             modifier = Modifier.fillMaxSize(),
         )
         Box(
@@ -612,19 +601,6 @@ private fun HeroItem(
                             down = downRequester,
                             right = detailsButtonRequester,
                         ))
-                        .onPreviewKeyEvent { keyEvent ->
-                            val nativeEvent = keyEvent.nativeKeyEvent
-                            if (
-                                onNavigateDown != null &&
-                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
-                            ) {
-                                onNavigateDown()
-                                true
-                            } else {
-                                false
-                            }
-                        }
                         .testTag(HomeTestTags.FeaturedPlayButton),
                     scale = ButtonDefaults.scale(focusedScale = 1.06f),
                 ) {
@@ -639,19 +615,6 @@ private fun HeroItem(
                             down = downRequester,
                             left = primaryActionFocusRequester,
                         ))
-                        .onPreviewKeyEvent { keyEvent ->
-                            val nativeEvent = keyEvent.nativeKeyEvent
-                            if (
-                                onNavigateDown != null &&
-                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
-                            ) {
-                                onNavigateDown()
-                                true
-                            } else {
-                                false
-                            }
-                        }
                         .testTag(HomeTestTags.FeaturedDetailsButton),
                     scale = ButtonDefaults.scale(focusedScale = 1.06f),
                 ) {
