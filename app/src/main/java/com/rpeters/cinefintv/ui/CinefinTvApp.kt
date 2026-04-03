@@ -485,7 +485,7 @@ internal fun CinefinAppScaffold(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .padding(start = if (showNav) 8.dp else 0.dp, end = 10.dp),
+                    .padding(start = if (showNav) 8.dp else 0.dp),
             ) {
                 content()
             }
