@@ -143,6 +143,21 @@ class AppNavigationSmokeUiTest {
     }
 
     @Test
+    fun focusedNavRail_showsTabLabel() {
+        composeRule.setContent {
+            AppSmokeTestHost {
+                AppNavigationSmokeHarness()
+            }
+        }
+
+        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.HOME))
+            .requestFocus()
+            .assertIsFocused()
+
+        composeRule.onNodeWithText("Home").assertIsDisplayed()
+    }
+
+    @Test
     fun repeatedNavExpansionCycles_keepContentHostStable() {
         composeRule.setContent {
             AppSmokeTestHost {

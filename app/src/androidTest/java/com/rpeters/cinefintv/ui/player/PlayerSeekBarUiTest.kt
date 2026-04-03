@@ -81,6 +81,29 @@ class PlayerSeekBarUiTest {
     }
 
     @Test
+    fun seekBar_multipleRightPresses_accumulateFromLatestSeekPosition() {
+        val player = mockk<ExoPlayer>(relaxed = true)
+
+        composeRule.setContent {
+            PlayerTestHost {
+                SeekBarHarness(player = player)
+            }
+        }
+
+        composeRule.onNodeWithTag(PlayerTestTags.SeekBar, useUnmergedTree = true)
+            .requestFocus()
+        composeRule.onNodeWithTag(PlayerTestTags.SeekBar, useUnmergedTree = true)
+            .performKeyInput {
+                pressKey(Key.DirectionRight)
+                pressKey(Key.DirectionRight)
+                pressKey(Key.DirectionLeft)
+            }
+
+        verify(exactly = 2) { player.seekTo(40_000L) }
+        verify(exactly = 1) { player.seekTo(50_000L) }
+    }
+
+    @Test
     fun seekBar_withChapterMarkers_keepsBubbleVisible() {
         val player = mockk<ExoPlayer>(relaxed = true)
 

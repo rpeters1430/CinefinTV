@@ -484,19 +484,11 @@ class DetailScrollStabilityUiTest {
                             factItems = emptyList(),
                             chips = emptyList(),
                             focusRequester = overviewFocusRequester,
-                            modifier = Modifier.onPreviewKeyEvent { event ->
-                                if (
-                                    event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                    event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
-                                ) {
-                                    coroutineScope.launch {
-                                        listState.scrollToItem(2)
-                                        yield()
-                                        firstEpisodeFocusRequester.requestFocus()
-                                    }
-                                    true
-                                } else {
-                                    false
+                            onNavigateDown = {
+                                coroutineScope.launch {
+                                    listState.scrollToItem(2)
+                                    yield()
+                                    firstEpisodeFocusRequester.requestFocus()
                                 }
                             },
                         )

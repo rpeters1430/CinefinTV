@@ -279,10 +279,12 @@ internal fun CinefinAppScaffold(
     }
     val chromeFocusController = remember { AppChromeFocusController() }
     val selectedTabFocusRequester = tabFocusRequesters[selectedTabIndex]
-    var navHasFocus by remember { mutableStateOf(false) }
+    var focusedTabIndex by remember { mutableStateOf<Int?>(null) }
+    val navHasFocus = focusedTabIndex != null
     val collapsedRailWidth = 104.dp
     val expandedRailWidth = 224.dp
-    val reservedRailSlotWidth = 116.dp
+    val railSlotStartPadding = 12.dp
+    val reservedRailSlotWidth = expandedRailWidth + railSlotStartPadding
     val railWidth by animateDpAsState(
         targetValue = if (showNav && navHasFocus) expandedRailWidth else collapsedRailWidth,
         animationSpec = tween(durationMillis = 280),
@@ -320,7 +322,7 @@ internal fun CinefinAppScaffold(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(reservedRailSlotWidth)
-                        .padding(start = 12.dp, top = 12.dp, bottom = 12.dp)
+                        .padding(start = railSlotStartPadding, top = 12.dp, bottom = 12.dp)
                         .zIndex(1f),
                 ) {
                     Surface(
@@ -342,7 +344,6 @@ internal fun CinefinAppScaffold(
                         Column(
                             modifier = Modifier
                                 .fillMaxHeight()
-                                .onFocusChanged { navHasFocus = it.hasFocus || it.isFocused }
                                 .focusProperties {
                                     onEnter = {
                                         selectedTabFocusRequester.requestFocus()
@@ -385,7 +386,14 @@ internal fun CinefinAppScaffold(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .focusRequester(tabFocusRequesters[index])
-                                        .onFocusChanged { isFocused = it.isFocused || it.hasFocus }
+                                        .onFocusChanged {
+                                            val focused = it.isFocused || it.hasFocus
+                                            isFocused = focused
+                                            when {
+                                                focused -> focusedTabIndex = index
+                                                focusedTabIndex == index -> focusedTabIndex = null
+                                            }
+                                        }
                                         .focusProperties {
                                             chromeFocusController.primaryContentFocusRequester?.let {
                                                 right = it
@@ -503,6 +511,7 @@ internal fun CinefinAppScaffold(
             }
         }
     }
+
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)

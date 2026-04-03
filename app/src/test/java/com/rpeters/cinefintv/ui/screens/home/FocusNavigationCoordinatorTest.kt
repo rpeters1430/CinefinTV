@@ -1,9 +1,9 @@
 package com.rpeters.cinefintv.ui.screens.home
 
-import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class FocusNavigationCoordinatorTest {
@@ -20,13 +20,13 @@ class FocusNavigationCoordinatorTest {
 
         coordinator.submit { runCount += 1 }
         runCurrent()
-        assertThat(runCount).isEqualTo(1)
+        assertEquals(1, runCount)
 
         now += 80L
         coordinator.submit { runCount += 1 }
         runCurrent()
 
-        assertThat(runCount).isEqualTo(1)
+        assertEquals(1, runCount)
     }
 
     @Test
@@ -49,6 +49,6 @@ class FocusNavigationCoordinatorTest {
         coordinator.submit { events += "start-2" }
         runCurrent()
 
-        assertThat(events).containsExactly("start-1", "start-2").inOrder()
+        assertEquals(listOf("start-1", "start-2"), events)
     }
 }

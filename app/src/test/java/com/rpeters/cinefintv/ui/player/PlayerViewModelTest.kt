@@ -34,6 +34,7 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.util.UUID
@@ -584,6 +585,68 @@ class PlayerViewModelTest {
         advanceUntilIdle()
 
         assertEquals(MediaUpdateEvent.RefreshItem("00000000-0000-0000-0000-000000000201"), eventDeferred.await())
+    }
+
+    @Test
+    fun reloadStream_usesCurrentPlaybackPositionWhenResolvingPlaybackUrl() = runTest {
+        val fakeRepositories = FakePlayerRepositories()
+        val movieItem: BaseItemDto = mockk()
+        val requestedStartPositions = mutableListOf<Long>()
+
+        every { movieItem.id } returns UUID.fromString("00000000-0000-0000-0000-000000000301")
+        every { movieItem.name } returns "Reload Test Movie"
+        every { movieItem.type } returns BaseItemKind.MOVIE
+        every { movieItem.seriesId } returns null
+        every { movieItem.userData } returns null
+        every { movieItem.chapters } returns null
+
+        every { fakeRepositories.stream.getStreamUrl("00000000-0000-0000-0000-000000000301") } returns "https://stream/movie-301"
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
+        coEvery { fakeRepositories.media.getItemDetails("movie-301") } returns ApiResult.Success(movieItem)
+        coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "00000000-0000-0000-0000-000000000301") } returns 0L
+        coEvery {
+            enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any(), any())
+        } coAnswers {
+            requestedStartPositions += arg<Long>(4)
+            com.rpeters.cinefintv.data.playback.PlaybackResult.Transcoding(
+                url = "https://stream/movie-301?start=${arg<Long>(4)}",
+                targetBitrate = 1_000,
+                targetResolution = "1920x1080",
+                targetVideoCodec = "h264",
+                targetAudioCodec = "aac",
+                targetContainer = "hls",
+                reason = "test",
+                isDirectStream = false,
+            )
+        }
+
+        val viewModel = PlayerViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("itemId" to "movie-301")),
+            repositories = fakeRepositories.coordinator,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
+            playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
+            appContext = appContext,
+            okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
+        )
+        advanceUntilIdle()
+
+        val reloadStream = PlayerViewModel::class.java.getDeclaredMethod(
+            "reloadStream",
+            Long::class.javaPrimitiveType,
+            Boolean::class.javaPrimitiveType,
+        ).apply {
+            isAccessible = true
+        }
+
+        reloadStream.invoke(viewModel, 123_000L, true)
+        advanceUntilIdle()
+
+        assertTrue(requestedStartPositions.contains(0L))
+        assertTrue(requestedStartPositions.contains(123_000L))
+        assertEquals("https://stream/movie-301?start=123000", viewModel.uiState.value.streamUrl)
     }
 
     @org.junit.After

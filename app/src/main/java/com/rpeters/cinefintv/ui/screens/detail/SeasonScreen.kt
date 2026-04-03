@@ -26,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -95,6 +94,7 @@ private fun SeasonContent(
     viewModel: SeasonViewModel,
 ) {
     val spacing = LocalCinefinSpacing.current
+    val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val topFocusRequester = remember { FocusRequester() }
     val primaryActionFocusRequester = remember { FocusRequester() }
@@ -226,6 +226,14 @@ private fun SeasonContent(
                 chips = emptyList(),
                 focusRequester = overviewFocusRequester,
                 upFocusRequester = primaryActionFocusRequester,
+                onNavigateDown = {
+                    if (episodes.isEmpty() || listState.isScrollInProgress) return@DetailOverviewSection
+                    coroutineScope.launch {
+                        listState.scrollToItem(2)
+                        yield()
+                        runCatching { firstEpisodeFocusRequester.requestFocus() }
+                    }
+                },
                 modifier = Modifier.padding(top = spacing.rowGap),
             )
         }

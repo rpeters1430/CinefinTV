@@ -533,6 +533,7 @@ class PlayerViewModel @Inject constructor(
                 item = currentItem,
                 audioStreamIndex = uiState.value.selectedAudioTrack?.streamIndex,
                 subtitleStreamIndex = uiState.value.selectedSubtitleTrack?.streamIndex,
+                startPositionMs = positionMs,
             )
             val streamUrl = resolvedPlayback?.url ?: repositories.stream.getTranscodedStreamUrl(
                 itemId = currentItemId,

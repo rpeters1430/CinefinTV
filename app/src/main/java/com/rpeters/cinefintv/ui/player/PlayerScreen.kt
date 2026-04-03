@@ -642,7 +642,7 @@ internal fun PlayerPlaybackContent(
                     thumbnailUrl = uiState.nextEpisodeThumbnailUrl,
                     remainingMs = remaining.coerceAtLeast(0L),
                     autoPlayEnabled = uiState.autoPlayNextEpisode,
-                    autoFocusPlayNow = showNextUp,
+                    autoFocusPlayNow = showNextUp && !controlsVisible,
                     onActionFocusChanged = { overlayActionFocused = it },
                     onPlayNow = {
                         uiState.nextEpisodeId?.let { onOpenItem(it) }

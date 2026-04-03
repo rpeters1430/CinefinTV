@@ -1069,12 +1069,8 @@ private fun SeekBarControl(
     var seekInteractionVersion by remember { mutableIntStateOf(0) }
     val expressiveColors = LocalCinefinExpressiveColors.current
 
-    fun commitSeekIfNeeded() {
-        if (!isSeeking) return
+    fun finishSeekInteraction() {
         isSeeking = false
-        if (seekPosition != position) {
-            onSeekCommitted(seekPosition)
-        }
     }
 
     LaunchedEffect(position, isSeeking) {
@@ -1088,7 +1084,7 @@ private fun SeekBarControl(
         val versionAtLaunch = seekInteractionVersion
         delay(450L)
         if (seekInteractionVersion == versionAtLaunch) {
-            commitSeekIfNeeded()
+            finishSeekInteraction()
         }
     }
 
@@ -1123,7 +1119,7 @@ private fun SeekBarControl(
             .onFocusChanged {
                 isFocused = it.isFocused || it.hasFocus
                 if (!isFocused) {
-                    commitSeekIfNeeded()
+                    finishSeekInteraction()
                     seekPosition = position
                 }
             }
@@ -1132,18 +1128,22 @@ private fun SeekBarControl(
                     keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.DirectionLeft -> {
                         if (duration <= 0L) return@onPreviewKeyEvent true
                         val basePosition = if (isSeeking) seekPosition else position
-                        seekPosition = (basePosition - seekIncrementMs).coerceAtLeast(0L)
+                        val nextPosition = (basePosition - seekIncrementMs).coerceAtLeast(0L)
+                        seekPosition = nextPosition
                         isSeeking = true
                         seekInteractionVersion += 1
+                        onSeekCommitted(nextPosition)
                         onInteract()
                         true
                     }
                     keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.DirectionRight -> {
                         if (duration <= 0L) return@onPreviewKeyEvent true
                         val basePosition = if (isSeeking) seekPosition else position
-                        seekPosition = (basePosition + seekIncrementMs).coerceIn(0L, duration)
+                        val nextPosition = (basePosition + seekIncrementMs).coerceIn(0L, duration)
+                        seekPosition = nextPosition
                         isSeeking = true
                         seekInteractionVersion += 1
+                        onSeekCommitted(nextPosition)
                         onInteract()
                         true
                     }
@@ -1151,7 +1151,7 @@ private fun SeekBarControl(
                         (keyEvent.key == Key.DirectionCenter ||
                             keyEvent.key == Key.Enter ||
                             keyEvent.key == Key.Spacebar) -> {
-                        commitSeekIfNeeded()
+                        finishSeekInteraction()
                         true
                     }
                     keyEvent.type == KeyEventType.KeyUp &&

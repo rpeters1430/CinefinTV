@@ -142,6 +142,37 @@ class PlayerPlaybackContentUiTest {
     }
 
     @Test
+    fun directionPress_whenNextEpisodeVisible_focusesSeekBarNotNextEpisodeButton() {
+        composeRule.setContent {
+            PlayerPlaybackTestHost {
+                PlaybackShellHarness(
+                    initialControlsVisible = false,
+                    uiState = PlayerUiState(
+                        title = "Series Title",
+                        isLoading = false,
+                        isEpisodicContent = true,
+                        autoPlayNextEpisode = true,
+                        nextEpisodeId = "episode-2",
+                        nextEpisodeTitle = "Episode 2",
+                    ),
+                    renderState = PlayerRenderState(
+                        isPlaying = true,
+                        position = 110_000L,
+                        duration = 120_000L,
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(PlayerTestTags.PlaybackRoot)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNodeWithTag(PlayerTestTags.ControlsOverlay).assertIsDisplayed()
+        composeRule.onNodeWithTag(PlayerTestTags.SeekBar, useUnmergedTree = true).assertIsFocused()
+    }
+
+    @Test
     fun resumeDialog_rendersAndDispatchesResumeChoice() {
         var resumeChoice: Boolean? = null
 

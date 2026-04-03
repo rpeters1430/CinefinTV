@@ -55,6 +55,7 @@ fun DetailOverviewSection(
     focusRequester: FocusRequester? = null,
     upFocusRequester: FocusRequester? = null,
     onNavigateUp: (() -> Unit)? = null,
+    onNavigateDown: (() -> Unit)? = null,
     posterUrl: String? = null,
     posterTitle: String = title,
 ) {
@@ -76,15 +77,20 @@ fun DetailOverviewSection(
             }
             .onPreviewKeyEvent { keyEvent ->
                 val nativeEvent = keyEvent.nativeKeyEvent
-                if (
+                when {
                     onNavigateUp != null &&
-                    nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
-                ) {
-                    onNavigateUp()
-                    true
-                } else {
-                    false
+                        nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                        nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                        onNavigateUp()
+                        true
+                    }
+                    onNavigateDown != null &&
+                        nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                        nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        onNavigateDown()
+                        true
+                    }
+                    else -> false
                 }
             }
             .onFocusChanged { state ->
