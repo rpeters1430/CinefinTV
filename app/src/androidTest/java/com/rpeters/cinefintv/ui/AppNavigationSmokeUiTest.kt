@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
@@ -104,6 +106,83 @@ class AppNavigationSmokeUiTest {
             .assertIsFocused()
             .performKeyInput { pressKey(Key.DirectionCenter) }
         composeRule.onNodeWithText("Screen: Home").assertIsDisplayed()
+    }
+
+    @Test
+    fun expandingNavRail_doesNotShiftContentHost() {
+        composeRule.setContent {
+            AppSmokeTestHost {
+                AppNavigationSmokeHarness()
+            }
+        }
+
+        val initialBounds = composeRule.onNodeWithTag(AppTestTags.ContentHost)
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.HOME))
+            .requestFocus()
+            .assertIsFocused()
+
+        composeRule.waitForIdle()
+
+        val expandedBounds = composeRule.onNodeWithTag(AppTestTags.ContentHost)
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(
+            "Expected content host left edge to remain stable during nav expansion, " +
+                "but moved from ${initialBounds.left} to ${expandedBounds.left}",
+            kotlin.math.abs(initialBounds.left - expandedBounds.left) < 0.5f,
+        )
+        assertTrue(
+            "Expected content host width to remain stable during nav expansion, " +
+                "but changed from ${initialBounds.width} to ${expandedBounds.width}",
+            kotlin.math.abs(initialBounds.width - expandedBounds.width) < 0.5f,
+        )
+    }
+
+    @Test
+    fun repeatedNavExpansionCycles_keepContentHostStable() {
+        composeRule.setContent {
+            AppSmokeTestHost {
+                AppNavigationSmokeHarness()
+            }
+        }
+
+        val initialBounds = composeRule.onNodeWithTag(AppTestTags.ContentHost)
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        val homeTab = composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.HOME))
+        val primaryContent = composeRule.onNodeWithTag("home_content_primary")
+
+        homeTab.requestFocus().assertIsFocused()
+
+        repeat(3) { cycle ->
+            homeTab.performKeyInput { pressKey(Key.DirectionRight) }
+            primaryContent.assertIsFocused()
+
+            composeRule.waitForIdle()
+
+            val expandedBounds = composeRule.onNodeWithTag(AppTestTags.ContentHost)
+                .fetchSemanticsNode()
+                .boundsInRoot
+
+            assertTrue(
+                "Cycle ${cycle + 1}: content host left edge moved during nav expansion " +
+                    "from ${initialBounds.left} to ${expandedBounds.left}",
+                kotlin.math.abs(initialBounds.left - expandedBounds.left) < 0.5f,
+            )
+            assertTrue(
+                "Cycle ${cycle + 1}: content host width changed during nav expansion " +
+                    "from ${initialBounds.width} to ${expandedBounds.width}",
+                kotlin.math.abs(initialBounds.width - expandedBounds.width) < 0.5f,
+            )
+
+            primaryContent.performKeyInput { pressKey(Key.DirectionLeft) }
+            homeTab.assertIsFocused()
+        }
     }
 
     @Test
@@ -252,7 +331,17 @@ private fun AppNavigationSmokeHarness() {
             modifier = Modifier.fillMaxSize(),
         ) {
             composable(NavRoutes.HOME) {
+                val primaryContentRequester = remember { FocusRequester() }
+                val destinationFocus = rememberTopLevelDestinationFocus(primaryContentRequester)
                 SmokeScreen("Home") {
+                    Button(
+                        onClick = {},
+                        modifier = Modifier
+                            .testTag("home_content_primary")
+                            .then(destinationFocus.primaryContentModifier()),
+                    ) {
+                        Text("Primary Content")
+                    }
                     Button(
                         onClick = { navController.navigate(NavRoutes.movieDetail("smoke-movie")) },
                         modifier = Modifier.testTag("go_detail"),

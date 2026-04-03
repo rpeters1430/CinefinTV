@@ -115,7 +115,9 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             adaptiveBitrateMonitor.qualityRecommendation.collectLatest { recommendation ->
                 if (recommendation != null && recommendation.severity == RecommendationSeverity.HIGH) {
-                    playbackPreferencesRepository.setTranscodingQuality(recommendation.recommendedQuality)
+                    _uiState.value = _uiState.value.copy(
+                        transcodingQuality = recommendation.recommendedQuality,
+                    )
                     adaptiveBitrateMonitor.clearRecommendation()
                     adaptiveBitrateMonitor.resetBufferingTracking()
                     val player = _player ?: return@collectLatest
@@ -392,16 +394,15 @@ class PlayerViewModel @Inject constructor(
             .apply {
                 val streamUrl = uiState.value.streamUrl
                 if (streamUrl != null) {
-                    setMediaItem(MediaItem.fromUri(streamUrl))
                     val shouldAsk = uiState.value.shouldShowResumeDialog
                     if (!shouldAsk) {
                         val resumePositionMs = uiState.value.savedPlaybackPositionMs.coerceAtLeast(0L)
-                        if (resumePositionMs > 0L) {
-                            seekTo(resumePositionMs)
-                        }
+                        setMediaItem(MediaItem.fromUri(streamUrl), resumePositionMs)
                         queuePlaybackStartReport(resumePositionMs)
                         prepare()
                         playWhenReady = true
+                    } else {
+                        setMediaItem(MediaItem.fromUri(streamUrl))
                     }
                 }
             }
@@ -549,10 +550,7 @@ class PlayerViewModel @Inject constructor(
             syncAdaptiveBitrateMonitorContext()
             clearPlaybackStartState()
             _player?.apply {
-                setMediaItem(MediaItem.fromUri(streamUrl))
-                if (positionMs > 0L) {
-                    seekTo(positionMs)
-                }
+                setMediaItem(MediaItem.fromUri(streamUrl), positionMs.coerceAtLeast(0L))
                 queuePlaybackStartReport(positionMs)
                 prepare()
                 applyTrackSelection(uiState.value.selectedAudioTrack, uiState.value.selectedSubtitleTrack)

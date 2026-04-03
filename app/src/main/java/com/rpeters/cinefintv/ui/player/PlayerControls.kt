@@ -1086,7 +1086,7 @@ private fun SeekBarControl(
     LaunchedEffect(seekInteractionVersion) {
         if (seekInteractionVersion == 0) return@LaunchedEffect
         val versionAtLaunch = seekInteractionVersion
-        delay(700L)
+        delay(450L)
         if (seekInteractionVersion == versionAtLaunch) {
             commitSeekIfNeeded()
         }
@@ -1147,11 +1147,15 @@ private fun SeekBarControl(
                         onInteract()
                         true
                     }
-                    keyEvent.type == KeyEventType.KeyUp &&
-                        (keyEvent.key == Key.DirectionLeft || keyEvent.key == Key.DirectionRight) -> {
+                    keyEvent.type == KeyEventType.KeyDown &&
+                        (keyEvent.key == Key.DirectionCenter ||
+                            keyEvent.key == Key.Enter ||
+                            keyEvent.key == Key.Spacebar) -> {
                         commitSeekIfNeeded()
                         true
                     }
+                    keyEvent.type == KeyEventType.KeyUp &&
+                        (keyEvent.key == Key.DirectionLeft || keyEvent.key == Key.DirectionRight) -> true
                     else -> false
                 }
             }
