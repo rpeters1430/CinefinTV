@@ -15,6 +15,7 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +25,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
@@ -346,7 +349,7 @@ internal fun CinefinAppScaffold(
                         ),
                         tonalElevation = 4.dp,
                     ) {
-                        Column(
+                        LazyColumn(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .focusProperties {
@@ -355,36 +358,40 @@ internal fun CinefinAppScaffold(
                                     }
                                 }
                                 .focusGroup()
-                                .testTag(AppTestTags.NavBar)
-                                .padding(vertical = 16.dp, horizontal = 10.dp),
+                                .testTag(AppTestTags.NavBar),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(10.dp),
+                            contentPadding = PaddingValues(vertical = 16.dp, horizontal = 10.dp),
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(logoSize)
-                                    .clip(RoundedCornerShape(999.dp))
-                                    .background(
-                                        Brush.radialGradient(
-                                            colors = listOf(
-                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.88f),
-                                                expressiveColors.titleAccent.copy(alpha = 0.42f),
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .size(logoSize)
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .background(
+                                            Brush.radialGradient(
+                                                colors = listOf(
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.88f),
+                                                    expressiveColors.titleAccent.copy(alpha = 0.42f),
+                                                )
                                             )
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    text = "C",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                )
+                                        ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = "C",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                    )
+                                }
                             }
 
-                            Spacer(modifier = Modifier.height(6.dp))
+                            item {
+                                Spacer(modifier = Modifier.height(6.dp))
+                            }
 
-                            navTabItems.forEachIndexed { index, item ->
+                            itemsIndexed(navTabItems) { index, item ->
                                 var isFocused by remember { mutableStateOf(false) }
                                 Button(
                                     onClick = { onNavigateToTab(item.route) },
@@ -498,8 +505,6 @@ internal fun CinefinAppScaffold(
                                     }
                                 }
                             }
-
-                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
