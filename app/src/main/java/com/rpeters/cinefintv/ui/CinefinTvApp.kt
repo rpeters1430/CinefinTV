@@ -402,7 +402,6 @@ internal fun CinefinAppScaffold(
                                         .focusProperties {
                                             chromeFocusController.primaryContentFocusRequester?.let {
                                                 right = it
-                                                down = it
                                             }
                                         }
                                         .testTag(AppTestTags.tab(item.route)),
