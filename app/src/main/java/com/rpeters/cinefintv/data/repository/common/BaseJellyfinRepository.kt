@@ -38,8 +38,10 @@ open class BaseJellyfinRepository @Inject constructor(
         private const val CIRCUIT_BREAKER_FAILURE_THRESHOLD = 3
         private const val CIRCUIT_BREAKER_OPEN_MS = 30_000L
         private const val MAX_RETRY_DELAY_MS = 5_000L
-        private val circuitBreakerStates = ConcurrentHashMap<String, CircuitBreakerState>()
     }
+
+    // Per-instance circuit breaker state — each repository subclass tracks its own failures.
+    private val circuitBreakerStates = ConcurrentHashMap<String, CircuitBreakerState>()
 
     // Mutex to prevent race conditions in token refresh
     private val tokenRefreshMutex = Mutex()

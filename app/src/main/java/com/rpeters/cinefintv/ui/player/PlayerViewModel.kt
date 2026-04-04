@@ -27,6 +27,7 @@ import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferencesRepos
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
+import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getEpisodeCode
@@ -200,6 +201,8 @@ class PlayerViewModel @Inject constructor(
                 itemId = resolvedItemId,
                 startPositionMs = if (shouldShowResumeDialog) 0L else savedPlaybackPositionMs,
             )
+        }.onFailure { e ->
+            SecureLogger.e("PlayerViewModel", "getPlaybackInfo failed for item $resolvedItemId", e)
         }.getOrNull()
         val mediaSource = playbackInfo?.mediaSources?.firstOrNull()
         val audioTracks = PlayerMappers.toAudioTrackOptions(mediaSource)

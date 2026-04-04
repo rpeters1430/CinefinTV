@@ -65,9 +65,11 @@ fun MovieDetailScreen(
     val listState = rememberLazyListState()
     val topFocus = remember { FocusRequester() }
     val primaryActionFocus = remember { FocusRequester() }
-    var didInitialFocus by remember { mutableStateOf(false) }
+    val contentId = (uiState as? MovieDetailUiState.Content)?.movie?.id
+    // Keyed on contentId so it resets when navigating to a different movie (e.g. from More Like This).
+    var didInitialFocus by remember(contentId) { mutableStateOf(false) }
 
-    LaunchedEffect((uiState as? MovieDetailUiState.Content)?.movie?.id) {
+    LaunchedEffect(contentId) {
         if (!didInitialFocus) {
             val content = uiState as? MovieDetailUiState.Content ?: return@LaunchedEffect
             focusDetailScreenAtTop(

@@ -284,12 +284,12 @@ internal fun CinefinAppScaffold(
     val collapsedRailWidth = 104.dp
     val expandedRailWidth = 224.dp
     val railSlotStartPadding = 12.dp
-    val reservedRailSlotWidth = expandedRailWidth + railSlotStartPadding
     val railWidth by animateDpAsState(
         targetValue = if (showNav && navHasFocus) expandedRailWidth else collapsedRailWidth,
         animationSpec = tween(durationMillis = 280),
         label = "railWidth",
     )
+    val railSlotWidth = railWidth + railSlotStartPadding
     val logoSize by animateDpAsState(
         targetValue = if (navHasFocus) 46.dp else 50.dp,
         animationSpec = tween(durationMillis = 280),
@@ -315,13 +315,18 @@ internal fun CinefinAppScaffold(
         chromeFocusController.topNavFocusRequester = if (showNav) selectedTabFocusRequester else null
     }
 
+    // Reset focused-tab state when the rail hides so it doesn't flash expanded on return.
+    if (!showNav && focusedTabIndex != null) {
+        focusedTabIndex = null
+    }
+
     CompositionLocalProvider(LocalAppChromeFocusController provides chromeFocusController) {
         Row(modifier = Modifier.fillMaxSize()) {
             if (showNav) {
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
-                        .width(reservedRailSlotWidth)
+                        .width(railSlotWidth)
                         .padding(start = railSlotStartPadding, top = 12.dp, bottom = 12.dp)
                         .zIndex(1f),
                 ) {
@@ -397,6 +402,7 @@ internal fun CinefinAppScaffold(
                                         .focusProperties {
                                             chromeFocusController.primaryContentFocusRequester?.let {
                                                 right = it
+                                                down = it
                                             }
                                         }
                                         .testTag(AppTestTags.tab(item.route)),

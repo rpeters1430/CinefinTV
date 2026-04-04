@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -31,6 +32,7 @@ import com.rpeters.cinefintv.ui.screens.detail.DetailLabeledMetaItem
 import com.rpeters.cinefintv.ui.screens.detail.SimilarMovieModel
 import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -69,11 +71,8 @@ fun MovieDetailLayout(
     val firstCastFocusRequester = remember { FocusRequester() }
     val firstSimilarFocusRequester = remember { FocusRequester() }
     val similarCardWidth: Dp = 196.dp
-    val firstContentFocusRequester = when {
-        castItems.isNotEmpty() -> firstCastFocusRequester
-        similarItems.isNotEmpty() -> firstSimilarFocusRequester
-        else -> null
-    }
+    // Overview always precedes similar items, so down-from-hero targets cast or overview — never similar directly.
+    val firstContentFocusRequester = if (castItems.isNotEmpty()) firstCastFocusRequester else null
 
     LazyColumn(
         state = listState,
@@ -105,8 +104,7 @@ fun MovieDetailLayout(
                     onDownNavigation = {
                         if (listState.isScrollInProgress) return@FlatDetailHero
                         coroutineScope.launch {
-                            listState.animateScrollToItem(1)
-                            androidx.compose.runtime.withFrameNanos { }
+                            listState.scrollToItemAndAwaitLayout(1)
                             runCatching {
                                 (firstContentFocusRequester ?: overviewFocusRequester).requestFocus()
                             }
@@ -192,14 +190,10 @@ fun MovieDetailLayout(
                     if (listState.isScrollInProgress) return@DetailOverviewSection
                     coroutineScope.launch {
                         if (castItems.isNotEmpty()) {
-                            listState.scrollToItem(1)
-                            androidx.compose.runtime.withFrameNanos { }
-                            androidx.compose.runtime.withFrameNanos { }
+                            listState.scrollToItemAndAwaitLayout(1)
                             runCatching { firstCastFocusRequester.requestFocus() }
                         } else {
-                            listState.scrollToItem(0)
-                            androidx.compose.runtime.withFrameNanos { }
-                            androidx.compose.runtime.withFrameNanos { }
+                            listState.scrollToItemAndAwaitLayout(0)
                             runCatching { primaryActionFocusRequester.requestFocus() }
                         }
                     }
@@ -264,3 +258,13 @@ fun MovieDetailLayout(
         }
     }
 }
+
+private suspend fun LazyListState.scrollToItemAndAwaitLayout(index: Int) {
+    if (!isIndexVisible(index)) {
+        scrollToItem(index)
+        snapshotFlow { isIndexVisible(index) }.first { it }
+    }
+}
+
+private fun LazyListState.isIndexVisible(index: Int): Boolean =
+    layoutInfo.visibleItemsInfo.any { it.index == index }

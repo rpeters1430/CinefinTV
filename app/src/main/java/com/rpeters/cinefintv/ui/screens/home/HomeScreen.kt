@@ -25,8 +25,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -77,6 +77,7 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -276,12 +277,7 @@ internal fun HomeScreenContent(
                 }
             }
 
-            LaunchedEffect(
-                shouldRestoreFocus,
-                preferredFocusRequester,
-                state.featuredItems.size,
-                state.sections,
-            ) {
+            LaunchedEffect(shouldRestoreFocus, preferredFocusRequester) {
                 if (!shouldRestoreFocus) {
                     return@LaunchedEffect
                 }
@@ -304,10 +300,8 @@ internal fun HomeScreenContent(
                 }
 
                 if (targetListIndex != null) {
-                    listState.scrollToItemIfNeeded(targetListIndex)
+                    listState.scrollToItemAndAwaitLayout(targetListIndex)
                 }
-                withFrameNanos { }
-                withFrameNanos { }
                 runCatching { requester.requestFocus() }
                 delay(HOME_FOCUS_RESTORE_SETTLE_MS)
                 shouldRestoreFocus = false
@@ -333,9 +327,7 @@ internal fun HomeScreenContent(
                                 onNavigateDown = firstSectionRequester?.let {
                                     {
                                         focusNavigationCoordinator.submit {
-                                            listState.scrollToItemIfNeeded(1)
-                                            withFrameNanos { }
-                                            withFrameNanos { }
+                                            listState.scrollToItemAndAwaitLayout(1)
                                             it.requestFocus()
                                         }
                                     }
@@ -384,9 +376,7 @@ internal fun HomeScreenContent(
                                 index == 0 && state.featuredItems.isNotEmpty() -> {
                                     {
                                         focusNavigationCoordinator.submit {
-                                            listState.scrollToItemIfNeeded(0)
-                                            withFrameNanos { }
-                                            withFrameNanos { }
+                                            listState.scrollToItemAndAwaitLayout(0)
                                             featuredPrimaryActionRequester.requestFocus()
                                         }
                                     }
@@ -395,9 +385,7 @@ internal fun HomeScreenContent(
                                     {
                                         focusNavigationCoordinator.submit {
                                             val previousListIndex = if (state.featuredItems.isNotEmpty()) index else index - 1
-                                            listState.scrollToItemIfNeeded(previousListIndex)
-                                            withFrameNanos { }
-                                            withFrameNanos { }
+                                            listState.scrollToItemAndAwaitLayout(previousListIndex)
                                             sectionFocusRequesters[index - 1].requestFocus()
                                         }
                                     }
@@ -408,9 +396,7 @@ internal fun HomeScreenContent(
                                 {
                                     focusNavigationCoordinator.submit {
                                         val nextListIndex = if (state.featuredItems.isNotEmpty()) index + 2 else index + 1
-                                        listState.scrollToItemIfNeeded(nextListIndex)
-                                        withFrameNanos { }
-                                        withFrameNanos { }
+                                        listState.scrollToItemAndAwaitLayout(nextListIndex)
                                         nextRequester.requestFocus()
                                     }
                                 }
@@ -736,5 +722,17 @@ private fun LazyListState.isIndexVisible(index: Int): Boolean =
 private suspend fun LazyListState.scrollToItemIfNeeded(index: Int) {
     if (!isIndexVisible(index)) {
         scrollToItem(index)
+    }
+}
+
+/**
+ * Scrolls to [index] if not already visible, then suspends until the item appears
+ * in [layoutInfo]. This guarantees the item is laid out before focus is requested,
+ * replacing the fragile double-withFrameNanos timing hack.
+ */
+private suspend fun LazyListState.scrollToItemAndAwaitLayout(index: Int) {
+    if (!isIndexVisible(index)) {
+        scrollToItem(index)
+        snapshotFlow { isIndexVisible(index) }.first { it }
     }
 }

@@ -20,9 +20,21 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 # Run a single test class
 ./gradlew :app:testDebugUnitTest --tests "com.rpeters.cinefintv.ui.screens.home.HomeViewModelTest"
 
+# Run instrumented/Compose UI tests (requires connected device or emulator)
+./gradlew :app:connectedDebugAndroidTest
+
+# Lint
+./gradlew :app:lintDebug
+
 # Clean build
 ./gradlew clean :app:assembleDebug
 ```
+
+### Publishing a release
+
+`./publish.sh` (Unix) or `.\publish.ps1` (Windows) bumps the version, builds a signed release APK, creates a GitHub release, and updates `updates/version.json` for the in-app updater. Requires a clean `main` branch and these env vars set:
+- `CINEFIN_RELEASE_STORE_FILE`, `CINEFIN_RELEASE_STORE_PASSWORD`
+- `CINEFIN_RELEASE_KEY_ALIAS`, `CINEFIN_RELEASE_KEY_PASSWORD`
 
 ## Architecture
 
@@ -70,9 +82,25 @@ executeWithCache("operationName", cacheKey = "key", cacheTtlMs = 30 * 60 * 1000L
 - Logout clears both in-memory state and DataStore under `NonCancellable` to guarantee persistence
 
 ### Navigation
-- `CinefinTvApp` — root composable; wraps content in `CinefinTvTheme` with a `TabRow` nav bar (hidden for `auth/*`, `player/*`, and `audio-player/*` routes)
+- `CinefinTvApp` — root composable; wraps content in `CinefinTvTheme` and delegates layout to `CinefinAppScaffold`
+- `CinefinAppScaffold` — contains a vertical animated rail nav sidebar (a `Column` of `Button`s inside a rounded `Surface`). The rail collapses to icon-only when unfocused and expands with labels when focused via D-pad. Hidden for `auth/*`, `player/*`, and `audio-player/*` routes.
 - `CinefinTvNavGraph` — `NavHost` with all route definitions; holds the single `AuthViewModel`
 - Routes defined in `NavRoutes` / `AuthRoutes` objects. Key routes: `detail/{itemId}`, `detail/person/{personId}`, `stuff/detail/{itemId}`, `player/{itemId}`, `audio-player/{itemId}?queue={queue}`, `library/{movies|tvshows|stuff|music}`
+
+#### Nav chrome focus wiring
+Each top-level screen must register with the nav chrome focus system so D-pad left/up from content reaches the sidebar:
+
+```kotlin
+val focus = rememberTopLevelDestinationFocus(primaryContentFocusRequester)
+
+// On the primary content root item:
+Modifier.then(focus.primaryContentModifier())
+
+// On left-edge items that should escape back to the nav rail:
+Modifier.then(focus.drawerEscapeModifier(isLeftEdge = true))
+```
+
+`RegisterPrimaryContentFocusRequester(focusRequester)` is called internally by `rememberTopLevelDestinationFocus`. Do not bypass the `AppChromeFocusController` / `LocalAppChromeFocusController` system when adding new screens.
 
 ### ViewModel Pattern
 Each screen has a co-located sealed `UiState` class plus a `@HiltViewModel`. Standard structure:
@@ -143,18 +171,23 @@ Use `SecureLogger` (`utils/SecureLogger.kt`) instead of `Log.*` — it redacts t
 
 ## Theme & Colors
 
-Dark-only. Key named colors in `ui/theme/Color.kt`:
+Supports dynamic theming (seed color, Material You dynamic colors, accent override, contrast level) via `ThemeViewModel`. Configured by the user in settings and persisted via `ThemePreferencesRepository`.
+
+Static fallback colors in `ui/theme/Color.kt`:
 - `BackgroundDark` = `#0D1117`
 - `SurfaceDark` = `#161B22`
 - `CinefinRed` = `#E50914` (primary accent)
 
+### Expressive color tokens
+`CinefinExpressiveColors` (`ui/theme/ExpressiveColors.kt`) is a parallel token set for surface gradients, hero scrim, focus ring/glow, nav chrome, player overlay, and semantic tokens (e.g. `watchedGreen`). Access via `LocalCinefinExpressiveColors.current` — prefer these tokens over raw `MaterialTheme.colorScheme` for any custom surface painting. `LocalCinefinSpacing` provides spacing tokens.
+
+`CinefinMotion` (`ui/theme/ExpressiveColors.kt`) provides motion easing tokens (`Overshoot`, `Emphasized`) and standard duration constants for consistent animation.
+
 ## Testing
 
-Tests live in `app/src/test/` (JVM unit tests only — no instrumented tests).
-
-- **MockK** for mocking, **Turbine** for Flow assertions, **coroutines-test** with `MainDispatcherRule`
-- Fake helpers live in `testutil/` (e.g., `FakeHomeRepositories`, `MainDispatcherRule`)
-- ViewModels are tested by constructing them directly with fake dependencies — no Hilt in tests
+- **JVM unit tests** in `app/src/test/` — MockK for mocking, Turbine for Flow assertions, coroutines-test with `MainDispatcherRule`. ViewModels constructed directly with fake dependencies — no Hilt in tests. Fake helpers in `testutil/` (e.g. `FakeHomeRepositories`).
+- **Instrumented Compose/UI tests** in `app/src/androidTest/` — for focus/navigation and playback interactions on a real device or emulator. Run with `./gradlew :app:connectedDebugAndroidTest`.
+- Compose test tags are co-located near their owning screen (e.g. `HomeTestTags`, `PlayerTestTags`). App-chrome tags live in `AppTestTags`. Name tests as `subjectAndContext_expectedBehavior`.
 
 ## Key Dependency Versions
 

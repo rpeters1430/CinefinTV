@@ -205,12 +205,14 @@ class JellyfinCache @Inject constructor(
      * Performs I/O operations on background thread.
      */
     suspend fun isCached(key: String): Boolean = withContext(Dispatchers.IO) {
-        // Check memory cache
-        memoryCache[key]?.let { entry ->
-            if (entry.isValid()) {
-                return@withContext true
-            } else {
-                memoryCache.remove(key)
+        // Check memory cache (synchronized for thread safety)
+        synchronized(memoryCache) {
+            memoryCache[key]?.let { entry ->
+                if (entry.isValid()) {
+                    return@withContext true
+                } else {
+                    memoryCache.remove(key)
+                }
             }
         }
 

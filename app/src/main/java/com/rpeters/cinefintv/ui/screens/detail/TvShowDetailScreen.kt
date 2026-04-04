@@ -63,9 +63,11 @@ fun TvShowDetailScreen(
     val listState = rememberLazyListState()
     val topFocus = remember { FocusRequester() }
     val primaryActionFocus = remember { FocusRequester() }
-    var didInitialFocus by remember { mutableStateOf(false) }
+    val contentId = (uiState as? TvShowDetailUiState.Content)?.show?.id
+    // Keyed on contentId so it resets when navigating to a different show (e.g. from Similar row).
+    var didInitialFocus by remember(contentId) { mutableStateOf(false) }
 
-    LaunchedEffect((uiState as? TvShowDetailUiState.Content)?.show?.id) {
+    LaunchedEffect(contentId) {
         if (!didInitialFocus) {
             val content = uiState as? TvShowDetailUiState.Content ?: return@LaunchedEffect
             focusDetailScreenAtTop(

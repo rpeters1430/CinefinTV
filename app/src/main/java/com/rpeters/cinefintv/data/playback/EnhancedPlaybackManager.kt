@@ -5,7 +5,7 @@ import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.data.DeviceCapabilities
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
-import com.rpeters.cinefintv.data.repository.JellyfinRepository
+import com.rpeters.cinefintv.data.repository.JellyfinAuthRepository
 import com.rpeters.cinefintv.data.repository.JellyfinStreamRepository
 import com.rpeters.cinefintv.network.ConnectivityChecker
 import com.rpeters.cinefintv.network.ConnectivityQuality
@@ -29,7 +29,7 @@ import kotlin.coroutines.cancellation.CancellationException
 @Singleton
 class EnhancedPlaybackManager @Inject constructor(
     private val context: Context,
-    private val repository: JellyfinRepository,
+    private val authRepository: JellyfinAuthRepository,
     private val streamRepository: JellyfinStreamRepository,
     private val deviceCapabilities: DeviceCapabilities,
     private val connectivityChecker: ConnectivityChecker,
@@ -176,7 +176,7 @@ class EnhancedPlaybackManager @Inject constructor(
         subtitleStreamIndex: Int? = null,
     ): PlaybackResult {
         val itemId = item.id.toString()
-        val serverUrl = repository.getCurrentServer()?.url
+        val serverUrl = authRepository.getCurrentServer()?.url
         val mediaSources = playbackInfo.mediaSources
         val playSessionId = playbackInfo.playSessionId
         val sessionId = java.util.UUID.randomUUID().toString()
@@ -489,7 +489,7 @@ class EnhancedPlaybackManager @Inject constructor(
         subtitleStreamIndex: Int? = null,
     ): PlaybackResult {
         val itemId = item.id.toString()
-        val serverUrl = repository.getCurrentServer()?.url
+        val serverUrl = authRepository.getCurrentServer()?.url
         val mediaSourceId = mediaSource.id
         val playSessionId = playbackInfo.playSessionId
         val prefs = playbackPreferencesRepository.preferences.first()
@@ -688,7 +688,7 @@ class EnhancedPlaybackManager @Inject constructor(
         startPositionMs: Long = 0L,
     ): PlaybackInfoResponse? {
         return try {
-            repository.getPlaybackInfo(itemId, audioStreamIndex, subtitleStreamIndex, startPositionMs)
+            streamRepository.getPlaybackInfo(itemId, audioStreamIndex, subtitleStreamIndex, startPositionMs)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             SecureLogger.e(TAG, "Failed to get playback info for item $itemId", e)

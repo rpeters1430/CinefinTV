@@ -19,10 +19,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -56,10 +63,27 @@ fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var hasBeenPaused by remember { mutableStateOf(false) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE  -> hasBeenPaused = true
+                Lifecycle.Event.ON_RESUME -> {} // focus restoration handled in content
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     SearchScreenContent(
         uiState = uiState,
         onQueryChange = viewModel::updateQuery,
         onOpenItem = onOpenItem,
+        hasBeenPaused = hasBeenPaused,
+        onConsumedPause = { hasBeenPaused = false },
     )
 }
 
@@ -69,14 +93,38 @@ internal fun SearchScreenContent(
     uiState: SearchUiState,
     onQueryChange: (String) -> Unit,
     onOpenItem: (com.rpeters.cinefintv.ui.screens.home.HomeCardModel) -> Unit,
+    hasBeenPaused: Boolean = false,
+    onConsumedPause: () -> Unit = {},
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     val spacing = LocalCinefinSpacing.current
     val gridState = rememberLazyGridState()
     val primaryContentRequester = remember { FocusRequester() }
     val firstResultFocusRequester = remember { FocusRequester() }
-    var lastFocusedResultId by rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    var lastFocusedResultId by rememberSaveable { mutableStateOf<String?>(null) }
+    var shouldRestoreFocus by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(hasBeenPaused) {
+        if (hasBeenPaused) shouldRestoreFocus = true
+    }
+
+    LaunchedEffect(shouldRestoreFocus) {
+        if (!shouldRestoreFocus) return@LaunchedEffect
+        val target = if (uiState.results.isNotEmpty()) firstResultFocusRequester else primaryContentRequester
+        runCatching { target.requestFocus() }
+        onConsumedPause()
+        shouldRestoreFocus = false
+    }
     val destinationFocus = rememberTopLevelDestinationFocus(primaryContentRequester)
+    // Derive actual column count from visible items so the left-edge escape works on any row.
+    val columnCount by remember {
+        derivedStateOf {
+            gridState.layoutInfo.visibleItemsInfo
+                .filter { it.row == 0 }
+                .maxOfOrNull { it.column + 1 }
+                ?: 1
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -202,14 +250,10 @@ internal fun SearchScreenContent(
                                     if (index == restoredFocusIndex) Modifier.focusRequester(firstResultFocusRequester) else Modifier
                                 )
                                 .then(
-                                    if (index < 6) {
-                                        destinationFocus.drawerEscapeModifier(
-                                            isLeftEdge = index == 0,
-                                            up = primaryContentRequester,
-                                        )
-                                    } else {
-                                        Modifier
-                                    }
+                                    destinationFocus.drawerEscapeModifier(
+                                        isLeftEdge = index % columnCount == 0,
+                                        up = if (index < columnCount) primaryContentRequester else null,
+                                    )
                                 )
                         )
                     }

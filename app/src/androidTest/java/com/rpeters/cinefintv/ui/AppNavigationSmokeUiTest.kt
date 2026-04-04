@@ -429,15 +429,14 @@ private fun AppNavigationSmokeHarness() {
                 arguments = listOf(
                     navArgument("itemId") { type = NavType.StringType },
                     navArgument("start") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
+                        type = NavType.LongType
+                        defaultValue = -1L
                     },
                 ),
             ) { backStackEntry ->
                 SmokeScreen("Player") {
                     Text("Arg itemId: ${backStackEntry.arguments?.getString("itemId").orEmpty()}")
-                    Text("Arg start: ${backStackEntry.arguments?.getString("start") ?: "null"}")
+                    Text("Arg start: ${backStackEntry.arguments?.getLong("start")}")
                 }
             }
         }

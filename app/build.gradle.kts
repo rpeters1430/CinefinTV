@@ -167,5 +167,5 @@ dependencies {
     androidTestImplementation(libs.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.espresso.core)
-    androidTestImplementation("io.mockk:mockk-android:1.14.9")
+    androidTestImplementation(libs.mockk.android)
 }

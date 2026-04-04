@@ -16,7 +16,12 @@ class CachePolicyInterceptor(
             url.contains("/Sessions", true)
         val isImage = url.contains("/Items/", true) &&
             url.contains("/Images", true)
-        val isCacheable = !isWrite && !isAuth
+        // User-state endpoints return per-user data that changes on playback (e.g. UserData,
+        // Continue Watching). Caching these would show stale progress on the home screen.
+        val isUserState = url.contains("/UserItems", true) ||
+            url.contains("/UserData", true) ||
+            (url.contains("/Users/", true) && url.contains("/Items", true))
+        val isCacheable = !isWrite && !isAuth && !isUserState
 
         val requestBuilder = req.newBuilder()
 

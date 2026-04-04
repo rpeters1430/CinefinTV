@@ -9,7 +9,6 @@ import com.rpeters.cinefintv.data.cache.JellyfinCache
 import com.rpeters.cinefintv.data.playback.EnhancedPlaybackManager
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.repository.JellyfinAuthRepository
-import com.rpeters.cinefintv.data.repository.JellyfinRepository
 import com.rpeters.cinefintv.data.repository.JellyfinStreamRepository
 import com.rpeters.cinefintv.network.CachePolicyInterceptor
 import com.rpeters.cinefintv.network.ConnectivityChecker
@@ -70,11 +69,12 @@ object NetworkModule {
         val builder = OkHttpClient.Builder()
             .withStrictModeTagger()
             .cache(cache)
-            // Add network state monitoring first to catch connectivity issues early
-            .addInterceptor(NetworkStateInterceptor(connectivityChecker))
             .addInterceptor(authInterceptor)
             .authenticator(authInterceptor)
             .addInterceptor(CachePolicyInterceptor(connectivityChecker))
+            // Network interceptor runs after cache — so offline cache reads succeed before
+            // connectivity is checked. Only fires when OkHttp actually needs to hit the network.
+            .addNetworkInterceptor(NetworkStateInterceptor(connectivityChecker))
             // SECURITY: Add certificate pinning
             .sslSocketFactory(sslSocketFactory, pinningTrustManager)
             .hostnameVerifier(hostnameVerifier)
@@ -186,7 +186,7 @@ object NetworkModule {
     @Singleton
     fun provideEnhancedPlaybackManager(
         @ApplicationContext context: Context,
-        repository: JellyfinRepository,
+        authRepository: JellyfinAuthRepository,
         streamRepository: JellyfinStreamRepository,
         deviceCapabilities: DeviceCapabilities,
         connectivityChecker: ConnectivityChecker,
@@ -194,39 +194,11 @@ object NetworkModule {
     ): EnhancedPlaybackManager {
         return EnhancedPlaybackManager(
             context,
-            repository,
+            authRepository,
             streamRepository,
             deviceCapabilities,
             connectivityChecker,
             playbackPreferencesRepository,
-        )
-    }
-
-    @Provides
-    @Singleton
-    fun provideJellyfinRepository(
-        sessionManager: com.rpeters.cinefintv.data.session.JellyfinSessionManager,
-        secureCredentialManager: com.rpeters.cinefintv.data.SecureCredentialManager,
-        @ApplicationContext context: Context,
-        deviceCapabilities: DeviceCapabilities,
-        authRepository: JellyfinAuthRepository,
-        streamRepository: JellyfinStreamRepository,
-        mediaRepository: com.rpeters.cinefintv.data.repository.JellyfinMediaRepository,
-        searchRepository: com.rpeters.cinefintv.data.repository.JellyfinSearchRepository,
-        connectivityChecker: ConnectivityChecker,
-        analyticsHelper: com.rpeters.cinefintv.utils.AnalyticsHelper,
-    ): JellyfinRepository {
-        return JellyfinRepository(
-            sessionManager,
-            secureCredentialManager,
-            context,
-            deviceCapabilities,
-            authRepository,
-            streamRepository,
-            mediaRepository,
-            searchRepository,
-            connectivityChecker,
-            analyticsHelper,
         )
     }
 
