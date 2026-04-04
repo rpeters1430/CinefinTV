@@ -36,8 +36,7 @@ private fun BaseItemDto.buildMediaCardSubtitle(): String? {
     val playbackLabel = getMediaPlaybackStatusLabel()
     val detailLabel = when {
         isEpisode() -> getEpisodeCardDetailLine()
-        isSeries() -> getUnwatchedEpisodeCardLabel()
-            ?: getSeriesCardDetailLine()
+        isSeries() -> getSeriesCardDetailLine()
             ?: getYear()?.toString()
             ?: type.toString().replace('_', ' ')
         type == BaseItemKind.VIDEO -> getFormattedDuration()
@@ -60,8 +59,6 @@ private fun BaseItemDto.buildMediaCardSubtitle(): String? {
 private fun BaseItemDto.getMediaPlaybackStatusLabel(): String? {
     return when {
         canResume() -> getResumeTimeLeftLabel() ?: "${getWatchedPercentage().toInt()}% watched"
-        isWatched() -> "Watched"
-        isPlayableVideoType() -> "Unwatched"
         else -> null
     }
 }

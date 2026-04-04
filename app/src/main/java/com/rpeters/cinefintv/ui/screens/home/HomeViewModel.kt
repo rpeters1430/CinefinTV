@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.ui.components.WatchStatus
+import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getItemTypeString
@@ -96,7 +97,7 @@ class HomeViewModel @Inject constructor(
             }
 
             val librariesDeferred = async { repositories.media.getUserLibraries() }
-            val continueDeferred = async { repositories.media.getContinueWatching(limit = 12) }
+            val continueDeferred = async { repositories.media.getContinueWatching(limit = 24) }
             val nextUpDeferred = async { repositories.media.getNextUp(limit = 12) }
             val moviesDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12) }
             val episodesDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12) }
@@ -114,6 +115,11 @@ class HomeViewModel @Inject constructor(
             )
 
             val nextEpisodesSectionItems = buildNextEpisodeSectionItems(results[2])
+            val continueWatchingItems = (results[1] as? ApiResult.Success)?.data
+                ?.filter { it.canResume() }
+                ?.take(12)
+                ?.map(::toCardModel)
+                .orEmpty()
 
             val sections = buildList {
                 val librariesResult = results[0]
@@ -131,7 +137,9 @@ class HomeViewModel @Inject constructor(
                     }
                 }
                 
-                addSection("Continue Watching", results[1])
+                if (continueWatchingItems.isNotEmpty()) {
+                    add(HomeSectionModel(title = "Continue Watching", items = continueWatchingItems))
+                }
                 if (nextEpisodesSectionItems.isNotEmpty()) {
                     add(HomeSectionModel(title = "Next Episodes", items = nextEpisodesSectionItems))
                 }
@@ -165,7 +173,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             // Give server a moment to process the stop report
             delay(500)
-            val continueDeferred = async { repositories.media.getContinueWatching(limit = 12) }
+            val continueDeferred = async { repositories.media.getContinueWatching(limit = 24) }
             val nextUpDeferred = async { repositories.media.getNextUp(limit = 12) }
 
             when (val continueResult = continueDeferred.await()) {
@@ -173,31 +181,32 @@ class HomeViewModel @Inject constructor(
                     // Re-read state after the suspension point to avoid overwriting concurrent mutations
                     val latestState = _uiState.value as? HomeUiState.Content ?: return@launch
                     val nextEpisodeItems = buildNextEpisodeSectionItems(nextUpDeferred.await())
+                    
+                    val continueWatchingItems = continueResult.data
+                        .filter { it.canResume() }
+                        .take(12)
+                        .map(::toCardModel)
+
                     val updatedSections = buildList {
                         for (section in latestState.sections) {
                             when (section.title) {
                                 "Continue Watching" -> {
-                                    if (continueResult.data.isNotEmpty()) {
-                                        add(section.copy(items = continueResult.data.take(12).map(::toCardModel)))
+                                    if (continueWatchingItems.isNotEmpty()) {
+                                        add(section.copy(items = continueWatchingItems))
                                     }
-                                    // If empty, omit the section (nothing to continue watching)
+                                    // If empty, omit the section
                                 }
                                 "Next Episodes" -> {
-                                    // Will be re-added after the loop if non-empty
+                                    // Will be re-added after the loop
                                 }
                                 else -> add(section)
                             }
                         }
                     }.toMutableList()
 
-                    // Insert Continue Watching + Next Episodes at correct positions
-                    // They were not added inside the loop if section didn't exist before;
-                    // find the insertion index (after "My Libraries" if present)
-                    val continueWatchingItems = continueResult.data.take(12).map(::toCardModel)
                     val myLibrariesIdx = updatedSections.indexOfFirst { it.title == "My Libraries" }
                     val insertAfter = if (myLibrariesIdx >= 0) myLibrariesIdx else -1
 
-                    // Remove any existing Continue Watching / Next Episodes (shouldn't be there but just in case)
                     val withoutCW = updatedSections.filter {
                         it.title != "Continue Watching" && it.title != "Next Episodes"
                     }.toMutableList()
@@ -251,6 +260,15 @@ class HomeViewModel @Inject constructor(
 
         return nextUpItems
             .filter { it.isEpisode() }
+            // Filter out episodes from shows that haven't been started.
+            // A show is considered "started" if we're past the first episode (S1:E1)
+            // or if we have already made progress on the first episode itself.
+            .filter { item ->
+                val isFirstEpisode = (item.parentIndexNumber ?: 1) <= 1 && (item.indexNumber ?: 1) <= 1
+                val hasProgress = (item.userData?.playedPercentage ?: 0.0) > 0.0 || item.userData?.played == true
+                
+                !isFirstEpisode || hasProgress
+            }
             .distinctBy { it.id.toString() }
             .take(12)
             .map(::toCardModel)

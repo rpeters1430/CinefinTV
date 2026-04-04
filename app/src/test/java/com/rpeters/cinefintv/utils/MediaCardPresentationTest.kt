@@ -26,7 +26,7 @@ class MediaCardPresentationTest {
     }
 
     @Test
-    fun toMediaCardPresentation_forWatchedMovie_showsWatchedStatusLine() {
+    fun toMediaCardPresentation_forWatchedMovie_showsYearOnly() {
         val item = mediaItem(
             type = BaseItemKind.MOVIE,
             title = "Feature Film",
@@ -37,11 +37,11 @@ class MediaCardPresentationTest {
 
         val presentation = item.toMediaCardPresentation()
 
-        assertEquals("Watched  ·  2024", presentation.subtitle)
+        assertEquals("2024", presentation.subtitle)
     }
 
     @Test
-    fun toMediaCardPresentation_forUnwatchedEpisode_keepsStatusAndEpisodeContext() {
+    fun toMediaCardPresentation_forUnwatchedEpisode_showsEpisodeContextOnly() {
         val item = mediaItem(
             type = BaseItemKind.EPISODE,
             title = "Episode 2",
@@ -52,7 +52,7 @@ class MediaCardPresentationTest {
 
         val presentation = item.toMediaCardPresentation()
 
-        assertEquals("Unwatched  ·  Example Show  ·  S1 · E2", presentation.subtitle)
+        assertEquals("Example Show  ·  S1 · E2", presentation.subtitle)
     }
 
     private fun mediaItem(

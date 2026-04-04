@@ -30,9 +30,15 @@ class HomeViewModelTest {
     fun refresh_buildsSectionsFromAvailableResults() = runTest {
         val fakeRepositories = FakeHomeRepositories()
         val movie = mockBaseItemDto("Movie 1")
+        val userData = mockk<org.jellyfin.sdk.model.api.UserItemDataDto>()
+        every { userData.playedPercentage } returns 45.0
+        every { userData.played } returns false
+        every { userData.playbackPositionTicks } returns 1000L
+        every { movie.userData } returns userData
+        every { movie.runTimeTicks } returns 2000L
 
         coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
-        coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(listOf(movie))
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 24) } returns ApiResult.Success(listOf(movie))
         coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
@@ -64,7 +70,7 @@ class HomeViewModelTest {
         val fakeRepositories = FakeHomeRepositories()
 
         coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
-        coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Error("backend unavailable")
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 24) } returns ApiResult.Error("backend unavailable")
         coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
@@ -94,7 +100,7 @@ class HomeViewModelTest {
         val movie2 = mockBaseItemDto("Featured Movie 2")
 
         coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
-        coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 24) } returns ApiResult.Success(emptyList())
         coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
@@ -124,9 +130,15 @@ class HomeViewModelTest {
     fun refreshWatchStatus_updatesOnlyContinueWatchingSection() = runTest {
         val fakeRepositories = FakeHomeRepositories()
         val movie = mockBaseItemDto("Movie 1")
+        val userData = mockk<org.jellyfin.sdk.model.api.UserItemDataDto>()
+        every { userData.playedPercentage } returns 45.0
+        every { userData.played } returns false
+        every { userData.playbackPositionTicks } returns 1000L
+        every { movie.userData } returns userData
+        every { movie.runTimeTicks } returns 2000L
 
         coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
-        coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(listOf(movie))
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 24) } returns ApiResult.Success(listOf(movie))
         coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
@@ -160,7 +172,7 @@ class HomeViewModelTest {
         val fakeRepositories = FakeHomeRepositories()
 
         coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
-        coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Error("backend unavailable")
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 24) } returns ApiResult.Error("backend unavailable")
         coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
@@ -192,7 +204,7 @@ class HomeViewModelTest {
         val video = mockBaseItemDto("Clip 1", BaseItemKind.VIDEO)
 
         coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
-        coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 24) } returns ApiResult.Success(emptyList())
         coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
@@ -221,11 +233,11 @@ class HomeViewModelTest {
     fun refresh_nextEpisodes_usesGlobalNextUpNotContinueWatchingEpisodesOnly() = runTest {
         val fakeRepositories = FakeHomeRepositories()
         val movie = mockBaseItemDto("Movie 1")
-        val nextEpisode1 = mockBaseItemDto("Show A - S1E2", BaseItemKind.EPISODE)
-        val nextEpisode2 = mockBaseItemDto("Show B - S2E4", BaseItemKind.EPISODE)
+        val nextEpisode1 = mockBaseItemDto("Show A - S1E2", BaseItemKind.EPISODE, season = 1, episode = 2)
+        val nextEpisode2 = mockBaseItemDto("Show B - S2E4", BaseItemKind.EPISODE, season = 2, episode = 4)
 
         coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
-        coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(listOf(movie))
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 24) } returns ApiResult.Success(listOf(movie))
         coEvery {
             fakeRepositories.media.getNextUp(limit = 12)
         } returns ApiResult.Success(listOf(nextEpisode1, nextEpisode2))
@@ -255,13 +267,52 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun refresh_nextEpisodes_filtersOutUnstartedShows() = runTest {
+        val fakeRepositories = FakeHomeRepositories()
+        // Unstarted show (S1E1, no progress)
+        val unstartedEpisode = mockBaseItemDto("Unstarted Show", BaseItemKind.EPISODE, season = 1, episode = 1)
+        
+        // Started show (S1E1, but we'll mock progress)
+        val startedFirstEpisode = mockBaseItemDto("Started Show", BaseItemKind.EPISODE, season = 1, episode = 1)
+        val userData = mockk<org.jellyfin.sdk.model.api.UserItemDataDto>()
+        every { userData.playedPercentage } returns 15.0
+        every { userData.played } returns false
+        every { userData.playbackPositionTicks } returns 1000L
+        every { startedFirstEpisode.userData } returns userData
+
+        // Show with progress (S2E1)
+        val showWithProgress = mockBaseItemDto("Show with Progress", BaseItemKind.EPISODE, season = 2, episode = 1)
+
+        coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 24) } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getNextUp(limit = 12)
+        } returns ApiResult.Success(listOf(unstartedEpisode, startedFirstEpisode, showWithProgress))
+        coEvery { fakeRepositories.media.getRecentlyAddedByType(any(), any()) } returns ApiResult.Success(emptyList())
+        every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
+        every { fakeRepositories.stream.getBackdropUrl(any()) } returns null
+
+        val viewModel = HomeViewModel(fakeRepositories.coordinator, updateBus)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as HomeUiState.Content
+        val nextEpisodes = state.sections.first { it.title == "Next Episodes" }
+        
+        // Should only have 2 items (unstarted one is filtered)
+        assertEquals(2, nextEpisodes.items.size)
+        assertTrue(nextEpisodes.items.any { it.title == "Started Show" })
+        assertTrue(nextEpisodes.items.any { it.title == "Show with Progress" })
+        assertTrue(nextEpisodes.items.none { it.title == "Unstarted Show" })
+    }
+
+    @Test
     fun refresh_silent_updatesRecentlyAddedWithoutLeavingContentState() = runTest {
         val fakeRepositories = FakeHomeRepositories()
         val oldMovie = mockBaseItemDto("Old Movie")
         val newMovie = mockBaseItemDto("New Movie")
 
         coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
-        coEvery { fakeRepositories.media.getContinueWatching(limit = 12) } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 24) } returns ApiResult.Success(emptyList())
         coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
         coEvery {
             fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
@@ -298,6 +349,8 @@ class HomeViewModelTest {
     private fun mockBaseItemDto(
         name: String,
         type: BaseItemKind = BaseItemKind.MOVIE,
+        season: Int? = null,
+        episode: Int? = null,
     ): BaseItemDto {
         val item: BaseItemDto = mockk()
         every { item.id } returns UUID.randomUUID()
@@ -313,8 +366,8 @@ class HomeViewModelTest {
         every { item.mediaSources } returns null
         every { item.seriesId } returns null
         every { item.seriesName } returns null
-        every { item.parentIndexNumber } returns null
-        every { item.indexNumber } returns null
+        every { item.parentIndexNumber } returns season
+        every { item.indexNumber } returns episode
         every { item.parentId } returns null
         return item
     }
