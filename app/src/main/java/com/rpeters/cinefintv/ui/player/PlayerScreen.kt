@@ -491,6 +491,14 @@ internal fun PlayerPlaybackContent(
                         Key.DirectionLeft, Key.DirectionRight -> {
                             if (!controlsVisible) {
                                 onInteract()
+                                // Seek immediately on first press rather than requiring a second press
+                                if (renderState.duration > 0L && !overlayActionFocused) {
+                                    val seekMs = uiState.videoSeekIncrement.millis
+                                    val delta = if (keyEvent.key == Key.DirectionLeft) -seekMs else seekMs
+                                    val newPos = (exoPlayer.currentPosition + delta)
+                                        .coerceIn(0L, renderState.duration)
+                                    exoPlayer.seekTo(newPos)
+                                }
                                 true
                             } else {
                                 false

@@ -538,7 +538,7 @@ class PlayerViewModel @Inject constructor(
                 subtitleStreamIndex = uiState.value.selectedSubtitleTrack?.streamIndex,
                 startPositionMs = positionMs,
             )
-            val streamUrl = resolvedPlayback?.url ?: repositories.stream.getTranscodedStreamUrl(
+            val streamUrl = resolvedPlayback?.url ?: repositories.stream.getHlsTranscodeStreamUrl(
                 itemId = currentItemId,
                 mediaSourceId = activeMediaSourceId,
                 playSessionId = activePlaySessionId,

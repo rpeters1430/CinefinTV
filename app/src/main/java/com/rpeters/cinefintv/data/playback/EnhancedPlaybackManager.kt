@@ -500,18 +500,17 @@ class EnhancedPlaybackManager @Inject constructor(
 
         val maxAudioChannels = prefs.audioChannels.channels ?: DEFAULT_TV_MAX_AUDIO_CHANNELS
 
-        // Build Direct Stream URL with audio transcoding parameters.
+        // Build Direct Stream HLS URL with audio transcoding parameters.
+        // HLS supports timestamp-based seeking; progressive TS streams do not.
         // Pass the actual source video codec + AllowVideoStreamCopy=true (default) so Jellyfin
-        // copies the video bitstream instead of re-encoding it. Using "copy" as the codec name
-        // is invalid — Jellyfin expects a real codec identifier here.
-        val directStreamUrl = streamRepository.getTranscodedStreamUrl(
+        // copies the video bitstream instead of re-encoding it.
+        val directStreamUrl = streamRepository.getHlsTranscodeStreamUrl(
             itemId = itemId,
             maxBitrate = mediaSource.bitrate ?: 20_000_000, // Use source bitrate
             maxWidth = sourceVideoStream?.width ?: 1920,
             maxHeight = sourceVideoStream?.height ?: 1080,
             videoCodec = sourceVideoStream?.codec ?: "h264",
             audioCodec = "aac", // Transcode audio to AAC (universally supported)
-            container = "ts", // Use TS container for better streaming compatibility
             mediaSourceId = mediaSourceId,
             playSessionId = playSessionId,
             audioStreamIndex = audioStreamIndex,
@@ -537,7 +536,7 @@ class EnhancedPlaybackManager @Inject constructor(
             targetResolution = "${sourceVideoStream?.width ?: 1920}x${sourceVideoStream?.height ?: 1080}",
             targetVideoCodec = sourceVideoStream?.codec ?: "h264", // Original codec (video is copied)
             targetAudioCodec = "aac",
-            targetContainer = "ts",
+            targetContainer = "hls",
             mediaSourceId = mediaSourceId,
             reason = "Direct Stream: Original video (${sourceVideoStream?.codec}), audio transcoded (${sourceAudioStream?.codec} -> aac)",
             playSessionId = playSessionId,
@@ -640,15 +639,16 @@ class EnhancedPlaybackManager @Inject constructor(
                 "preserveHdr=$shouldPreserveHdr",
         )
 
-        // Try primary transcoding URL
-        val transcodingUrl = streamRepository.getTranscodedStreamUrl(
+        // Build HLS transcoding URL for reliable timestamp-based seeking.
+        // Progressive TS streams cannot be seeked via byte ranges, but HLS segments
+        // carry timing metadata that lets ExoPlayer seek accurately without reloading the stream.
+        val transcodingUrl = streamRepository.getHlsTranscodeStreamUrl(
             itemId = itemId,
             maxBitrate = transcodingParams.maxBitrate,
             maxWidth = transcodingParams.maxWidth,
             maxHeight = transcodingParams.maxHeight,
             videoCodec = transcodingParams.videoCodec,
             audioCodec = transcodingParams.audioCodec,
-            container = transcodingParams.container,
             mediaSourceId = mediaSourceId,
             playSessionId = playSessionId,
             audioStreamIndex = audioStreamIndex,
@@ -671,7 +671,7 @@ class EnhancedPlaybackManager @Inject constructor(
             targetResolution = "${transcodingParams.maxWidth}x${transcodingParams.maxHeight}",
             targetVideoCodec = transcodingParams.videoCodec,
             targetAudioCodec = transcodingParams.audioCodec,
-            targetContainer = transcodingParams.container,
+            targetContainer = "hls",
             mediaSourceId = mediaSourceId,
             reason = "Optimized for $qualityName quality",
             playSessionId = playSessionId,

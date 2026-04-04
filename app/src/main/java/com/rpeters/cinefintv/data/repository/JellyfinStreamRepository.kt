@@ -146,6 +146,57 @@ class JellyfinStreamRepository @Inject constructor(
     }
 
     /**
+     * Get HLS transcoding URL with quality parameters.
+     * HLS supports accurate timestamp-based seeking via segment manifests, unlike progressive
+     * TS streams where byte-range seeking does not correspond to timestamps.
+     */
+    fun getHlsTranscodeStreamUrl(
+        itemId: String,
+        maxBitrate: Int? = null,
+        maxWidth: Int? = null,
+        maxHeight: Int? = null,
+        videoCodec: String = DEFAULT_VIDEO_CODEC,
+        audioCodec: String = DEFAULT_AUDIO_CODEC,
+        mediaSourceId: String? = null,
+        playSessionId: String? = null,
+        audioStreamIndex: Int? = null,
+        subtitleStreamIndex: Int? = null,
+        audioChannels: Int = DEFAULT_TV_MAX_AUDIO_CHANNELS,
+        audioBitrate: Int? = null,
+        allowVideoStreamCopy: Boolean = true,
+        allowAudioStreamCopy: Boolean = true,
+    ): String? {
+        return try {
+            val server = validateServer()
+            val params = mutableListOf<String>()
+
+            maxBitrate?.let {
+                params.add("MaxStreamingBitrate=$it")
+                params.add("VideoBitRate=$it")
+            }
+            maxWidth?.let { params.add("MaxWidth=$it") }
+            maxHeight?.let { params.add("MaxHeight=$it") }
+            params.add("VideoCodec=$videoCodec")
+            params.add("AudioCodec=$audioCodec")
+            params.add("AudioChannels=$audioChannels")
+            audioBitrate?.let { params.add("AudioBitRate=$it") }
+            params.add("DeviceId=${deviceCapabilities.getDeviceId()}")
+            params.add("AllowVideoStreamCopy=$allowVideoStreamCopy")
+            params.add("AllowAudioStreamCopy=$allowAudioStreamCopy")
+            audioStreamIndex?.let { params.add("AudioStreamIndex=$it") }
+            subtitleStreamIndex?.let { params.add("SubtitleStreamIndex=$it") }
+            mediaSourceId?.let { params.add("MediaSourceId=$it") }
+            params.add("PlaySessionId=${playSessionId ?: UUID.randomUUID()}")
+
+            "${server.url}/Videos/$itemId/master.m3u8?${params.joinToString("&")}"
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("JellyfinStreamRepository", "getHlsTranscodeStreamUrl failed: ${e.message}")
+            null
+        }
+    }
+
+    /**
      * Get DASH (Dynamic Adaptive Streaming over HTTP) URL
      */
     fun getDashStreamUrl(itemId: String): String? {
