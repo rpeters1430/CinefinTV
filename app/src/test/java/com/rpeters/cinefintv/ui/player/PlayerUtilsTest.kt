@@ -80,7 +80,15 @@ class PlayerUtilsTest {
             positionMs = 18_000L,
             range = SkipRange(startMs = 5_000L, endMs = 18_000L),
         )
+    @Test
+    fun isInSkipRange_returnsTrueAtInclusiveStartBoundary() {
+        val result = isInSkipRange(
+            positionMs = 5_000L,
+            range = SkipRange(startMs = 5_000L, endMs = 18_000L),
+        )
 
+        assertTrue(result)
+    }
         assertFalse(result)
     }
 }
