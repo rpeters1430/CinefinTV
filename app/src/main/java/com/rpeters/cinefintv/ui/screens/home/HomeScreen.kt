@@ -695,7 +695,7 @@ private fun HomeSection(
                                     Modifier
                                 }
                             )
-                            .then(if (index == restoredFocusIndex) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
+                            .then(if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
                             .then(focusModifier)
                             .onPreviewKeyEvent { keyEvent ->
                                 val nativeEvent = keyEvent.nativeKeyEvent
