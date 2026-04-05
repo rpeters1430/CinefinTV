@@ -56,4 +56,39 @@ class PlayerUtilsTest {
 
         assertFalse(result)
     }
+
+    @Test
+    fun shouldShowNextEpisodeCard_returnsFalseOutsideCreditsWindow_whenNotNearEnd() {
+        val uiState = PlayerUiState(
+            isEpisodicContent = true,
+            nextEpisodeId = "episode-2",
+            creditsSkipRange = SkipRange(startMs = 90_000L, endMs = 100_000L),
+        )
+
+        val result = shouldShowNextEpisodeCard(
+            uiState = uiState,
+            positionMs = 105_000L,
+            durationMs = 300_000L,
+        )
+
+        assertFalse(result)
+    }
+
+    @Test
+    fun isInSkipRange_returnsFalseWhenPositionHitsExclusiveEndBoundary() {
+        val result = isInSkipRange(
+            positionMs = 18_000L,
+            range = SkipRange(startMs = 5_000L, endMs = 18_000L),
+        )
+    @Test
+    fun isInSkipRange_returnsTrueAtInclusiveStartBoundary() {
+        val result = isInSkipRange(
+            positionMs = 5_000L,
+            range = SkipRange(startMs = 5_000L, endMs = 18_000L),
+        )
+
+        assertTrue(result)
+    }
+        assertFalse(result)
+    }
 }
