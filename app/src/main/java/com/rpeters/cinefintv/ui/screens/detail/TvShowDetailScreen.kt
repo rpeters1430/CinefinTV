@@ -151,6 +151,15 @@ fun TvShowDetailScreen(
                         ?.let { "$it." }
                 }
 
+                val heroSummary = remember(show, heroTagline) {
+                    heroTagline ?: show.overview
+                        ?.trim()
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { overview ->
+                            if (overview.length <= 140) overview else overview.take(137).trimEnd() + "..."
+                        }
+                }
+
                 val heroBadges = remember(show) {
                     buildList {
                         show.officialRating?.let(::add)
@@ -187,6 +196,8 @@ fun TvShowDetailScreen(
                     },
                     topFocusRequester = topFocus,
                     primaryActionFocusRequester = primaryActionFocus,
+                    nextUpTitle = show.nextUpTitle,
+                    onNextUpClick = show.nextUpEpisodeId?.let { nextUpId -> { onPlayEpisode(nextUpId) } },
                     seasons = state.seasons,
                     onSeasonClick = { season -> onOpenSeason(season.id) },
                     castItems = state.cast,
@@ -194,7 +205,7 @@ fun TvShowDetailScreen(
                     onCastClick = { personId -> onOpenPerson(personId) },
                     onSimilarClick = { showId -> onOpenShow(showId) },
                     description = show.overview ?: "",
-                    heroTagline = heroTagline,
+                    heroTagline = heroSummary,
                     creditLine = creditLine,
                     heroBadges = heroBadges,
                     factItems = factItems,

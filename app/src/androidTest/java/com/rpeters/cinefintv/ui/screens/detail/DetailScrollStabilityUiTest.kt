@@ -139,6 +139,8 @@ class DetailScrollStabilityUiTest {
                     onPrimaryAction = {},
                     primaryActionFocusRequester = focusRequester,
                     topFocusRequester = anchorFocusRequester,
+                    nextUpTitle = null,
+                    onNextUpClick = null,
                     seasons = emptyList(),
                     onSeasonClick = {},
                     castItems = emptyList(),
@@ -323,6 +325,8 @@ class DetailScrollStabilityUiTest {
                     primaryActionLabel = "Play",
                     onPrimaryAction = {},
                     primaryActionFocusRequester = focusRequester,
+                    nextUpTitle = null,
+                    onNextUpClick = null,
                     seasons = (1..5).map {
                         SeasonModel(
                             id = "s$it",

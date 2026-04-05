@@ -5,6 +5,8 @@ object DetailTestTags {
     const val Overview = "detail_overview"
     const val HeroTitle = "detail_hero_title"
     const val HeroLogo = "detail_hero_logo"
+    const val TvNextUpPanel = "tv_detail_next_up_panel"
+    const val TvNextUpAction = "tv_detail_next_up_action"
     const val MovieCastSection = "movie_detail_cast_section"
     const val MovieSimilarSection = "movie_detail_similar_section"
     const val TvEpisodesPanel = "tv_detail_episodes_panel"

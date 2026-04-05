@@ -327,6 +327,55 @@ fun DetailMetaLabelLine(
 }
 
 @Composable
+fun DetailShelfPanel(
+    title: String,
+    subtitle: String? = null,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val spacing = LocalCinefinSpacing.current
+    val expressiveColors = LocalCinefinExpressiveColors.current
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = spacing.gutter)
+            .background(
+                color = expressiveColors.detailPanelMuted.copy(alpha = 0.9f),
+                shape = RoundedCornerShape(spacing.cornerContainer),
+            )
+            .border(
+                width = 1.dp,
+                color = expressiveColors.borderSubtle.copy(alpha = 0.34f),
+                shape = RoundedCornerShape(spacing.cornerContainer),
+            )
+            .padding(vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
+        content = {
+            Column(
+                modifier = Modifier.padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                subtitle?.takeIf { it.isNotBlank() }?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            content()
+        },
+    )
+}
+
+@Composable
 fun DetailFactsColumn(
     items: List<DetailLabeledMetaItem>,
     modifier: Modifier = Modifier,

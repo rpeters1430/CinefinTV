@@ -18,10 +18,13 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
+import io.mockk.just
+import io.mockk.Runs
 import io.mockk.unmockkObject
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -429,6 +432,50 @@ class PlayerViewModelTest {
         viewModel.setPlaybackSpeed(1.5f)
 
         assertEquals(1.5f, viewModel.uiState.value.playbackSpeed)
+    }
+
+    @Test
+    fun qualityRecommendation_whenMediumSeverity_updatesTranscodingQuality() = runTest {
+        val fakeRepositories = FakePlayerRepositories()
+        val recommendationFlow =
+            MutableStateFlow<com.rpeters.cinefintv.data.playback.QualityRecommendation?>(null)
+        val customAdaptiveMonitor: com.rpeters.cinefintv.data.playback.AdaptiveBitrateMonitor = mockk {
+            every { qualityRecommendation } returns recommendationFlow
+            every { clearRecommendation() } just Runs
+            every { resetBufferingTracking() } just Runs
+        }
+
+        every { fakeRepositories.stream.getStreamUrl("item-1") } returns "https://stream/item-1"
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
+        coEvery { fakeRepositories.media.getItemDetails("item-1") } returns ApiResult.Error("not found")
+        coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "item-1") } returns 0L
+        coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns
+            com.rpeters.cinefintv.data.playback.PlaybackResult.Error("error")
+
+        val viewModel = PlayerViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
+            repositories = fakeRepositories.coordinator,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = customAdaptiveMonitor,
+            playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
+            appContext = appContext,
+            okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
+        )
+        advanceUntilIdle()
+
+        recommendationFlow.value = com.rpeters.cinefintv.data.playback.QualityRecommendation(
+            recommendedQuality = com.rpeters.cinefintv.data.preferences.TranscodingQuality.MEDIUM,
+            reason = "Frequent buffering",
+            severity = com.rpeters.cinefintv.data.playback.RecommendationSeverity.MEDIUM,
+        )
+        advanceUntilIdle()
+
+        assertEquals(
+            com.rpeters.cinefintv.data.preferences.TranscodingQuality.MEDIUM,
+            viewModel.uiState.value.transcodingQuality,
+        )
     }
 
     @Test

@@ -13,6 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,10 +44,20 @@ fun CinefinChip(
     modifier: Modifier = Modifier,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
-    val backgroundColor = if (strong) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.88f)
+    val backgroundBrush = if (strong) {
+        Brush.horizontalGradient(
+            listOf(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
+                expressiveColors.titleAccent.copy(alpha = 0.74f),
+            ),
+        )
     } else {
-        expressiveColors.chromeSurface.copy(alpha = 0.44f)
+        Brush.horizontalGradient(
+            listOf(
+                expressiveColors.detailBadge.copy(alpha = 0.92f),
+                expressiveColors.detailPanelMuted.copy(alpha = 0.86f),
+            ),
+        )
     }
     val contentColor = if (strong) {
         MaterialTheme.colorScheme.onPrimary 
@@ -55,20 +67,20 @@ fun CinefinChip(
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(backgroundColor)
+            .clip(RoundedCornerShape(999.dp))
+            .background(backgroundBrush)
             .border(
                 border = androidx.compose.foundation.BorderStroke(
-                    width = 1.dp, 
+                    width = 1.dp,
                     color = if (strong) {
-                        expressiveColors.borderSubtle.copy(alpha = 0.58f)
+                        Color.White.copy(alpha = 0.2f)
                     } else {
-                        expressiveColors.borderSubtle.copy(alpha = 0.24f)
+                        expressiveColors.borderSubtle.copy(alpha = 0.3f)
                     }
                 ),
-                shape = RoundedCornerShape(6.dp),
+                shape = RoundedCornerShape(999.dp),
             )
-            .padding(horizontal = 12.dp, vertical = 5.dp),
+            .padding(horizontal = 14.dp, vertical = 7.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -86,7 +98,7 @@ fun CinefinChip(
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.1.sp
+                    letterSpacing = 0.25.sp,
                 ),
                 color = contentColor,
                 maxLines = 1,

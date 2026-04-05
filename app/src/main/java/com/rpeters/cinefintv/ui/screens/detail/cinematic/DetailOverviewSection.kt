@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,9 +29,12 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -62,6 +66,8 @@ fun DetailOverviewSection(
     val spacing = LocalCinefinSpacing.current
     val expressiveColors = LocalCinefinExpressiveColors.current
     var isFocused by remember(title) { mutableStateOf(false) }
+    val summaryFacts = factItems.take(3)
+    val detailFacts = factItems.drop(3)
 
     Column(
         modifier = modifier
@@ -101,7 +107,10 @@ fun DetailOverviewSection(
                 shadowElevation = if (isFocused) 10.dp.toPx() else 0.dp.toPx()
             }
             .background(
-                color = expressiveColors.detailPanel.copy(alpha = 0.68f),
+                brush = Brush.verticalGradient(
+                    0f to expressiveColors.detailPanel.copy(alpha = 0.8f),
+                    1f to expressiveColors.detailPanelMuted.copy(alpha = 0.92f),
+                ),
                 shape = RoundedCornerShape(spacing.cornerContainer),
             )
             .border(
@@ -116,6 +125,11 @@ fun DetailOverviewSection(
             .padding(horizontal = spacing.gutter, vertical = 22.dp),
         verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
     ) {
+        OverviewSectionLabel(
+            text = "Editorial Overview",
+            highlighted = isFocused,
+        )
+
         Row(
             horizontalArrangement = Arrangement.spacedBy(spacing.gutter),
             verticalAlignment = Alignment.Top,
@@ -134,43 +148,44 @@ fun DetailOverviewSection(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
-                ) {
-                    Text(
-                        text = "ABOUT",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (isFocused) expressiveColors.focusRing else MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Text(
-                        text = if (description.isNotBlank()) description else "No overview available.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                OverviewNarrativeCard(
+                    title = title,
+                    description = description,
+                    isFocused = isFocused,
+                )
 
-                if (factItems.isNotEmpty()) {
+                if (summaryFacts.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(spacing.elementGap)) {
-                        Text(
-                            text = "DETAILS",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
+                        OverviewSectionLabel(
+                            text = "At a Glance",
+                            highlighted = false,
                         )
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
                             verticalArrangement = Arrangement.spacedBy(spacing.cardGap),
                         ) {
-                            factItems.forEach { item ->
+                            summaryFacts.forEach { item ->
+                                MetaFactItem(
+                                    icon = item.icon,
+                                    label = item.label,
+                                    value = item.value,
+                                    style = MetaFactStyle.Inline,
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (detailFacts.isNotEmpty()) {
+                    OverviewGroupedPanel(
+                        title = "Details",
+                        contentPadding = PaddingValues(18.dp),
+                    ) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                            verticalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                        ) {
+                            detailFacts.forEach { item ->
                                 MetaFactItem(
                                     icon = item.icon,
                                     label = item.label,
@@ -183,17 +198,102 @@ fun DetailOverviewSection(
                 }
 
                 if (chips.isNotEmpty()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(spacing.elementGap)) {
-                        Text(
-                            text = "CATEGORIES",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
-                        )
+                    OverviewGroupedPanel(
+                        title = "Categories",
+                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
+                    ) {
                         DetailChipRow(labels = chips)
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun OverviewSectionLabel(
+    text: String,
+    highlighted: Boolean,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+
+    Text(
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelMedium,
+        color = if (highlighted) expressiveColors.focusRing else MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+    )
+}
+
+@Composable
+private fun OverviewNarrativeCard(
+    title: String,
+    description: String,
+    isFocused: Boolean,
+) {
+    val spacing = LocalCinefinSpacing.current
+    val expressiveColors = LocalCinefinExpressiveColors.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = expressiveColors.detailPanelFocused.copy(alpha = if (isFocused) 0.7f else 0.42f),
+                shape = RoundedCornerShape(spacing.cornerContainer),
+            )
+            .border(
+                width = 1.dp,
+                color = expressiveColors.borderSubtle.copy(alpha = 0.45f),
+                shape = RoundedCornerShape(spacing.cornerContainer),
+            )
+            .padding(horizontal = 22.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Text(
+            text = if (description.isNotBlank()) description else "No overview available.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 8,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun OverviewGroupedPanel(
+    title: String,
+    contentPadding: PaddingValues,
+    content: @Composable () -> Unit,
+) {
+    val spacing = LocalCinefinSpacing.current
+    val expressiveColors = LocalCinefinExpressiveColors.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = expressiveColors.detailPanelMuted.copy(alpha = 0.88f),
+                shape = RoundedCornerShape(spacing.cornerContainer),
+            )
+            .border(
+                width = 1.dp,
+                color = expressiveColors.borderSubtle.copy(alpha = 0.38f),
+                shape = RoundedCornerShape(spacing.cornerContainer),
+            )
+            .padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
+    ) {
+        OverviewSectionLabel(
+            text = title,
+            highlighted = false,
+        )
+        Box(modifier = Modifier.padding(contentPadding)) {
+            content()
         }
     }
 }

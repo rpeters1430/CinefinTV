@@ -619,6 +619,8 @@ class DetailDpadNavigationUiTest {
                     primaryActionLabel = "▶ Play",
                     onPrimaryAction = {},
                     primaryActionFocusRequester = primaryActionFocusRequester,
+                    nextUpTitle = null,
+                    onNextUpClick = null,
                     seasons = seasons,
                     onSeasonClick = {},
                     castItems = castItems,

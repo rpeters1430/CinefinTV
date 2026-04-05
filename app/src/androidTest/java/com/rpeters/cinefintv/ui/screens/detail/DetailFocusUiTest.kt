@@ -89,6 +89,8 @@ class DetailFocusUiTest {
                     primaryActionLabel = "▶ Play",
                     onPrimaryAction = {},
                     primaryActionFocusRequester = primaryActionFocusRequester,
+                    nextUpTitle = null,
+                    onNextUpClick = null,
                     seasons = listOf(
                         SeasonModel(
                             id = "season-1",

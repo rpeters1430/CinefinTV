@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -49,7 +50,7 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.rpeters.cinefintv.ui.screens.detail.DetailChipRow
+import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
@@ -86,7 +87,7 @@ fun FlatDetailHero(
     ratingText: String?,
     badges: List<String>,
     tagline: String?,
-    description: String,
+    summary: String?,
     creditLine: String?,
     primaryActionLabel: String,
     onPrimaryAction: () -> Unit,
@@ -202,12 +203,12 @@ fun FlatDetailHero(
 
             Text(
                 text = listOfNotNull(eyebrow.takeIf { it.isNotBlank() }, ratingText).joinToString("  •  "),
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White.copy(alpha = 0.9f),
+                style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 0.3.sp),
+                color = Color.White.copy(alpha = 0.84f),
             )
 
             if (badges.isNotEmpty()) {
-                DetailChipRow(
+                HeroBadgeRow(
                     labels = badges,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -224,12 +225,12 @@ fun FlatDetailHero(
                 )
             }
 
-            if (description.isNotBlank()) {
+            if (!summary.isNullOrBlank()) {
                 Text(
-                    text = description,
+                    text = summary,
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White.copy(alpha = 0.96f),
-                    maxLines = 4,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth(0.95f),
                 )
@@ -270,8 +271,8 @@ private fun HeroActionStrip(
         List(secondaryActions.size) { FocusRequester() }
     }
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    FlowRow(
+        verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Button(
@@ -302,8 +303,8 @@ private fun HeroActionStrip(
                     }
                 }
                 .defaultMinSize(minWidth = 220.dp, minHeight = 58.dp),
-            scale = ButtonDefaults.scale(focusedScale = 1.03f),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+            scale = ButtonDefaults.scale(focusedScale = 1.04f),
+            contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp),
             colors = ButtonDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -325,14 +326,17 @@ private fun HeroActionStrip(
                 ),
             ),
         ) {
-            Text(primaryLabel)
+            Text(
+                text = primaryLabel,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            )
         }
 
         secondaryActions.forEachIndexed { index, action ->
             OutlinedButton(
                 onClick = action.onClick,
                 modifier = Modifier
-                    .size(58.dp)
+                    .defaultMinSize(minWidth = 86.dp, minHeight = 58.dp)
                     .focusRequester(secondaryFocusRequesters[index])
                     .blockBringIntoView()
                     .focusProperties {
@@ -360,10 +364,10 @@ private fun HeroActionStrip(
                             false
                         }
                     },
-                scale = ButtonDefaults.scale(focusedScale = 1.08f),
-                contentPadding = PaddingValues(0.dp),
+                scale = ButtonDefaults.scale(focusedScale = 1.04f),
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
                 colors = ButtonDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.16f),
+                    containerColor = expressiveColors.detailPanelFocused.copy(alpha = 0.32f),
                     contentColor = MaterialTheme.colorScheme.onBackground,
                     focusedContainerColor = expressiveColors.detailPanelFocused,
                     focusedContentColor = MaterialTheme.colorScheme.onBackground,
@@ -389,11 +393,44 @@ private fun HeroActionStrip(
                     ),
                 ),
             ) {
-                Icon(
-                    imageVector = action.icon,
-                    contentDescription = action.contentDescription,
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = action.icon,
+                        contentDescription = action.contentDescription,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = action.contentDescription,
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun HeroBadgeRow(
+    labels: List<String>,
+    modifier: Modifier = Modifier,
+) {
+    val filtered = labels.filter { it.isNotBlank() }
+    if (filtered.isEmpty()) return
+
+    FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        filtered.forEachIndexed { index, label ->
+            CinefinChip(
+                label = label,
+                strong = index < 2,
+            )
         }
     }
 }

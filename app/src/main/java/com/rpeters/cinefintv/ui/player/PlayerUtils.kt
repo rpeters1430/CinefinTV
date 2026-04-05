@@ -26,3 +26,25 @@ object PlayerConstants {
     const val CONTROLS_HIDE_DELAY_MS = 5_000L
     const val NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS = 15_000L
 }
+
+internal fun shouldShowNextEpisodeCard(
+    uiState: PlayerUiState,
+    positionMs: Long,
+    durationMs: Long,
+): Boolean {
+    if (!uiState.isEpisodicContent || uiState.nextEpisodeId.isNullOrBlank()) {
+        return false
+    }
+
+    val inCredits = uiState.creditsSkipRange?.let { positionMs >= it.startMs } ?: false
+    if (inCredits) {
+        return true
+    }
+
+    if (durationMs <= 0L) {
+        return false
+    }
+
+    val remainingMs = (durationMs - positionMs).coerceAtLeast(0L)
+    return remainingMs <= PlayerConstants.NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS
+}

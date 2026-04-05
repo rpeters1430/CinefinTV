@@ -149,6 +149,15 @@ fun MovieDetailScreen(
                         ?.let { "$it." }
                 }
 
+                val heroSummary = remember(movie, heroTagline) {
+                    heroTagline ?: movie.overview
+                        ?.trim()
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { overview ->
+                            if (overview.length <= 140) overview else overview.take(137).trimEnd() + "..."
+                        }
+                }
+
                 val heroBadges = remember(movie) {
                     buildList {
                         movie.videoQuality?.let(::add)
@@ -205,7 +214,7 @@ fun MovieDetailScreen(
                     topFocusRequester = topFocus,
                     primaryActionFocusRequester = primaryActionFocus,
                     description = movie.overview ?: "",
-                    heroTagline = heroTagline,
+                    heroTagline = heroSummary,
                     directorLine = directorLine,
                     heroBadges = heroBadges,
                     heroSecondaryActions = heroSecondaryActions,

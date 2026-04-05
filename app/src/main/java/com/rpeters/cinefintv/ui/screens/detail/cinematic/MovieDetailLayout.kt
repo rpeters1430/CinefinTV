@@ -29,6 +29,7 @@ import com.rpeters.cinefintv.ui.components.TvPersonCard
 import com.rpeters.cinefintv.ui.screens.detail.CastModel
 import com.rpeters.cinefintv.ui.screens.detail.DetailAnchor
 import com.rpeters.cinefintv.ui.screens.detail.DetailLabeledMetaItem
+import com.rpeters.cinefintv.ui.screens.detail.DetailShelfPanel
 import com.rpeters.cinefintv.ui.screens.detail.SimilarMovieModel
 import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
@@ -71,8 +72,7 @@ fun MovieDetailLayout(
     val firstCastFocusRequester = remember { FocusRequester() }
     val firstSimilarFocusRequester = remember { FocusRequester() }
     val similarCardWidth: Dp = 196.dp
-    // Overview always precedes similar items, so down-from-hero targets cast or overview — never similar directly.
-    val firstContentFocusRequester = if (castItems.isNotEmpty()) firstCastFocusRequester else null
+    val firstContentFocusRequester = overviewFocusRequester
 
     LazyColumn(
         state = listState,
@@ -94,42 +94,74 @@ fun MovieDetailLayout(
                     ratingText = ratingText,
                     badges = heroBadges,
                     tagline = heroTagline,
-                    description = description,
+                    summary = heroTagline ?: description.takeIf { it.isNotBlank() },
                     creditLine = directorLine,
                     primaryActionLabel = primaryActionLabel,
                     onPrimaryAction = onPrimaryAction,
                     secondaryIconActions = heroSecondaryActions,
                     primaryActionFocusRequester = primaryActionFocusRequester,
-                    primaryActionDownFocusRequester = firstContentFocusRequester ?: overviewFocusRequester,
+                    primaryActionDownFocusRequester = firstContentFocusRequester,
                     onDownNavigation = {
                         if (listState.isScrollInProgress) return@FlatDetailHero
                         coroutineScope.launch {
                             listState.scrollToItemAndAwaitLayout(1)
-                            runCatching {
-                                (firstContentFocusRequester ?: overviewFocusRequester).requestFocus()
-                            }
+                            runCatching { firstContentFocusRequester.requestFocus() }
                         }
                     },
                 )
             }
         }
 
+        item {
+            DetailOverviewSection(
+                title = title,
+                posterUrl = posterUrl,
+                description = description,
+                factItems = factItems,
+                chips = genres,
+                focusRequester = overviewFocusRequester,
+                upFocusRequester = primaryActionFocusRequester,
+                onNavigateUp = {
+                    if (listState.isScrollInProgress) return@DetailOverviewSection
+                    coroutineScope.launch {
+                        listState.scrollToItemAndAwaitLayout(0)
+                        runCatching { primaryActionFocusRequester.requestFocus() }
+                    }
+                },
+                onNavigateDown = if (castItems.isNotEmpty() || similarItems.isNotEmpty()) {
+                    {
+                        if (listState.isScrollInProgress) return@DetailOverviewSection
+                        coroutineScope.launch {
+                            when {
+                                castItems.isNotEmpty() -> {
+                                    listState.scrollToItemAndAwaitLayout(2)
+                                    runCatching { firstCastFocusRequester.requestFocus() }
+                                }
+                                similarItems.isNotEmpty() -> {
+                                    listState.scrollToItemAndAwaitLayout(2)
+                                    runCatching { firstSimilarFocusRequester.requestFocus() }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    null
+                },
+                modifier = Modifier.padding(top = spacing.rowGap),
+            )
+        }
+
         if (castItems.isNotEmpty()) {
             item {
-                Column(
+                DetailShelfPanel(
                     modifier = Modifier
                         .padding(top = spacing.rowGap / 2)
                         .testTag(DetailTestTags.MovieCastSection),
+                    title = "People",
+                    subtitle = "Cast and key performers",
                 ) {
-                    DetailStripTitle(
-                        title = "People",
-                        modifier = Modifier.padding(
-                            horizontal = spacing.gutter,
-                            vertical = spacing.elementGap,
-                        ),
-                    )
                     LazyRow(
-                        contentPadding = PaddingValues(horizontal = spacing.gutter),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
                     ) {
                         items(castItems) { person ->
@@ -142,20 +174,21 @@ fun MovieDetailLayout(
                                         .blockBringIntoView()
                                         .focusRequester(firstCastFocusRequester)
                                         .focusProperties {
-                                            up = primaryActionFocusRequester
-                                            down = overviewFocusRequester
+                                            up = overviewFocusRequester
+                                            down = if (similarItems.isNotEmpty()) firstSimilarFocusRequester else firstCastFocusRequester
                                         }
                                         .onPreviewKeyEvent { keyEvent ->
                                             val nativeEvent = keyEvent.nativeKeyEvent
                                             when {
                                                 nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
                                                     nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                                                    runCatching { primaryActionFocusRequester.requestFocus() }
+                                                    runCatching { overviewFocusRequester.requestFocus() }
                                                     true
                                                 }
-                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                                similarItems.isNotEmpty() &&
+                                                    nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
                                                     nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                                    runCatching { overviewFocusRequester.requestFocus() }
+                                                    runCatching { firstSimilarFocusRequester.requestFocus() }
                                                     true
                                                 }
                                                 else -> false
@@ -173,51 +206,17 @@ fun MovieDetailLayout(
             }
         }
 
-        item {
-            DetailOverviewSection(
-                title = title,
-                posterUrl = posterUrl,
-                description = description,
-                factItems = factItems,
-                chips = genres,
-                focusRequester = overviewFocusRequester,
-                upFocusRequester = if (castItems.isNotEmpty()) {
-                    firstCastFocusRequester
-                } else {
-                    primaryActionFocusRequester
-                },
-                onNavigateUp = {
-                    if (listState.isScrollInProgress) return@DetailOverviewSection
-                    coroutineScope.launch {
-                        if (castItems.isNotEmpty()) {
-                            listState.scrollToItemAndAwaitLayout(1)
-                            runCatching { firstCastFocusRequester.requestFocus() }
-                        } else {
-                            listState.scrollToItemAndAwaitLayout(0)
-                            runCatching { primaryActionFocusRequester.requestFocus() }
-                        }
-                    }
-                },
-                modifier = Modifier.padding(top = spacing.rowGap),
-            )
-        }
-
         if (similarItems.isNotEmpty()) {
             item {
-                Column(
+                DetailShelfPanel(
                     modifier = Modifier
                         .padding(top = spacing.rowGap)
                         .testTag(DetailTestTags.MovieSimilarSection),
+                    title = "More Like This",
+                    subtitle = "Recommended from your library",
                 ) {
-                    DetailStripTitle(
-                        title = "More Like This",
-                        modifier = Modifier.padding(
-                            horizontal = spacing.gutter,
-                            vertical = spacing.elementGap,
-                        ),
-                    )
                     LazyRow(
-                        contentPadding = PaddingValues(horizontal = spacing.gutter),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
                     ) {
                         items(similarItems, key = { it.id }) { mediaItem ->
@@ -227,19 +226,22 @@ fun MovieDetailLayout(
                                 watchStatus = mediaItem.watchStatus,
                                 playbackProgress = mediaItem.playbackProgress,
                                 aspectRatio = 2f / 3f, // Standard poster ratio
-                                cardWidth = similarCardWidth,
+                                cardWidth = 220.dp,
                                 modifier = if (mediaItem.id == similarItems.firstOrNull()?.id) {
                                     Modifier
                                         .blockBringIntoView()
                                         .focusRequester(firstSimilarFocusRequester)
-                                        .focusProperties { up = overviewFocusRequester }
+                                        .focusProperties { up = if (castItems.isNotEmpty()) firstCastFocusRequester else overviewFocusRequester }
                                         .onPreviewKeyEvent { keyEvent ->
                                             val nativeEvent = keyEvent.nativeKeyEvent
                                             if (
                                                 nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
                                                 nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
                                             ) {
-                                                runCatching { overviewFocusRequester.requestFocus() }
+                                                runCatching {
+                                                    if (castItems.isNotEmpty()) firstCastFocusRequester.requestFocus()
+                                                    else overviewFocusRequester.requestFocus()
+                                                }
                                                 true
                                             } else {
                                                 false

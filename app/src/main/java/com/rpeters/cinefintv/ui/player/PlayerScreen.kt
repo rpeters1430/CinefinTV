@@ -414,13 +414,15 @@ internal fun PlayerPlaybackContent(
     }
 
     val remaining = if (renderState.duration > 0L) {
-        renderState.duration - renderState.position
+        (renderState.duration - renderState.position).coerceAtLeast(0L)
     } else {
         -1L
     }
-    val showNextUp = remaining in 0L..NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS &&
-        uiState.isEpisodicContent &&
-        uiState.nextEpisodeId != null
+    val showNextUp = shouldShowNextEpisodeCard(
+        uiState = uiState,
+        positionMs = renderState.position,
+        durationMs = renderState.duration,
+    )
 
     Box(
         modifier = modifier

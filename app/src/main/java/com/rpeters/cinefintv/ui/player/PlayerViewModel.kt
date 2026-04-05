@@ -115,7 +115,7 @@ class PlayerViewModel @Inject constructor(
         }
         viewModelScope.launch {
             adaptiveBitrateMonitor.qualityRecommendation.collectLatest { recommendation ->
-                if (recommendation != null && recommendation.severity == RecommendationSeverity.HIGH) {
+                if (recommendation != null && recommendation.severity >= RecommendationSeverity.MEDIUM) {
                     _uiState.value = _uiState.value.copy(
                         transcodingQuality = recommendation.recommendedQuality,
                     )
