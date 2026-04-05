@@ -392,12 +392,8 @@ internal fun PlayerPlaybackContent(
     val introRange = uiState.introSkipRange
     val creditsRange = uiState.creditsSkipRange
     val activeSkipLabel = when {
-        introRange != null &&
-            renderState.position >= introRange.startMs &&
-            renderState.position <= (introRange.endMs ?: Long.MAX_VALUE) -> "Skip Intro"
-        creditsRange != null &&
-            renderState.position >= creditsRange.startMs &&
-            renderState.position <= (creditsRange.endMs ?: Long.MAX_VALUE) -> "Skip Credits"
+        isInSkipRange(renderState.position, introRange) -> "Skip Intro"
+        isInSkipRange(renderState.position, creditsRange) -> "Skip Credits"
         else -> null
     }
     val activeSkipTargetMs = when (activeSkipLabel) {

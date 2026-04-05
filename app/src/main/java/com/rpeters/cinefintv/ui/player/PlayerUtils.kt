@@ -36,7 +36,10 @@ internal fun shouldShowNextEpisodeCard(
         return false
     }
 
-    val inCredits = uiState.creditsSkipRange?.let { positionMs >= it.startMs } ?: false
+    val inCredits = isInSkipRange(
+        positionMs = positionMs,
+        range = uiState.creditsSkipRange,
+    )
     if (inCredits) {
         return true
     }
@@ -47,4 +50,17 @@ internal fun shouldShowNextEpisodeCard(
 
     val remainingMs = (durationMs - positionMs).coerceAtLeast(0L)
     return remainingMs <= PlayerConstants.NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS
+}
+
+internal fun isInSkipRange(
+    positionMs: Long,
+    range: SkipRange?,
+): Boolean {
+    range ?: return false
+    if (positionMs < range.startMs) return false
+
+    val endMs = range.endMs ?: return true
+    if (endMs <= range.startMs) return false
+
+    return positionMs < endMs
 }
