@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -144,6 +145,8 @@ internal fun HomeScreenContent(
 ) {
     val listState = rememberLazyListState()
     val spacing = LocalCinefinSpacing.current
+    val density = LocalDensity.current
+    val focusVisibilityBottomBufferPx = remember(density) { with(density) { 128.dp.roundToPx() } }
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -363,7 +366,11 @@ internal fun HomeScreenContent(
                                 lastFocusedSectionTitle = section.title
                                 lastFocusedItemId = itemId
                                 val listIndex = if (state.featuredItems.isNotEmpty()) index + 1 else index
-                                if (!listState.isIndexVisible(listIndex)) {
+                                if (!listState.isIndexComfortablyVisible(
+                                        index = listIndex,
+                                        bottomBufferPx = focusVisibilityBottomBufferPx,
+                                    )
+                                ) {
                                     focusNavigationCoordinator.submit {
                                         listState.animateScrollToItem(listIndex)
                                     }
@@ -718,6 +725,15 @@ private fun HomeSection(
 
 private fun LazyListState.isIndexVisible(index: Int): Boolean =
     layoutInfo.visibleItemsInfo.any { it.index == index }
+
+private fun LazyListState.isIndexComfortablyVisible(index: Int, bottomBufferPx: Int): Boolean {
+    val target = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return false
+    val viewportTop = layoutInfo.viewportStartOffset
+    val viewportBottom = layoutInfo.viewportEndOffset - bottomBufferPx
+    val itemTop = target.offset
+    val itemBottom = target.offset + target.size
+    return itemTop >= viewportTop && itemBottom <= viewportBottom
+}
 
 private suspend fun LazyListState.scrollToItemIfNeeded(index: Int) {
     if (!isIndexVisible(index)) {
