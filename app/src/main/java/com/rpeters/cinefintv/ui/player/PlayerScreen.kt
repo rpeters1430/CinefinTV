@@ -55,6 +55,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.annotation.OptIn
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
@@ -85,6 +86,7 @@ internal data class PlayerRenderState(
     val bufferedFraction: Float = 0f,
 )
 
+@OptIn(UnstableApi::class)
 private fun PlayerView.applySubtitleAppearance(preferences: SubtitleAppearancePreferences) {
     subtitleView?.apply {
         setApplyEmbeddedStyles(false)

@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -402,7 +403,8 @@ class DetailScrollStabilityUiTest {
                 LazyColumn(state = listState) {
                     item {
                         androidx.compose.foundation.layout.Column {
-                            DetailAnchor(FocusRequester(), onFocused = {})
+                            val focusRequester = remember { FocusRequester() }
+                            DetailAnchor(focusRequester, onFocused = {})
                             CinematicHero(
                                 backdropUrl = null,
                                 logoUrl = null,
@@ -467,7 +469,8 @@ class DetailScrollStabilityUiTest {
                 ) {
                     item {
                         Column {
-                            DetailAnchor(FocusRequester(), onFocused = {})
+                            val focusRequester = remember { FocusRequester() }
+                            DetailAnchor(focusRequester, onFocused = {})
                             CinematicHero(
                                 backdropUrl = null,
                                 logoUrl = null,

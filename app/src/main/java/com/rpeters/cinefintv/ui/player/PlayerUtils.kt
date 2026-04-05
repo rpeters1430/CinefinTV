@@ -60,18 +60,7 @@ internal fun isInSkipRange(
     if (positionMs < range.startMs) return false
 
     val endMs = range.endMs ?: return true
-internal fun isInSkipRange(
-    positionMs: Long,
-    range: SkipRange?,
-): Boolean {
-    range ?: return false
-    if (positionMs < range.startMs) return false
-
-    val endMs = range.endMs ?: return true
     if (endMs <= range.startMs) return false
-
-    return positionMs < endMs
-}
 
     return positionMs < endMs
 }
