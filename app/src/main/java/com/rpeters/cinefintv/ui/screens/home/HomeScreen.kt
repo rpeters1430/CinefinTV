@@ -145,7 +145,8 @@ internal fun HomeScreenContent(
 ) {
     val listState = rememberLazyListState()
     val spacing = LocalCinefinSpacing.current
-    val focusVisibilityBottomBufferPx = with(LocalDensity.current) { 128.dp.roundToPx() }
+    val density = LocalDensity.current
+    val focusVisibilityBottomBufferPx = remember(density) { with(density) { 128.dp.roundToPx() } }
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
 
