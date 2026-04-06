@@ -99,6 +99,7 @@ fun TvShowDetailLayout(
     heroTagline: String?,
     creditLine: String?,
     heroBadges: List<String>,
+    heroSecondaryActions: List<HeroIconAction>,
     factItems: List<DetailLabeledMetaItem>,
     listState: LazyListState,
     modifier: Modifier = Modifier,
@@ -119,7 +120,7 @@ fun TvShowDetailLayout(
         else -> overviewFocusRequester
     }
     val overviewItemIndex = 1 + (if (hasNextUp) 1 else 0) + (if (seasons.isNotEmpty()) 1 else 0)
-    val heroSecondaryActions = remember(seasons, castItems) {
+    val navigationHeroActions = remember(seasons, castItems) {
         buildList {
             if (seasons.isNotEmpty()) {
                 add(
@@ -164,9 +165,11 @@ fun TvShowDetailLayout(
                     creditLine = creditLine,
                     primaryActionLabel = primaryActionLabel,
                     onPrimaryAction = onPrimaryAction,
-                    secondaryIconActions = heroSecondaryActions.mapIndexed { index, action ->
+                    secondaryIconActions = (heroSecondaryActions + navigationHeroActions).mapIndexed { index, action ->
                         when {
-                            seasons.isNotEmpty() && index == 0 -> action.copy(
+                            index >= heroSecondaryActions.size &&
+                                seasons.isNotEmpty() &&
+                                index == heroSecondaryActions.size -> action.copy(
                                 onClick = {
                                     coroutineScope.launch {
                                         listState.animateScrollToItem(1 + if (hasNextUp) 1 else 0)
@@ -175,7 +178,7 @@ fun TvShowDetailLayout(
                                     }
                                 }
                             )
-                            else -> action.copy(
+                            index >= heroSecondaryActions.size -> action.copy(
                                 onClick = {
                                     coroutineScope.launch {
                                         listState.animateScrollToItem(overviewItemIndex)
@@ -184,6 +187,7 @@ fun TvShowDetailLayout(
                                     }
                                 }
                             )
+                            else -> action
                         }
                     },
                     primaryActionFocusRequester = primaryActionFocusRequester,

@@ -164,6 +164,15 @@ class TvShowDetailViewModel @Inject constructor(
         }
     }
 
+    fun deleteShow(onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            if (repositories.user.deleteItemAsAdmin(showId) is ApiResult.Success) {
+                updateBus.refreshAll()
+                onDeleted()
+            }
+        }
+    }
+
     private fun BaseItemDto.toDetailModel(nextUpDto: BaseItemDto?): TvShowDetailModel {
         return TvShowDetailModel(
             id = id.toString(),

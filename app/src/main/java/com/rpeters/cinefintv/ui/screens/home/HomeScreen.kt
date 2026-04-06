@@ -2,6 +2,7 @@ package com.rpeters.cinefintv.ui.screens.home
 
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -146,6 +147,7 @@ internal fun HomeScreenContent(
     val listState = rememberLazyListState()
     val spacing = LocalCinefinSpacing.current
     val density = LocalDensity.current
+    val focusVisibilityTopBufferPx = remember(density) { with(density) { 72.dp.roundToPx() } }
     val focusVisibilityBottomBufferPx = remember(density) { with(density) { 128.dp.roundToPx() } }
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
@@ -224,7 +226,12 @@ internal fun HomeScreenContent(
                 state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
                 else -> sectionFocusRequesters.firstOrNull()
             }
-            val destinationFocus = rememberTopLevelDestinationFocus(preferredFocusRequester)
+            val primaryContentFocusRequester = if (state.featuredItems.isNotEmpty()) {
+                featuredPrimaryActionRequester
+            } else {
+                sectionFocusRequesters.firstOrNull()
+            }
+            val destinationFocus = rememberTopLevelDestinationFocus(primaryContentFocusRequester)
 
             selectedEpisodeMenuItem?.let { item ->
                 MediaActionDialog(
@@ -366,13 +373,19 @@ internal fun HomeScreenContent(
                                 lastFocusedSectionTitle = section.title
                                 lastFocusedItemId = itemId
                                 val listIndex = if (state.featuredItems.isNotEmpty()) index + 1 else index
-                                if (!listState.isIndexComfortablyVisible(
+                                if (
+                                    !listState.isIndexComfortablyVisible(
                                         index = listIndex,
+                                        topBufferPx = focusVisibilityTopBufferPx,
                                         bottomBufferPx = focusVisibilityBottomBufferPx,
                                     )
                                 ) {
                                     focusNavigationCoordinator.submit {
-                                        listState.animateScrollToItem(listIndex)
+                                        listState.ensureItemComfortablyVisible(
+                                            index = listIndex,
+                                            topBufferPx = focusVisibilityTopBufferPx,
+                                            bottomBufferPx = focusVisibilityBottomBufferPx,
+                                        )
                                     }
                                 }
                             },
@@ -726,9 +739,13 @@ private fun HomeSection(
 private fun LazyListState.isIndexVisible(index: Int): Boolean =
     layoutInfo.visibleItemsInfo.any { it.index == index }
 
-private fun LazyListState.isIndexComfortablyVisible(index: Int, bottomBufferPx: Int): Boolean {
+private fun LazyListState.isIndexComfortablyVisible(
+    index: Int,
+    topBufferPx: Int,
+    bottomBufferPx: Int,
+): Boolean {
     val target = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return false
-    val viewportTop = layoutInfo.viewportStartOffset
+    val viewportTop = layoutInfo.viewportStartOffset + topBufferPx
     val viewportBottom = layoutInfo.viewportEndOffset - bottomBufferPx
     val itemTop = target.offset
     val itemBottom = target.offset + target.size
@@ -750,5 +767,29 @@ private suspend fun LazyListState.scrollToItemAndAwaitLayout(index: Int) {
     if (!isIndexVisible(index)) {
         scrollToItem(index)
         snapshotFlow { isIndexVisible(index) }.first { it }
+    }
+}
+
+private suspend fun LazyListState.ensureItemComfortablyVisible(
+    index: Int,
+    topBufferPx: Int,
+    bottomBufferPx: Int,
+) {
+    scrollToItemAndAwaitLayout(index)
+
+    val target = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return
+    val viewportTop = layoutInfo.viewportStartOffset + topBufferPx
+    val viewportBottom = layoutInfo.viewportEndOffset - bottomBufferPx
+    val itemTop = target.offset
+    val itemBottom = target.offset + target.size
+
+    val scrollDelta = when {
+        itemTop < viewportTop -> (itemTop - viewportTop).toFloat()
+        itemBottom > viewportBottom -> (itemBottom - viewportBottom).toFloat()
+        else -> 0f
+    }
+
+    if (scrollDelta != 0f) {
+        animateScrollBy(scrollDelta)
     }
 }

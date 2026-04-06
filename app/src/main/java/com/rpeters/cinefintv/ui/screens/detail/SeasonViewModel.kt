@@ -109,6 +109,15 @@ class SeasonViewModel @Inject constructor(
         }
     }
 
+    fun deleteSeason(onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            if (repositories.user.deleteItemAsAdmin(seasonId) is ApiResult.Success) {
+                updateBus.refreshAll()
+                onDeleted()
+            }
+        }
+    }
+
     fun load(silent: Boolean = false) {
         viewModelScope.launch {
             val hasContent = _uiState.value is SeasonUiState.Content

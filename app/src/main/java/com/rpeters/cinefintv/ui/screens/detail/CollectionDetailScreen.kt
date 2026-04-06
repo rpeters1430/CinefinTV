@@ -85,6 +85,8 @@ fun CollectionDetailScreen(
                         stuff = state.stuff,
                         items = state.items,
                         onOpenItem = onOpenItem,
+                        onBack = onBack,
+                        viewModel = viewModel,
                     )
                 } else {
                     CollectionVideoContent(
@@ -214,11 +216,14 @@ private fun CollectionFolderContent(
     stuff: CollectionDetailModel,
     items: List<CollectionItemModel>,
     onOpenItem: (String, String?) -> Unit,
+    onBack: () -> Unit,
+    viewModel: CollectionDetailViewModel,
 ) {
     val primaryActionFocusRequester = remember { FocusRequester() }
     val overviewFocusRequester = remember { FocusRequester() }
     val gridEntryFocusRequester = remember { FocusRequester() }
     var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(items.firstOrNull()?.id) }
+    var showDeleteDialog by remember(stuff.id) { mutableStateOf(false) }
     var didInitialFocus by remember { mutableStateOf(false) }
 
     val factItems = remember(stuff, items) {
@@ -246,6 +251,18 @@ private fun CollectionFolderContent(
         }
     }
 
+    if (showDeleteDialog) {
+        ConfirmDeleteDialog(
+            title = "Delete ${stuff.title}?",
+            message = "This will remove the item from your Jellyfin library.",
+            onDismissRequest = { showDeleteDialog = false },
+            onConfirmDelete = {
+                showDeleteDialog = false
+                viewModel.deleteItem(onBack)
+            },
+        )
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         CinematicHero(
             backdropUrl = stuff.backdropUrl,
@@ -260,6 +277,7 @@ private fun CollectionFolderContent(
                     gridEntryFocusRequester.requestFocus()
                 }
             },
+            secondaryActions = listOf("Delete" to { showDeleteDialog = true }),
             primaryActionFocusRequester = primaryActionFocusRequester,
             primaryActionDownFocusRequester = overviewFocusRequester,
         )

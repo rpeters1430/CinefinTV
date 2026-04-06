@@ -447,10 +447,10 @@ fun DetailActionRow(
     }
     val hasSecondaryAction = secondaryActions.isNotEmpty()
 
-    Row(
+    FlowRow(
         modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Button(
             onClick = onPrimaryClick,
@@ -484,7 +484,7 @@ fun DetailActionRow(
                     }
                 }
                 .then(primaryButtonModifier)
-                .defaultMinSize(minWidth = 200.dp, minHeight = 50.dp),
+                .defaultMinSize(minWidth = 180.dp, minHeight = 50.dp),
             scale = ButtonDefaults.scale(focusedScale = 1.03f),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
             colors = ButtonDefaults.colors(
@@ -508,14 +508,14 @@ fun DetailActionRow(
                 ),
             ),
         ) {
-            Text(primaryLabel)
+                Text(primaryLabel)
         }
         secondaryActions.forEachIndexed { index, (label, onClick) ->
             OutlinedButton(
                 onClick = onClick,
                 modifier = Modifier
                     .focusRequester(secondaryFocusRequesters[index])
-                    .defaultMinSize(minWidth = 200.dp, minHeight = 50.dp)
+                    .defaultMinSize(minWidth = 160.dp, minHeight = 50.dp)
                     .focusProperties {
                         left = when (index) {
                             0 -> primaryFocusRequester ?: FocusRequester.Default

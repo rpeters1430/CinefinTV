@@ -4,6 +4,7 @@ package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.foundation.layout.Box
@@ -49,6 +50,7 @@ fun SeasonScreen(
     viewModel: SeasonViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showDeleteDialog by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -80,6 +82,9 @@ fun SeasonScreen(
                 season = state.season,
                 episodes = state.episodes,
                 onOpenEpisode = onOpenEpisode,
+                onBack = onBack,
+                showDeleteDialog = showDeleteDialog,
+                onShowDeleteDialogChange = { showDeleteDialog = it },
                 viewModel = viewModel,
             )
         }
@@ -91,6 +96,9 @@ private fun SeasonContent(
     season: SeasonDetailModel,
     episodes: List<EpisodeModel>,
     onOpenEpisode: (String) -> Unit,
+    onBack: () -> Unit,
+    showDeleteDialog: Boolean,
+    onShowDeleteDialogChange: (Boolean) -> Unit,
     viewModel: SeasonViewModel,
 ) {
     val spacing = LocalCinefinSpacing.current
@@ -183,6 +191,18 @@ private fun SeasonContent(
         )
     }
 
+    if (showDeleteDialog) {
+        ConfirmDeleteDialog(
+            title = "Delete ${season.title}?",
+            message = "This will remove the season from your Jellyfin library.",
+            onDismissRequest = { onShowDeleteDialogChange(false) },
+            onConfirmDelete = {
+                onShowDeleteDialogChange(false)
+                viewModel.deleteSeason(onBack)
+            },
+        )
+    }
+
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
@@ -207,9 +227,12 @@ private fun SeasonContent(
                         val target = resumeEpisode ?: episodes.firstOrNull()
                         if (target != null) onOpenEpisode(target.id)
                     },
-                    secondaryActions = if (episodes.isNotEmpty())
-                        listOf("Start From Episode 1" to { onOpenEpisode(episodes.first().id) })
-                    else emptyList(),
+                    secondaryActions = buildList {
+                        if (episodes.isNotEmpty()) {
+                            add("Start From Episode 1" to { onOpenEpisode(episodes.first().id) })
+                        }
+                        add("Delete" to { onShowDeleteDialogChange(true) })
+                    },
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     primaryActionDownFocusRequester = overviewFocusRequester,
                     listState = listState,

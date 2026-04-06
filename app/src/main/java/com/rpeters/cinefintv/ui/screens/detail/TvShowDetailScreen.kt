@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CastConnected
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Tv
@@ -28,6 +29,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.HeroIconAction
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowDetailLayout
 
 @Composable
@@ -40,6 +43,7 @@ fun TvShowDetailScreen(
     viewModel: TvShowDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showDeleteDialog by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -88,6 +92,17 @@ fun TvShowDetailScreen(
             )
             is TvShowDetailUiState.Content -> {
                 val show = state.show
+                if (showDeleteDialog) {
+                    ConfirmDeleteDialog(
+                        title = "Delete ${show.title}?",
+                        message = "This will remove the show from your Jellyfin library.",
+                        onDismissRequest = { showDeleteDialog = false },
+                        onConfirmDelete = {
+                            showDeleteDialog = false
+                            viewModel.deleteShow(onBack)
+                        },
+                    )
+                }
 
                 val factItems = remember(show) {
                     buildList {
@@ -177,6 +192,16 @@ fun TvShowDetailScreen(
                         ?.let { "Created by $it" }
                 }
 
+                val heroSecondaryActions = remember(show.isWatched) {
+                    listOf(
+                        HeroIconAction(
+                            icon = Icons.Default.Delete,
+                            contentDescription = "Delete show",
+                            onClick = { showDeleteDialog = true },
+                        )
+                    )
+                }
+
                 TvShowDetailLayout(
                     backdropUrl = show.backdropUrl,
                     posterUrl = show.posterUrl,
@@ -208,6 +233,7 @@ fun TvShowDetailScreen(
                     heroTagline = heroSummary,
                     creditLine = creditLine,
                     heroBadges = heroBadges,
+                    heroSecondaryActions = heroSecondaryActions,
                     factItems = factItems,
                     listState = listState,
                 )
