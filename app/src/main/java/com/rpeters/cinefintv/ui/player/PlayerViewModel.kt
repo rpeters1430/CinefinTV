@@ -207,9 +207,10 @@ class PlayerViewModel @Inject constructor(
         val mediaSource = playbackInfo?.mediaSources?.firstOrNull()
         val audioTracks = PlayerMappers.toAudioTrackOptions(mediaSource)
         val subtitleTracks = PlayerMappers.toSubtitleTrackOptions(mediaSource)
-        val selectedAudioTrack = audioTracks.firstOrNull {
-            it.streamIndex == mediaSource?.defaultAudioStreamIndex
-        } ?: audioTracks.firstOrNull()
+        val selectedAudioTrack = audioTracks.resolvePreferredAudioTrack(
+            preferredLanguageCode = playbackPrefs.audioLanguage.code,
+            defaultStreamIndex = mediaSource?.defaultAudioStreamIndex,
+        )
         val selectedSubtitleTrack = subtitleTracks.firstOrNull {
             it.streamIndex == mediaSource?.defaultSubtitleStreamIndex
         }
@@ -219,7 +220,7 @@ class PlayerViewModel @Inject constructor(
         val resolvedPlayback = resolvePlaybackUrl(
             item = item,
             playbackInfo = playbackInfo,
-            audioStreamIndex = null,
+            audioStreamIndex = selectedAudioTrack?.streamIndex,
             subtitleStreamIndex = null,
             startPositionMs = if (shouldShowResumeDialog) 0L else savedPlaybackPositionMs,
         )
@@ -461,7 +462,10 @@ class PlayerViewModel @Inject constructor(
         if (activePlayMethod == org.jellyfin.sdk.model.api.PlayMethod.DIRECT_PLAY) {
             applyTrackSelection(track, uiState.value.selectedSubtitleTrack)
         } else {
-            reloadStream(positionMs = positionMs, playWhenReady = playWhenReady)
+            reloadStream(
+                positionMs = currentPlaybackPosition(positionMs),
+                playWhenReady = currentPlayWhenReady(playWhenReady),
+            )
         }
     }
 
@@ -470,7 +474,10 @@ class PlayerViewModel @Inject constructor(
         if (activePlayMethod == org.jellyfin.sdk.model.api.PlayMethod.DIRECT_PLAY) {
             applyTrackSelection(uiState.value.selectedAudioTrack, track)
         } else {
-            reloadStream(positionMs = positionMs, playWhenReady = playWhenReady)
+            reloadStream(
+                positionMs = currentPlaybackPosition(positionMs),
+                playWhenReady = currentPlayWhenReady(playWhenReady),
+            )
         }
     }
 
@@ -562,6 +569,50 @@ class PlayerViewModel @Inject constructor(
             }
         }
     }
+
+    private fun currentPlaybackPosition(fallbackPositionMs: Long): Long =
+        _player?.currentPosition?.coerceAtLeast(0L) ?: fallbackPositionMs.coerceAtLeast(0L)
+
+    private fun currentPlayWhenReady(fallbackPlayWhenReady: Boolean): Boolean =
+        _player?.playWhenReady ?: fallbackPlayWhenReady
+
+    private fun List<TrackOption>.resolvePreferredAudioTrack(
+        preferredLanguageCode: String?,
+        defaultStreamIndex: Int?,
+    ): TrackOption? {
+        findByLanguage(preferredLanguageCode)?.let { return it }
+        firstOrNull { it.streamIndex == defaultStreamIndex }?.let { return it }
+        return firstOrNull()
+    }
+
+    private fun List<TrackOption>.findByLanguage(languageCode: String?): TrackOption? {
+        val normalizedPreferred = languageCode.normalizeLanguageCode() ?: return null
+        return firstOrNull { track ->
+            val normalizedTrack = track.language.normalizeLanguageCode()
+            normalizedTrack == normalizedPreferred ||
+                normalizedTrack?.startsWith("$normalizedPreferred-") == true
+        }
+    }
+
+    private fun String?.normalizeLanguageCode(): String? = this
+        ?.trim()
+        ?.lowercase()
+        ?.replace('_', '-')
+        ?.takeIf { it.isNotBlank() }
+        ?.let { code ->
+            when (code) {
+                "eng" -> "en"
+                "spa" -> "es"
+                "fre", "fra" -> "fr"
+                "ger", "deu" -> "de"
+                "ita" -> "it"
+                "por" -> "pt"
+                "jpn" -> "ja"
+                "kor" -> "ko"
+                "chi", "zho" -> "zh"
+                else -> code
+            }
+        }
 
     override fun onCleared() {
         super.onCleared()

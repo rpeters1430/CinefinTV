@@ -1,11 +1,13 @@
 package com.rpeters.cinefintv.ui.player
 
 import android.content.Context
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.test.core.app.ApplicationProvider
 import androidx.lifecycle.SavedStateHandle
 import com.rpeters.cinefintv.data.PlaybackPositionStore
 import com.rpeters.cinefintv.data.common.MediaUpdateEvent
 import com.rpeters.cinefintv.data.common.MediaUpdateBus
+import com.rpeters.cinefintv.data.preferences.AudioLanguagePreference
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferences
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
@@ -33,12 +35,17 @@ import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.MediaSourceInfo
+import org.jellyfin.sdk.model.api.MediaStream
+import org.jellyfin.sdk.model.api.MediaStreamType
+import org.jellyfin.sdk.model.api.PlaybackInfoResponse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.io.File
 import java.util.UUID
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -692,6 +699,106 @@ class PlayerViewModelTest {
         assertTrue(requestedStartPositions.contains(0L))
         assertTrue(requestedStartPositions.contains(123_000L))
         assertEquals("https://stream/movie-301?start=123000", viewModel.uiState.value.streamUrl)
+    }
+
+    @Test
+    fun load_prefersConfiguredEnglishAudioTrackOverServerDefault() = runTest {
+        val fakeRepositories = FakePlayerRepositories()
+        val movieItem: BaseItemDto = mockk()
+        val requestedAudioStreamIndexes = mutableListOf<Int?>()
+        val playbackPreferencesRepository = createPlaybackPreferencesRepository().also {
+            it.setAudioLanguage(AudioLanguagePreference.ENGLISH)
+        }
+
+        every { movieItem.id } returns UUID.fromString("00000000-0000-0000-0000-000000000401")
+        every { movieItem.name } returns "Preferred Audio Movie"
+        every { movieItem.type } returns BaseItemKind.MOVIE
+        every { movieItem.seriesId } returns null
+        every { movieItem.userData } returns null
+        every { movieItem.chapters } returns null
+
+        coEvery { fakeRepositories.media.getItemDetails("movie-401") } returns ApiResult.Success(movieItem)
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
+        coEvery { fakeRepositories.stream.getTrickplayManifest(any()) } returns null
+        coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "00000000-0000-0000-0000-000000000401") } returns 0L
+        coEvery { fakeRepositories.media.getSimilarMovies(any(), any()) } returns ApiResult.Error("unused")
+        val japaneseAudioStream: MediaStream = mockk {
+            every { index } returns 2
+            every { type } returns MediaStreamType.AUDIO
+            every { language } returns "jpn"
+            every { title } returns "Japanese"
+            every { displayTitle } returns null
+            every { codec } returns null
+        }
+        val englishAudioStream: MediaStream = mockk {
+            every { index } returns 5
+            every { type } returns MediaStreamType.AUDIO
+            every { language } returns "eng"
+            every { title } returns "English"
+            every { displayTitle } returns null
+            every { codec } returns null
+        }
+        val mediaSource: MediaSourceInfo = mockk {
+            every { id } returns "media-source-1"
+            every { defaultAudioStreamIndex } returns 2
+            every { defaultSubtitleStreamIndex } returns null
+            every { mediaStreams } returns listOf(japaneseAudioStream, englishAudioStream)
+        }
+        val playbackInfoResponse: PlaybackInfoResponse = mockk {
+            every { mediaSources } returns listOf(mediaSource)
+            every { playSessionId } returns "play-session-1"
+        }
+
+        coEvery {
+            fakeRepositories.stream.getPlaybackInfo(
+                itemId = "00000000-0000-0000-0000-000000000401",
+                audioStreamIndex = any(),
+                subtitleStreamIndex = any(),
+                startPositionMs = any(),
+            )
+        } returns playbackInfoResponse
+        coEvery {
+            enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any(), any())
+        } coAnswers {
+            requestedAudioStreamIndexes += arg<Int?>(2)
+            com.rpeters.cinefintv.data.playback.PlaybackResult.DirectPlay(
+                url = "https://stream/movie-401",
+                container = "mkv",
+                videoCodec = "h264",
+                audioCodec = "aac",
+                bitrate = 1000,
+                reason = "test",
+                mediaSourceId = "media-source-1",
+                playSessionId = "play-session-1",
+            )
+        }
+
+        val viewModel = PlayerViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("itemId" to "movie-401")),
+            repositories = fakeRepositories.coordinator,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
+            playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
+            appContext = appContext,
+            okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
+        )
+        advanceUntilIdle()
+
+        assertEquals(5, viewModel.uiState.value.selectedAudioTrack?.streamIndex)
+        assertTrue(requestedAudioStreamIndexes.contains(5))
+    }
+
+    private fun createPlaybackPreferencesRepository(): PlaybackPreferencesRepository {
+        val dataStore = PreferenceDataStoreFactory.create(
+            produceFile = {
+                File.createTempFile("playback-prefs", ".preferences_pb").apply {
+                    deleteOnExit()
+                }
+            }
+        )
+        return PlaybackPreferencesRepository(dataStore)
     }
 
     @org.junit.After

@@ -53,6 +53,7 @@ import androidx.tv.material3.Switch
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.data.preferences.AccentColor
 import com.rpeters.cinefintv.data.preferences.AudioChannelPreference
+import com.rpeters.cinefintv.data.preferences.AudioLanguagePreference
 import com.rpeters.cinefintv.data.preferences.ContrastLevel
 import com.rpeters.cinefintv.data.preferences.ResumePlaybackMode
 import com.rpeters.cinefintv.data.preferences.SubtitleBackground
@@ -74,6 +75,7 @@ private enum class SettingsChoiceDialog {
     VIDEO_SEEK_INCREMENT,
     STREAMING_QUALITY,
     AUDIO_CHANNELS,
+    AUDIO_LANGUAGE,
     SUBTITLE_TEXT_SIZE,
     SUBTITLE_FONT,
     SUBTITLE_BACKGROUND,
@@ -190,6 +192,15 @@ fun SettingsScreen(
             labelFor = { it.label },
             onDismissRequest = { activeDialog = null },
             onOptionSelected = viewModel::setAudioChannels,
+        )
+        SettingsChoiceDialog.AUDIO_LANGUAGE -> CinefinOptionDialog(
+            title = "Default audio language",
+            supportingText = "Choose which audio language playback should prefer first.",
+            options = AudioLanguagePreference.entries,
+            selected = uiState.playback.audioLanguage,
+            labelFor = { it.label },
+            onDismissRequest = { activeDialog = null },
+            onOptionSelected = viewModel::setAudioLanguage,
         )
         SettingsChoiceDialog.SUBTITLE_TEXT_SIZE -> CinefinOptionDialog(
             title = "Subtitle text size",
@@ -352,6 +363,13 @@ fun SettingsScreen(
                                 description = "Limit maximum playback channel count.",
                                 selectedLabel = uiState.playback.audioChannels.label,
                                 onClick = { activeDialog = SettingsChoiceDialog.AUDIO_CHANNELS },
+                            )
+                            SettingsChoiceRow(
+                                icon = Icons.Default.MusicNote,
+                                title = "Default audio language",
+                                description = "Preferred language when playback starts.",
+                                selectedLabel = uiState.playback.audioLanguage.label,
+                                onClick = { activeDialog = SettingsChoiceDialog.AUDIO_LANGUAGE },
                             )
                         }
                         SettingsCategory.SUBTITLES -> SettingsSectionCard(

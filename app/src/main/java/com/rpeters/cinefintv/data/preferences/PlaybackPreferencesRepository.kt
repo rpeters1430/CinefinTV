@@ -37,6 +37,22 @@ enum class AudioChannelPreference(val label: String, val channels: Int?) {
 }
 
 /**
+ * Preferred default audio language for playback.
+ */
+enum class AudioLanguagePreference(val label: String, val code: String?) {
+    AUTO("Original / Server Default", null),
+    ENGLISH("English", "en"),
+    SPANISH("Spanish", "es"),
+    FRENCH("French", "fr"),
+    GERMAN("German", "de"),
+    ITALIAN("Italian", "it"),
+    PORTUGUESE("Portuguese", "pt"),
+    JAPANESE("Japanese", "ja"),
+    KOREAN("Korean", "ko"),
+    CHINESE("Chinese", "zh"),
+}
+
+/**
  * Resume playback mode preferences.
  */
 enum class ResumePlaybackMode(val label: String) {
@@ -59,6 +75,7 @@ enum class VideoSeekIncrement(val label: String, val shortLabel: String, val mil
 data class PlaybackPreferences(
     val transcodingQuality: TranscodingQuality,
     val audioChannels: AudioChannelPreference,
+    val audioLanguage: AudioLanguagePreference,
     val autoPlayNextEpisode: Boolean,
     val resumePlaybackMode: ResumePlaybackMode,
     val videoSeekIncrement: VideoSeekIncrement,
@@ -67,6 +84,7 @@ data class PlaybackPreferences(
         val DEFAULT = PlaybackPreferences(
             transcodingQuality = TranscodingQuality.AUTO,
             audioChannels = AudioChannelPreference.AUTO,
+            audioLanguage = AudioLanguagePreference.ENGLISH,
             autoPlayNextEpisode = true, // enabled by default
             resumePlaybackMode = ResumePlaybackMode.ALWAYS, // always resume by default
             videoSeekIncrement = VideoSeekIncrement.TEN_SECONDS,
@@ -100,6 +118,9 @@ class PlaybackPreferencesRepository @Inject constructor(
                 audioChannels = runCatching {
                     AudioChannelPreference.valueOf(prefs[PreferencesKeys.AUDIO_CHANNELS] ?: "")
                 }.getOrDefault(PlaybackPreferences.DEFAULT.audioChannels),
+                audioLanguage = runCatching {
+                    AudioLanguagePreference.valueOf(prefs[PreferencesKeys.AUDIO_LANGUAGE] ?: "")
+                }.getOrDefault(PlaybackPreferences.DEFAULT.audioLanguage),
                 autoPlayNextEpisode = prefs[PreferencesKeys.AUTO_PLAY_NEXT_EPISODE] ?: PlaybackPreferences.DEFAULT.autoPlayNextEpisode,
                 resumePlaybackMode = runCatching {
                     ResumePlaybackMode.valueOf(prefs[PreferencesKeys.RESUME_PLAYBACK_MODE] ?: "")
@@ -118,6 +139,10 @@ class PlaybackPreferencesRepository @Inject constructor(
         dataStore.edit { it[PreferencesKeys.AUDIO_CHANNELS] = preference.name }
     }
 
+    suspend fun setAudioLanguage(preference: AudioLanguagePreference) {
+        dataStore.edit { it[PreferencesKeys.AUDIO_LANGUAGE] = preference.name }
+    }
+
     suspend fun setAutoPlayNextEpisode(enabled: Boolean) {
         dataStore.edit { it[PreferencesKeys.AUTO_PLAY_NEXT_EPISODE] = enabled }
     }
@@ -133,6 +158,7 @@ class PlaybackPreferencesRepository @Inject constructor(
     private object PreferencesKeys {
         val TRANSCODING_QUALITY = stringPreferencesKey("transcoding_quality")
         val AUDIO_CHANNELS = stringPreferencesKey("audio_channels")
+        val AUDIO_LANGUAGE = stringPreferencesKey("audio_language")
         val AUTO_PLAY_NEXT_EPISODE = booleanPreferencesKey("auto_play_next_episode")
         val RESUME_PLAYBACK_MODE = stringPreferencesKey("resume_playback_mode")
         val VIDEO_SEEK_INCREMENT = stringPreferencesKey("video_seek_increment")
