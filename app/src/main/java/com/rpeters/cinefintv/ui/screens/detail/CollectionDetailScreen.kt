@@ -185,6 +185,7 @@ private fun CollectionVideoContent(
             primaryActionLabel = if (stuff.playbackProgress != null) "▶ Resume" else "▶ Play",
             onPrimaryAction = { onPlayItem(stuff.id) },
             secondaryActions = buildList {
+                add("Delete" to { showDeleteDialog = true })
                 add(
                     if (stuff.isWatched) {
                         "Mark Unwatched" to { viewModel.markUnwatched() }
@@ -192,7 +193,6 @@ private fun CollectionVideoContent(
                         "Mark Watched" to { viewModel.markWatched() }
                     }
                 )
-                add("Delete" to { showDeleteDialog = true })
             },
             primaryActionFocusRequester = primaryActionFocusRequester,
             primaryActionDownFocusRequester = overviewFocusRequester,

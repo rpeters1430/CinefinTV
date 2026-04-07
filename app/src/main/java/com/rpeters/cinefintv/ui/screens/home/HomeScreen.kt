@@ -310,7 +310,11 @@ internal fun HomeScreenContent(
                 }
 
                 if (targetListIndex != null) {
-                    listState.scrollToItemAndAwaitLayout(targetListIndex)
+                    listState.ensureItemComfortablyVisible(
+                        index = targetListIndex,
+                        topBufferPx = focusVisibilityTopBufferPx,
+                        bottomBufferPx = focusVisibilityBottomBufferPx,
+                    )
                 }
                 runCatching { requester.requestFocus() }
                 delay(HOME_FOCUS_RESTORE_SETTLE_MS)
@@ -337,7 +341,11 @@ internal fun HomeScreenContent(
                                 onNavigateDown = firstSectionRequester?.let {
                                     {
                                         focusNavigationCoordinator.submit {
-                                            listState.scrollToItemAndAwaitLayout(1)
+                                            listState.ensureItemComfortablyVisible(
+                                                index = 1,
+                                                topBufferPx = focusVisibilityTopBufferPx,
+                                                bottomBufferPx = focusVisibilityBottomBufferPx,
+                                            )
                                             it.requestFocus()
                                         }
                                     }
@@ -396,7 +404,11 @@ internal fun HomeScreenContent(
                                 index == 0 && state.featuredItems.isNotEmpty() -> {
                                     {
                                         focusNavigationCoordinator.submit {
-                                            listState.scrollToItemAndAwaitLayout(0)
+                                            listState.ensureItemComfortablyVisible(
+                                                index = 0,
+                                                topBufferPx = focusVisibilityTopBufferPx,
+                                                bottomBufferPx = focusVisibilityBottomBufferPx,
+                                            )
                                             featuredPrimaryActionRequester.requestFocus()
                                         }
                                     }
@@ -405,7 +417,11 @@ internal fun HomeScreenContent(
                                     {
                                         focusNavigationCoordinator.submit {
                                             val previousListIndex = if (state.featuredItems.isNotEmpty()) index else index - 1
-                                            listState.scrollToItemAndAwaitLayout(previousListIndex)
+                                            listState.ensureItemComfortablyVisible(
+                                                index = previousListIndex,
+                                                topBufferPx = focusVisibilityTopBufferPx,
+                                                bottomBufferPx = focusVisibilityBottomBufferPx,
+                                            )
                                             sectionFocusRequesters[index - 1].requestFocus()
                                         }
                                     }
@@ -416,7 +432,11 @@ internal fun HomeScreenContent(
                                 {
                                     focusNavigationCoordinator.submit {
                                         val nextListIndex = if (state.featuredItems.isNotEmpty()) index + 2 else index + 1
-                                        listState.scrollToItemAndAwaitLayout(nextListIndex)
+                                        listState.ensureItemComfortablyVisible(
+                                            index = nextListIndex,
+                                            topBufferPx = focusVisibilityTopBufferPx,
+                                            bottomBufferPx = focusVisibilityBottomBufferPx,
+                                        )
                                         nextRequester.requestFocus()
                                     }
                                 }

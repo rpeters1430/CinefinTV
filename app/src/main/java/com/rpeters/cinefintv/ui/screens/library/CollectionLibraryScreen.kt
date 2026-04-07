@@ -105,8 +105,8 @@ fun CollectionLibraryScreen(
 
     LibraryGridContent(
         uiState = uiState,
-        errorTitle = "Failed to load collections",
-        emptyTitle = "No collections found",
+        errorTitle = "Failed to load library",
+        emptyTitle = "No library items found",
         columnCount = 3,
         aspectRatio = 16f / 9f,
         gridState = gridState,
