@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidthIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -302,7 +303,8 @@ private fun HeroActionStrip(
                         false
                     }
                 }
-                .defaultMinSize(minWidth = 220.dp, minHeight = 58.dp),
+                .requiredWidthIn(min = 220.dp)
+                .defaultMinSize(minHeight = 58.dp),
             scale = ButtonDefaults.scale(focusedScale = 1.04f),
             contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp),
             colors = ButtonDefaults.colors(
@@ -329,6 +331,8 @@ private fun HeroActionStrip(
             Text(
                 text = primaryLabel,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
 
@@ -336,7 +340,8 @@ private fun HeroActionStrip(
             OutlinedButton(
                 onClick = action.onClick,
                 modifier = Modifier
-                    .defaultMinSize(minWidth = 86.dp, minHeight = 58.dp)
+                    .requiredWidthIn(min = 160.dp)
+                    .defaultMinSize(minHeight = 58.dp)
                     .focusRequester(secondaryFocusRequesters[index])
                     .blockBringIntoView()
                     .focusProperties {
@@ -406,6 +411,7 @@ private fun HeroActionStrip(
                         text = action.contentDescription,
                         style = MaterialTheme.typography.labelLarge,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

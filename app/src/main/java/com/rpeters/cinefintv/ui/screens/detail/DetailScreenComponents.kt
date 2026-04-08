@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.requiredWidthIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
@@ -484,7 +485,8 @@ fun DetailActionRow(
                     }
                 }
                 .then(primaryButtonModifier)
-                .defaultMinSize(minWidth = 180.dp, minHeight = 50.dp),
+                .requiredWidthIn(min = 180.dp)
+                .defaultMinSize(minHeight = 50.dp),
             scale = ButtonDefaults.scale(focusedScale = 1.03f),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
             colors = ButtonDefaults.colors(
@@ -508,14 +510,19 @@ fun DetailActionRow(
                 ),
             ),
         ) {
-                Text(primaryLabel)
+            Text(
+                text = primaryLabel,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
         secondaryActions.forEachIndexed { index, (label, onClick) ->
             OutlinedButton(
                 onClick = onClick,
                 modifier = Modifier
                     .focusRequester(secondaryFocusRequesters[index])
-                    .defaultMinSize(minWidth = 160.dp, minHeight = 50.dp)
+                    .requiredWidthIn(min = 160.dp)
+                    .defaultMinSize(minHeight = 50.dp)
                     .focusProperties {
                         left = when (index) {
                             0 -> primaryFocusRequester ?: FocusRequester.Default
@@ -570,7 +577,11 @@ fun DetailActionRow(
                     ),
                 ),
             ) {
-                Text(label)
+                Text(
+                    text = label,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
