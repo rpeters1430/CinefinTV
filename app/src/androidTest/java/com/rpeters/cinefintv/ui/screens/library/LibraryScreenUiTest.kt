@@ -25,7 +25,6 @@ import com.rpeters.cinefintv.ui.AppTestTags
 import com.rpeters.cinefintv.ui.CinefinAppScaffold
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.WatchStatus
-import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.ThemeColorController
 import org.junit.Assert.assertEquals
@@ -270,8 +269,8 @@ class LibraryScreenUiTest {
             }
         }
 
-        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.LIBRARY_MOVIES)).requestFocus()
-        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.LIBRARY_MOVIES))
+        composeRule.onNodeWithTag(AppTestTags.tab("Movies")).requestFocus()
+        composeRule.onNodeWithTag(AppTestTags.tab("Movies"))
             .performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.onNodeWithTag(LibraryTestTags.item(0)).assertIsFocused()
     }
@@ -302,7 +301,7 @@ class LibraryScreenUiTest {
         composeRule.onNodeWithTag(LibraryTestTags.item(0)).requestFocus()
         composeRule.onNodeWithTag(LibraryTestTags.item(0))
             .performKeyInput { pressKey(Key.DirectionLeft) }
-        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.LIBRARY_MOVIES)).assertIsFocused()
+        composeRule.onNodeWithTag(AppTestTags.tab("Movies")).assertIsFocused()
     }
 }
 
