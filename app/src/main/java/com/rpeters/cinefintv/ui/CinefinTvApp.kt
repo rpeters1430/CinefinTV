@@ -51,6 +51,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,9 +63,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.util.UnstableApi
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -74,9 +75,10 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinDialogActions
 import com.rpeters.cinefintv.ui.components.CinefinDialogSurface
-import com.rpeters.cinefintv.ui.navigation.AuthRoutes
 import com.rpeters.cinefintv.ui.navigation.CinefinTvNavGraph
-import com.rpeters.cinefintv.ui.navigation.NavRoutes
+import com.rpeters.cinefintv.ui.navigation.NavDestination
+import com.rpeters.cinefintv.ui.navigation.ServerConnection
+import com.rpeters.cinefintv.ui.navigation.Home
 import com.rpeters.cinefintv.ui.navigation.appChromeRouteSpec
 import com.rpeters.cinefintv.ui.navigation.navTabItems
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
@@ -113,9 +115,11 @@ fun CinefinTvApp(
         contrastLevel = themePrefs.contrastLevel,
     ) {
         CompositionLocalProvider(LocalCinefinThemeController provides themeViewModel) {
-            val navController = rememberNavController()
-            val navBackStackEntry by navController.currentBackStackEntryAsState()
-            val currentRoute = navBackStackEntry?.destination?.route
+            val backStack: NavBackStack<NavKey> = rememberNavBackStack(
+                if (isAuthenticated) Home else ServerConnection
+            )
+            val currentDestination = backStack.lastOrNull() as? NavDestination
+            
             val expressiveColors = LocalCinefinExpressiveColors.current
             val spacing = LocalCinefinSpacing.current
             val coroutineScope = rememberCoroutineScope()
@@ -219,25 +223,15 @@ fun CinefinTvApp(
                 )
             }
 
-            val appChromeRouteSpec = appChromeRouteSpec(currentRoute)
+            val appChromeRouteSpec = appChromeRouteSpec(currentDestination)
 
-            fun navigateToTab(route: String) {
-                val activeRoute = navController.currentDestination?.route
-                if (activeRoute != route) {
-                    val homeDestinationId = navController.graph.findNode(NavRoutes.HOME)?.id
-                    navController.navigate(route) {
-                        if (homeDestinationId != null) {
-                            popUpTo(homeDestinationId) {
-                                saveState = true
-                            }
-                        } else {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+            fun onNavigate(destination: NavDestination) {
+                // If it's a top-level tab destination, clear and go there
+                if (navTabItems.any { it.destination::class == destination::class }) {
+                    backStack.clear()
+                    backStack.add(destination)
+                } else {
+                    backStack.add(destination)
                 }
             }
 
@@ -256,11 +250,10 @@ fun CinefinTvApp(
                 CinefinAppScaffold(
                     showNav = appChromeRouteSpec.showNav,
                     selectedTabIndex = appChromeRouteSpec.selectedTabIndex,
-                    onNavigateToTab = ::navigateToTab,
+                    onNavigateToTab = ::onNavigate,
                 ) {
                     CinefinTvNavGraph(
-                        navController = navController,
-                        startDestination = if (isAuthenticated) NavRoutes.HOME else AuthRoutes.SERVER_CONNECTION,
+                        backStack = backStack,
                     )
                 }
             }
@@ -273,7 +266,7 @@ fun CinefinTvApp(
 internal fun CinefinAppScaffold(
     showNav: Boolean,
     selectedTabIndex: Int,
-    onNavigateToTab: (String) -> Unit,
+    onNavigateToTab: (NavDestination) -> Unit,
     content: @Composable () -> Unit,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
@@ -281,7 +274,7 @@ internal fun CinefinAppScaffold(
         List(navTabItems.size) { FocusRequester() }
     }
     val chromeFocusController = remember { AppChromeFocusController() }
-    val selectedTabFocusRequester = tabFocusRequesters[selectedTabIndex]
+    val selectedTabFocusRequester = tabFocusRequesters.getOrElse(selectedTabIndex) { FocusRequester() }
     var focusedTabIndex by remember { mutableStateOf<Int?>(null) }
     val navHasFocus = focusedTabIndex != null
     val collapsedRailWidth = 104.dp
@@ -394,7 +387,7 @@ internal fun CinefinAppScaffold(
                             itemsIndexed(navTabItems) { index, item ->
                                 var isFocused by remember { mutableStateOf(false) }
                                 Button(
-                                    onClick = { onNavigateToTab(item.route) },
+                                    onClick = { onNavigateToTab(item.destination) },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .focusRequester(tabFocusRequesters[index])
@@ -411,7 +404,7 @@ internal fun CinefinAppScaffold(
                                                 right = it
                                             }
                                         }
-                                        .testTag(AppTestTags.tab(item.route)),
+                                        .testTag(AppTestTags.tab(item.label)),
                                     shape = ButtonDefaults.shape(RoundedCornerShape(18.dp)),
                                     scale = ButtonDefaults.scale(
                                         focusedScale = 1.04f,

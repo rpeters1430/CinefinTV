@@ -161,10 +161,16 @@ private fun PlayerVideoSurface(
 @UnstableApi
 @Composable
 fun PlayerScreen(
+    itemId: String,
+    startPositionMs: Long = -1L,
     onBack: () -> Unit,
     onOpenItem: (String) -> Unit = {},
     viewModel: PlayerViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(itemId, startPositionMs) {
+        viewModel.init(itemId, startPositionMs)
+    }
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 

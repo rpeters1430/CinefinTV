@@ -1,39 +1,40 @@
 package com.rpeters.cinefintv.ui.navigation
 
-internal fun routeForBrowsableItem(
+fun routeForBrowsableItem(
     itemId: String,
     itemType: String?,
     collectionType: String?,
-): String {
+): NavDestination {
     return when {
         itemType.equals("CollectionFolder", ignoreCase = true) -> {
             when (collectionType?.lowercase()) {
-                "movies" -> NavRoutes.LIBRARY_MOVIES
-                "tvshows" -> NavRoutes.LIBRARY_TVSHOWS
-                "music" -> NavRoutes.LIBRARY_MUSIC
-                "homevideos" -> NavRoutes.LIBRARY_COLLECTIONS
-                else -> NavRoutes.collectionDetail(itemId)
+                "movies" -> LibraryMovies
+                "tvshows" -> LibraryTvShows
+                "music" -> LibraryMusic
+                "homevideos" -> LibraryCollections
+                else -> CollectionDetail(itemId)
             }
         }
-        itemType.equals("Movie", ignoreCase = true) -> NavRoutes.movieDetail(itemId)
+        itemType.equals("Movie", ignoreCase = true) -> MovieDetail(itemId)
         itemType.equals("Series", ignoreCase = true) ||
-            itemType.equals("TV Show", ignoreCase = true) -> NavRoutes.tvShowDetail(itemId)
-        itemType.equals("Season", ignoreCase = true) -> NavRoutes.seasonDetail(itemId)
-        itemType.equals("Episode", ignoreCase = true) -> NavRoutes.player(itemId)
-        else -> NavRoutes.collectionDetail(itemId)
+            itemType.equals("TV Show", ignoreCase = true) -> TvShowDetail(itemId)
+        itemType.equals("Season", ignoreCase = true) -> SeasonDetail(itemId)
+        itemType.equals("Episode", ignoreCase = true) -> Player(itemId)
+        else -> CollectionDetail(itemId)
     }
 }
 
-internal fun routeForLinkedDetailItem(
+fun routeForLinkedDetailItem(
     itemId: String,
     itemType: String?,
-): String {
+): NavDestination {
     return when {
-        itemType.equals("Movie", ignoreCase = true) -> NavRoutes.movieDetail(itemId)
+        itemType.equals("Movie", ignoreCase = true) -> MovieDetail(itemId)
         itemType.equals("Series", ignoreCase = true) ||
-            itemType.equals("TV Show", ignoreCase = true) -> NavRoutes.tvShowDetail(itemId)
-        itemType.equals("Season", ignoreCase = true) -> NavRoutes.seasonDetail(itemId)
-        itemType.equals("Episode", ignoreCase = true) -> NavRoutes.player(itemId)
-        else -> NavRoutes.collectionDetail(itemId)
+            itemType.equals("TV Show", ignoreCase = true) -> TvShowDetail(itemId)
+        itemType.equals("Season", ignoreCase = true) -> SeasonDetail(itemId)
+        itemType.equals("Episode", ignoreCase = true) -> Player(itemId)
+        itemType.equals("Person", ignoreCase = true) -> PersonDetail(itemId)
+        else -> CollectionDetail(itemId)
     }
 }

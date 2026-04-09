@@ -1,7 +1,6 @@
 package com.rpeters.cinefintv.ui.player.audio
 
 import android.content.Context
-import androidx.lifecycle.SavedStateHandle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -12,7 +11,7 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -45,18 +44,19 @@ class AudioPlayerViewModelTest {
         val mediaItemFactory = FakeAudioMediaItemFactory()
 
         val viewModel = AudioPlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "")),
             appContext = appContext,
             repositories = fakeRepositories.coordinator,
             controllerConnector = connector,
             playbackPositionRepository = positionRepository,
             mediaItemFactory = mediaItemFactory,
         )
-        advanceUntilIdle()
+        viewModel.init("", null)
+        runCurrent()
 
         val state = viewModel.uiState.value
         assertFalse(state.isConnecting)
         assertEquals("No music track was provided.", state.errorMessage)
+        clearViewModel(viewModel)
     }
 
     @Test
@@ -78,14 +78,14 @@ class AudioPlayerViewModelTest {
         coEvery { fakeRepositories.media.getItemDetails(any()) } returns ApiResult.Success(BaseItemDto(id = UUID.randomUUID(), name = "Track", type = BaseItemKind.AUDIO))
 
         val viewModel = AudioPlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to TRACK_ONE_ID)),
             appContext = appContext,
             repositories = fakeRepositories.coordinator,
             controllerConnector = connector,
             playbackPositionRepository = positionRepository,
             mediaItemFactory = mediaItemFactory,
         )
-        advanceUntilIdle()
+        viewModel.init(TRACK_ONE_ID, null)
+        runCurrent()
 
         viewModel.togglePlayPause()
         assertFalse(controller.isPlaying)
@@ -116,20 +116,20 @@ class AudioPlayerViewModelTest {
         coEvery { fakeRepositories.media.getItemDetails(any()) } returns ApiResult.Success(BaseItemDto(id = UUID.randomUUID(), name = "Track", type = BaseItemKind.AUDIO))
 
         val viewModel = AudioPlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to TRACK_ONE_ID)),
             appContext = appContext,
             repositories = fakeRepositories.coordinator,
             controllerConnector = connector,
             playbackPositionRepository = positionRepository,
             mediaItemFactory = mediaItemFactory,
         )
-        advanceUntilIdle()
+        viewModel.init(TRACK_ONE_ID, null)
+        runCurrent()
 
         viewModel.seekForward()
         viewModel.seekBackward()
         viewModel.skipToNext()
         viewModel.skipToPrevious()
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(1, controller.seekForwardCalls)
         assertEquals(1, controller.seekBackCalls)
@@ -163,19 +163,14 @@ class AudioPlayerViewModelTest {
         }
 
         val viewModel = AudioPlayerViewModel(
-            savedStateHandle = SavedStateHandle(
-                mapOf(
-                    "itemId" to TRACK_TWO_ID,
-                    "queue" to "$TRACK_ONE_ID,$TRACK_TWO_ID",
-                ),
-            ),
             appContext = appContext,
             repositories = fakeRepositories.coordinator,
             controllerConnector = connector,
             playbackPositionRepository = positionRepository,
             mediaItemFactory = mediaItemFactory,
         )
-        advanceUntilIdle()
+        viewModel.init(TRACK_TWO_ID, listOf(TRACK_ONE_ID, TRACK_TWO_ID))
+        runCurrent()
 
         assertEquals(2, controller.lastSetMediaItems.size)
         assertEquals(TRACK_ONE_ID, controller.lastSetMediaItems[0].mediaId)

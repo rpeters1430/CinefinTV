@@ -57,7 +57,6 @@ data class AudioPlayerUiState(
 
 @HiltViewModel
 class AudioPlayerViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
     @param:ApplicationContext private val appContext: Context,
     private val repositories: JellyfinRepositoryCoordinator,
     private val controllerConnector: AudioControllerConnector,
@@ -65,23 +64,21 @@ class AudioPlayerViewModel @Inject constructor(
     private val mediaItemFactory: AudioMediaItemFactory,
 ) : ViewModel() {
 
-    private val itemId: String = savedStateHandle.get<String>("itemId").orEmpty()
-    private val encodedQueue: String? = savedStateHandle.get<String>("queue")
+    private var itemId: String = ""
+    private var queueIds: List<String> = emptyList()
 
     private val _uiState = MutableStateFlow(AudioPlayerUiState())
     val uiState: StateFlow<AudioPlayerUiState> = _uiState
 
-    private val queueIds: List<String> by lazy {
-        val parsed = encodedQueue
-            ?.takeIf { it.isNotBlank() }
-            ?.split(",")
-            ?.mapNotNull { encodedId ->
-                URLDecoder.decode(encodedId, Charsets.UTF_8.name())
-                    .takeIf(String::isNotBlank)
-            }
-            .orEmpty()
+    private var isInitialized = false
 
-        if (parsed.isEmpty() && itemId.isNotBlank()) listOf(itemId) else parsed
+    fun init(id: String, queue: List<String>?) {
+        if (isInitialized && itemId == id) return
+        isInitialized = true
+        itemId = id
+        queueIds = queue ?: listOf(id)
+        
+        connectToSession()
     }
 
     private var controller: AudioPlaybackController? = null
@@ -95,7 +92,7 @@ class AudioPlayerViewModel @Inject constructor(
     }
 
     init {
-        connectToSession()
+        // Initialization handled by init() method called after creation
     }
 
     fun togglePlayPause() {

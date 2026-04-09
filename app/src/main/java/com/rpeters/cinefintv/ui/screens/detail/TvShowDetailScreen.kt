@@ -35,6 +35,7 @@ import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowDetailLayout
 
 @Composable
 fun TvShowDetailScreen(
+    itemId: String,
     onPlayEpisode: (String) -> Unit,
     onOpenSeason: (String) -> Unit,
     onOpenShow: (String) -> Unit,
@@ -42,6 +43,10 @@ fun TvShowDetailScreen(
     onBack: () -> Unit,
     viewModel: TvShowDetailViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(itemId) {
+        viewModel.init(itemId)
+    }
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)

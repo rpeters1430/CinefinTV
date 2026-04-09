@@ -9,54 +9,56 @@ class NavChromeTest {
 
     @Test
     fun appChromeRouteSpec_hidesNavForFullscreenRoutes() {
-        val fullscreenRoutes = listOf(
-            AuthRoutes.SERVER_CONNECTION,
-            AuthRoutes.LOGIN,
-            NavRoutes.player("episode-1"),
-            "audio-player/track-1?queue=track-1,track-2",
-            NavRoutes.movieDetail("movie-1"),
-            NavRoutes.tvShowDetail("series-1"),
-            NavRoutes.seasonDetail("season-1"),
-            NavRoutes.collectionDetail("collection-1"),
-            NavRoutes.personDetail("person-1"),
-            NavRoutes.episodeDetail("episode-1"),
+        val fullscreenDestinations = listOf(
+            ServerConnection,
+            Login,
+            Player("episode-1"),
+            AudioPlayer("track-1", listOf("track-1", "track-2")),
+            MovieDetail("movie-1"),
+            TvShowDetail("series-1"),
+            SeasonDetail("season-1"),
+            CollectionDetail("collection-1"),
+            PersonDetail("person-1"),
+            EpisodeDetail("episode-1"),
         )
 
-        fullscreenRoutes.forEach { route ->
-            val spec = appChromeRouteSpec(route)
-            assertFalse("Expected nav to be hidden for route $route", spec.showNav)
+        fullscreenDestinations.forEach { dest ->
+            val spec = appChromeRouteSpec(dest)
+            assertFalse("Expected nav to be hidden for destination $dest", spec.showNav)
         }
     }
 
     @Test
     fun appChromeRouteSpec_selectsExpectedTopLevelTab() {
-        assertEquals(0, appChromeRouteSpec(NavRoutes.HOME).selectedTabIndex)
-        assertEquals(1, appChromeRouteSpec(NavRoutes.LIBRARY_MOVIES).selectedTabIndex)
-        assertEquals(2, appChromeRouteSpec(NavRoutes.LIBRARY_TVSHOWS).selectedTabIndex)
-        assertEquals(6, appChromeRouteSpec(NavRoutes.SETTINGS).selectedTabIndex)
+        assertEquals(0, appChromeRouteSpec(Home).selectedTabIndex)
+        assertEquals(1, appChromeRouteSpec(LibraryMovies).selectedTabIndex)
+        assertEquals(2, appChromeRouteSpec(LibraryTvShows).selectedTabIndex)
+        assertEquals(6, appChromeRouteSpec(Settings).selectedTabIndex)
     }
 
     @Test
     fun appChromeRouteSpec_defaultsToHomeWhenRouteUnknownOrNull() {
-        assertEquals(0, appChromeRouteSpec("unknown/route").selectedTabIndex)
+        // Unknown destination (if any new ones added but not in chrome)
+        // For now, since it's a sealed interface, we can't easily pass an "unknown" one 
+        // without defining it.
         assertEquals(0, appChromeRouteSpec(null).selectedTabIndex)
         assertFalse(appChromeRouteSpec(null).showNav)
     }
 
     @Test
     fun appChromeRouteSpec_showsNavForTopLevelRoutes() {
-        val topLevelRoutes = listOf(
-            NavRoutes.HOME,
-            NavRoutes.SEARCH,
-            NavRoutes.LIBRARY_MOVIES,
-            NavRoutes.LIBRARY_TVSHOWS,
-            NavRoutes.LIBRARY_COLLECTIONS,
-            NavRoutes.LIBRARY_MUSIC,
-            NavRoutes.SETTINGS,
+        val topLevelDestinations = listOf(
+            Home,
+            Search,
+            LibraryMovies,
+            LibraryTvShows,
+            LibraryCollections,
+            LibraryMusic,
+            Settings,
         )
 
-        topLevelRoutes.forEach { route ->
-            assertTrue("Expected nav to be visible for route $route", appChromeRouteSpec(route).showNav)
+        topLevelDestinations.forEach { dest ->
+            assertTrue("Expected nav to be visible for destination $dest", appChromeRouteSpec(dest).showNav)
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.rpeters.cinefintv.ui.screens.person
 
-import androidx.lifecycle.SavedStateHandle
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.testutil.FakeHomeRepositories
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
@@ -27,7 +26,6 @@ class PersonViewModelTest {
     @Test
     fun init_loadsPersonDetailsAndMedia() = runTest {
         val personId = UUID.randomUUID().toString()
-        val savedStateHandle = SavedStateHandle(mapOf("personId" to personId))
         val fakeRepositories = FakeHomeRepositories()
         val personItem = mockBaseItemDto(personId, "Test Actor", BaseItemKind.PERSON)
 
@@ -37,7 +35,8 @@ class PersonViewModelTest {
         every { fakeRepositories.stream.getImageUrl(any(), any(), any()) } returns "https://img/person.jpg"
         every { fakeRepositories.stream.getPosterCardImageUrl(any(), any()) } returns "https://img/poster.jpg"
 
-        val viewModel = PersonViewModel(fakeRepositories.coordinator, savedStateHandle)
+        val viewModel = PersonViewModel(fakeRepositories.coordinator)
+        viewModel.init(personId)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value

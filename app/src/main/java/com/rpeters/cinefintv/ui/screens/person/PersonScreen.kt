@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,10 +62,15 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun PersonScreen(
+    personId: String,
     onOpenItem: (String, String?) -> Unit,
     onBack: () -> Unit,
     viewModel: PersonViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(personId) {
+        viewModel.init(personId)
+    }
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = LocalCinefinSpacing.current
     var focusedDescription by remember { mutableStateOf<String?>(null) }

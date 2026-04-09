@@ -47,11 +47,16 @@ import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
 
 @Composable
 fun CollectionDetailScreen(
+    itemId: String,
     onOpenItem: (String, String?) -> Unit,
     onPlayItem: (String) -> Unit,
     onBack: () -> Unit,
     viewModel: CollectionDetailViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(itemId) {
+        viewModel.init(itemId)
+    }
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
     var hasBeenPaused by remember { mutableStateOf(false) }

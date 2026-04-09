@@ -65,15 +65,16 @@ sealed class CollectionDetailUiState {
 class CollectionDetailViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
     private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
-    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val itemId: String = savedStateHandle.get<String>("itemId").orEmpty()
+    private var itemId: String = ""
 
     private val _uiState = MutableStateFlow<CollectionDetailUiState>(CollectionDetailUiState.Loading)
     val uiState: StateFlow<CollectionDetailUiState> = _uiState.asStateFlow()
 
-    init {
+    fun init(id: String) {
+        if (itemId == id) return
+        itemId = id
         if (itemId.isBlank()) {
             _uiState.value = CollectionDetailUiState.Error("Invalid item ID")
         } else {

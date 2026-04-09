@@ -1,6 +1,5 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
-import androidx.lifecycle.SavedStateHandle
 import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.testutil.FakeCollectionDetailRepositories
@@ -29,9 +28,6 @@ class CollectionDetailViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val updateBus = MediaUpdateBus()
-
-    private fun savedStateHandle(itemId: String) =
-        SavedStateHandle(mapOf("itemId" to itemId))
 
     private fun makeItemDto(
         id: String = UUID.randomUUID().toString(),
@@ -81,7 +77,7 @@ class CollectionDetailViewModelTest {
         every { fakeRepos.stream.getBackdropUrl(any()) } returns "https://img/backdrop.jpg"
         every { fakeRepos.stream.getPosterCardImageUrl(any()) } returns "https://img/poster.jpg"
 
-        val vm = CollectionDetailViewModel(fakeRepos.coordinator, updateBus, savedStateHandle(itemId))
+        val vm = CollectionDetailViewModel(fakeRepos.coordinator, updateBus).apply { init(itemId) }
         advanceUntilIdle()
 
         val state = vm.uiState.value as CollectionDetailUiState.Content
@@ -125,7 +121,7 @@ class CollectionDetailViewModelTest {
         every { fakeRepos.stream.getBackdropUrl(any()) } returns null
         every { fakeRepos.stream.getPosterCardImageUrl(any()) } returns "https://img/poster.jpg"
 
-        val vm = CollectionDetailViewModel(fakeRepos.coordinator, updateBus, savedStateHandle(itemId))
+        val vm = CollectionDetailViewModel(fakeRepos.coordinator, updateBus).apply { init(itemId) }
         advanceUntilIdle()
 
         val state = vm.uiState.value as CollectionDetailUiState.Content
@@ -150,7 +146,7 @@ class CollectionDetailViewModelTest {
         every { fakeRepos.stream.getBackdropUrl(any()) } returns null
         every { fakeRepos.stream.getPosterCardImageUrl(any()) } returns null
 
-        val vm = CollectionDetailViewModel(fakeRepos.coordinator, updateBus, savedStateHandle(itemId))
+        val vm = CollectionDetailViewModel(fakeRepos.coordinator, updateBus).apply { init(itemId) }
         advanceUntilIdle()
 
         assertEquals("Initial Title", (vm.uiState.value as CollectionDetailUiState.Content).stuff.title)

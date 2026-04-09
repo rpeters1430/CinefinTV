@@ -36,15 +36,16 @@ sealed class SeasonUiState {
 class SeasonViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
     private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
-    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val seasonId: String = savedStateHandle.get<String>("itemId").orEmpty()
+    private var seasonId: String = ""
 
     private val _uiState = MutableStateFlow<SeasonUiState>(SeasonUiState.Loading)
     val uiState: StateFlow<SeasonUiState> = _uiState.asStateFlow()
 
-    init {
+    fun init(id: String) {
+        if (seasonId == id) return
+        seasonId = id
         if (seasonId.isBlank()) {
             _uiState.value = SeasonUiState.Error("Invalid season ID")
         } else {

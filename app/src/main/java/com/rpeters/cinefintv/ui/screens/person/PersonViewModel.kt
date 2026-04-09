@@ -48,15 +48,16 @@ sealed class PersonUiState {
 @HiltViewModel
 class PersonViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
-    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val personId: String = savedStateHandle.get<String>("personId").orEmpty()
+    private var personId: String = ""
 
     private val _uiState = MutableStateFlow<PersonUiState>(PersonUiState.Loading)
     val uiState: StateFlow<PersonUiState> = _uiState.asStateFlow()
 
-    init {
+    fun init(id: String) {
+        if (personId == id) return
+        personId = id
         if (personId.isBlank()) {
             _uiState.value = PersonUiState.Error("Invalid person ID")
         } else {

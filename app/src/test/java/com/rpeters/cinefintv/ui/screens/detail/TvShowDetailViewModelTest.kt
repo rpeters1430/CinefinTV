@@ -1,6 +1,5 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
-import androidx.lifecycle.SavedStateHandle
 import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.testutil.FakeTvShowDetailRepositories
@@ -26,8 +25,7 @@ class TvShowDetailViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private fun makeSavedStateHandle(seriesId: String) =
-        SavedStateHandle(mapOf("itemId" to seriesId))
+    private val updateBus = MediaUpdateBus()
 
     private fun makeSeriesDto(id: String = UUID.randomUUID().toString()): BaseItemDto {
         return mockk<BaseItemDto>(relaxed = true) {
@@ -73,7 +71,8 @@ class TvShowDetailViewModelTest {
         every { fakeRepos.stream.getWideCardImageUrl(any()) } returns null
         every { fakeRepos.stream.getImageUrl(any(), any()) } returns null
 
-        val vm = TvShowDetailViewModel(fakeRepos.coordinator, updateBus, makeSavedStateHandle(seriesId))
+        val vm = TvShowDetailViewModel(fakeRepos.coordinator, updateBus)
+        vm.init(seriesId)
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value is TvShowDetailUiState.Content)
@@ -102,7 +101,8 @@ class TvShowDetailViewModelTest {
         coEvery { fakeRepos.media.getSimilarSeries(seriesId) } returns ApiResult.Success(emptyList())
         coEvery { fakeRepos.media.getNextUpForSeries(seriesId) } returns ApiResult.Error("none")
 
-        val vm = TvShowDetailViewModel(fakeRepos.coordinator, updateBus, makeSavedStateHandle(seriesId))
+        val vm = TvShowDetailViewModel(fakeRepos.coordinator, updateBus)
+        vm.init(seriesId)
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value is TvShowDetailUiState.Error)
@@ -129,7 +129,8 @@ class TvShowDetailViewModelTest {
         every { fakeRepos.stream.getWideCardImageUrl(any()) } returns null
         every { fakeRepos.stream.getImageUrl(any(), any()) } returns null
 
-        val vm = TvShowDetailViewModel(fakeRepos.coordinator, updateBus, makeSavedStateHandle(seriesId))
+        val vm = TvShowDetailViewModel(fakeRepos.coordinator, updateBus)
+        vm.init(seriesId)
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value is TvShowDetailUiState.Content)
@@ -145,4 +146,3 @@ class TvShowDetailViewModelTest {
         assertTrue(vm.uiState.value is TvShowDetailUiState.Content)
     }
 }
-    private val updateBus = MediaUpdateBus()

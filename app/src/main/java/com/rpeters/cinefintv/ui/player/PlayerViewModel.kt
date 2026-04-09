@@ -54,7 +54,6 @@ import kotlin.math.pow
 @UnstableApi
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
     private val repositories: JellyfinRepositoryCoordinator,
     private val enhancedPlaybackManager: EnhancedPlaybackManager,
     private val adaptiveBitrateMonitor: AdaptiveBitrateMonitor,
@@ -65,40 +64,27 @@ class PlayerViewModel @Inject constructor(
     private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
 ) : ViewModel() {
     private val playbackSessionId: String = UUID.randomUUID().toString()
-    val itemId: String = savedStateHandle.get<String>("itemId").orEmpty()
-    private val requestedStartPositionMs: Long = savedStateHandle.get<Long>("start") ?: -1L
+    var itemId: String = ""
+        private set
+    private var requestedStartPositionMs: Long = -1L
     
     private val _uiState = MutableStateFlow(
         PlayerUiState(
-            itemId = itemId,
+            itemId = "",
         ),
     )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
-    private var _player: ExoPlayer? = null
-    val player: ExoPlayer? get() = _player
+    private var isInitialized = false
 
-    private var activeMediaSourceId: String? = null
-    private var activePlaySessionId: String? = null
-    private var activePlayMethod: PlayMethod = PlayMethod.DIRECT_PLAY
-    private var currentItem: BaseItemDto? = null
-    private var resolvedItemId: String = itemId
-    private var playbackStartReported = false
-    private var pendingPlaybackStartPositionMs: Long? = null
+    fun init(id: String, start: Long) {
+        if (isInitialized && itemId == id) return
+        isInitialized = true
+        itemId = id
+        requestedStartPositionMs = start
+        resolvedItemId = id
+        _uiState.value = _uiState.value.copy(itemId = id)
 
-    private data class ResolvedPlayback(
-        val url: String,
-        val isHdrPlayback: Boolean,
-    )
-
-    private fun syncAdaptiveBitrateMonitorContext(quality: TranscodingQuality = uiState.value.transcodingQuality) {
-        adaptiveBitrateMonitor.updatePlaybackContext(
-            currentQuality = quality,
-            isTranscoding = activePlayMethod != PlayMethod.DIRECT_PLAY,
-        )
-    }
-
-    init {
         viewModelScope.launch {
             playbackPreferencesRepository.preferences.collectLatest { prefs ->
                 _uiState.value = _uiState.value.copy(
@@ -130,6 +116,29 @@ class PlayerViewModel @Inject constructor(
             }
         }
         load()
+    }
+
+    private var _player: ExoPlayer? = null
+    val player: ExoPlayer? get() = _player
+
+    private var activeMediaSourceId: String? = null
+    private var activePlaySessionId: String? = null
+    private var activePlayMethod: PlayMethod = PlayMethod.DIRECT_PLAY
+    private var currentItem: BaseItemDto? = null
+    private var resolvedItemId: String = ""
+    private var playbackStartReported = false
+    private var pendingPlaybackStartPositionMs: Long? = null
+
+    private data class ResolvedPlayback(
+        val url: String,
+        val isHdrPlayback: Boolean,
+    )
+
+    private fun syncAdaptiveBitrateMonitorContext(quality: TranscodingQuality = uiState.value.transcodingQuality) {
+        adaptiveBitrateMonitor.updatePlaybackContext(
+            currentQuality = quality,
+            isTranscoding = activePlayMethod != PlayMethod.DIRECT_PLAY,
+        )
     }
 
     fun load() {

@@ -45,10 +45,15 @@ import kotlinx.coroutines.yield
 
 @Composable
 fun SeasonScreen(
+    itemId: String,
     onOpenEpisode: (String) -> Unit,
     onBack: () -> Unit,
     viewModel: SeasonViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(itemId) {
+        viewModel.init(itemId)
+    }
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)

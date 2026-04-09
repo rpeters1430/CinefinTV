@@ -5,28 +5,26 @@ data class AppChromeRouteSpec(
     val selectedTabIndex: Int,
 )
 
-private val fullscreenRoutePrefixes = listOf(
-    "auth/",
-    "player/",
-    "audio-player/",
-    "movie/detail/",
-    "tvshow/detail/",
-    "season/detail/",
-    "episode/detail/",
-    "collections/detail/",
-    "detail/person/",
-)
+fun appChromeRouteSpec(currentDestination: NavDestination?): AppChromeRouteSpec {
+    val showNav = currentDestination != null && when (currentDestination) {
+        is ServerConnection,
+        is Login,
+        is MovieDetail,
+        is TvShowDetail,
+        is SeasonDetail,
+        is EpisodeDetail,
+        is CollectionDetail,
+        is PersonDetail,
+        is Player,
+        is AudioPlayer -> false
+        else -> true
+    }
 
-fun appChromeRouteSpec(currentRoute: String?): AppChromeRouteSpec {
-    val showNav = currentRoute != null && fullscreenRoutePrefixes.none(currentRoute::startsWith)
     val selectedTabIndex = navTabItems.indexOfFirst { item ->
-        currentRoute != null && (
-            currentRoute == item.route ||
-                (item.route.isNotEmpty() && currentRoute.startsWith(item.route))
-            )
+        currentDestination != null && currentDestination::class == item.destination::class
     }.let { index ->
         if (index == -1) {
-            navTabItems.indexOfFirst { it.route == NavRoutes.HOME }
+            navTabItems.indexOfFirst { it.destination is Home }
         } else {
             index
         }

@@ -19,6 +19,7 @@ jellyfin = "1.8.8"
 retrofit = "3.0.0"
 okhttp = "5.3.2"
 navigation = "2.10.0-alpha02"
+navigation3 = "1.1.0"
 paging = "3.5.0-beta01"
 coroutines = "1.10.2"
 serialization = "1.10.0"
@@ -89,7 +90,10 @@ kotlinx-serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-seria
 kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 
 # Core
-core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.19.0-alpha01" }
+core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.18.0" }
+navigation3-runtime = { group = "androidx.navigation3", name = "navigation3-runtime", version.ref = "navigation3" }
+navigation3-ui = { group = "androidx.navigation3", name = "navigation3-ui", version.ref = "navigation3" }
+lifecycle-viewmodel-navigation3 = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-navigation3", version.ref = "navigation3" }
 palette-ktx = { group = "androidx.palette", name = "palette-ktx", version.ref = "palette" }
 slf4j-android = { group = "org.slf4j", name = "slf4j-android", version = "1.7.36" }
 

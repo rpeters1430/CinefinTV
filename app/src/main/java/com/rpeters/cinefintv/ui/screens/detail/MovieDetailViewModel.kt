@@ -59,15 +59,16 @@ sealed class MovieDetailUiState {
 class MovieDetailViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
     private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
-    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val movieId: String = savedStateHandle.get<String>("itemId").orEmpty()
+    private var movieId: String = ""
 
     private val _uiState = MutableStateFlow<MovieDetailUiState>(MovieDetailUiState.Loading)
     val uiState: StateFlow<MovieDetailUiState> = _uiState.asStateFlow()
 
-    init {
+    fun init(id: String) {
+        if (movieId == id) return
+        movieId = id
         if (movieId.isBlank()) {
             _uiState.value = MovieDetailUiState.Error("Invalid movie ID")
         } else {

@@ -1,6 +1,5 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
-import androidx.lifecycle.SavedStateHandle
 import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.testutil.FakeMovieDetailRepositories
@@ -24,9 +23,6 @@ class MovieDetailViewModelTest {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
-
-    private fun makeSavedStateHandle(movieId: String) =
-        SavedStateHandle(mapOf("itemId" to movieId))
 
     private fun makeMovieDto(
         id: String = UUID.randomUUID().toString(),
@@ -62,7 +58,7 @@ class MovieDetailViewModelTest {
         every { fakeRepos.stream.getPosterCardImageUrl(any()) } returns null
         every { fakeRepos.stream.getImageUrl(any(), any()) } returns null
 
-        val vm = MovieDetailViewModel(fakeRepos.coordinator, updateBus, makeSavedStateHandle(movieId))
+        val vm = MovieDetailViewModel(fakeRepos.coordinator, updateBus).apply { init(movieId) }
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value is MovieDetailUiState.Content)
@@ -87,7 +83,7 @@ class MovieDetailViewModelTest {
         coEvery { fakeRepos.media.getMovieDetails(movieId) } returns ApiResult.Error("not found")
         coEvery { fakeRepos.media.getSimilarMovies(movieId) } returns ApiResult.Success(emptyList())
 
-        val vm = MovieDetailViewModel(fakeRepos.coordinator, updateBus, makeSavedStateHandle(movieId))
+        val vm = MovieDetailViewModel(fakeRepos.coordinator, updateBus).apply { init(movieId) }
         advanceUntilIdle()
 
         // State is Error, refreshWatchStatus should no-op
@@ -112,7 +108,7 @@ class MovieDetailViewModelTest {
         every { fakeRepos.stream.getPosterCardImageUrl(any()) } returns null
         every { fakeRepos.stream.getImageUrl(any(), any()) } returns null
 
-        val vm = MovieDetailViewModel(fakeRepos.coordinator, updateBus, makeSavedStateHandle(movieId))
+        val vm = MovieDetailViewModel(fakeRepos.coordinator, updateBus).apply { init(movieId) }
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value is MovieDetailUiState.Content)

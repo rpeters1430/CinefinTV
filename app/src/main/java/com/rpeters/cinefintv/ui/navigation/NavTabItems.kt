@@ -11,17 +11,17 @@ import androidx.compose.material.icons.filled.Tv
 import androidx.compose.ui.graphics.vector.ImageVector
 
 data class NavTabItem(
-    val route: String,
+    val destination: NavDestination,
     val label: String,
     val icon: ImageVector,
 )
 
 val navTabItems = listOf(
-    NavTabItem(NavRoutes.HOME, "Home", Icons.Default.Home),
-    NavTabItem(NavRoutes.LIBRARY_MOVIES, "Movies", Icons.Default.Movie),
-    NavTabItem(NavRoutes.LIBRARY_TVSHOWS, "TV Shows", Icons.Default.Tv),
-    NavTabItem(NavRoutes.LIBRARY_COLLECTIONS, "Library", Icons.Default.Folder),
-    NavTabItem(NavRoutes.LIBRARY_MUSIC, "Music", Icons.Default.MusicNote),
-    NavTabItem(NavRoutes.SEARCH, "Search", Icons.Default.Search),
-    NavTabItem(NavRoutes.SETTINGS, "Settings", Icons.Default.Settings),
+    NavTabItem(Home, "Home", Icons.Default.Home),
+    NavTabItem(LibraryMovies, "Movies", Icons.Default.Movie),
+    NavTabItem(LibraryTvShows, "TV Shows", Icons.Default.Tv),
+    NavTabItem(LibraryCollections, "Library", Icons.Default.Folder),
+    NavTabItem(LibraryMusic, "Music", Icons.Default.MusicNote),
+    NavTabItem(Search, "Search", Icons.Default.Search),
+    NavTabItem(Settings, "Settings", Icons.Default.Settings),
 )

@@ -3,6 +3,7 @@ package com.rpeters.cinefintv.ui.navigation
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,13 +18,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
-import androidx.navigation.NavHostController
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import androidx.tv.material3.Button
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.ui.NavDisplay
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -49,270 +48,242 @@ import com.rpeters.cinefintv.ui.screens.settings.SettingsScreen
 @UnstableApi
 @Composable
 fun CinefinTvNavGraph(
-    navController: NavHostController = rememberNavController(),
-    startDestination: String = AuthRoutes.SERVER_CONNECTION,
+    backStack: NavBackStack<NavKey>,
 ) {
     val authViewModel: AuthViewModel = hiltViewModel()
     val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
-    val resolvedStartDestination = if (authUiState.isSessionActive) NavRoutes.HOME else startDestination
 
     if (!authUiState.isSessionChecked) {
         AuthBootstrapScreen()
         return
     }
 
+    val currentDestination = backStack.lastOrNull() as? NavDestination
+
     LaunchedEffect(authUiState.connectedServerUrl) {
         if (authUiState.connectedServerUrl != null &&
-            navController.currentDestination?.route == AuthRoutes.SERVER_CONNECTION
+            currentDestination == ServerConnection
         ) {
-            navController.navigate(AuthRoutes.LOGIN)
+            backStack.add(Login)
         }
     }
 
     LaunchedEffect(authUiState.loginSucceeded) {
-        if (!authUiState.loginSucceeded || navController.currentDestination?.route == NavRoutes.HOME) {
+        if (!authUiState.loginSucceeded || currentDestination == Home) {
             return@LaunchedEffect
         }
 
         authViewModel.resetLoginSuccess()
-        navController.navigate(NavRoutes.HOME) {
-            launchSingleTop = true
-            popUpTo(AuthRoutes.SERVER_CONNECTION) { inclusive = true }
+        // Clear backstack and go home
+        backStack.clear()
+        backStack.add(Home)
+    }
+
+    val cinefinEntryProvider: (NavKey) -> NavEntry<NavKey> = { key ->
+        val destination = key as NavDestination
+        NavEntry(key) {
+            when (destination) {
+                is ServerConnection -> {
+                    ServerConnectionScreen(
+                        serverUrl = authUiState.serverUrlInput,
+                        isLoading = authUiState.isTestingConnection,
+                        errorMessage = authUiState.connectionError,
+                        onServerUrlChange = { authViewModel.updateServerUrlInput(it) },
+                        onContinue = { authViewModel.testServerConnection() },
+                    )
+                }
+                is Login -> {
+                    LoginScreen(
+                        serverUrl = authUiState.connectedServerUrl ?: authUiState.serverUrlInput,
+                        isAuthenticating = authUiState.isAuthenticating,
+                        errorMessage = authUiState.loginError,
+                        isQuickConnectEnabled = authUiState.isQuickConnectEnabled,
+                        isQuickConnectLoading = authUiState.isQuickConnectLoading,
+                        quickConnectCode = authUiState.quickConnectCode,
+                        quickConnectPollStatus = authUiState.quickConnectPollStatus,
+                        quickConnectError = authUiState.quickConnectError,
+                        onLogin = { username, password ->
+                            authViewModel.login(username, password)
+                        },
+                        onUseQuickConnect = {
+                            authViewModel.startQuickConnect()
+                        },
+                        onGenerateNewCode = {
+                            authViewModel.generateNewQuickConnectCode()
+                        },
+                        onLeaveScreen = {
+                            authViewModel.stopQuickConnect()
+                        },
+                        onBack = {
+                            authViewModel.returnToServerEntry()
+                            backStack.removeAt(backStack.size - 1)
+                        },
+                    )
+                }
+                is Home -> {
+                    HomeScreen(
+                        onOpenItem = { item ->
+                            backStack.add(
+                                routeForBrowsableItem(
+                                    itemId = item.id,
+                                    itemType = item.itemType,
+                                    collectionType = item.collectionType,
+                                )
+                            )
+                        },
+                        onPlayItem = { itemId ->
+                            backStack.add(Player(itemId))
+                        },
+                        onOpenSeries = { seriesId ->
+                            backStack.add(TvShowDetail(seriesId))
+                        },
+                        onOpenSeason = { seasonId ->
+                            backStack.add(SeasonDetail(seasonId))
+                        },
+                    )
+                }
+                is Search -> {
+                    SearchScreen(
+                        onOpenItem = { item ->
+                            backStack.add(
+                                routeForBrowsableItem(
+                                    itemId = item.id,
+                                    itemType = item.itemType,
+                                    collectionType = item.collectionType,
+                                )
+                            )
+                        },
+                    )
+                }
+                is LibraryMovies -> {
+                    MovieLibraryScreen(
+                        onOpenItem = { item ->
+                            backStack.add(MovieDetail(item.id))
+                        }
+                    )
+                }
+                is LibraryTvShows -> {
+                    TvShowLibraryScreen(
+                        onOpenItem = { item ->
+                            backStack.add(TvShowDetail(item.id))
+                        }
+                    )
+                }
+                is LibraryCollections -> {
+                    CollectionLibraryScreen(
+                        onOpenItem = { item ->
+                            backStack.add(CollectionDetail(item.id))
+                        },
+                        onPlayItem = { item ->
+                            backStack.add(Player(item.id))
+                        }
+                    )
+                }
+                is LibraryMusic -> {
+                    MusicScreen(
+                        onPlayTrack = { request ->
+                            backStack.add(AudioPlayer(request.trackId, request.queueIds))
+                        },
+                    )
+                }
+                is Settings -> {
+                    SettingsScreen()
+                }
+                is MovieDetail -> {
+                    MovieDetailScreen(
+                        itemId = destination.itemId,
+                        onPlayMovie = { itemId ->
+                            backStack.add(Player(itemId))
+                        },
+                        onOpenMovie = { itemId ->
+                            backStack.add(MovieDetail(itemId))
+                        },
+                        onOpenPerson = { personId ->
+                            backStack.add(PersonDetail(personId))
+                        },
+                        onBack = { backStack.removeAt(backStack.size - 1) },
+                    )
+                }
+                is TvShowDetail -> {
+                    TvShowDetailScreen(
+                        itemId = destination.itemId,
+                        onPlayEpisode = { episodeId ->
+                            backStack.add(Player(episodeId))
+                        },
+                        onOpenSeason = { seasonId ->
+                            backStack.add(SeasonDetail(seasonId))
+                        },
+                        onOpenShow = { seriesId ->
+                            backStack.add(TvShowDetail(seriesId))
+                        },
+                        onOpenPerson = { personId ->
+                            backStack.add(PersonDetail(personId))
+                        },
+                        onBack = { backStack.removeAt(backStack.size - 1) },
+                    )
+                }
+                is SeasonDetail -> {
+                    SeasonScreen(
+                        itemId = destination.itemId,
+                        onOpenEpisode = { episodeId ->
+                            backStack.add(Player(episodeId))
+                        },
+                        onBack = { backStack.removeAt(backStack.size - 1) },
+                    )
+                }
+                is EpisodeDetail -> {
+                    PlaceholderScreen("Episode Detail", onBack = { backStack.removeAt(backStack.size - 1) })
+                }
+                is CollectionDetail -> {
+                    CollectionDetailScreen(
+                        itemId = destination.itemId,
+                        onOpenItem = { id, type ->
+                            backStack.add(routeForLinkedDetailItem(id, type))
+                        },
+                        onPlayItem = { itemId ->
+                            backStack.add(Player(itemId))
+                        },
+                        onBack = { backStack.removeAt(backStack.size - 1) },
+                    )
+                }
+                is PersonDetail -> {
+                    PersonScreen(
+                        personId = destination.personId,
+                        onOpenItem = { id, type ->
+                            backStack.add(routeForLinkedDetailItem(id, type))
+                        },
+                        onBack = { backStack.removeAt(backStack.size - 1) },
+                    )
+                }
+                is Player -> {
+                    PlayerScreen(
+                        itemId = destination.itemId,
+                        startPositionMs = destination.startPositionMs,
+                        onBack = { backStack.removeAt(backStack.size - 1) },
+                        onOpenItem = { nextItemId ->
+                            backStack.add(Player(nextItemId))
+                        },
+                    )
+                }
+                is AudioPlayer -> {
+                    AudioPlayerScreen(
+                        itemId = destination.itemId,
+                        queueIds = destination.queueIds,
+                        onBack = { backStack.removeAt(backStack.size - 1) },
+                    )
+                }
+            }
         }
     }
 
-    NavHost(
-        navController = navController,
-        startDestination = resolvedStartDestination,
-        enterTransition = { fadeIn(animationSpec = tween(200)) },
-        exitTransition = { fadeOut(animationSpec = tween(200)) },
-        popEnterTransition = { fadeIn(animationSpec = tween(200)) },
-        popExitTransition = { fadeOut(animationSpec = tween(200)) }
-    ) {
-        composable(AuthRoutes.SERVER_CONNECTION) {
-            ServerConnectionScreen(
-                serverUrl = authUiState.serverUrlInput,
-                isLoading = authUiState.isTestingConnection,
-                errorMessage = authUiState.connectionError,
-                onServerUrlChange = { authViewModel.updateServerUrlInput(it) },
-                onContinue = { authViewModel.testServerConnection() },
-            )
-        }
-        composable(AuthRoutes.LOGIN) {
-            LoginScreen(
-                serverUrl = authUiState.connectedServerUrl ?: authUiState.serverUrlInput,
-                isAuthenticating = authUiState.isAuthenticating,
-                errorMessage = authUiState.loginError,
-                isQuickConnectEnabled = authUiState.isQuickConnectEnabled,
-                isQuickConnectLoading = authUiState.isQuickConnectLoading,
-                quickConnectCode = authUiState.quickConnectCode,
-                quickConnectPollStatus = authUiState.quickConnectPollStatus,
-                quickConnectError = authUiState.quickConnectError,
-                onLogin = { username, password ->
-                    authViewModel.login(username, password)
-                },
-                onUseQuickConnect = {
-                    authViewModel.startQuickConnect()
-                },
-                onGenerateNewCode = {
-                    authViewModel.generateNewQuickConnectCode()
-                },
-                onLeaveScreen = {
-                    authViewModel.stopQuickConnect()
-                },
-                onBack = {
-                    authViewModel.returnToServerEntry()
-                    navController.popBackStack()
-                },
-            )
-        }
-        composable(NavRoutes.HOME) {
-            HomeScreen(
-                onOpenItem = { item ->
-                    navController.navigate(
-                        routeForBrowsableItem(
-                            itemId = item.id,
-                            itemType = item.itemType,
-                            collectionType = item.collectionType,
-                        )
-                    )
-                },
-                onPlayItem = { itemId ->
-                    navController.navigate(NavRoutes.player(itemId))
-                },
-                onOpenSeries = { seriesId ->
-                    navController.navigate(NavRoutes.tvShowDetail(seriesId))
-                },
-                onOpenSeason = { seasonId ->
-                    navController.navigate(NavRoutes.seasonDetail(seasonId))
-                },
-            )
-        }
-        composable(NavRoutes.SEARCH) {
-            SearchScreen(
-                onOpenItem = { item ->
-                    navController.navigate(
-                        routeForBrowsableItem(
-                            itemId = item.id,
-                            itemType = item.itemType,
-                            collectionType = item.collectionType,
-                        )
-                    )
-                },
-            )
-        }
-        composable(NavRoutes.LIBRARY_MOVIES) {
-            MovieLibraryScreen(
-                onOpenItem = { item ->
-                    navController.navigate(NavRoutes.movieDetail(item.id))
-                }
-            )
-        }
-        composable(NavRoutes.LIBRARY_TVSHOWS) {
-            TvShowLibraryScreen(
-                onOpenItem = { item ->
-                    navController.navigate(NavRoutes.tvShowDetail(item.id))
-                }
-            )
-        }
-        composable(NavRoutes.LIBRARY_COLLECTIONS) {
-            CollectionLibraryScreen(
-                onOpenItem = { item ->
-                    navController.navigate(NavRoutes.collectionDetail(item.id))
-                },
-                onPlayItem = { item ->
-                    navController.navigate(NavRoutes.player(item.id))
-                }
-            )
-        }
-        composable(NavRoutes.LIBRARY_MUSIC) {
-            MusicScreen(
-                onPlayTrack = { request ->
-                    navController.navigate(NavRoutes.audioPlayer(request.trackId, request.queueIds))
-                },
-            )
-        }
-        composable(NavRoutes.SETTINGS) {
-            SettingsScreen()
-        }
-        composable(
-            NavRoutes.MOVIE_DETAIL,
-            arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
-        ) {
-            MovieDetailScreen(
-                onPlayMovie = { itemId ->
-                    navController.navigate(NavRoutes.player(itemId))
-                },
-                onOpenMovie = { itemId ->
-                    navController.navigate(NavRoutes.movieDetail(itemId))
-                },
-                onOpenPerson = { personId ->
-                    navController.navigate(NavRoutes.personDetail(personId))
-                },
-                onBack = { navController.popBackStack() },
-            )
-        }
-        composable(
-            NavRoutes.TV_SHOW_DETAIL,
-            arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
-        ) {
-            TvShowDetailScreen(
-                onPlayEpisode = { episodeId ->
-                    navController.navigate(NavRoutes.player(episodeId))
-                },
-                onOpenSeason = { seasonId ->
-                    navController.navigate(NavRoutes.seasonDetail(seasonId))
-                },
-                onOpenShow = { seriesId ->
-                    navController.navigate(NavRoutes.tvShowDetail(seriesId))
-                },
-                onOpenPerson = { personId ->
-                    navController.navigate(NavRoutes.personDetail(personId))
-                },
-                onBack = { navController.popBackStack() },
-            )
-        }
-        composable(
-            NavRoutes.SEASON_DETAIL,
-            arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
-        ) {
-            SeasonScreen(
-                onOpenEpisode = { episodeId ->
-                    navController.navigate(NavRoutes.player(episodeId))
-                },
-                onBack = { navController.popBackStack() },
-            )
-        }
-        composable(
-            NavRoutes.COLLECTION_DETAIL,
-            arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
-        ) {
-            CollectionDetailScreen(
-                onOpenItem = { id, type ->
-                    navController.navigate(routeForLinkedDetailItem(id, type))
-                },
-                onPlayItem = { itemId ->
-                    navController.navigate(NavRoutes.player(itemId))
-                },
-                onBack = { navController.popBackStack() },
-            )
-        }
-        composable(
-            NavRoutes.PERSON_DETAIL,
-            arguments = listOf(navArgument("personId") { type = NavType.StringType }),
-        ) {
-            PersonScreen(
-                onOpenItem = { id, type ->
-                    navController.navigate(routeForLinkedDetailItem(id, type))
-                },
-                onBack = {
-                    navController.popBackStack()
-                },
-            )
-        }
-        composable(
-            NavRoutes.PLAYER,
-            arguments = listOf(
-                navArgument("itemId") { type = NavType.StringType },
-                navArgument("start") {
-                    type = NavType.LongType
-                    defaultValue = -1L
-                }
-            ),
-        ) {
-            PlayerScreen(
-                onBack = {
-                    navController.popBackStack()
-                },
-                onOpenItem = { nextItemId ->
-                    val playerDestinationId = navController.graph.findNode(NavRoutes.PLAYER)?.id
-                    navController.navigate(NavRoutes.player(nextItemId)) {
-                        if (playerDestinationId != null) {
-                            popUpTo(playerDestinationId) { inclusive = true }
-                        }
-                        launchSingleTop = true
-                    }
-                },
-            )
-        }
-        composable(
-            route = NavRoutes.AUDIO_PLAYER,
-            arguments = listOf(
-                navArgument("itemId") { type = NavType.StringType },
-                navArgument("queue") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-            ),
-        ) {
-            AudioPlayerScreen(
-                onBack = {
-                    navController.popBackStack()
-                },
-            )
-        }
-    }
+    NavDisplay(
+        backStack = backStack,
+        onBack = { if (backStack.size > 1) backStack.removeAt(backStack.size - 1) },
+        transitionSpec = {
+            fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200))
+        },
+        entryProvider = cinefinEntryProvider,
+    )
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -357,7 +328,7 @@ private fun PlaceholderScreen(name: String, onBack: () -> Unit) {
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Button(onClick = onBack) {
+            androidx.tv.material3.Button(onClick = onBack) {
                 Text("Go Back")
             }
         }

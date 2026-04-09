@@ -34,12 +34,17 @@ import com.rpeters.cinefintv.ui.screens.detail.cinematic.MovieDetailLayout
 
 @Composable
 fun MovieDetailScreen(
+    itemId: String,
     onPlayMovie: (String) -> Unit,
     onOpenMovie: (String) -> Unit,
     onOpenPerson: (String) -> Unit,
     onBack: () -> Unit,
     viewModel: MovieDetailViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(itemId) {
+        viewModel.init(itemId)
+    }
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)

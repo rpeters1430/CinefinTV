@@ -53,15 +53,16 @@ sealed class TvShowDetailUiState {
 class TvShowDetailViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
     private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
-    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val showId: String = savedStateHandle.get<String>("itemId").orEmpty()
+    private var showId: String = ""
 
     private val _uiState = MutableStateFlow<TvShowDetailUiState>(TvShowDetailUiState.Loading)
     val uiState: StateFlow<TvShowDetailUiState> = _uiState.asStateFlow()
 
-    init {
+    fun init(id: String) {
+        if (showId == id) return
+        showId = id
         if (showId.isBlank()) {
             _uiState.value = TvShowDetailUiState.Error("Invalid series ID")
         } else {

@@ -81,7 +81,6 @@ class PlayerViewModelTest {
     @Test
     fun load_whenItemIdMissing_setsFriendlyError() = runTest {
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "")),
             repositories = FakePlayerRepositories().coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
@@ -90,8 +89,8 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-        )
-        advanceUntilIdle()
+        ).apply { init("", -1L) }
+        runCurrent()
 
         val state = viewModel.uiState.value
         assertEquals("No playable item was provided.", state.errorMessage)
@@ -108,7 +107,6 @@ class PlayerViewModelTest {
         coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.Error("error")
 
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
@@ -117,8 +115,8 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-        )
-        advanceUntilIdle()
+        ).apply { init("item-1", -1L) }
+        runCurrent()
 
         val state = viewModel.uiState.value
         assertEquals("Unable to create a stream for this item.", state.errorMessage)
@@ -135,7 +133,6 @@ class PlayerViewModelTest {
         coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.Error("error")
 
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
@@ -144,8 +141,8 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-        )
-        advanceUntilIdle()
+        ).apply { init("item-1", -1L) }
+        runCurrent()
 
         val state = viewModel.uiState.value
         assertEquals("Now Playing", state.title)
@@ -182,7 +179,6 @@ class PlayerViewModelTest {
         coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "00000000-0000-0000-0000-000000000001") } returns 0L
 
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "ep-1")),
             repositories = fakeRepositories.coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
@@ -191,8 +187,8 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-        )
-        advanceUntilIdle()
+        ).apply { init("ep-1", -1L) }
+        runCurrent()
 
         val state = viewModel.uiState.value
         assertEquals(2, state.seasonNumber)
@@ -255,7 +251,6 @@ class PlayerViewModelTest {
         coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "00000000-0000-0000-0000-000000000102") } returns 0L
 
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "series-1")),
             repositories = fakeRepositories.coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
@@ -264,8 +259,8 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-        )
-        advanceUntilIdle()
+        ).apply { init("series-1", -1L) }
+        runCurrent()
 
         val state = viewModel.uiState.value
         assertEquals("00000000-0000-0000-0000-000000000102", state.itemId)
@@ -302,7 +297,6 @@ class PlayerViewModelTest {
         coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "movie-1") } returns 0L
 
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "movie-1")),
             repositories = fakeRepositories.coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
@@ -311,8 +305,8 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-        )
-        advanceUntilIdle()
+        ).apply { init("movie-1", -1L) }
+        runCurrent()
 
         val state = viewModel.uiState.value
         assertNull(state.seasonNumber)
@@ -333,7 +327,6 @@ class PlayerViewModelTest {
         )
 
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
@@ -342,8 +335,8 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-        )
-        advanceUntilIdle()
+        ).apply { init("item-1", -1L) }
+        runCurrent()
 
         val state = viewModel.uiState.value
         assertEquals(0L, state.savedPlaybackPositionMs)
@@ -364,7 +357,6 @@ class PlayerViewModelTest {
         )
 
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
@@ -373,8 +365,8 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-        )
-        advanceUntilIdle()
+        ).apply { init("item-1", -1L) }
+        runCurrent()
 
         val state = viewModel.uiState.value
         assertEquals(5000L, state.savedPlaybackPositionMs)
@@ -395,7 +387,6 @@ class PlayerViewModelTest {
         )
 
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
@@ -404,8 +395,8 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-        )
-        advanceUntilIdle()
+        ).apply { init("item-1", -1L) }
+        runCurrent()
 
         val state = viewModel.uiState.value
         assertEquals(5000L, state.savedPlaybackPositionMs)
@@ -422,7 +413,6 @@ class PlayerViewModelTest {
         coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.Error("error")
 
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
@@ -431,8 +421,8 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-        )
-        advanceUntilIdle()
+        ).apply { init("item-1", -1L) }
+        runCurrent()
 
         assertEquals(1.0f, viewModel.uiState.value.playbackSpeed)
 
@@ -460,7 +450,6 @@ class PlayerViewModelTest {
             com.rpeters.cinefintv.data.playback.PlaybackResult.Error("error")
 
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = customAdaptiveMonitor,
@@ -470,14 +459,15 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
         )
-        advanceUntilIdle()
+        viewModel.init("item-1", -1L)
+        runCurrent()
 
         recommendationFlow.value = com.rpeters.cinefintv.data.playback.QualityRecommendation(
             recommendedQuality = com.rpeters.cinefintv.data.preferences.TranscodingQuality.MEDIUM,
             reason = "Frequent buffering",
             severity = com.rpeters.cinefintv.data.playback.RecommendationSeverity.MEDIUM,
         )
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(
             com.rpeters.cinefintv.data.preferences.TranscodingQuality.MEDIUM,
@@ -501,7 +491,6 @@ class PlayerViewModelTest {
             com.rpeters.cinefintv.data.playback.PlaybackResult.Error("error")
 
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
@@ -510,8 +499,8 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-        )
-        advanceUntilIdle()
+        ).apply { init("item-1", -1L) }
+        runCurrent()
 
         // Calling selectSubtitleTrack when player is null (not yet attached) should not crash.
         // The method should guard on _player == null inside applyTrackSelection.
@@ -522,7 +511,7 @@ class PlayerViewModelTest {
             streamIndex = 2,
         )
         viewModel.selectSubtitleTrack(subtitleTrack, positionMs = 0L, playWhenReady = true)
-        advanceUntilIdle()
+        runCurrent()
 
         // State should reflect the selection even if player is not attached
         assertEquals(subtitleTrack, viewModel.uiState.value.selectedSubtitleTrack)
@@ -539,7 +528,6 @@ class PlayerViewModelTest {
             com.rpeters.cinefintv.data.playback.PlaybackResult.Error("error")
 
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "item-1")),
             repositories = fakeRepositories.coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
@@ -548,12 +536,12 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-        )
-        advanceUntilIdle()
+        ).apply { init("item-1", -1L) }
+        runCurrent()
 
         // Selecting null should disable subtitles (set selectedSubtitleTrack to null in state)
         viewModel.selectSubtitleTrack(null, positionMs = 0L, playWhenReady = true)
-        advanceUntilIdle()
+        runCurrent()
 
         assertNull(viewModel.uiState.value.selectedSubtitleTrack)
     }
@@ -609,7 +597,6 @@ class PlayerViewModelTest {
         } returns Unit
 
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "movie-1")),
             repositories = fakeRepositories.coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
@@ -618,8 +605,8 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-        )
-        advanceUntilIdle()
+        ).apply { init("movie-1", -1L) }
+        runCurrent()
 
         val eventDeferred = async { updateBus.events.first() }
 
@@ -634,7 +621,7 @@ class PlayerViewModelTest {
         assertFalse(eventDeferred.isCompleted)
 
         syncGate.complete(Unit)
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(MediaUpdateEvent.RefreshItem("00000000-0000-0000-0000-000000000201"), eventDeferred.await())
     }
@@ -673,7 +660,6 @@ class PlayerViewModelTest {
         }
 
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "movie-301")),
             repositories = fakeRepositories.coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
@@ -682,8 +668,8 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-        )
-        advanceUntilIdle()
+        ).apply { init("movie-301", -1L) }
+        runCurrent()
 
         val reloadStream = PlayerViewModel::class.java.getDeclaredMethod(
             "reloadStream",
@@ -694,7 +680,7 @@ class PlayerViewModelTest {
         }
 
         reloadStream.invoke(viewModel, 123_000L, true)
-        advanceUntilIdle()
+        runCurrent()
 
         assertTrue(requestedStartPositions.contains(0L))
         assertTrue(requestedStartPositions.contains(123_000L))
@@ -774,7 +760,6 @@ class PlayerViewModelTest {
         }
 
         val viewModel = PlayerViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("itemId" to "movie-401")),
             repositories = fakeRepositories.coordinator,
             enhancedPlaybackManager = enhancedPlaybackManager,
             adaptiveBitrateMonitor = adaptiveBitrateMonitor,
@@ -783,8 +768,8 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-        )
-        advanceUntilIdle()
+        ).apply { init("movie-401", -1L) }
+        runCurrent()
 
         assertEquals(5, viewModel.uiState.value.selectedAudioTrack?.streamIndex)
         assertTrue(requestedAudioStreamIndexes.contains(5))

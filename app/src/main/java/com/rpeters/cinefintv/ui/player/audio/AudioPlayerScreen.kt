@@ -73,9 +73,15 @@ import com.rpeters.cinefintv.utils.LocalPerformanceProfile
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun AudioPlayerScreen(
+    itemId: String,
+    queueIds: List<String>? = null,
     onBack: () -> Unit,
     viewModel: AudioPlayerViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(itemId, queueIds) {
+        viewModel.init(itemId, queueIds)
+    }
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val spacing = LocalCinefinSpacing.current
