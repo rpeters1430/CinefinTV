@@ -21,7 +21,6 @@ import com.rpeters.cinefintv.ui.AppTestTags
 import com.rpeters.cinefintv.ui.CinefinAppScaffold
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.WatchStatus
-import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.screens.home.HomeCardModel
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.ThemeColorController
@@ -155,8 +154,8 @@ class SearchScreenUiTest {
             }
         }
 
-        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.SEARCH)).requestFocus()
-        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.SEARCH))
+        composeRule.onNodeWithTag(AppTestTags.tab("Search")).requestFocus()
+        composeRule.onNodeWithTag(AppTestTags.tab("Search"))
             .performKeyInput { pressKey(Key.DirectionRight) }
         composeRule.onNodeWithTag(SearchTestTags.Field).assertIsFocused()
     }
@@ -182,7 +181,7 @@ class SearchScreenUiTest {
         composeRule.onNodeWithTag(SearchTestTags.Field).requestFocus()
         composeRule.onNodeWithTag(SearchTestTags.Field)
             .performKeyInput { pressKey(Key.DirectionLeft) }
-        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.SEARCH)).assertIsFocused()
+        composeRule.onNodeWithTag(AppTestTags.tab("Search")).assertIsFocused()
     }
 
     @Test
@@ -212,7 +211,7 @@ class SearchScreenUiTest {
         composeRule.onNodeWithTag(SearchTestTags.resultItem(0)).requestFocus()
         composeRule.onNodeWithTag(SearchTestTags.resultItem(0))
             .performKeyInput { pressKey(Key.DirectionLeft) }
-        composeRule.onNodeWithTag(AppTestTags.tab(NavRoutes.SEARCH)).assertIsFocused()
+        composeRule.onNodeWithTag(AppTestTags.tab("Search")).assertIsFocused()
     }
 }
 

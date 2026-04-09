@@ -27,9 +27,9 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.tv.material3.Button
 import androidx.tv.material3.Text
@@ -38,6 +38,8 @@ import com.rpeters.cinefintv.ui.AppChromeFocusController
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.WatchStatus
+import com.rpeters.cinefintv.ui.navigation.Home
+import com.rpeters.cinefintv.ui.navigation.Player
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.ThemeColorController
 import org.junit.Assert.assertEquals
@@ -540,36 +542,33 @@ private fun SemanticsNodeInteraction.requestFocus(): SemanticsNodeInteraction =
 private fun HomeNavigationHarness(
     uiState: HomeUiState,
 ) {
-    val navController = rememberNavController()
-
-    NavHost(
-        navController = navController,
-        startDestination = "home",
-    ) {
-        composable("home") {
+    val backStack: NavBackStack<NavKey> = rememberNavBackStack(Home)
+    when (backStack.lastOrNull()) {
+        is Home -> {
             HomeScreenContent(
                 uiState = uiState,
-                onOpenItem = { navController.navigate("player") },
-                onPlayItem = { navController.navigate("player") },
+                onOpenItem = { backStack.add(Player(it.id)) },
+                onPlayItem = { backStack.add(Player(it)) },
                 onOpenSeries = {},
                 onOpenSeason = {},
                 onRetry = {},
                 hasBeenPaused = false,
             )
         }
-        composable("player") {
+        is Player -> {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
                 Button(
-                    onClick = { navController.popBackStack() },
+                    onClick = { backStack.removeAt(backStack.size - 1) },
                     modifier = Modifier.testTag("player_back"),
                 ) {
                     Text("Back To Home")
                 }
             }
         }
+        else -> Unit
     }
 }
 

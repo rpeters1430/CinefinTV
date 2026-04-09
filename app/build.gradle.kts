@@ -118,7 +118,6 @@ dependencies {
     implementation(libs.activity.compose)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.lifecycle.viewmodel.compose)
-    implementation(libs.navigation.compose)
     implementation(libs.navigation3.runtime)
     implementation(libs.navigation3.ui)
     implementation(libs.lifecycle.viewmodel.navigation3)
@@ -168,6 +167,7 @@ dependencies {
     testImplementation(libs.robolectric)
 
     androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.navigation.compose)
     androidTestImplementation(libs.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.espresso.core)

@@ -54,7 +54,6 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
-import com.rpeters.cinefintv.ui.navigation.NavRoutes
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import kotlinx.coroutines.launch
