@@ -18,10 +18,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
+import androidx.lifecycle.viewmodel.navigation3.ViewModelStoreNavLocalProvider
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
-import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -58,18 +58,16 @@ fun CinefinTvNavGraph(
         return
     }
 
-    val currentDestination = backStack.lastOrNull() as? NavDestination
-
     LaunchedEffect(authUiState.connectedServerUrl) {
-        if (authUiState.connectedServerUrl != null &&
-            currentDestination == ServerConnection
-        ) {
+        val current = backStack.lastOrNull() as? NavDestination
+        if (authUiState.connectedServerUrl != null && current == ServerConnection) {
             backStack.add(Login)
         }
     }
 
     LaunchedEffect(authUiState.loginSucceeded) {
-        if (!authUiState.loginSucceeded || currentDestination == Home) {
+        val current = backStack.lastOrNull() as? NavDestination
+        if (!authUiState.loginSucceeded || current == Home) {
             return@LaunchedEffect
         }
 
@@ -80,7 +78,8 @@ fun CinefinTvNavGraph(
     }
 
     LaunchedEffect(authUiState.isSessionActive) {
-        val isOnAuthRoute = currentDestination == ServerConnection || currentDestination == Login
+        val current = backStack.lastOrNull() as? NavDestination
+        val isOnAuthRoute = current == ServerConnection || current == Login
         if (!authUiState.isSessionActive || !isOnAuthRoute) {
             return@LaunchedEffect
         }
@@ -126,7 +125,7 @@ fun CinefinTvNavGraph(
                         },
                         onBack = {
                             authViewModel.returnToServerEntry()
-                            backStack.removeAt(backStack.size - 1)
+                            backStack.pop()
                         },
                     )
                 }
@@ -211,7 +210,7 @@ fun CinefinTvNavGraph(
                         onOpenPerson = { personId ->
                             backStack.add(PersonDetail(personId))
                         },
-                        onBack = { backStack.removeAt(backStack.size - 1) },
+                        onBack = { backStack.pop() },
                     )
                 }
                 is TvShowDetail -> {
@@ -229,7 +228,7 @@ fun CinefinTvNavGraph(
                         onOpenPerson = { personId ->
                             backStack.add(PersonDetail(personId))
                         },
-                        onBack = { backStack.removeAt(backStack.size - 1) },
+                        onBack = { backStack.pop() },
                     )
                 }
                 is SeasonDetail -> {
@@ -238,11 +237,11 @@ fun CinefinTvNavGraph(
                         onOpenEpisode = { episodeId ->
                             backStack.add(Player(episodeId))
                         },
-                        onBack = { backStack.removeAt(backStack.size - 1) },
+                        onBack = { backStack.pop() },
                     )
                 }
                 is EpisodeDetail -> {
-                    PlaceholderScreen("Episode Detail", onBack = { backStack.removeAt(backStack.size - 1) })
+                    PlaceholderScreen("Episode Detail", onBack = { backStack.pop() })
                 }
                 is CollectionDetail -> {
                     CollectionDetailScreen(
@@ -253,7 +252,7 @@ fun CinefinTvNavGraph(
                         onPlayItem = { itemId ->
                             backStack.add(Player(itemId))
                         },
-                        onBack = { backStack.removeAt(backStack.size - 1) },
+                        onBack = { backStack.pop() },
                     )
                 }
                 is PersonDetail -> {
@@ -262,14 +261,14 @@ fun CinefinTvNavGraph(
                         onOpenItem = { id, type ->
                             backStack.add(routeForLinkedDetailItem(id, type))
                         },
-                        onBack = { backStack.removeAt(backStack.size - 1) },
+                        onBack = { backStack.pop() },
                     )
                 }
                 is Player -> {
                     PlayerScreen(
                         itemId = destination.itemId,
                         startPositionMs = destination.startPositionMs,
-                        onBack = { backStack.removeAt(backStack.size - 1) },
+                        onBack = { backStack.pop() },
                         onOpenItem = { nextItemId ->
                             backStack.add(Player(nextItemId))
                         },
@@ -279,7 +278,7 @@ fun CinefinTvNavGraph(
                     AudioPlayerScreen(
                         itemId = destination.itemId,
                         queueIds = destination.queueIds,
-                        onBack = { backStack.removeAt(backStack.size - 1) },
+                        onBack = { backStack.pop() },
                     )
                 }
             }
@@ -288,12 +287,18 @@ fun CinefinTvNavGraph(
 
     NavDisplay(
         backStack = backStack,
-        onBack = { if (backStack.size > 1) backStack.removeAt(backStack.size - 1) },
+        onBack = { backStack.pop() },
+        localProviders = listOf(ViewModelStoreNavLocalProvider),
         transitionSpec = {
             fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200))
         },
         entryProvider = cinefinEntryProvider,
     )
+}
+
+// Only pops when there is more than one entry, preventing the back stack from going empty.
+private fun NavBackStack<NavKey>.pop() {
+    if (size > 1) removeAt(size - 1)
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
