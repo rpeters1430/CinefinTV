@@ -79,6 +79,16 @@ fun CinefinTvNavGraph(
         backStack.add(Home)
     }
 
+    LaunchedEffect(authUiState.isSessionActive) {
+        val isOnAuthRoute = currentDestination == ServerConnection || currentDestination == Login
+        if (!authUiState.isSessionActive || !isOnAuthRoute) {
+            return@LaunchedEffect
+        }
+
+        backStack.clear()
+        backStack.add(Home)
+    }
+
     val cinefinEntryProvider: (NavKey) -> NavEntry<NavKey> = { key ->
         val destination = key as NavDestination
         NavEntry(key) {
