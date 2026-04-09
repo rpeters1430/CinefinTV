@@ -80,7 +80,8 @@ fun CinefinTvNavGraph(
     }
 
     LaunchedEffect(authUiState.isSessionActive) {
-        if (!authUiState.isSessionActive || currentDestination == Home) {
+        val isOnAuthRoute = currentDestination == ServerConnection || currentDestination == Login
+        if (!authUiState.isSessionActive || !isOnAuthRoute) {
             return@LaunchedEffect
         }
 
