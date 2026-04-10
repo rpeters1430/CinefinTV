@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
@@ -117,6 +118,7 @@ private fun CollectionVideoContent(
     val overviewFocusRequester = remember { FocusRequester() }
     var showDeleteDialog by remember(stuff.id) { mutableStateOf(false) }
     var didInitialFocus by remember { mutableStateOf(false) }
+    val chromeFocusController = LocalAppChromeFocusController.current
 
     val factItems = remember(stuff) {
         buildList {
@@ -174,6 +176,7 @@ private fun CollectionVideoContent(
             onDismissRequest = { showDeleteDialog = false },
             onConfirmDelete = {
                 showDeleteDialog = false
+                chromeFocusController?.shouldRestoreFocusToContent = true
                 viewModel.deleteItem(onBack)
             },
         )
@@ -230,6 +233,7 @@ private fun CollectionFolderContent(
     var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(items.firstOrNull()?.id) }
     var showDeleteDialog by remember(stuff.id) { mutableStateOf(false) }
     var didInitialFocus by remember { mutableStateOf(false) }
+    val chromeFocusController = LocalAppChromeFocusController.current
 
     val factItems = remember(stuff, items) {
         buildList {
@@ -263,6 +267,7 @@ private fun CollectionFolderContent(
             onDismissRequest = { showDeleteDialog = false },
             onConfirmDelete = {
                 showDeleteDialog = false
+                chromeFocusController?.shouldRestoreFocusToContent = true
                 viewModel.deleteItem(onBack)
             },
         )

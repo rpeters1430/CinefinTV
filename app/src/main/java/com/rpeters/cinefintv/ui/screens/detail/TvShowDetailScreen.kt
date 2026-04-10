@@ -29,6 +29,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.HeroIconAction
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowDetailLayout
@@ -49,6 +50,7 @@ fun TvShowDetailScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
+    val chromeFocusController = LocalAppChromeFocusController.current
     BackHandler(onBack = onBack)
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -104,6 +106,7 @@ fun TvShowDetailScreen(
                         onDismissRequest = { showDeleteDialog = false },
                         onConfirmDelete = {
                             showDeleteDialog = false
+                            chromeFocusController?.shouldRestoreFocusToContent = true
                             viewModel.deleteShow(onBack)
                         },
                     )

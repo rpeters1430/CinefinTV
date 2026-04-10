@@ -317,6 +317,21 @@ internal fun CinefinAppScaffold(
     }
 
     CompositionLocalProvider(LocalAppChromeFocusController provides chromeFocusController) {
+        // After a delete-and-back action the content area may be reloading, leaving focus stranded
+        // in the nav rail. Watch for the flag and redirect focus to content once it is available.
+        LaunchedEffect(
+            chromeFocusController.shouldRestoreFocusToContent,
+            chromeFocusController.primaryContentFocusRequester,
+        ) {
+            if (chromeFocusController.shouldRestoreFocusToContent) {
+                val target = chromeFocusController.primaryContentFocusRequester
+                if (target != null) {
+                    runCatching { target.requestFocus() }
+                    chromeFocusController.shouldRestoreFocusToContent = false
+                }
+            }
+        }
+
         Row(modifier = Modifier.fillMaxSize()) {
             if (showNav) {
                 Box(

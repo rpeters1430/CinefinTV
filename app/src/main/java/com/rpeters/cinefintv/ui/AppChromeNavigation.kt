@@ -18,6 +18,12 @@ import androidx.compose.ui.focus.focusRequester
 class AppChromeFocusController {
     var topNavFocusRequester: FocusRequester? by mutableStateOf(null)
     var primaryContentFocusRequester: FocusRequester? by mutableStateOf(null)
+    /**
+     * When true, the scaffold will automatically move focus to [primaryContentFocusRequester]
+     * as soon as it becomes non-null. Set this before navigating back from a delete action so
+     * that focus is not left stranded in the nav rail while the content area reloads.
+     */
+    var shouldRestoreFocusToContent: Boolean by mutableStateOf(false)
 }
 
 val LocalAppChromeFocusController = compositionLocalOf<AppChromeFocusController?> { null }

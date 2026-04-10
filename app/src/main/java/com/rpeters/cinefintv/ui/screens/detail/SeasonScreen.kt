@@ -34,6 +34,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
 import com.rpeters.cinefintv.ui.components.MediaActionDialog
 import com.rpeters.cinefintv.ui.components.MediaActionDialogItem
@@ -108,6 +109,7 @@ private fun SeasonContent(
 ) {
     val spacing = LocalCinefinSpacing.current
     val coroutineScope = rememberCoroutineScope()
+    val chromeFocusController = LocalAppChromeFocusController.current
     val listState = rememberLazyListState()
     val topFocusRequester = remember { FocusRequester() }
     val primaryActionFocusRequester = remember { FocusRequester() }
@@ -203,6 +205,7 @@ private fun SeasonContent(
             onDismissRequest = { onShowDeleteDialogChange(false) },
             onConfirmDelete = {
                 onShowDeleteDialogChange(false)
+                chromeFocusController?.shouldRestoreFocusToContent = true
                 viewModel.deleteSeason(onBack)
             },
         )
