@@ -48,7 +48,7 @@ This document synthesizes the current known bugs, performance bottlenecks, archi
 [ ] Tighten Typography & Spacing Rhythm:** Normalize title/subtitle line heights, clamp multi-line text overflow behavior, and align vertical spacing tokens so rails and detail panels feel visually balanced at 1080p and 4K.
 [ ] Improve Skeleton & Loading Surfaces:** Replace abrupt placeholder transitions with low-motion shimmer/fade variants tied to `respectReduceMotion`, and ensure placeholders match final layout dimensions to reduce visual jump.
 [ ] Normalize Poster/Card Image Treatments:** Unify corner radii, gradient overlays, and fallback artwork handling so mixed content sources (posters, backdrops, missing art) maintain a cohesive shelf presentation.
-[ ] Add Empty/Error State Design Pass:** Create polished, branded empty/error views with clear recovery actions (retry, change filter, refresh library) and TV-safe focus defaults.
+[ ] Audit Contrast & Accessibility on TV Panels:** Verify text/icon contrast against dynamic backdrops, enlarge low-legibility metadata chips, and enforce minimum selection/focusable target sizes for remote navigation.
 [ ] Audit Contrast & Accessibility on TV Panels:** Verify text/icon contrast against dynamic backdrops, enlarge low-legibility metadata chips, and enforce minimum tappable/focusable target sizes for remote navigation.
 
 ## Phase 5: Testing & Release Hardening (P4)
