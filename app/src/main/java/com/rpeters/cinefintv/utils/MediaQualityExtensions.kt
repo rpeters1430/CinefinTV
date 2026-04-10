@@ -27,20 +27,20 @@ fun BaseItemDto.getMediaQualityLabel(): String? {
     resolution?.let { labels.add(it) }
 
     // 2. Dynamic Range / HDR
-    val videoRange = videoStream.videoRange?.toString()?.lowercase()
-    val videoRangeType = videoStream.videoRangeType?.toString()?.lowercase()
-    
+    val videoRange = videoStream.videoRange.toString().lowercase()
+    val videoRangeType = videoStream.videoRangeType.toString().lowercase()
+
     val hdrLabel = when {
-        videoRange?.contains("dolby vision") == true || videoRangeType?.contains("dv") == true -> "Dolby Vision"
-        videoRange?.contains("hdr10+") == true -> "HDR10+"
-        videoRange?.contains("hdr10") == true -> "HDR10"
-        videoRange?.contains("hdr") == true || videoRangeType?.contains("hdr") == true -> "HDR"
+        videoRange.contains("dolby vision") || videoRangeType.contains("dv") -> "Dolby Vision"
+        videoRange.contains("hdr10+") -> "HDR10+"
+        videoRange.contains("hdr10") -> "HDR10"
+        videoRange.contains("hdr") || videoRangeType.contains("hdr") -> "HDR"
         else -> null
     }
     hdrLabel?.let { labels.add(it) }
 
     // 3. Codec (Optional, but useful if space allows)
-    val codec = videoStream.codec?.toString()?.uppercase()
+    val codec = videoStream.codec?.uppercase()
     val codecLabel = when (codec) {
         "HEVC", "H265" -> "HEVC"
         "AVC", "H264" -> "AVC"

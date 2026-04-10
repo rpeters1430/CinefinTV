@@ -11,17 +11,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.media3.common.util.UnstableApi
-import androidx.lifecycle.viewmodel.navigation3.ViewModelStoreNavLocalProvider
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -52,6 +55,12 @@ fun CinefinTvNavGraph(
 ) {
     val authViewModel: AuthViewModel = hiltViewModel()
     val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
+    val saveableStateHolder = rememberSaveableStateHolder()
+    val viewModelStoreOwner = requireNotNull(LocalViewModelStoreOwner.current)
+    val entryDecorators = listOf(
+        rememberSaveableStateHolderNavEntryDecorator<NavKey>(saveableStateHolder),
+        rememberViewModelStoreNavEntryDecorator<NavKey>(viewModelStoreOwner),
+    )
 
     if (!authUiState.isSessionChecked) {
         AuthBootstrapScreen()
@@ -288,7 +297,7 @@ fun CinefinTvNavGraph(
     NavDisplay(
         backStack = backStack,
         onBack = { backStack.pop() },
-        localProviders = listOf(ViewModelStoreNavLocalProvider),
+        entryDecorators = entryDecorators,
         transitionSpec = {
             fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200))
         },
