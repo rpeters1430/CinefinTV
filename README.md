@@ -26,8 +26,8 @@ You can browse all published versions on the [Releases page](https://github.com/
 
 ## Project status
 
-**Last updated:** **April 3, 2026**  
-**Current app version:** **1.6.4 (versionCode 65)**  
+**Last updated:** **April 10, 2026**  
+**Current app version:** **1.7.6 (versionCode 77)**  
 **Lifecycle stage:** **Beta**
 
 CinefinTV is past MVP and currently supports the full end-to-end user journey:
