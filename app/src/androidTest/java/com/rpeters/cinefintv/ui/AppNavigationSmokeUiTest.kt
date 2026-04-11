@@ -16,6 +16,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -53,6 +54,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalTestApi::class)
@@ -315,6 +318,40 @@ class AppNavigationSmokeUiTest {
         composeRule.onNodeWithText("Screen: Movie Detail").assertIsDisplayed()
         composeRule.onNodeWithText("Arg itemId: smoke-movie").assertIsDisplayed()
         assertTrue(composeRule.onAllNodesWithTag(AppTestTags.NavBar).fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
+    fun playerBack_restoresFocusToHomeContent() {
+        composeRule.setContent {
+            AppSmokeTestHost {
+                AppNavigationSmokeHarness()
+            }
+        }
+
+        // 1. Move focus to content
+        val primaryContent = composeRule.onNodeWithTag("home_content_primary")
+        primaryContent.requestFocus().assertIsFocused()
+
+        // 2. Open player
+        composeRule.onNodeWithTag("go_player")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithText("Screen: Player").assertIsDisplayed()
+        assertTrue(composeRule.onAllNodesWithTag(AppTestTags.NavBar).fetchSemanticsNodes().isEmpty())
+
+        // 3. Go back
+        composeRule.activityRule.scenario.onActivity {
+            it.onBackPressedDispatcher.onBackPressed()
+        }
+
+        // 4. Verify Home is back and focus is restored to content (not nav bar)
+        composeRule.onNodeWithText("Screen: Home").assertIsDisplayed()
+        composeRule.onNodeWithTag(AppTestTags.NavBar).assertIsDisplayed()
+        
+        // Wait for focus restoration delay
+        composeRule.mainClock.advanceTimeBy(500)
+        composeRule.waitForIdle()
+
+        primaryContent.assertIsFocused()
     }
 }
 

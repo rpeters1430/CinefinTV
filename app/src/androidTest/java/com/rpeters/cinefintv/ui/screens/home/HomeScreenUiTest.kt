@@ -65,7 +65,8 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
-                    hasBeenPaused = false,
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
                 )
             }
         }
@@ -87,7 +88,8 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = { retryCount++ },
-                    hasBeenPaused = false,
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
                 )
             }
         }
@@ -116,7 +118,8 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
-                    hasBeenPaused = false,
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
                 )
             }
         }
@@ -145,7 +148,8 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
-                    hasBeenPaused = false,
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
                 )
             }
         }
@@ -172,7 +176,8 @@ class HomeScreenUiTest {
                         onOpenSeries = {},
                         onOpenSeason = {},
                         onRetry = {},
-                        hasBeenPaused = false,
+                        shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
                     )
                 }
             }
@@ -198,7 +203,8 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
-                    hasBeenPaused = false,
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
                 )
             }
         }
@@ -220,7 +226,8 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
-                    hasBeenPaused = false,
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
                 )
             }
         }
@@ -242,7 +249,8 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
-                    hasBeenPaused = false,
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
                 )
             }
         }
@@ -268,7 +276,8 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
-                    hasBeenPaused = false,
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
                 )
             }
         }
@@ -290,7 +299,8 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
-                    hasBeenPaused = false,
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
                 )
             }
         }
@@ -312,7 +322,8 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
-                    hasBeenPaused = false,
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
                 )
             }
         }
@@ -334,7 +345,8 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
-                    hasBeenPaused = false,
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
                 )
             }
         }
@@ -380,7 +392,8 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
-                    hasBeenPaused = false,
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
                 )
             }
         }
@@ -429,7 +442,8 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
-                    hasBeenPaused = false,
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
                 )
             }
         }
@@ -448,7 +462,8 @@ class HomeScreenUiTest {
                     onOpenSeries = {},
                     onOpenSeason = {},
                     onRetry = {},
-                    hasBeenPaused = false,
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
                 )
             }
         }
@@ -552,7 +567,8 @@ private fun HomeNavigationHarness(
                 onOpenSeries = {},
                 onOpenSeason = {},
                 onRetry = {},
-                hasBeenPaused = false,
+                shouldRestoreFocusOnResume = false,
+                onConsumedRestore = {},
             )
         }
         is Player -> {

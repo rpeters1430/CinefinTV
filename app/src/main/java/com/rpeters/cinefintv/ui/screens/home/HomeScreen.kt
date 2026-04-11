@@ -68,6 +68,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
+import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.MediaActionDialog
@@ -99,6 +100,7 @@ fun HomeScreen(
 
     val lifecycleOwner = LocalLifecycleOwner.current
     var hasBeenPaused by remember { mutableStateOf(false) }
+    var shouldRestoreFocusOnResume by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -106,6 +108,7 @@ fun HomeScreen(
                 Lifecycle.Event.ON_PAUSE  -> hasBeenPaused = true
                 Lifecycle.Event.ON_RESUME -> if (hasBeenPaused) {
                     hasBeenPaused = false
+                    shouldRestoreFocusOnResume = true
                     viewModel.refresh(silent = true)
                 }
                 else -> {}
@@ -129,7 +132,8 @@ fun HomeScreen(
         onOpenSeries = onOpenSeries,
         onOpenSeason = onOpenSeason,
         onRetry = { viewModel.refresh() },
-        hasBeenPaused = hasBeenPaused
+        shouldRestoreFocusOnResume = shouldRestoreFocusOnResume,
+        onConsumedRestore = { shouldRestoreFocusOnResume = false }
     )
 }
 
@@ -142,7 +146,8 @@ internal fun HomeScreenContent(
     onOpenSeries: (String) -> Unit,
     onOpenSeason: (String) -> Unit,
     onRetry: () -> Unit,
-    hasBeenPaused: Boolean
+    shouldRestoreFocusOnResume: Boolean,
+    onConsumedRestore: () -> Unit,
 ) {
     val listState = rememberLazyListState()
     val spacing = LocalCinefinSpacing.current
@@ -216,6 +221,7 @@ internal fun HomeScreenContent(
             val focusNavigationCoordinator = remember(coroutineScope) {
                 FocusNavigationCoordinator(coroutineScope)
             }
+            val chromeFocusController = LocalAppChromeFocusController.current
 
             val preferredFocusRequester = when {
                 lastFocusedSectionTitle != null -> {
@@ -226,12 +232,20 @@ internal fun HomeScreenContent(
                 state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
                 else -> sectionFocusRequesters.firstOrNull()
             }
-            val primaryContentFocusRequester = if (state.featuredItems.isNotEmpty()) {
-                featuredPrimaryActionRequester
-            } else {
-                sectionFocusRequesters.firstOrNull()
-            }
+            // Use preferredFocusRequester as the primary content focus target so the nav rail 
+            // always returns focus to the last-used section rather than always to the top.
+            val primaryContentFocusRequester = preferredFocusRequester
             val destinationFocus = rememberTopLevelDestinationFocus(primaryContentFocusRequester)
+
+            LaunchedEffect(shouldRestoreFocusOnResume) {
+                if (shouldRestoreFocusOnResume) {
+                    shouldRestoreFocus = true
+                    // Also notify the global scaffold that we need focus restoration,
+                    // which provides an extra layer of robustness.
+                    chromeFocusController?.shouldRestoreFocusToContent = true
+                    onConsumedRestore()
+                }
+            }
 
             selectedEpisodeMenuItem?.let { item ->
                 MediaActionDialog(
@@ -275,14 +289,7 @@ internal fun HomeScreenContent(
             }
 
             DisposableEffect(lifecycleOwner) {
-                val observer = LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_RESUME && hasBeenPaused) {
-                        shouldRestoreFocus = true
-                    }
-                }
-                lifecycleOwner.lifecycle.addObserver(observer)
                 onDispose {
-                    lifecycleOwner.lifecycle.removeObserver(observer)
                     focusNavigationCoordinator.cancelActiveJob()
                 }
             }

@@ -41,6 +41,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -91,6 +92,7 @@ import com.rpeters.cinefintv.update.UpdateInstallResult
 import com.rpeters.cinefintv.update.UpdateManager
 import com.rpeters.cinefintv.update.UpdateStatus
 import com.rpeters.cinefintv.update.shouldCheckForUpdate
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 val LocalCinefinThemeController = compositionLocalOf<ThemeColorController> {
@@ -274,6 +276,17 @@ internal fun CinefinAppScaffold(
         List(navTabItems.size) { FocusRequester() }
     }
     val chromeFocusController = remember { AppChromeFocusController() }
+    var lastShowNav by remember { mutableStateOf(showNav) }
+
+    // When we return to a screen that shows the nav bar after it was hidden (e.g. from Player or Details),
+    // automatically trigger focus restoration to the primary content area.
+    LaunchedEffect(showNav) {
+        if (showNav && !lastShowNav) {
+            chromeFocusController.shouldRestoreFocusToContent = true
+        }
+        lastShowNav = showNav
+    }
+
     val selectedTabFocusRequester = tabFocusRequesters.getOrElse(selectedTabIndex) { FocusRequester() }
     var focusedTabIndex by remember { mutableStateOf<Int?>(null) }
     val navHasFocus = focusedTabIndex != null
@@ -326,8 +339,15 @@ internal fun CinefinAppScaffold(
             if (chromeFocusController.shouldRestoreFocusToContent) {
                 val target = chromeFocusController.primaryContentFocusRequester
                 if (target != null) {
-                    runCatching { target.requestFocus() }
                     chromeFocusController.shouldRestoreFocusToContent = false
+                    
+                    // Give the screen a moment to fully attach and lay out its focus targets
+                    // before we attempt to snatch focus away from the nav rail.
+                    withFrameNanos { }
+                    withFrameNanos { }
+                    delay(150)
+                    
+                    runCatching { target.requestFocus() }
                 }
             }
         }

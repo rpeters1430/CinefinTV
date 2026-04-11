@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailTestTags
@@ -631,6 +632,7 @@ class DetailDpadNavigationUiTest {
                     heroTagline = null,
                     creditLine = null,
                     heroBadges = emptyList(),
+                    heroSecondaryActions = emptyList(),
                     factItems = emptyList(),
                     listState = listState,
                 )
