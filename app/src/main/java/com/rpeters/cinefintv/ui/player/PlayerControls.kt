@@ -205,6 +205,7 @@ internal fun PlayerControls(
                         modifier = Modifier
                             .focusRequester(backFocusRequester)
                             .focusProperties {
+                                up = backFocusRequester
                                 down = seekBarFocusRequester
                             },
                         scale = IconButtonDefaults.scale(focusedScale = 1.15f),
