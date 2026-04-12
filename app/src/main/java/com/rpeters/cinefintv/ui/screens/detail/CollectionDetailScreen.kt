@@ -231,7 +231,7 @@ private fun CollectionFolderContent(
     viewModel: CollectionDetailViewModel,
 ) {
     val primaryActionFocusRequester = remember { FocusRequester() }
-    val destinationFocusFolder = rememberTopLevelDestinationFocus(primaryActionFocusRequester)
+    val destinationFocus = rememberTopLevelDestinationFocus(primaryActionFocusRequester)
     val overviewFocusRequester = remember { FocusRequester() }
     val gridEntryFocusRequester = remember { FocusRequester() }
     var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(items.firstOrNull()?.id) }
@@ -294,7 +294,7 @@ private fun CollectionFolderContent(
             secondaryActions = listOf("Delete" to { showDeleteDialog = true }),
             primaryActionFocusRequester = primaryActionFocusRequester,
             primaryActionDownFocusRequester = overviewFocusRequester,
-            drawerFocusRequester = destinationFocusFolder.drawerFocusRequester,
+            drawerFocusRequester = destinationFocus.drawerFocusRequester,
         )
 
         DetailOverviewSection(

@@ -78,8 +78,8 @@ fun PersonScreen(
     val coroutineScope = rememberCoroutineScope()
     val expressiveColors = LocalCinefinExpressiveColors.current
 
-    val primaryContentRequester = remember { FocusRequester() }
-    val destinationFocus = rememberTopLevelDestinationFocus(primaryContentRequester)
+    val backButtonRequester = remember { FocusRequester() }
+    val destinationFocus = rememberTopLevelDestinationFocus(backButtonRequester)
 
     when (val state = uiState) {
         is PersonUiState.Loading -> {
@@ -126,7 +126,6 @@ fun PersonScreen(
         is PersonUiState.Content -> {
             val person = state.person
             var focusedMedia by remember(state.media) { mutableStateOf(state.media.firstOrNull()) }
-            val backButtonRequester = remember { FocusRequester() }
             val firstKnownForRequester = remember { FocusRequester() }
 
             BackHandler(onBack = onBack)
@@ -171,13 +170,11 @@ fun PersonScreen(
                     )
                 }
 
-                val primaryContentMod = destinationFocus.primaryContentModifier()
                 LazyColumn(
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .focusGroup()
-                        .then(primaryContentMod),
+                        .focusGroup(),
                     contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = spacing.safeZoneVertical),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
@@ -227,6 +224,9 @@ fun PersonScreen(
                                             .focusRequester(backButtonRequester)
                                             .onFocusChanged { if (it.isFocused) focusedDescription = null }
                                             .focusProperties {
+                                                val drawer = destinationFocus.drawerFocusRequester ?: return@focusProperties
+                                                left = drawer
+                                                up = drawer
                                                 if (state.media.isNotEmpty()) down = firstKnownForRequester
                                             }
                                     ) {
