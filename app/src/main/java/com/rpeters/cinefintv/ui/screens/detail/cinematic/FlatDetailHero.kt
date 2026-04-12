@@ -96,6 +96,7 @@ fun FlatDetailHero(
     primaryActionFocusRequester: FocusRequester,
     primaryActionDownFocusRequester: FocusRequester? = null,
     onDownNavigation: (() -> Unit)? = null,
+    drawerFocusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
@@ -253,6 +254,7 @@ fun FlatDetailHero(
                 primaryFocusRequester = primaryActionFocusRequester,
                 primaryDownFocusRequester = primaryActionDownFocusRequester,
                 onDownNavigation = onDownNavigation,
+                drawerFocusRequester = drawerFocusRequester,
             )
         }
     }
@@ -266,6 +268,7 @@ private fun HeroActionStrip(
     primaryFocusRequester: FocusRequester,
     primaryDownFocusRequester: FocusRequester?,
     onDownNavigation: (() -> Unit)?,
+    drawerFocusRequester: FocusRequester? = null,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     val secondaryFocusRequesters = remember(secondaryActions.size) {
@@ -288,6 +291,10 @@ private fun HeroActionStrip(
                     }
                     if (secondaryActions.isNotEmpty()) {
                         right = secondaryFocusRequesters.first()
+                    }
+                    drawerFocusRequester?.let {
+                        left = it
+                        up = it
                     }
                 }
                 .onPreviewKeyEvent { keyEvent ->

@@ -246,7 +246,7 @@ fun TvShowDetailScreen(
                     heroSecondaryActions = heroSecondaryActions,
                     factItems = factItems,
                     listState = listState,
-                    modifier = Modifier.then(destinationFocus.primaryContentModifier()),
+                    drawerFocusRequester = destinationFocus.drawerFocusRequester,
                 )
             }
         }

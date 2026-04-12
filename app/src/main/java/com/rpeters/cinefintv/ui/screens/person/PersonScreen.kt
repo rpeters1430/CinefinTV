@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -77,6 +78,9 @@ fun PersonScreen(
     val coroutineScope = rememberCoroutineScope()
     val expressiveColors = LocalCinefinExpressiveColors.current
 
+    val primaryContentRequester = remember { FocusRequester() }
+    val destinationFocus = rememberTopLevelDestinationFocus(primaryContentRequester)
+
     when (val state = uiState) {
         is PersonUiState.Loading -> {
             Box(
@@ -123,7 +127,6 @@ fun PersonScreen(
             val person = state.person
             var focusedMedia by remember(state.media) { mutableStateOf(state.media.firstOrNull()) }
             val backButtonRequester = remember { FocusRequester() }
-            val destinationFocus = rememberTopLevelDestinationFocus(backButtonRequester)
             val firstKnownForRequester = remember { FocusRequester() }
 
             BackHandler(onBack = onBack)
@@ -168,11 +171,13 @@ fun PersonScreen(
                     )
                 }
 
+                val primaryContentMod = destinationFocus.primaryContentModifier()
                 LazyColumn(
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .then(destinationFocus.primaryContentModifier()),
+                        .focusGroup()
+                        .then(primaryContentMod),
                     contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = spacing.safeZoneVertical),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {

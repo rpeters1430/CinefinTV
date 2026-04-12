@@ -234,7 +234,7 @@ fun MovieDetailScreen(
                     onCastClick = { personId -> onOpenPerson(personId) },
                     onSimilarClick = { onOpenMovie(it) },
                     listState = listState,
-                    modifier = Modifier.then(destinationFocus.primaryContentModifier()),
+                    drawerFocusRequester = destinationFocus.drawerFocusRequester,
                 )
             }
         }

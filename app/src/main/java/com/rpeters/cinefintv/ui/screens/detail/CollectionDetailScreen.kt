@@ -184,7 +184,7 @@ private fun CollectionVideoContent(
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize().then(destinationFocus.primaryContentModifier())) {
+    Column(modifier = Modifier.fillMaxSize()) {
         CinematicHero(
             backdropUrl = stuff.backdropUrl,
             logoUrl = null,
@@ -206,6 +206,7 @@ private fun CollectionVideoContent(
             },
             primaryActionFocusRequester = primaryActionFocusRequester,
             primaryActionDownFocusRequester = overviewFocusRequester,
+            drawerFocusRequester = destinationFocus.drawerFocusRequester,
         )
 
         DetailOverviewSection(
@@ -276,7 +277,7 @@ private fun CollectionFolderContent(
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize().then(destinationFocusFolder.primaryContentModifier())) {
+    Column(modifier = Modifier.fillMaxSize()) {
         CinematicHero(
             backdropUrl = stuff.backdropUrl,
             logoUrl = null,
@@ -293,6 +294,7 @@ private fun CollectionFolderContent(
             secondaryActions = listOf("Delete" to { showDeleteDialog = true }),
             primaryActionFocusRequester = primaryActionFocusRequester,
             primaryActionDownFocusRequester = overviewFocusRequester,
+            drawerFocusRequester = destinationFocusFolder.drawerFocusRequester,
         )
 
         DetailOverviewSection(

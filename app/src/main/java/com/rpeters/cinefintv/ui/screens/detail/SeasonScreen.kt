@@ -215,9 +215,7 @@ private fun SeasonContent(
 
     LazyColumn(
         state = listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .then(destinationFocus.primaryContentModifier()),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = spacing.gutter * 2),
     ) {
         item {
@@ -248,6 +246,7 @@ private fun SeasonContent(
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     primaryActionDownFocusRequester = overviewFocusRequester,
                     listState = listState,
+                    drawerFocusRequester = destinationFocus.drawerFocusRequester,
                 )
             }
         }

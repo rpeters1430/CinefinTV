@@ -65,6 +65,7 @@ fun MovieDetailLayout(
     listState: LazyListState,
     modifier: Modifier = Modifier,
     topFocusRequester: FocusRequester = remember { FocusRequester() },
+    drawerFocusRequester: FocusRequester? = null,
 ) {
     val spacing = LocalCinefinSpacing.current
     val coroutineScope = rememberCoroutineScope()
@@ -101,6 +102,7 @@ fun MovieDetailLayout(
                     secondaryIconActions = heroSecondaryActions,
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     primaryActionDownFocusRequester = firstContentFocusRequester,
+                    drawerFocusRequester = drawerFocusRequester,
                     onDownNavigation = {
                         if (listState.isScrollInProgress) return@FlatDetailHero
                         coroutineScope.launch {

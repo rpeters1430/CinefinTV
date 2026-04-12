@@ -33,6 +33,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -76,6 +77,7 @@ fun CinematicHero(
     primaryActionFocusRequester: FocusRequester = remember { FocusRequester() },
     primaryActionDownFocusRequester: FocusRequester? = null,
     listState: androidx.compose.foundation.lazy.LazyListState? = null,
+    drawerFocusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier,
 ) {
     val configuration = LocalConfiguration.current
@@ -286,7 +288,12 @@ fun CinematicHero(
                                         }
                                     }
                                 }
-                            },
+                            }
+                            .then(
+                                drawerFocusRequester?.let { drawer ->
+                                    Modifier.focusProperties { left = drawer; up = drawer }
+                                } ?: Modifier
+                            ),
                     )
                 }
             }

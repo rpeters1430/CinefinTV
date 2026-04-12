@@ -104,6 +104,7 @@ fun TvShowDetailLayout(
     listState: LazyListState,
     modifier: Modifier = Modifier,
     topFocusRequester: FocusRequester = remember { FocusRequester() },
+    drawerFocusRequester: FocusRequester? = null,
 ) {
     val spacing = LocalCinefinSpacing.current
     val coroutineScope = rememberCoroutineScope()
@@ -165,6 +166,7 @@ fun TvShowDetailLayout(
                     creditLine = creditLine,
                     primaryActionLabel = primaryActionLabel,
                     onPrimaryAction = onPrimaryAction,
+                    drawerFocusRequester = drawerFocusRequester,
                     secondaryIconActions = (heroSecondaryActions + navigationHeroActions).mapIndexed { index, action ->
                         when {
                             index >= heroSecondaryActions.size &&
