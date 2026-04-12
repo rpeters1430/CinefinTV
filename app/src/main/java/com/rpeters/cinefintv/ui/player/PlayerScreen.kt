@@ -471,14 +471,11 @@ internal fun PlayerPlaybackContent(
                             if (!controlsVisible) {
                                 onInteract()
                                 true
-                            } else if (isContentShelfVisible) {
-                                // We check if we should hide it manually. 
-                                // But PlayerControls also calls onHideShelf via focus movement.
-                                // For safety we can handle it here too if focus doesn't move.
-                                false
                             } else {
-                                onInteract()
-                                true
+                                // Let the focus system handle UP traversal within the controls.
+                                // Consuming the event here would silently block focusProperties
+                                // (e.g. up = seekBarFocusRequester on utility buttons) from firing.
+                                false
                             }
                         }
                         Key.DirectionLeft, Key.DirectionRight -> {

@@ -57,6 +57,69 @@ class PlayerControlsFocusUiTest {
         composeRule.onNodeWithTag(PlayerTestTags.SettingsButton, useUnmergedTree = true)
             .assertIsFocused()
     }
+
+    @Test
+    fun upFromSubtitleButton_movesFocusToSeekBar() {
+        composeRule.setContent {
+            PlayerTestHost {
+                PlayerControlsVisibilityHarness()
+            }
+        }
+
+        composeRule.onNodeWithTag(PlayerTestTags.SubtitleButton, useUnmergedTree = true)
+            .requestFocus()
+        composeRule.onNodeWithTag(PlayerTestTags.SubtitleButton, useUnmergedTree = true)
+            .assertIsFocused()
+        composeRule.onNodeWithTag(PlayerTestTags.SubtitleButton, useUnmergedTree = true)
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(PlayerTestTags.SeekBar, useUnmergedTree = true)
+            .assertIsFocused()
+    }
+
+    @Test
+    fun upFromAudioButton_movesFocusToSeekBar() {
+        composeRule.setContent {
+            PlayerTestHost {
+                PlayerControlsVisibilityHarness()
+            }
+        }
+
+        composeRule.onNodeWithTag(PlayerTestTags.AudioButton, useUnmergedTree = true)
+            .requestFocus()
+        composeRule.onNodeWithTag(PlayerTestTags.AudioButton, useUnmergedTree = true)
+            .assertIsFocused()
+        composeRule.onNodeWithTag(PlayerTestTags.AudioButton, useUnmergedTree = true)
+            .performKeyInput { pressKey(Key.DirectionUp) }
+
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(PlayerTestTags.SeekBar, useUnmergedTree = true)
+            .assertIsFocused()
+    }
+
+    @Test
+    fun leftRightNavigation_subtitleToQuality_andBack() {
+        composeRule.setContent {
+            PlayerTestHost {
+                PlayerControlsVisibilityHarness()
+            }
+        }
+
+        composeRule.onNodeWithTag(PlayerTestTags.SubtitleButton, useUnmergedTree = true)
+            .requestFocus()
+        composeRule.onNodeWithTag(PlayerTestTags.SubtitleButton, useUnmergedTree = true)
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(PlayerTestTags.QualityButton, useUnmergedTree = true)
+            .assertIsFocused()
+
+        composeRule.onNodeWithTag(PlayerTestTags.QualityButton, useUnmergedTree = true)
+            .performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(PlayerTestTags.SubtitleButton, useUnmergedTree = true)
+            .assertIsFocused()
+    }
 }
 
 @Composable
@@ -76,7 +139,7 @@ private fun PlayerControlsVisibilityHarness() {
     PlayerControls(
         isVisible = controlsVisible,
         isPlaying = true,
-        position = 30_000L,
+        positionProvider = { 30_000L },
         duration = 120_000L,
         bufferedFraction = 0.5f,
         uiState = PlayerUiState(

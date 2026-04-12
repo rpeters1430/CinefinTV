@@ -140,7 +140,7 @@ private fun SpeedButtonHarness(
     PlayerControls(
         isVisible = true,
         isPlaying = true,
-        position = 30_000L,
+        positionProvider = { 30_000L },
         duration = 120_000L,
         bufferedFraction = 0.5f,
         uiState = PlayerUiState(
@@ -182,7 +182,7 @@ private fun SeekBarHarness(
     PlayerControls(
         isVisible = true,
         isPlaying = true,
-        position = currentPosition,
+        positionProvider = { currentPosition },
         duration = 120_000L,
         bufferedFraction = 0.5f,
         uiState = PlayerUiState(
