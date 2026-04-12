@@ -42,6 +42,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
+import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
@@ -115,6 +116,7 @@ private fun CollectionVideoContent(
     viewModel: CollectionDetailViewModel,
 ) {
     val primaryActionFocusRequester = remember { FocusRequester() }
+    val destinationFocus = rememberTopLevelDestinationFocus(primaryActionFocusRequester)
     val overviewFocusRequester = remember { FocusRequester() }
     var showDeleteDialog by remember(stuff.id) { mutableStateOf(false) }
     var didInitialFocus by remember { mutableStateOf(false) }
@@ -182,7 +184,7 @@ private fun CollectionVideoContent(
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().then(destinationFocus.primaryContentModifier())) {
         CinematicHero(
             backdropUrl = stuff.backdropUrl,
             logoUrl = null,
@@ -228,6 +230,7 @@ private fun CollectionFolderContent(
     viewModel: CollectionDetailViewModel,
 ) {
     val primaryActionFocusRequester = remember { FocusRequester() }
+    val destinationFocusFolder = rememberTopLevelDestinationFocus(primaryActionFocusRequester)
     val overviewFocusRequester = remember { FocusRequester() }
     val gridEntryFocusRequester = remember { FocusRequester() }
     var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(items.firstOrNull()?.id) }
@@ -273,7 +276,7 @@ private fun CollectionFolderContent(
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().then(destinationFocusFolder.primaryContentModifier())) {
         CinematicHero(
             backdropUrl = stuff.backdropUrl,
             logoUrl = null,

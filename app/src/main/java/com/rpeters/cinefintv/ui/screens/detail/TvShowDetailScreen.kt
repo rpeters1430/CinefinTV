@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
+import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.HeroIconAction
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowDetailLayout
 
@@ -74,6 +75,7 @@ fun TvShowDetailScreen(
     val listState = rememberLazyListState()
     val topFocus = remember { FocusRequester() }
     val primaryActionFocus = remember { FocusRequester() }
+    val destinationFocus = rememberTopLevelDestinationFocus(primaryActionFocus)
     val contentId = (uiState as? TvShowDetailUiState.Content)?.show?.id
     // Keyed on contentId so it resets when navigating to a different show (e.g. from Similar row).
     var didInitialFocus by remember(contentId) { mutableStateOf(false) }
@@ -244,6 +246,7 @@ fun TvShowDetailScreen(
                     heroSecondaryActions = heroSecondaryActions,
                     factItems = factItems,
                     listState = listState,
+                    modifier = Modifier.then(destinationFocus.primaryContentModifier()),
                 )
             }
         }

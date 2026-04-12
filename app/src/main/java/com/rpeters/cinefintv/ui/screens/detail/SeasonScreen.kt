@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
+import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.components.MediaActionDialog
 import com.rpeters.cinefintv.ui.components.MediaActionDialogItem
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
@@ -113,6 +114,7 @@ private fun SeasonContent(
     val listState = rememberLazyListState()
     val topFocusRequester = remember { FocusRequester() }
     val primaryActionFocusRequester = remember { FocusRequester() }
+    val destinationFocus = rememberTopLevelDestinationFocus(primaryActionFocusRequester)
     val overviewFocusRequester = remember { FocusRequester() }
     val firstEpisodeFocusRequester = remember { FocusRequester() }
     var selectedEpisode by remember { mutableStateOf<EpisodeModel?>(null) }
@@ -213,7 +215,9 @@ private fun SeasonContent(
 
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .then(destinationFocus.primaryContentModifier()),
         contentPadding = PaddingValues(bottom = spacing.gutter * 2),
     ) {
         item {

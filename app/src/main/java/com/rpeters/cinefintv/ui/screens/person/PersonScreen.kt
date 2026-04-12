@@ -54,6 +54,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
+import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import kotlinx.coroutines.launch
@@ -122,6 +123,7 @@ fun PersonScreen(
             val person = state.person
             var focusedMedia by remember(state.media) { mutableStateOf(state.media.firstOrNull()) }
             val backButtonRequester = remember { FocusRequester() }
+            val destinationFocus = rememberTopLevelDestinationFocus(backButtonRequester)
             val firstKnownForRequester = remember { FocusRequester() }
 
             BackHandler(onBack = onBack)
@@ -168,7 +170,9 @@ fun PersonScreen(
 
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(destinationFocus.primaryContentModifier()),
                     contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = spacing.safeZoneVertical),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
