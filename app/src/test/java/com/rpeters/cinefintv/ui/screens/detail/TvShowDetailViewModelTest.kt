@@ -92,6 +92,27 @@ class TvShowDetailViewModelTest {
     }
 
     @Test
+    fun refreshWatchStatus_whenLoading_doesNotCallNetwork() = runTest {
+        val fakeRepos = FakeTvShowDetailRepositories()
+        val seriesId = UUID.randomUUID().toString()
+
+        // Return error so state stays Loading after init attempt resolves to Error
+        // Actually we want Loading state — call refreshWatchStatus before init
+        val vm = TvShowDetailViewModel(fakeRepos.coordinator, updateBus)
+        // State is Loading at construction, before init() is called
+        assertTrue(vm.uiState.value is TvShowDetailUiState.Loading)
+
+        vm.refreshWatchStatus()
+        advanceUntilIdle()
+
+        // State should still be Loading — no network calls should flip it
+        assertTrue(vm.uiState.value is TvShowDetailUiState.Loading)
+        io.mockk.coVerify(exactly = 0) { fakeRepos.media.getSeriesDetails(any()) }
+        io.mockk.coVerify(exactly = 0) { fakeRepos.media.getSeasonsForSeries(any()) }
+        io.mockk.coVerify(exactly = 0) { fakeRepos.media.getNextUpForSeries(any()) }
+    }
+
+    @Test
     fun refreshWatchStatus_whenNotContent_doesNothing() = runTest {
         val fakeRepos = FakeTvShowDetailRepositories()
         val seriesId = UUID.randomUUID().toString()

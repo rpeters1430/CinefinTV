@@ -89,6 +89,7 @@ class TvShowDetailViewModel @Inject constructor(
     }
 
     fun refreshWatchStatus() {
+        _uiState.value as? TvShowDetailUiState.Content ?: return
         viewModelScope.launch {
             val showResult = repositories.media.getSeriesDetails(showId)
             val seasonsResult = repositories.media.getSeasonsForSeries(showId)
