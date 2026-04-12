@@ -30,7 +30,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -173,8 +172,7 @@ fun PersonScreen(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier
-                        .fillMaxSize()
-                        .focusGroup(),
+                        .fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = spacing.safeZoneVertical),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
@@ -224,9 +222,10 @@ fun PersonScreen(
                                             .focusRequester(backButtonRequester)
                                             .onFocusChanged { if (it.isFocused) focusedDescription = null }
                                             .focusProperties {
-                                                val drawer = destinationFocus.drawerFocusRequester ?: return@focusProperties
-                                                left = drawer
-                                                up = drawer
+                                                destinationFocus.drawerFocusRequester?.let { drawer ->
+                                                    left = drawer
+                                                    up = drawer
+                                                }
                                                 if (state.media.isNotEmpty()) down = firstKnownForRequester
                                             }
                                     ) {

@@ -41,6 +41,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
+import com.rpeters.cinefintv.ui.TopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
 import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.components.TvMediaCard
@@ -63,6 +64,9 @@ fun CollectionDetailScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     var hasBeenPaused by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
+
+    val primaryActionFocusRequester = remember { FocusRequester() }
+    val destinationFocus = rememberTopLevelDestinationFocus(primaryActionFocusRequester)
 
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -94,6 +98,8 @@ fun CollectionDetailScreen(
                         onOpenItem = onOpenItem,
                         onBack = onBack,
                         viewModel = viewModel,
+                        primaryActionFocusRequester = primaryActionFocusRequester,
+                        destinationFocus = destinationFocus,
                     )
                 } else {
                     CollectionVideoContent(
@@ -101,6 +107,8 @@ fun CollectionDetailScreen(
                         onPlayItem = onPlayItem,
                         onBack = onBack,
                         viewModel = viewModel,
+                        primaryActionFocusRequester = primaryActionFocusRequester,
+                        destinationFocus = destinationFocus,
                     )
                 }
             }
@@ -114,9 +122,9 @@ private fun CollectionVideoContent(
     onPlayItem: (String) -> Unit,
     onBack: () -> Unit,
     viewModel: CollectionDetailViewModel,
+    primaryActionFocusRequester: FocusRequester,
+    destinationFocus: TopLevelDestinationFocus,
 ) {
-    val primaryActionFocusRequester = remember { FocusRequester() }
-    val destinationFocus = rememberTopLevelDestinationFocus(primaryActionFocusRequester)
     val overviewFocusRequester = remember { FocusRequester() }
     var showDeleteDialog by remember(stuff.id) { mutableStateOf(false) }
     var didInitialFocus by remember { mutableStateOf(false) }
@@ -229,9 +237,9 @@ private fun CollectionFolderContent(
     onOpenItem: (String, String?) -> Unit,
     onBack: () -> Unit,
     viewModel: CollectionDetailViewModel,
+    primaryActionFocusRequester: FocusRequester,
+    destinationFocus: TopLevelDestinationFocus,
 ) {
-    val primaryActionFocusRequester = remember { FocusRequester() }
-    val destinationFocus = rememberTopLevelDestinationFocus(primaryActionFocusRequester)
     val overviewFocusRequester = remember { FocusRequester() }
     val gridEntryFocusRequester = remember { FocusRequester() }
     var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(items.firstOrNull()?.id) }
