@@ -76,7 +76,9 @@ class TvShowDetailViewModel @Inject constructor(
             updateBus.events.collect { event ->
                 when (event) {
                     is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshItem -> {
-                        refreshWatchStatus()
+                        if (event.itemId == showId) {
+                            refreshWatchStatus()
+                        }
                     }
                     is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshAll -> {
                         load(silent = true)

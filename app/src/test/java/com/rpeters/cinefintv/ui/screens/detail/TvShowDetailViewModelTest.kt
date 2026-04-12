@@ -114,6 +114,40 @@ class TvShowDetailViewModelTest {
     }
 
     @Test
+    fun observeUpdateEvents_refreshItemForForeignId_doesNotCallNetwork() = runTest {
+        val fakeRepos = FakeTvShowDetailRepositories()
+        val seriesId = UUID.randomUUID().toString()
+        val foreignId = UUID.randomUUID().toString() // a DIFFERENT item's ID
+        val seriesDto = makeSeriesDto(id = seriesId)
+        val seasonDto = makeSeasonDto(unplayedCount = 1)
+
+        coEvery { fakeRepos.media.getSeriesDetails(seriesId) } returns ApiResult.Success(seriesDto)
+        coEvery { fakeRepos.media.getSeasonsForSeries(seriesId) } returns ApiResult.Success(listOf(seasonDto))
+        coEvery { fakeRepos.media.getSimilarSeries(seriesId) } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepos.media.getNextUpForSeries(seriesId) } returns ApiResult.Error("none")
+        every { fakeRepos.stream.getBackdropUrl(any()) } returns null
+        every { fakeRepos.stream.getPosterCardImageUrl(any()) } returns null
+        every { fakeRepos.stream.getWideCardImageUrl(any()) } returns null
+        every { fakeRepos.stream.getImageUrl(any(), any()) } returns null
+
+        val vm = TvShowDetailViewModel(fakeRepos.coordinator, updateBus)
+        vm.init(seriesId)
+        advanceUntilIdle()
+
+        // Clear invocation records so we can verify what happens AFTER init
+        io.mockk.clearMocks(fakeRepos.media, answers = false)
+
+        // Emit a RefreshItem for a DIFFERENT item (not this show)
+        updateBus.refreshItem(foreignId)
+        advanceUntilIdle()
+
+        // No network calls should have been made for the show
+        io.mockk.coVerify(exactly = 0) { fakeRepos.media.getSeriesDetails(any()) }
+        io.mockk.coVerify(exactly = 0) { fakeRepos.media.getSeasonsForSeries(any()) }
+        io.mockk.coVerify(exactly = 0) { fakeRepos.media.getNextUpForSeries(any()) }
+    }
+
+    @Test
     fun refreshWatchStatus_onSeasonsError_doesNotFlickerToLoading() = runTest {
         val fakeRepos = FakeTvShowDetailRepositories()
         val seriesId = UUID.randomUUID().toString()
