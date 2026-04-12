@@ -59,8 +59,9 @@ class SeasonViewModel @Inject constructor(
             updateBus.events.collect { event ->
                 when (event) {
                     is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshItem -> {
-                        // Refresh watch status if any item was updated
-                        refreshWatchStatus()
+                        if (event.itemId == seasonId) {
+                            refreshWatchStatus()
+                        }
                     }
                     is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshAll -> {
                         load(silent = true)
