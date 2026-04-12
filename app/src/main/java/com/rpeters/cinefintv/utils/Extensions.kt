@@ -298,3 +298,28 @@ fun BaseItemDto.getItemKey(): String =
  * ✅ PHASE 3: Content key generation utility
  */
 fun generateItemKey(prefix: String, id: String): String = "${prefix}_$id"
+
+/**
+ * Formats the primary audio stream's codec and channel count into a display label.
+ * Returns null if the stream has no meaningful codec or channel information.
+ * Examples: "EAC3 5.1", "TrueHD 7.1", "AAC Stereo"
+ */
+fun org.jellyfin.sdk.model.api.MediaStream.getAudioLabel(): String? {
+    val codec = when (codec?.uppercase()) {
+        "EAC3", "E-AC3" -> "EAC3"
+        "AC3" -> "AC3"
+        "TRUEHD" -> "TrueHD"
+        "DTS" -> "DTS"
+        "AAC" -> "AAC"
+        "FLAC" -> "FLAC"
+        "OPUS" -> "Opus"
+        else -> codec?.uppercase()
+    }
+    val channels = when (channels) {
+        2 -> "Stereo"
+        6 -> "5.1"
+        8 -> "7.1"
+        else -> channels?.let { "$it ch" }
+    }
+    return listOfNotNull(codec, channels).joinToString(" ").ifBlank { null }
+}

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.ui.components.WatchStatus
+import com.rpeters.cinefintv.utils.getAudioLabel
 import com.rpeters.cinefintv.utils.getMediaQualityLabel
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
@@ -170,27 +171,8 @@ class MovieDetailViewModel @Inject constructor(
             audioLabel = mediaSources
                 ?.firstOrNull()
                 ?.mediaStreams
-                ?.filter { it.type == org.jellyfin.sdk.model.api.MediaStreamType.AUDIO }
-                ?.firstOrNull()
-                ?.let { stream ->
-                    val codec = when (stream.codec?.uppercase()) {
-                        "EAC3", "E-AC3" -> "EAC3"
-                        "AC3" -> "AC3"
-                        "TRUEHD" -> "TrueHD"
-                        "DTS" -> "DTS"
-                        "AAC" -> "AAC"
-                        "FLAC" -> "FLAC"
-                        "OPUS" -> "Opus"
-                        else -> stream.codec?.uppercase()
-                    }
-                    val channels = when (stream.channels) {
-                        2 -> "Stereo"
-                        6 -> "5.1"
-                        8 -> "7.1"
-                        else -> stream.channels?.let { "$it ch" }
-                    }
-                    listOfNotNull(codec, channels).joinToString(" ").ifBlank { null }
-                },
+                ?.firstOrNull { it.type == org.jellyfin.sdk.model.api.MediaStreamType.AUDIO }
+                ?.getAudioLabel(),
             directors = people
                 ?.filter { it.type.toString().equals("Director", ignoreCase = true) }
                 ?.mapNotNull { it.name }
