@@ -107,9 +107,7 @@ class TvShowLibraryViewModel @Inject constructor(
 class CollectionLibraryViewModel @Inject constructor(
     repositories: JellyfinRepositoryCoordinator,
     private val updateBus: MediaUpdateBus,
-) : BaseLibraryViewModel(repositories, updateBus, listOf(BaseItemKind.VIDEO, BaseItemKind.COLLECTION_FOLDER))
-
-{
+) : BaseLibraryViewModel(repositories, updateBus, listOf(BaseItemKind.VIDEO, BaseItemKind.COLLECTION_FOLDER)) {
     fun markWatched(itemId: String, onComplete: (() -> Unit)? = null) {
         viewModelScope.launch {
             if (repositories.user.markAsWatched(itemId) is com.rpeters.cinefintv.data.repository.common.ApiResult.Success) {

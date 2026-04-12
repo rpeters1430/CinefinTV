@@ -115,7 +115,7 @@ private val defaultBounds = Rect.Zero
 internal fun PlayerControls(
     isVisible: Boolean,
     isPlaying: Boolean,
-    position: Long,
+    positionProvider: () -> Long,
     duration: Long,
     bufferedFraction: Float,
     uiState: PlayerUiState,
@@ -283,13 +283,13 @@ internal fun PlayerControls(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
-                        text = formatMs(position),
+                        text = formatMs(positionProvider()),
                         style = MaterialTheme.typography.labelLarge,
                         fontSize = 18.sp,
                         color = expressiveColors.playerContentPrimary.copy(alpha = 0.9f),
                     )
                     SeekBarControl(
-                        position = position,
+                        positionProvider = positionProvider,
                         duration = duration,
                         bufferedFraction = bufferedFraction,
                         chapters = uiState.chapters,
@@ -461,7 +461,7 @@ internal fun PlayerControls(
                     if (contentRow != null) {
                         PlayerContentShelf(
                             contentRow = contentRow,
-                            currentPosition = position,
+                            positionProvider = positionProvider,
                             trickplayManifest = uiState.trickplayManifest,
                             trickplayBaseUrl = uiState.trickplayBaseUrl,
                             firstItemFocusRequester = contentRowFocusRequester,
@@ -482,7 +482,7 @@ internal fun PlayerControls(
 @Composable
 private fun PlayerContentShelf(
     contentRow: PlayerContentRow,
-    currentPosition: Long,
+    positionProvider: () -> Long,
     trickplayManifest: TrickplayManifest?,
     trickplayBaseUrl: String?,
     firstItemFocusRequester: FocusRequester,
@@ -513,9 +513,10 @@ private fun PlayerContentShelf(
         ) {
             when (contentRow) {
                 is PlayerContentRow.Chapters -> {
-                    val activeIndex = contentRow.chapters.indexOfLast { it.positionMs <= currentPosition }
-                        .coerceAtLeast(0)
                     itemsIndexed(contentRow.chapters) { index, chapter ->
+                        val currentPosition = positionProvider()
+                        val activeIndex = contentRow.chapters.indexOfLast { it.positionMs <= currentPosition }
+                            .coerceAtLeast(0)
                         PlayerChapterCard(
                             chapter = chapter,
                             isActive = index == activeIndex,
@@ -1049,7 +1050,7 @@ private fun TrickplayPreview(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun SeekBarControl(
-    position: Long,
+    positionProvider: () -> Long,
     duration: Long,
     bufferedFraction: Float,
     chapters: List<ChapterMarker>,
@@ -1065,7 +1066,7 @@ private fun SeekBarControl(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     var isSeeking by remember { mutableStateOf(false) }
-    var seekPosition by remember { mutableLongStateOf(position) }
+    var seekPosition by remember { mutableLongStateOf(positionProvider()) }
     var seekInteractionVersion by remember { mutableIntStateOf(0) }
     val expressiveColors = LocalCinefinExpressiveColors.current
 
@@ -1073,9 +1074,13 @@ private fun SeekBarControl(
         isSeeking = false
     }
 
-    LaunchedEffect(position, isSeeking) {
+    // Periodically update seekPosition from provider when NOT seeking to keep bar in sync
+    LaunchedEffect(isSeeking) {
         if (!isSeeking) {
-            seekPosition = position
+            while (true) {
+                seekPosition = positionProvider()
+                delay(200L) // Slower update for the bar itself is fine
+            }
         }
     }
 
@@ -1120,14 +1125,14 @@ private fun SeekBarControl(
                 isFocused = it.isFocused || it.hasFocus
                 if (!isFocused) {
                     finishSeekInteraction()
-                    seekPosition = position
+                    seekPosition = positionProvider()
                 }
             }
             .onPreviewKeyEvent { keyEvent ->
                 when {
                     keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.DirectionLeft -> {
                         if (duration <= 0L) return@onPreviewKeyEvent true
-                        val basePosition = if (isSeeking) seekPosition else position
+                        val basePosition = if (isSeeking) seekPosition else positionProvider()
                         val nextPosition = (basePosition - seekIncrementMs).coerceAtLeast(0L)
                         seekPosition = nextPosition
                         isSeeking = true
@@ -1138,7 +1143,7 @@ private fun SeekBarControl(
                     }
                     keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.DirectionRight -> {
                         if (duration <= 0L) return@onPreviewKeyEvent true
-                        val basePosition = if (isSeeking) seekPosition else position
+                        val basePosition = if (isSeeking) seekPosition else positionProvider()
                         val nextPosition = (basePosition + seekIncrementMs).coerceIn(0L, duration)
                         seekPosition = nextPosition
                         isSeeking = true

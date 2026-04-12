@@ -1,8 +1,8 @@
 package com.rpeters.cinefintv.data.repository
 
 import android.util.Log
-import com.rpeters.cinefintv.data.model.ApiResult
-import com.rpeters.cinefintv.data.model.JellyfinError
+import com.rpeters.cinefintv.core.ErrorHandler
+import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.data.session.JellyfinSessionManager
 import kotlinx.coroutines.CancellationException
 import org.jellyfin.sdk.api.client.ApiClient
@@ -19,7 +19,7 @@ import javax.inject.Singleton
 import javax.net.ssl.SSLException
 
 /**
- * ✅ IMPROVEMENT: Simplified system repository for Phase 2
+ * Simplified system repository for server validation and normalization.
  */
 @Singleton
 class JellyfinSystemRepository @Inject constructor(
@@ -36,24 +36,12 @@ class JellyfinSystemRepository @Inject constructor(
         sessionManager.getClientForUrl(serverUrl)
 
     private fun <T> handleException(e: Exception, defaultMessage: String = "System error"): ApiResult.Error<T> {
-        Log.e(TAG, "$defaultMessage: ${e.message}", e)
-
-        val error = when (e) {
-            is InvalidStatusException -> JellyfinError.ServerError
-            is HttpException -> JellyfinError.ServerError
-            is UnknownHostException -> JellyfinError.NetworkError
-            is ConnectException -> JellyfinError.NetworkError
-            is SocketTimeoutException -> JellyfinError.TimeoutError
-            is SSLException -> JellyfinError.NetworkError
-            is IOException -> JellyfinError.NetworkError
-            else -> JellyfinError.UnknownError(e.message ?: defaultMessage, e)
-        }
-
-        return error.toApiResult()
+        val jellyfinError = ErrorHandler.handleException(e, mapOf("operation" to "system_api", "message" to defaultMessage))
+        return ErrorHandler.toApiResult(jellyfinError)
     }
 
     /**
-     * ✅ IMPROVEMENT: Enhanced server connection testing
+     * Enhanced server connection testing
      */
     suspend fun testServerConnection(serverUrl: String): ApiResult<PublicSystemInfo> {
         return try {
@@ -62,6 +50,8 @@ class JellyfinSystemRepository @Inject constructor(
             ApiResult.Success(response.content)
         } catch (e: CancellationException) {
             throw e
+        } catch (e: Exception) {
+            handleException(e, "Connection failed for $serverUrl")
         }
     }
 

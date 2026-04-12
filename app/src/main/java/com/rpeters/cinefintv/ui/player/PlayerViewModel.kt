@@ -230,7 +230,7 @@ class PlayerViewModel @Inject constructor(
             item = item,
             playbackInfo = playbackInfo,
             audioStreamIndex = selectedAudioTrack?.streamIndex,
-            subtitleStreamIndex = null,
+            subtitleStreamIndex = selectedSubtitleTrack?.streamIndex,
             startPositionMs = if (shouldShowResumeDialog) 0L else savedPlaybackPositionMs,
         )
         val streamUrl = resolvedPlayback?.url ?: repositories.stream.getStreamUrl(resolvedItemId)

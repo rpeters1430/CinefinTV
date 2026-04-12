@@ -225,8 +225,7 @@ fun TvShowDetailScreen(
                         if (show.nextUpEpisodeId != null) {
                             onPlayEpisode(show.nextUpEpisodeId)
                         } else {
-                            state.episodes.firstOrNull()?.let { onPlayEpisode(it.id) }
-                                ?: state.seasons.firstOrNull()?.let { onOpenSeason(it.id) }
+                            state.seasons.firstOrNull()?.let { onOpenSeason(it.id) }
                         }
                     },
                     topFocusRequester = topFocus,

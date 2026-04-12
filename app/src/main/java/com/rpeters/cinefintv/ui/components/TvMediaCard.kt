@@ -248,7 +248,7 @@ fun TvMediaCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall.copy(
-                    fontSize = if (compactMetadata) 15.sp else 17.sp
+                    fontSize = if (compactMetadata) 16.sp else 18.sp
                 ),
                 fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Medium,
                 color = titleColor,

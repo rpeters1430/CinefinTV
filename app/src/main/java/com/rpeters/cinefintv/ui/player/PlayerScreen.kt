@@ -81,7 +81,6 @@ import kotlinx.coroutines.launch
 internal data class PlayerRenderState(
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = false,
-    val position: Long = 0L,
     val duration: Long = 0L,
     val bufferedFraction: Float = 0f,
 )
@@ -247,7 +246,6 @@ fun PlayerScreen(
                         PlayerRenderState(
                             isPlaying = exoPlayer.isPlaying,
                             isBuffering = exoPlayer.playbackState == Player.STATE_BUFFERING,
-                            position = exoPlayer.currentPosition.coerceAtLeast(0L),
                             duration = exoPlayer.duration.coerceAtLeast(0L),
                             bufferedFraction = exoPlayer.bufferedPercentage / 100f,
                         )
@@ -259,7 +257,6 @@ fun PlayerScreen(
                         renderState = PlayerRenderState(
                             isPlaying = exoPlayer.isPlaying,
                             isBuffering = exoPlayer.playbackState == Player.STATE_BUFFERING,
-                            position = exoPlayer.currentPosition.coerceAtLeast(0L),
                             duration = exoPlayer.duration.coerceAtLeast(0L),
                             bufferedFraction = exoPlayer.bufferedPercentage / 100f,
                         )
@@ -279,20 +276,8 @@ fun PlayerScreen(
                 }
 
                 // Periodic progress updates to keep seeker and time in sync
-                LaunchedEffect(exoPlayer, renderState.isPlaying) {
-                    if (renderState.isPlaying) {
-                        while (true) {
-                            renderState = PlayerRenderState(
-                                isPlaying = exoPlayer.isPlaying,
-                                isBuffering = exoPlayer.playbackState == Player.STATE_BUFFERING,
-                                position = exoPlayer.currentPosition.coerceAtLeast(0L),
-                                duration = exoPlayer.duration.coerceAtLeast(0L),
-                                bufferedFraction = exoPlayer.bufferedPercentage / 100f,
-                            )
-                            delay(PROGRESS_UPDATE_INTERVAL_MS)
-                        }
-                    }
-                }
+                // We use a provider to avoid recomposing the whole screen every 50ms.
+                val positionProvider = { exoPlayer.currentPosition.coerceAtLeast(0L) }
 
                 val coroutineScope = rememberCoroutineScope()
 
@@ -316,17 +301,18 @@ fun PlayerScreen(
                     exoPlayer = exoPlayer,
                     uiState = uiState,
                     renderState = renderState,
+                    positionProvider = positionProvider,
                     onBack = onBack,
                     onOpenItem = onOpenItem,
                     onResumePlayback = { resume -> viewModel.onResumePlayback(resume) },
                     onAudioTrackSelected = {
-                        viewModel.selectAudioTrack(it, renderState.position, renderState.isPlaying)
+                        viewModel.selectAudioTrack(it, positionProvider(), renderState.isPlaying)
                     },
                     onSubtitleTrackSelected = {
-                        viewModel.selectSubtitleTrack(it, renderState.position, renderState.isPlaying)
+                        viewModel.selectSubtitleTrack(it, positionProvider(), renderState.isPlaying)
                     },
                     onQualitySelected = {
-                        viewModel.setTranscodingQuality(it, renderState.position, renderState.isPlaying)
+                        viewModel.setTranscodingQuality(it, positionProvider(), renderState.isPlaying)
                     },
                     onPlaybackSpeedSelected = { viewModel.setPlaybackSpeed(it) },
                     onAutoPlayChange = { viewModel.setAutoPlayNextEpisode(it) },
@@ -342,6 +328,7 @@ internal fun PlayerPlaybackContent(
     exoPlayer: ExoPlayer,
     uiState: PlayerUiState,
     renderState: PlayerRenderState,
+    positionProvider: () -> Long,
     onBack: () -> Unit,
     onOpenItem: (String) -> Unit,
     onResumePlayback: (Boolean) -> Unit,
@@ -400,8 +387,8 @@ internal fun PlayerPlaybackContent(
     val introRange = uiState.introSkipRange
     val creditsRange = uiState.creditsSkipRange
     val activeSkipLabel = when {
-        isInSkipRange(renderState.position, introRange) -> "Skip Intro"
-        isInSkipRange(renderState.position, creditsRange) -> "Skip Credits"
+        isInSkipRange(positionProvider(), introRange) -> "Skip Intro"
+        isInSkipRange(positionProvider(), creditsRange) -> "Skip Credits"
         else -> null
     }
     val activeSkipTargetMs = when (activeSkipLabel) {
@@ -418,13 +405,13 @@ internal fun PlayerPlaybackContent(
     }
 
     val remaining = if (renderState.duration > 0L) {
-        (renderState.duration - renderState.position).coerceAtLeast(0L)
+        (renderState.duration - positionProvider()).coerceAtLeast(0L)
     } else {
         -1L
     }
     val showNextUp = shouldShowNextEpisodeCard(
         uiState = uiState,
-        positionMs = renderState.position,
+        positionMs = positionProvider(),
         durationMs = renderState.duration,
     )
 
@@ -530,7 +517,7 @@ internal fun PlayerPlaybackContent(
         PlayerControls(
             isVisible = controlsVisible,
             isPlaying = renderState.isPlaying,
-            position = renderState.position,
+            positionProvider = positionProvider,
             duration = renderState.duration,
             bufferedFraction = renderState.bufferedFraction,
             uiState = uiState,

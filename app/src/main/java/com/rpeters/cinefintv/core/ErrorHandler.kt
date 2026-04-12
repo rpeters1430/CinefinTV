@@ -366,23 +366,4 @@ object ErrorHandler {
             JellyfinErrorType.UNKNOWN -> "Unknown Error"
         }
     }
-
-    /**
-     * Legacy compatibility method for JellyfinRepository.
-     */
-    fun processError(exception: Throwable, operation: String): JellyfinError {
-        return handleException(exception, mapOf("operation" to operation))
-    }
-
-    /**
-     * Legacy compatibility method for JellyfinRepository.
-     */
-    fun logErrorAnalytics(
-        analyticsHelper: com.rpeters.cinefintv.utils.AnalyticsHelper,
-        error: JellyfinError,
-        operation: String,
-        userId: String?
-    ) {
-        analyticsHelper.logErrorAnalytics(error, operation, userId)
-    }
 }

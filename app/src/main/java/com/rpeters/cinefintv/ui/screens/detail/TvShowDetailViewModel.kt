@@ -1,6 +1,5 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
@@ -43,7 +42,6 @@ sealed class TvShowDetailUiState {
     data class Content(
         val show: TvShowDetailModel,
         val seasons: List<SeasonModel>,
-        val episodes: List<EpisodeModel>,
         val cast: List<CastModel>,
         val similarShows: List<SimilarMovieModel>,
     ) : TvShowDetailUiState()
@@ -135,8 +133,6 @@ class TvShowDetailViewModel @Inject constructor(
                     emptyList()
                 }
 
-                val episodes = emptyList<EpisodeModel>()
-
                 val similar = if (similarResult is ApiResult.Success) {
                     similarResult.data.map { it.toSimilarModel() }
                 } else {
@@ -158,7 +154,6 @@ class TvShowDetailViewModel @Inject constructor(
                 _uiState.value = TvShowDetailUiState.Content(
                     show = showDto.toDetailModel(nextUpDto),
                     seasons = seasons,
-                    episodes = episodes,
                     cast = cast,
                     similarShows = similar
                 )
