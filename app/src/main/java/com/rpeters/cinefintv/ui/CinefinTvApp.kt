@@ -1,7 +1,8 @@
 package com.rpeters.cinefintv.ui
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.unit.lerp
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
@@ -81,6 +82,8 @@ import com.rpeters.cinefintv.ui.navigation.NavDestination
 import com.rpeters.cinefintv.ui.navigation.ServerConnection
 import com.rpeters.cinefintv.ui.navigation.Home
 import com.rpeters.cinefintv.ui.navigation.appChromeRouteSpec
+import com.rpeters.cinefintv.ui.navigation.isTopLevelTabDestination
+import com.rpeters.cinefintv.ui.navigation.navigateToTopLevelDestination
 import com.rpeters.cinefintv.ui.navigation.navTabItems
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
@@ -228,10 +231,8 @@ fun CinefinTvApp(
             val appChromeRouteSpec = appChromeRouteSpec(currentDestination)
 
             fun onNavigate(destination: NavDestination) {
-                // If it's a top-level tab destination, clear and go there
-                if (navTabItems.any { it.destination::class == destination::class }) {
-                    backStack.clear()
-                    backStack.add(destination)
+                if (destination.isTopLevelTabDestination()) {
+                    backStack.navigateToTopLevelDestination(destination)
                 } else {
                     backStack.add(destination)
                 }
@@ -290,35 +291,18 @@ internal fun CinefinAppScaffold(
     val selectedTabFocusRequester = tabFocusRequesters.getOrElse(selectedTabIndex) { FocusRequester() }
     var focusedTabIndex by remember { mutableStateOf<Int?>(null) }
     val navHasFocus = focusedTabIndex != null
-    val collapsedRailWidth = 104.dp
-    val expandedRailWidth = 224.dp
+    val railWidth = 196.dp
     val railSlotStartPadding = 12.dp
-    val railWidth by animateDpAsState(
-        targetValue = if (showNav && navHasFocus) expandedRailWidth else collapsedRailWidth,
-        animationSpec = tween(durationMillis = 280),
-        label = "railWidth",
-    )
     val railSlotWidth = railWidth + railSlotStartPadding
-    val logoSize by animateDpAsState(
-        targetValue = if (navHasFocus) 46.dp else 50.dp,
+    val railProgress by animateFloatAsState(
+        targetValue = if (navHasFocus) 1f else 0f,
         animationSpec = tween(durationMillis = 280),
-        label = "logoSize",
+        label = "railProgress",
     )
-    val iconSize by animateDpAsState(
-        targetValue = if (navHasFocus) 22.dp else 28.dp,
-        animationSpec = tween(durationMillis = 280),
-        label = "iconSize",
-    )
-    val buttonPaddingVertical by animateDpAsState(
-        targetValue = if (navHasFocus) 10.dp else 14.dp,
-        animationSpec = tween(durationMillis = 280),
-        label = "buttonPaddingVertical",
-    )
-    val buttonPaddingHorizontal by animateDpAsState(
-        targetValue = if (navHasFocus) 10.dp else 0.dp,
-        animationSpec = tween(durationMillis = 280),
-        label = "buttonPaddingHorizontal",
-    )
+    val logoSize = lerp(50.dp, 46.dp, railProgress)
+    val iconSize = lerp(28.dp, 22.dp, railProgress)
+    val buttonPaddingVertical = lerp(14.dp, 10.dp, railProgress)
+    val buttonPaddingHorizontal = 12.dp
 
     SideEffect {
         chromeFocusController.topNavFocusRequester = if (showNav) selectedTabFocusRequester else null
@@ -421,6 +405,7 @@ internal fun CinefinAppScaffold(
 
                             itemsIndexed(navTabItems) { index, item ->
                                 var isFocused by remember { mutableStateOf(false) }
+                                val showLabel = navHasFocus || index == selectedTabIndex
                                 Button(
                                     onClick = { onNavigateToTab(item.destination) },
                                     modifier = Modifier
@@ -487,11 +472,7 @@ internal fun CinefinAppScaffold(
                                                 horizontal = buttonPaddingHorizontal,
                                             ),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = if (navHasFocus) {
-                                            Arrangement.spacedBy(12.dp)
-                                        } else {
-                                            Arrangement.Center
-                                        },
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.Start),
                                     ) {
                                         Icon(
                                             item.icon,
@@ -504,7 +485,7 @@ internal fun CinefinAppScaffold(
                                             },
                                         )
                                         AnimatedVisibility(
-                                            visible = navHasFocus,
+                                            visible = showLabel,
                                             enter = fadeIn(animationSpec = tween(durationMillis = 200)) +
                                                 expandHorizontally(animationSpec = tween(durationMillis = 280)),
                                             exit = fadeOut(animationSpec = tween(durationMillis = 150)) +
