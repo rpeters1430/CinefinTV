@@ -1,12 +1,12 @@
 package com.rpeters.cinefintv.ui.screens.home
 
+import android.os.SystemClock
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -27,11 +27,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,7 +44,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
@@ -67,7 +70,6 @@ import androidx.tv.material3.rememberCarouselState
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.components.CinefinChip
@@ -86,6 +88,9 @@ import kotlinx.coroutines.launch
 
 private const val HOME_AUTO_REFRESH_INTERVAL_MS = 60_000L
 private const val HOME_FOCUS_RESTORE_SETTLE_MS = 1_000L
+private const val HOME_RESUME_REFRESH_THRESHOLD_MS = 30_000L
+
+private val NAV_RAIL_SLOT_WIDTH = 216.dp  // 196dp rail + 12dp start padding + 8dp content host start padding (matches CinefinAppScaffold)
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -100,16 +105,23 @@ fun HomeScreen(
 
     val lifecycleOwner = LocalLifecycleOwner.current
     var hasBeenPaused by remember { mutableStateOf(false) }
+    var lastPausedAtMs by remember { mutableStateOf(0L) }
     var shouldRestoreFocusOnResume by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_PAUSE  -> hasBeenPaused = true
+                Lifecycle.Event.ON_PAUSE  -> {
+                    hasBeenPaused = true
+                    lastPausedAtMs = SystemClock.elapsedRealtime()
+                }
                 Lifecycle.Event.ON_RESUME -> if (hasBeenPaused) {
                     hasBeenPaused = false
                     shouldRestoreFocusOnResume = true
-                    viewModel.refresh(silent = true)
+                    val pausedDurationMs = SystemClock.elapsedRealtime() - lastPausedAtMs
+                    if (pausedDurationMs >= HOME_RESUME_REFRESH_THRESHOLD_MS) {
+                        viewModel.refresh(silent = true)
+                    }
                 }
                 else -> {}
             }
@@ -118,10 +130,12 @@ fun HomeScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(viewModel) {
-        while (isActive) {
-            delay(HOME_AUTO_REFRESH_INTERVAL_MS)
-            viewModel.refresh(silent = true)
+    LaunchedEffect(lifecycleOwner, viewModel) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (isActive) {
+                delay(HOME_AUTO_REFRESH_INTERVAL_MS)
+                viewModel.refresh(silent = true)
+            }
         }
     }
 
@@ -210,250 +224,297 @@ internal fun HomeScreenContent(
         }
 
         is HomeUiState.Content -> {
-            val sectionFocusRequesters = remember(state.sections.size) {
-                List(state.sections.size) { FocusRequester() }
-            }
-            val featuredPrimaryActionRequester = remember { FocusRequester() }
-            var lastFocusedSectionTitle by rememberSaveable { mutableStateOf<String?>(null) }
-            var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(null) }
-            var selectedEpisodeMenuItem by remember { mutableStateOf<HomeCardModel?>(null) }
-            var shouldRestoreFocus by rememberSaveable { mutableStateOf(true) }
-            val focusNavigationCoordinator = remember(coroutineScope) {
-                FocusNavigationCoordinator(coroutineScope)
-            }
-            val chromeFocusController = LocalAppChromeFocusController.current
+            HomeLoadedContent(
+                state = state,
+                listState = listState,
+                focusVisibilityTopBufferPx = focusVisibilityTopBufferPx,
+                focusVisibilityBottomBufferPx = focusVisibilityBottomBufferPx,
+                spacing = spacing,
+                lifecycleOwner = lifecycleOwner,
+                coroutineScope = coroutineScope,
+                onOpenItem = onOpenItem,
+                onPlayItem = onPlayItem,
+                onOpenSeries = onOpenSeries,
+                onOpenSeason = onOpenSeason,
+                shouldRestoreFocusOnResume = shouldRestoreFocusOnResume,
+                onConsumedRestore = onConsumedRestore,
+            )
+        }
+    }
+}
 
-            val preferredFocusRequester = when {
-                lastFocusedSectionTitle != null -> {
-                    state.sections.indexOfFirst { it.title == lastFocusedSectionTitle }
-                        .takeIf { it >= 0 }
-                        ?.let(sectionFocusRequesters::get)
-                }
-                state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
-                else -> sectionFocusRequesters.firstOrNull()
-            }
-            // Use preferredFocusRequester as the primary content focus target so the nav rail 
-            // always returns focus to the last-used section rather than always to the top.
-            val primaryContentFocusRequester = preferredFocusRequester
-            val destinationFocus = rememberTopLevelDestinationFocus(primaryContentFocusRequester)
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun HomeLoadedContent(
+    state: HomeUiState.Content,
+    listState: LazyListState,
+    focusVisibilityTopBufferPx: Int,
+    focusVisibilityBottomBufferPx: Int,
+    spacing: com.rpeters.cinefintv.ui.theme.CinefinSpacing,
+    lifecycleOwner: androidx.lifecycle.LifecycleOwner,
+    coroutineScope: kotlinx.coroutines.CoroutineScope,
+    onOpenItem: (HomeCardModel) -> Unit,
+    onPlayItem: (String) -> Unit,
+    onOpenSeries: (String) -> Unit,
+    onOpenSeason: (String) -> Unit,
+    shouldRestoreFocusOnResume: Boolean,
+    onConsumedRestore: () -> Unit,
+) {
+    val sectionIds = remember(state.sections) { state.sections.map(HomeSectionModel::id) }
+    val sectionFocusRequesters = remember(sectionIds) {
+        List(state.sections.size) { FocusRequester() }
+    }
+    val featuredPrimaryActionRequester = remember { FocusRequester() }
+    var lastFocusedSectionId by rememberSaveable { mutableStateOf<HomeSectionId?>(null) }
+    var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedEpisodeMenuItem by remember { mutableStateOf<HomeCardModel?>(null) }
+    var shouldRestoreFocus by rememberSaveable { mutableStateOf(true) }
+    val focusNavigationCoordinator = remember(coroutineScope) {
+        FocusNavigationCoordinator(coroutineScope)
+    }
+    val chromeFocusController = LocalAppChromeFocusController.current
 
-            LaunchedEffect(shouldRestoreFocusOnResume) {
-                if (shouldRestoreFocusOnResume) {
-                    shouldRestoreFocus = true
-                    // Also notify the global scaffold that we need focus restoration,
-                    // which provides an extra layer of robustness.
-                    chromeFocusController?.shouldRestoreFocusToContent = true
-                    onConsumedRestore()
-                }
-            }
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val availableWidth = screenWidth - NAV_RAIL_SLOT_WIDTH
+    val rowSpacing = remember(spacing.cardGap) {
+        (spacing.cardGap - 4.dp).coerceAtLeast(12.dp)
+    }
+    val cardWidth = remember(availableWidth, spacing.gutter, rowSpacing) {
+        ((availableWidth - (spacing.gutter * 2) - (rowSpacing * 2)) / 3f)
+            .coerceIn(220.dp, 400.dp)
+    }
 
-            selectedEpisodeMenuItem?.let { item ->
-                MediaActionDialog(
-                    title = item.title,
-                    actions = buildList {
-                        add(
-                            MediaActionDialogItem(
-                                label = "Play episode",
-                                supportingText = "Start playback immediately.",
-                                onClick = { onPlayItem(item.id) },
-                            )
-                        )
-                        item.seriesId?.let { seriesId ->
-                            add(
-                                MediaActionDialogItem(
-                                    label = "Open show",
-                                    supportingText = "Go to the TV show detail screen.",
-                                    onClick = { onOpenSeries(seriesId) },
-                                )
-                            )
-                        }
-                        item.seasonId?.let { seasonId ->
-                            add(
-                                MediaActionDialogItem(
-                                    label = "Open season",
-                                    supportingText = "Go to the season detail screen.",
-                                    onClick = { onOpenSeason(seasonId) },
-                                )
-                            )
-                        }
-                        add(
-                            MediaActionDialogItem(
-                                label = "Open item",
-                                supportingText = "Open the default destination for this card.",
-                                onClick = { onOpenItem(item) },
-                            )
-                        )
-                    },
-                    onDismissRequest = { selectedEpisodeMenuItem = null },
+    val preferredFocusRequester = when {
+        lastFocusedSectionId != null -> {
+            state.sections.indexOfFirst { it.id == lastFocusedSectionId }
+                .takeIf { it >= 0 }
+                ?.let(sectionFocusRequesters::get)
+        }
+        state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
+        else -> sectionFocusRequesters.firstOrNull()
+    }
+    val destinationFocus = rememberTopLevelDestinationFocus(preferredFocusRequester)
+
+    LaunchedEffect(shouldRestoreFocusOnResume) {
+        if (shouldRestoreFocusOnResume) {
+            shouldRestoreFocus = true
+            chromeFocusController?.shouldRestoreFocusToContent = true
+            onConsumedRestore()
+        }
+    }
+
+    HomeEpisodeActionDialog(
+        selectedItem = selectedEpisodeMenuItem,
+        onPlayItem = onPlayItem,
+        onOpenSeries = onOpenSeries,
+        onOpenSeason = onOpenSeason,
+        onOpenItem = onOpenItem,
+        onDismissRequest = { selectedEpisodeMenuItem = null },
+    )
+
+    DisposableEffect(lifecycleOwner) {
+        onDispose {
+            focusNavigationCoordinator.cancelActiveJob()
+        }
+    }
+
+    LaunchedEffect(shouldRestoreFocus, preferredFocusRequester) {
+        if (!shouldRestoreFocus) return@LaunchedEffect
+
+        val fallbackRequester = if (state.featuredItems.isNotEmpty()) {
+            featuredPrimaryActionRequester
+        } else {
+            sectionFocusRequesters.firstOrNull()
+        }
+        val requester = preferredFocusRequester ?: fallbackRequester ?: return@LaunchedEffect
+        val targetListIndex = when {
+            lastFocusedSectionId != null -> {
+                state.sections.indexOfFirst { it.id == lastFocusedSectionId }
+                    .takeIf { it >= 0 }
+                    ?.let { if (state.featuredItems.isNotEmpty()) it + 1 else it }
+            }
+            state.featuredItems.isNotEmpty() -> 0
+            else -> 0
+        }
+
+        if (targetListIndex != null) {
+            listState.ensureItemComfortablyVisible(
+                index = targetListIndex,
+                topBufferPx = focusVisibilityTopBufferPx,
+                bottomBufferPx = focusVisibilityBottomBufferPx,
+            )
+        }
+        runCatching { requester.requestFocus() }
+        delay(HOME_FOCUS_RESTORE_SETTLE_MS)
+        shouldRestoreFocus = false
+    }
+
+    fun requestFocusAtListIndex(
+        requester: FocusRequester,
+        listIndex: Int,
+    ): () -> Unit = {
+        focusNavigationCoordinator.submit {
+            listState.ensureItemComfortablyVisible(
+                index = listIndex,
+                topBufferPx = focusVisibilityTopBufferPx,
+                bottomBufferPx = focusVisibilityBottomBufferPx,
+            )
+            requester.requestFocus()
+        }
+    }
+
+    fun ensureSectionVisible(sectionIndex: Int) {
+        val listIndex = if (state.featuredItems.isNotEmpty()) sectionIndex + 1 else sectionIndex
+        if (
+            !listState.isIndexComfortablyVisible(
+                index = listIndex,
+                topBufferPx = focusVisibilityTopBufferPx,
+                bottomBufferPx = focusVisibilityBottomBufferPx,
+            )
+        ) {
+            focusNavigationCoordinator.submit {
+                listState.ensureItemComfortablyVisible(
+                    index = listIndex,
+                    topBufferPx = focusVisibilityTopBufferPx,
+                    bottomBufferPx = focusVisibilityBottomBufferPx,
                 )
             }
+        }
+    }
 
-            DisposableEffect(lifecycleOwner) {
-                onDispose {
-                    focusNavigationCoordinator.cancelActiveJob()
-                }
-            }
-
-            LaunchedEffect(shouldRestoreFocus, preferredFocusRequester) {
-                if (!shouldRestoreFocus) {
-                    return@LaunchedEffect
-                }
-
-                val fallbackRequester = when {
-                    state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
-                    else -> sectionFocusRequesters.firstOrNull()
-                }
-                val requester = preferredFocusRequester ?: fallbackRequester
-                    ?: return@LaunchedEffect
-
-                val targetListIndex = when {
-                    lastFocusedSectionTitle != null -> {
-                        state.sections.indexOfFirst { it.title == lastFocusedSectionTitle }
-                            .takeIf { it >= 0 }
-                            ?.let { if (state.featuredItems.isNotEmpty()) it + 1 else it }
-                    }
-                    state.featuredItems.isNotEmpty() -> 0
-                    else -> 0
-                }
-
-                if (targetListIndex != null) {
-                    listState.ensureItemComfortablyVisible(
-                        index = targetListIndex,
-                        topBufferPx = focusVisibilityTopBufferPx,
-                        bottomBufferPx = focusVisibilityBottomBufferPx,
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 0.dp, bottom = 120.dp),
+            verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
+        ) {
+            if (state.featuredItems.isNotEmpty()) {
+                item {
+                    val firstSectionRequester = sectionFocusRequesters.firstOrNull()
+                    FeaturedCarousel(
+                        items = state.featuredItems,
+                        onMoreInfo = onOpenItem,
+                        onPlay = onPlayItem,
+                        destinationFocus = destinationFocus,
+                        primaryActionFocusRequester = featuredPrimaryActionRequester,
+                        downRequester = firstSectionRequester,
+                        onNavigateDown = firstSectionRequester?.let { requester ->
+                            requestFocusAtListIndex(requester = requester, listIndex = 1)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 0.dp, start = spacing.gutter, end = spacing.gutter),
                     )
                 }
-                runCatching { requester.requestFocus() }
-                delay(HOME_FOCUS_RESTORE_SETTLE_MS)
-                shouldRestoreFocus = false
             }
 
-            Box(modifier = Modifier.fillMaxSize()) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 0.dp, bottom = 120.dp),
-                    verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
-                ) {
-                    if (state.featuredItems.isNotEmpty()) {
-                        item {
-                            val firstSectionRequester = sectionFocusRequesters.firstOrNull()
-                            FeaturedCarousel(
-                                items = state.featuredItems,
-                                onMoreInfo = onOpenItem,
-                                onPlay = onPlayItem,
-                                destinationFocus = destinationFocus,
-                                primaryActionFocusRequester = featuredPrimaryActionRequester,
-                                downRequester = firstSectionRequester,
-                                onNavigateDown = firstSectionRequester?.let {
-                                    {
-                                        focusNavigationCoordinator.submit {
-                                            listState.ensureItemComfortablyVisible(
-                                                index = 1,
-                                                topBufferPx = focusVisibilityTopBufferPx,
-                                                bottomBufferPx = focusVisibilityBottomBufferPx,
-                                            )
-                                            it.requestFocus()
-                                        }
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 0.dp, start = spacing.gutter, end = spacing.gutter),
+            itemsIndexed(
+                state.sections,
+                key = { _, section -> section.id }
+            ) { index, section ->
+                val upFocusRequester = when {
+                    index == 0 && state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
+                    index == 0 -> destinationFocus.drawerFocusRequester
+                    else -> sectionFocusRequesters[index - 1]
+                }
+
+                HomeSection(
+                    sectionIndex = index,
+                    title = section.title,
+                    items = section.items,
+                    cardWidth = cardWidth,
+                    rowSpacing = rowSpacing,
+                    onOpenItem = onOpenItem,
+                    restoredFocusedItemId = if (lastFocusedSectionId == section.id) {
+                        lastFocusedItemId
+                    } else {
+                        null
+                    },
+                    onItemFocused = { itemId ->
+                        lastFocusedSectionId = section.id
+                        lastFocusedItemId = itemId
+                        ensureSectionVisible(index)
+                    },
+                    onEpisodeMenuRequested = { selectedEpisodeMenuItem = it },
+                    firstItemFocusRequester = sectionFocusRequesters[index],
+                    upFocusRequester = upFocusRequester,
+                    onNavigateUp = when {
+                        index == 0 && state.featuredItems.isNotEmpty() -> {
+                            requestFocusAtListIndex(
+                                requester = featuredPrimaryActionRequester,
+                                listIndex = 0,
                             )
                         }
-                    }
-
-                    itemsIndexed(
-                        state.sections,
-                        key = { _, section -> section.title }
-                    ) { index, section ->
-                        val upFocusRequester = when {
-                            index == 0 && state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
-                            index == 0 -> destinationFocus.drawerFocusRequester
-                            else -> sectionFocusRequesters[index - 1]
+                        index > 0 -> {
+                            requestFocusAtListIndex(
+                                requester = sectionFocusRequesters[index - 1],
+                                listIndex = if (state.featuredItems.isNotEmpty()) index else index - 1,
+                            )
                         }
-
-                        HomeSection(
-                            sectionIndex = index,
-                            title = section.title,
-                            items = section.items,
-                            onOpenItem = onOpenItem,
-                            restoredFocusedItemId = if (lastFocusedSectionTitle == section.title) {
-                                lastFocusedItemId
-                            } else {
-                                null
-                            },
-                            onItemFocused = { itemId ->
-                                lastFocusedSectionTitle = section.title
-                                lastFocusedItemId = itemId
-                                val listIndex = if (state.featuredItems.isNotEmpty()) index + 1 else index
-                                if (
-                                    !listState.isIndexComfortablyVisible(
-                                        index = listIndex,
-                                        topBufferPx = focusVisibilityTopBufferPx,
-                                        bottomBufferPx = focusVisibilityBottomBufferPx,
-                                    )
-                                ) {
-                                    focusNavigationCoordinator.submit {
-                                        listState.ensureItemComfortablyVisible(
-                                            index = listIndex,
-                                            topBufferPx = focusVisibilityTopBufferPx,
-                                            bottomBufferPx = focusVisibilityBottomBufferPx,
-                                        )
-                                    }
-                                }
-                            },
-                            onEpisodeMenuRequested = { selectedEpisodeMenuItem = it },
-                            firstItemFocusRequester = sectionFocusRequesters[index],
-                            upFocusRequester = upFocusRequester,
-                            onNavigateUp = when {
-                                index == 0 && state.featuredItems.isNotEmpty() -> {
-                                    {
-                                        focusNavigationCoordinator.submit {
-                                            listState.ensureItemComfortablyVisible(
-                                                index = 0,
-                                                topBufferPx = focusVisibilityTopBufferPx,
-                                                bottomBufferPx = focusVisibilityBottomBufferPx,
-                                            )
-                                            featuredPrimaryActionRequester.requestFocus()
-                                        }
-                                    }
-                                }
-                                index > 0 -> {
-                                    {
-                                        focusNavigationCoordinator.submit {
-                                            val previousListIndex = if (state.featuredItems.isNotEmpty()) index else index - 1
-                                            listState.ensureItemComfortablyVisible(
-                                                index = previousListIndex,
-                                                topBufferPx = focusVisibilityTopBufferPx,
-                                                bottomBufferPx = focusVisibilityBottomBufferPx,
-                                            )
-                                            sectionFocusRequesters[index - 1].requestFocus()
-                                        }
-                                    }
-                                }
-                                else -> null
-                            },
-                            onNavigateDown = sectionFocusRequesters.getOrNull(index + 1)?.let { nextRequester ->
-                                {
-                                    focusNavigationCoordinator.submit {
-                                        val nextListIndex = if (state.featuredItems.isNotEmpty()) index + 2 else index + 1
-                                        listState.ensureItemComfortablyVisible(
-                                            index = nextListIndex,
-                                            topBufferPx = focusVisibilityTopBufferPx,
-                                            bottomBufferPx = focusVisibilityBottomBufferPx,
-                                        )
-                                        nextRequester.requestFocus()
-                                    }
-                                }
-                            },
-                            destinationFocus = destinationFocus,
+                        else -> null
+                    },
+                    onNavigateDown = sectionFocusRequesters.getOrNull(index + 1)?.let { nextRequester ->
+                        requestFocusAtListIndex(
+                            requester = nextRequester,
+                            listIndex = if (state.featuredItems.isNotEmpty()) index + 2 else index + 1,
                         )
-                    }
-                }
+                    },
+                    destinationFocus = destinationFocus,
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun HomeEpisodeActionDialog(
+    selectedItem: HomeCardModel?,
+    onPlayItem: (String) -> Unit,
+    onOpenSeries: (String) -> Unit,
+    onOpenSeason: (String) -> Unit,
+    onOpenItem: (HomeCardModel) -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    selectedItem?.let { item ->
+        MediaActionDialog(
+            title = item.title,
+            actions = buildList {
+                add(
+                    MediaActionDialogItem(
+                        label = "Play episode",
+                        supportingText = "Start playback immediately.",
+                        onClick = { onPlayItem(item.id) },
+                    )
+                )
+                item.seriesId?.let { seriesId ->
+                    add(
+                        MediaActionDialogItem(
+                            label = "Open show",
+                            supportingText = "Go to the TV show detail screen.",
+                            onClick = { onOpenSeries(seriesId) },
+                        )
+                    )
+                }
+                item.seasonId?.let { seasonId ->
+                    add(
+                        MediaActionDialogItem(
+                            label = "Open season",
+                            supportingText = "Go to the season detail screen.",
+                            onClick = { onOpenSeason(seasonId) },
+                        )
+                    )
+                }
+                add(
+                    MediaActionDialogItem(
+                        label = "Open item",
+                        supportingText = "Open the default destination for this card.",
+                        onClick = { onOpenItem(item) },
+                    )
+                )
+            },
+            onDismissRequest = onDismissRequest,
+        )
     }
 }
 
@@ -470,11 +531,16 @@ private fun FeaturedCarousel(
     modifier: Modifier = Modifier,
 ) {
     val carouselState = rememberCarouselState()
+    val performanceProfile = LocalPerformanceProfile.current
 
     Carousel(
         itemCount = items.size,
         carouselState = carouselState,
-        autoScrollDurationMillis = 15000L,
+        autoScrollDurationMillis = when {
+            items.size <= 1 -> Long.MAX_VALUE
+            performanceProfile.tier == DevicePerformanceProfile.Tier.LOW -> 25000L
+            else -> 15000L
+        },
         modifier = modifier
             .testTag(HomeTestTags.FeaturedCarousel)
             .fillMaxWidth()
@@ -502,7 +568,6 @@ private fun FeaturedCarousel(
             destinationFocus = destinationFocus,
             primaryActionFocusRequester = primaryActionFocusRequester,
             downRequester = downRequester,
-            onNavigateDown = onNavigateDown,
             modifier = Modifier.fillMaxSize()
         )
     }
@@ -517,25 +582,38 @@ private fun HeroItem(
     destinationFocus: com.rpeters.cinefintv.ui.TopLevelDestinationFocus,
     primaryActionFocusRequester: FocusRequester,
     downRequester: FocusRequester?,
-    onNavigateDown: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val expressiveColors = LocalCinefinExpressiveColors.current
     val performanceProfile = LocalPerformanceProfile.current
     val spacing = LocalCinefinSpacing.current
-    val themeController = LocalCinefinThemeController.current
     val detailsButtonRequester = remember { FocusRequester() }
-    val coroutineScope = rememberCoroutineScope()
     val heroImageUrl = item.backdropUrl ?: item.imageUrl
+    val heroImageRequest = remember(heroImageUrl, performanceProfile.tier, context) {
+        ImageRequest.Builder(context)
+            .data(heroImageUrl)
+            .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
+            .size(
+                if (performanceProfile.tier == DevicePerformanceProfile.Tier.LOW) 960 else 1280,
+                if (performanceProfile.tier == DevicePerformanceProfile.Tier.LOW) 540 else 720,
+            )
+            .build()
+    }
+    val carouselMeta = remember(item.year, item.runtime, item.rating) {
+        listOfNotNull(
+            item.year?.toString(),
+            item.runtime,
+            item.rating?.let { "★ $it" },
+        ).joinToString("  •  ")
+    }
+    val heroDescription = remember(item.description) {
+        item.description ?: "Featured title from your library"
+    }
 
     Box(modifier = modifier.clip(RoundedCornerShape(20.dp))) {
         AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(heroImageUrl)
-                .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
-                .size(1280, 720)
-                .build(),
+            model = heroImageRequest,
             contentDescription = item.title,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
@@ -592,11 +670,6 @@ private fun HeroItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            val carouselMeta = listOfNotNull(
-                item.year?.toString(),
-                item.runtime,
-                item.rating?.let { "★ $it" },
-            ).joinToString("  •  ")
             if (carouselMeta.isNotBlank()) {
                 Text(
                     text = carouselMeta,
@@ -614,7 +687,7 @@ private fun HeroItem(
                 )
             }
             Text(
-                text = item.description ?: "Featured title from your library",
+                text = heroDescription,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.84f),
                 maxLines = 3,
@@ -663,6 +736,8 @@ private fun HomeSection(
     sectionIndex: Int,
     title: String,
     items: List<HomeCardModel>,
+    cardWidth: Dp,
+    rowSpacing: Dp,
     onOpenItem: (HomeCardModel) -> Unit,
     restoredFocusedItemId: String?,
     onItemFocused: (String) -> Unit,
@@ -675,7 +750,7 @@ private fun HomeSection(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
-    val visibleItems = items.take(12)
+    val visibleItems = remember(items) { items.take(12) }
     val restoredFocusIndex = visibleItems.indexOfFirst { it.id == restoredFocusedItemId }
         .takeIf { it >= 0 } ?: 0
 
@@ -693,70 +768,70 @@ private fun HomeSection(
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(start = spacing.gutter, end = spacing.gutter),
         )
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val cardWidth = ((maxWidth - (spacing.gutter * 2) - (spacing.cardGap * 2)) / 3f)
-                .coerceIn(220.dp, 400.dp)
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy((spacing.cardGap - 4.dp).coerceAtLeast(12.dp)),
-                contentPadding = PaddingValues(horizontal = spacing.gutter),
-            ) {
-                itemsIndexed(visibleItems, key = { _, item -> item.id }) { index, item ->
-                    val focusModifier = if (upFocusRequester != null) {
-                        destinationFocus.drawerEscapeModifier(
-                            isLeftEdge = index == 0,
-                            up = upFocusRequester,
-                        )
-                    } else {
-                        destinationFocus.drawerEscapeModifier(isLeftEdge = index == 0)
-                    }
-
-                    TvMediaCard(
-                        title = item.title,
-                        subtitle = item.subtitle ?: item.year?.toString(),
-                        imageUrl = item.imageUrl,
-                        onClick = { onOpenItem(item) },
-                        onMenuAction = if (item.itemType == "Episode") {
-                            { onEpisodeMenuRequested(item) }
-                        } else {
-                            null
-                        },
-                        watchStatus = item.watchStatus,
-                        unwatchedCount = item.unwatchedCount,
-                        playbackProgress = item.playbackProgress,
-                        onFocus = { onItemFocused(item.id) },
-                        aspectRatio = 16f / 9f,
-                        cardWidth = cardWidth,
-                        modifier = Modifier
-                            .testTag(HomeTestTags.sectionItem(sectionIndex, index))
-                            .then(
-                                if (index == 0 || index == restoredFocusIndex) {
-                                    Modifier.blockBringIntoView()
-                                } else {
-                                    Modifier
-                                }
-                            )
-                            .then(if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
-                            .then(focusModifier)
-                            .onPreviewKeyEvent { keyEvent ->
-                                val nativeEvent = keyEvent.nativeKeyEvent
-                                when {
-                                    onNavigateDown != null &&
-                                        nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                        nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                        onNavigateDown()
-                                        true
-                                    }
-                                    onNavigateUp != null &&
-                                        nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                        nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                                        onNavigateUp()
-                                        true
-                                    }
-                                    else -> false
-                                }
-                            }
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(rowSpacing),
+            contentPadding = PaddingValues(horizontal = spacing.gutter),
+        ) {
+            itemsIndexed(
+                items = visibleItems,
+                key = { _, item -> item.id },
+                contentType = { _, item -> item.itemType ?: "media" },
+            ) { index, item ->
+                val focusModifier = if (upFocusRequester != null) {
+                    destinationFocus.drawerEscapeModifier(
+                        isLeftEdge = index == 0,
+                        up = upFocusRequester,
                     )
+                } else {
+                    destinationFocus.drawerEscapeModifier(isLeftEdge = index == 0)
                 }
+
+                TvMediaCard(
+                    title = item.title,
+                    subtitle = item.subtitle ?: item.year?.toString(),
+                    imageUrl = item.imageUrl,
+                    onClick = { onOpenItem(item) },
+                    onMenuAction = if (item.itemType == "Episode") {
+                        { onEpisodeMenuRequested(item) }
+                    } else {
+                        null
+                    },
+                    watchStatus = item.watchStatus,
+                    unwatchedCount = item.unwatchedCount,
+                    playbackProgress = item.playbackProgress,
+                    onFocus = { onItemFocused(item.id) },
+                    aspectRatio = 16f / 9f,
+                    cardWidth = cardWidth,
+                    modifier = Modifier
+                        .testTag(HomeTestTags.sectionItem(sectionIndex, index))
+                        .then(
+                            if (index == 0 || index == restoredFocusIndex) {
+                                Modifier.blockBringIntoView()
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .then(if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
+                        .then(focusModifier)
+                        .onPreviewKeyEvent { keyEvent ->
+                            val nativeEvent = keyEvent.nativeKeyEvent
+                            when {
+                                onNavigateDown != null &&
+                                    nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    onNavigateDown()
+                                    true
+                                }
+                                onNavigateUp != null &&
+                                    nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                                    onNavigateUp()
+                                    true
+                                }
+                                else -> false
+                            }
+                        }
+                )
             }
         }
     }
