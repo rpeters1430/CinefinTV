@@ -48,6 +48,7 @@ import com.rpeters.cinefintv.ui.navigation.SeasonDetail
 import com.rpeters.cinefintv.ui.navigation.Settings
 import com.rpeters.cinefintv.ui.navigation.TvShowDetail
 import com.rpeters.cinefintv.ui.navigation.appChromeRouteSpec
+import com.rpeters.cinefintv.ui.navigation.navigateToTopLevelDestination
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.ThemeColorController
 import org.junit.Assert.assertTrue
@@ -366,9 +367,7 @@ private fun AppNavigationSmokeHarness() {
     }
 
     fun navigateToTab(destination: NavDestination) {
-        if (backStack.lastOrNull() == destination) return
-        backStack.clear()
-        backStack.add(destination)
+        backStack.navigateToTopLevelDestination(destination)
     }
 
     CinefinAppScaffold(

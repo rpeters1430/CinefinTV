@@ -167,7 +167,6 @@ dependencies {
     testImplementation(libs.robolectric)
 
     androidTestImplementation(platform(libs.compose.bom))
-    androidTestImplementation(libs.navigation.compose)
     androidTestImplementation(libs.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.espresso.core)

@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation3.runtime.NavKey
 
 data class NavTabItem(
     val destination: NavDestination,
@@ -25,3 +26,31 @@ val navTabItems = listOf(
     NavTabItem(Search, "Search", Icons.Default.Search),
     NavTabItem(Settings, "Settings", Icons.Default.Settings),
 )
+
+fun NavDestination?.isTopLevelTabDestination(): Boolean =
+    this != null && navTabItems.any { item -> item.destination::class == this::class }
+
+fun NavDestination?.matchesTopLevelTab(destination: NavDestination): Boolean =
+    this != null && this::class == destination::class
+
+fun selectedTopLevelTabIndex(currentDestination: NavDestination?): Int =
+    navTabItems.indexOfFirst { item ->
+        currentDestination.matchesTopLevelTab(item.destination)
+    }.let { index ->
+        if (index == -1) {
+            navTabItems.indexOfFirst { it.destination is Home }
+        } else {
+            index
+        }
+    }.coerceAtLeast(0)
+
+fun MutableList<NavKey>.navigateToTopLevelDestination(destination: NavDestination): Boolean {
+    val currentDestination = lastOrNull() as? NavDestination
+    if (currentDestination.matchesTopLevelTab(destination)) {
+        return false
+    }
+
+    clear()
+    add(destination)
+    return true
+}

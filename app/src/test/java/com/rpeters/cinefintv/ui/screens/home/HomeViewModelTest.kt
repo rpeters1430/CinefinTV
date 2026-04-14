@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -60,6 +61,7 @@ class HomeViewModelTest {
 
         val state = viewModel.uiState.value as HomeUiState.Content
         assertEquals(1, state.sections.size)
+        assertEquals(HomeSectionId.CONTINUE_WATCHING, state.sections.first().id)
         assertEquals("Continue Watching", state.sections.first().title)
         assertEquals(1, state.sections.first().items.size)
         assertEquals("Movie 1", state.sections.first().items.first().title)
@@ -225,6 +227,7 @@ class HomeViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value as HomeUiState.Content
+        assertEquals(HomeSectionId.RECENT_COLLECTIONS, state.sections.single().id)
         assertEquals("Recently Added Collections", state.sections.single().title)
         assertEquals("Clip 1", state.sections.single().items.single().title)
     }
@@ -260,7 +263,7 @@ class HomeViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value as HomeUiState.Content
-        val nextEpisodes = state.sections.first { it.title == "Next Episodes" }
+        val nextEpisodes = state.sections.first { it.id == HomeSectionId.NEXT_EPISODES }
         assertEquals(2, nextEpisodes.items.size)
         assertEquals("Show A - S1E2", nextEpisodes.items[0].title)
         assertEquals("Show B - S2E4", nextEpisodes.items[1].title)
@@ -296,7 +299,7 @@ class HomeViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value as HomeUiState.Content
-        val nextEpisodes = state.sections.first { it.title == "Next Episodes" }
+        val nextEpisodes = state.sections.first { it.id == HomeSectionId.NEXT_EPISODES }
         
         // Should only have 2 items (unstarted one is filtered)
         assertEquals(2, nextEpisodes.items.size)
@@ -346,6 +349,133 @@ class HomeViewModelTest {
         assertEquals("New Movie", refreshedState.featuredItems.first().title)
     }
 
+    @Test
+    fun refresh_silent_whenContentIsUnchanged_keepsExistingUiStateInstance() = runTest {
+        val fakeRepositories = FakeHomeRepositories()
+        val movie = mockBaseItemDto("Movie 1")
+
+        coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 24) } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
+        } returnsMany listOf(
+            ApiResult.Success(listOf(movie)),
+            ApiResult.Success(listOf(movie)),
+        )
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
+        every { fakeRepositories.stream.getBackdropUrl(any()) } returns "https://img/backdrop.jpg"
+
+        val viewModel = HomeViewModel(fakeRepositories.coordinator, updateBus)
+        advanceUntilIdle()
+
+        val initialState = viewModel.uiState.value
+        viewModel.refresh(silent = true)
+        advanceUntilIdle()
+
+        assertSame(initialState, viewModel.uiState.value)
+    }
+
+    @Test
+    fun refresh_silent_whenOnlyFeaturedChanges_reusesUnchangedSectionInstances() = runTest {
+        val fakeRepositories = FakeHomeRepositories()
+        val oldMovie = mockBaseItemDto("Old Movie")
+        val newMovie = mockBaseItemDto("New Movie")
+        val video = mockBaseItemDto("Clip 1", BaseItemKind.VIDEO)
+
+        coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getContinueWatching(limit = 24) } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
+        } returnsMany listOf(
+            ApiResult.Success(listOf(oldMovie)),
+            ApiResult.Success(listOf(newMovie)),
+        )
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12)
+        } returns ApiResult.Success(listOf(video))
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
+        every { fakeRepositories.stream.getBackdropUrl(any()) } returns "https://img/backdrop.jpg"
+
+        val viewModel = HomeViewModel(fakeRepositories.coordinator, updateBus)
+        advanceUntilIdle()
+
+        val initialState = viewModel.uiState.value as HomeUiState.Content
+        val initialCollectionsSection = initialState.sections.first { it.id == HomeSectionId.RECENT_COLLECTIONS }
+
+        viewModel.refresh(silent = true)
+        advanceUntilIdle()
+
+        val refreshedState = viewModel.uiState.value as HomeUiState.Content
+        val refreshedCollectionsSection = refreshedState.sections.first { it.id == HomeSectionId.RECENT_COLLECTIONS }
+
+        assertSame(initialCollectionsSection, refreshedCollectionsSection)
+        assertEquals("New Movie", refreshedState.featuredItems.first().title)
+    }
+
+    @Test
+    fun refreshWatchStatus_reusesUnchangedNonWatchSections() = runTest {
+        val fakeRepositories = FakeHomeRepositories()
+        val initialMovie = mockResumableMovie("Movie 1")
+        val refreshedMovie = mockResumableMovie("Movie 2")
+        val video = mockBaseItemDto("Clip 1", BaseItemKind.VIDEO)
+
+        coEvery { fakeRepositories.media.getUserLibraries() } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getContinueWatching(limit = 24)
+        } returnsMany listOf(
+            ApiResult.Success(listOf(initialMovie)),
+            ApiResult.Success(listOf(refreshedMovie)),
+        )
+        coEvery { fakeRepositories.media.getNextUp(limit = 12) } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12)
+        } returns ApiResult.Success(listOf(video))
+        coEvery {
+            fakeRepositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12)
+        } returns ApiResult.Success(emptyList())
+        every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
+        every { fakeRepositories.stream.getBackdropUrl(any()) } returns null
+
+        val viewModel = HomeViewModel(fakeRepositories.coordinator, updateBus)
+        advanceUntilIdle()
+
+        val initialState = viewModel.uiState.value as HomeUiState.Content
+        val initialCollectionsSection = initialState.sections.first { it.id == HomeSectionId.RECENT_COLLECTIONS }
+
+        viewModel.refreshWatchStatus()
+        advanceUntilIdle()
+
+        val refreshedState = viewModel.uiState.value as HomeUiState.Content
+        val refreshedCollectionsSection = refreshedState.sections.first { it.id == HomeSectionId.RECENT_COLLECTIONS }
+        val continueWatchingSection = refreshedState.sections.first { it.id == HomeSectionId.CONTINUE_WATCHING }
+
+        assertSame(initialCollectionsSection, refreshedCollectionsSection)
+        assertEquals("Movie 2", continueWatchingSection.items.first().title)
+    }
+
     private fun mockBaseItemDto(
         name: String,
         type: BaseItemKind = BaseItemKind.MOVIE,
@@ -370,5 +500,16 @@ class HomeViewModelTest {
         every { item.indexNumber } returns episode
         every { item.parentId } returns null
         return item
+    }
+
+    private fun mockResumableMovie(name: String): BaseItemDto {
+        val movie = mockBaseItemDto(name)
+        val userData = mockk<org.jellyfin.sdk.model.api.UserItemDataDto>()
+        every { userData.playedPercentage } returns 45.0
+        every { userData.played } returns false
+        every { userData.playbackPositionTicks } returns 1000L
+        every { movie.userData } returns userData
+        every { movie.runTimeTicks } returns 2000L
+        return movie
     }
 }

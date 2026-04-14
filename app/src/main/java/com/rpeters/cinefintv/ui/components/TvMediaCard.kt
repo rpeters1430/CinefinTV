@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,6 +74,7 @@ fun TvMediaCard(
     cardWidth: androidx.compose.ui.unit.Dp? = null,
     compactMetadata: Boolean = false,
 ) {
+    val context = LocalContext.current
     val performanceProfile = LocalPerformanceProfile.current
     val expressiveColors = LocalCinefinExpressiveColors.current
     val spacing = LocalCinefinSpacing.current
@@ -95,6 +97,18 @@ fun TvMediaCard(
         if (compactMetadata) 1.0f
         else if (aspectRatio > 1f || (cardWidth != null && cardWidth > 200.dp)) 1.03f
         else 1.05f
+    }
+    val imageRequest = remember(imageUrl, performanceProfile.tier, aspectRatio, context) {
+        imageUrl?.let {
+            ImageRequest.Builder(context)
+                .data(it)
+                .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
+                .size(
+                    if (aspectRatio > 1f) 640 else 336,
+                    if (aspectRatio > 1f) 360 else 504,
+                )
+                .build()
+        }
     }
     val metadataTextAlign = TextAlign.Start
 
@@ -156,13 +170,9 @@ fun TvMediaCard(
                             .background(expressiveColors.accentSurface.copy(alpha = 0.9f)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        if (imageUrl != null) {
+                        if (imageRequest != null) {
                             AsyncImage(
-                                model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                                    .data(imageUrl)
-                                    .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
-                                    .size(if (aspectRatio > 1f) 640 else 336, if (aspectRatio > 1f) 360 else 504)
-                                    .build(),
+                                model = imageRequest,
                                 contentDescription = title,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize(),

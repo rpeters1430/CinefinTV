@@ -28,7 +28,10 @@
       "Read(//home/rpeters1428/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.5/**)",
       "Bash(bash scripts/start-server.sh --project-dir /home/rpeters1428/CinefinTV)",
       "Bash(adb devices:*)",
-      "Bash(./gradlew :app:compileDebugAndroidTestKotlin)"
+      "Bash(./gradlew :app:compileDebugAndroidTestKotlin)",
+      "Bash(adb shell:*)",
+      "Bash(adb pull:*)",
+      "Bash(./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.rpeters.cinefintv.ui.AppNavigationSmokeUiTest)"
     ]
   }
 }

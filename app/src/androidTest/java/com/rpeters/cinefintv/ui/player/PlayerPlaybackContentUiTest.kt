@@ -92,9 +92,9 @@ class PlayerPlaybackContentUiTest {
                     ),
                     renderState = PlayerRenderState(
                         isPlaying = true,
-                        position = 10_000L,
                         duration = 90_000L,
                     ),
+                    positionProvider = { 10_000L },
                 )
             }
         }
@@ -125,9 +125,9 @@ class PlayerPlaybackContentUiTest {
                     ),
                     renderState = PlayerRenderState(
                         isPlaying = true,
-                        position = 110_000L,
                         duration = 120_000L,
                     ),
+                    positionProvider = { 110_000L },
                 )
             }
         }
@@ -157,9 +157,9 @@ class PlayerPlaybackContentUiTest {
                     ),
                     renderState = PlayerRenderState(
                         isPlaying = true,
-                        position = 110_000L,
                         duration = 120_000L,
                     ),
+                    positionProvider = { 110_000L },
                 )
             }
         }
@@ -213,10 +213,10 @@ private fun PlaybackShellHarness(
     ),
     renderState: PlayerRenderState = PlayerRenderState(
         isPlaying = true,
-        position = 30_000L,
         duration = 120_000L,
         bufferedFraction = 0.5f,
     ),
+    positionProvider: () -> Long = { 30_000L },
     initialControlsVisible: Boolean = true,
     onOpenItem: (String) -> Unit = {},
     onResumePlayback: (Boolean) -> Unit = {},
@@ -225,6 +225,7 @@ private fun PlaybackShellHarness(
         exoPlayer = player,
         uiState = uiState,
         renderState = renderState,
+        positionProvider = positionProvider,
         onBack = {},
         onOpenItem = onOpenItem,
         onResumePlayback = onResumePlayback,

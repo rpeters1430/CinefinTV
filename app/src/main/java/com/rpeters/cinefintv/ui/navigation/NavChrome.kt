@@ -20,18 +20,8 @@ fun appChromeRouteSpec(currentDestination: NavDestination?): AppChromeRouteSpec 
         else -> true
     }
 
-    val selectedTabIndex = navTabItems.indexOfFirst { item ->
-        currentDestination != null && currentDestination::class == item.destination::class
-    }.let { index ->
-        if (index == -1) {
-            navTabItems.indexOfFirst { it.destination is Home }
-        } else {
-            index
-        }
-    }.coerceAtLeast(0)
-
     return AppChromeRouteSpec(
         showNav = showNav,
-        selectedTabIndex = selectedTabIndex,
+        selectedTabIndex = selectedTopLevelTabIndex(currentDestination),
     )
 }

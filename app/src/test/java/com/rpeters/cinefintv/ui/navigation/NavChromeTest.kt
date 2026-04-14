@@ -1,5 +1,6 @@
 package com.rpeters.cinefintv.ui.navigation
 
+import androidx.navigation3.runtime.NavKey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -60,5 +61,25 @@ class NavChromeTest {
         topLevelDestinations.forEach { dest ->
             assertTrue("Expected nav to be visible for destination $dest", appChromeRouteSpec(dest).showNav)
         }
+    }
+
+    @Test
+    fun navigateToTopLevelDestination_skipsReselectingCurrentTab() {
+        val backStack = mutableListOf<NavKey>(Home)
+
+        val changed = backStack.navigateToTopLevelDestination(Home)
+
+        assertFalse(changed)
+        assertEquals(listOf(Home), backStack)
+    }
+
+    @Test
+    fun navigateToTopLevelDestination_replacesStackWhenSwitchingTabs() {
+        val backStack = mutableListOf<NavKey>(Home, MovieDetail("movie-1"))
+
+        val changed = backStack.navigateToTopLevelDestination(Search)
+
+        assertTrue(changed)
+        assertEquals(listOf(Search), backStack)
     }
 }

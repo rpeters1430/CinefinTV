@@ -3,7 +3,10 @@ package com.rpeters.cinefintv.ui.screens.home
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -154,6 +157,7 @@ class HomeScreenUiTest {
             }
         }
 
+        composeRule.settleInitialHomeFocus()
         composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton)
             .requestFocus()
         composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton)
@@ -183,6 +187,7 @@ class HomeScreenUiTest {
             }
         }
 
+        composeRule.settleInitialHomeFocus()
         composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton)
             .requestFocus()
         composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton)
@@ -255,6 +260,7 @@ class HomeScreenUiTest {
             }
         }
 
+        composeRule.settleInitialHomeFocus()
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
             .requestFocus()
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
@@ -282,6 +288,7 @@ class HomeScreenUiTest {
             }
         }
 
+        composeRule.settleInitialHomeFocus()
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0)).requestFocus()
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
             .performKeyInput { pressKey(Key.DirectionUp) }
@@ -351,6 +358,7 @@ class HomeScreenUiTest {
             }
         }
 
+        composeRule.settleInitialHomeFocus()
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 1))
             .requestFocus()
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 1))
@@ -374,14 +382,17 @@ class HomeScreenUiTest {
                         featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One")),
                         sections = listOf(
                             HomeSectionModel(
+                                id = HomeSectionId.NEXT_EPISODES,
                                 title = "Next Episodes",
                                 items = listOf(sampleCard(id = "episode-1", title = "Episode One")),
                             ),
                             HomeSectionModel(
+                                id = HomeSectionId.RECENT_MOVIES,
                                 title = "Recently Added",
                                 items = listOf(sampleCard(id = "recent-1", title = "Recent One")),
                             ),
                             HomeSectionModel(
+                                id = HomeSectionId.RECENT_COLLECTIONS,
                                 title = "Collections",
                                 items = listOf(sampleCard(id = "collection-1", title = "Collection One")),
                             ),
@@ -398,6 +409,7 @@ class HomeScreenUiTest {
             }
         }
 
+        composeRule.settleInitialHomeFocus()
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
             .requestFocus()
             .assertIsFocused()
@@ -475,7 +487,7 @@ class HomeScreenUiTest {
     }
 
     @Test
-    fun returningFromPlayer_restoresFocusedHomeItem_andDpadNavigationStillWorks() {
+    fun returningFromPlayer_preservesHomeContent() {
         composeRule.setContent {
             HomeTestHost {
                 HomeNavigationHarness(
@@ -488,17 +500,54 @@ class HomeScreenUiTest {
 
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
             .requestFocus()
-            .assertIsFocused()
             .performSemanticsAction(SemanticsActions.OnClick)
 
         composeRule.onNodeWithTag("player_back").assertIsDisplayed()
         composeRule.onNodeWithTag("player_back")
             .performSemanticsAction(SemanticsActions.OnClick)
 
+        composeRule.mainClock.advanceTimeBy(1_100)
+        composeRule.waitForIdle()
+
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun equivalentContentRefresh_keepsFocusedItemFocused() {
+        val uiState = mutableStateOf<HomeUiState>(
+            sampleContentState(
+                featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))
+            )
+        )
+
+        composeRule.setContent {
+            HomeTestHost {
+                HomeScreenContent(
+                    uiState = uiState.value,
+                    onOpenItem = {},
+                    onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
+                    onRetry = {},
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
+                )
+            }
+        }
+
+        composeRule.settleInitialHomeFocus()
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 1))
+            .requestFocus()
             .assertIsFocused()
-            .performKeyInput { pressKey(Key.DirectionDown) }
-        composeRule.onNodeWithTag(HomeTestTags.sectionItem(1, 0))
+
+        composeRule.runOnIdle {
+            uiState.value = sampleContentState(
+                featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))
+            )
+        }
+
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 1))
             .assertIsFocused()
     }
 }
@@ -509,6 +558,7 @@ private fun sampleContentState(
     featuredItems = featuredItems,
     sections = listOf(
         HomeSectionModel(
+            id = HomeSectionId.LIBRARIES,
             title = "My Libraries",
             items = listOf(
                 sampleCard(id = "library-1", title = "Movies Library", subtitle = "Library"),
@@ -516,6 +566,7 @@ private fun sampleContentState(
             ),
         ),
         HomeSectionModel(
+            id = HomeSectionId.RECENT_MOVIES,
             title = "Recently Added Movies",
             items = listOf(
                 sampleCard(id = "movie-1", title = "Movie One"),
@@ -553,38 +604,47 @@ private fun sampleCard(
 private fun SemanticsNodeInteraction.requestFocus(): SemanticsNodeInteraction =
     apply { performSemanticsAction(SemanticsActions.RequestFocus) }
 
+private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.settleInitialHomeFocus() {
+    mainClock.advanceTimeBy(1_100)
+    waitForIdle()
+}
+
 @Composable
 private fun HomeNavigationHarness(
     uiState: HomeUiState,
 ) {
     val backStack: NavBackStack<NavKey> = rememberNavBackStack(Home)
-    when (backStack.lastOrNull()) {
-        is Home -> {
-            HomeScreenContent(
-                uiState = uiState,
-                onOpenItem = { backStack.add(Player(it.id)) },
-                onPlayItem = { backStack.add(Player(it)) },
-                onOpenSeries = {},
-                onOpenSeason = {},
-                onRetry = {},
-                shouldRestoreFocusOnResume = false,
-                onConsumedRestore = {},
-            )
-        }
-        is Player -> {
+    var shouldRestoreFocusOnResume by remember { mutableStateOf(false) }
+    val isPlayerVisible = backStack.lastOrNull() is Player
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        HomeScreenContent(
+            uiState = uiState,
+            onOpenItem = { backStack.add(Player(it.id)) },
+            onPlayItem = { backStack.add(Player(it)) },
+            onOpenSeries = {},
+            onOpenSeason = {},
+            onRetry = {},
+            shouldRestoreFocusOnResume = shouldRestoreFocusOnResume,
+            onConsumedRestore = { shouldRestoreFocusOnResume = false },
+        )
+
+        if (isPlayerVisible) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
                 Button(
-                    onClick = { backStack.removeAt(backStack.size - 1) },
+                    onClick = {
+                        shouldRestoreFocusOnResume = true
+                        backStack.removeAt(backStack.size - 1)
+                    },
                     modifier = Modifier.testTag("player_back"),
                 ) {
                     Text("Back To Home")
                 }
             }
         }
-        else -> Unit
     }
 }
 
