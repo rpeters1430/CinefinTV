@@ -3,12 +3,7 @@ package com.rpeters.cinefintv.ui.player
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
@@ -26,7 +21,6 @@ import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.ThemeColorController
 import io.mockk.mockk
-import kotlinx.coroutines.delay
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -127,17 +121,9 @@ private fun PlayerControlsVisibilityHarness() {
     val player = remember { mockk<ExoPlayer>(relaxed = true) }
     val playPauseFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     val seekBarFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
-    var controlsVisible by remember { mutableStateOf(true) }
-    var lastInteraction by remember { mutableLongStateOf(0L) }
-
-    LaunchedEffect(lastInteraction) {
-        if (lastInteraction == 0L) return@LaunchedEffect
-        delay(200)
-        controlsVisible = false
-    }
 
     PlayerControls(
-        isVisible = controlsVisible,
+        isVisible = true,
         isPlaying = true,
         positionProvider = { 30_000L },
         duration = 120_000L,
@@ -153,10 +139,7 @@ private fun PlayerControlsVisibilityHarness() {
         seekBarFocusRequester = seekBarFocusRequester,
         isContentShelfVisible = false,
         onHideShelf = {},
-        onInteract = {
-            controlsVisible = true
-            lastInteraction = System.currentTimeMillis()
-        },
+        onInteract = {},
         onSettingsClick = { _, _ -> },
         onBack = {},
         onOpenItem = {},

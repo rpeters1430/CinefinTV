@@ -126,8 +126,8 @@ class DetailFocusUiTest {
     fun movieDetail_rendersCastAndSimilarSections() {
         composeRule.setContent {
             val primaryActionFocusRequester = remember { FocusRequester() }
-            // Start near the first post-hero section so People, Overview, and Similar remain composed.
-            val listState = remember { LazyListState(firstVisibleItemIndex = 1) }
+            // Start near the cast shelf so both cast and similar sections are laid out.
+            val listState = remember { LazyListState(firstVisibleItemIndex = 2) }
 
             DetailTestHost {
                 MovieDetailLayout(

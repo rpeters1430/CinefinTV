@@ -4,6 +4,8 @@ import android.graphics.Color as AndroidColor
 import android.graphics.Typeface
 import android.util.TypedValue
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -72,6 +74,7 @@ import com.rpeters.cinefintv.data.preferences.SubtitleBackground
 import com.rpeters.cinefintv.data.preferences.SubtitleFont
 import com.rpeters.cinefintv.data.preferences.SubtitleTextColor
 import com.rpeters.cinefintv.ui.player.PlayerConstants.CONTROLS_HIDE_DELAY_MS
+import com.rpeters.cinefintv.ui.player.PlayerConstants.EXIT_TRANSITION_DURATION_MS
 import com.rpeters.cinefintv.ui.player.PlayerConstants.NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS
 import com.rpeters.cinefintv.ui.player.PlayerConstants.PROGRESS_UPDATE_INTERVAL_MS
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
@@ -241,6 +244,7 @@ fun PlayerScreen(
                 }
             } else {
                 val exoPlayer = player ?: return
+                var isClosing by remember(uiState.itemId) { mutableStateOf(false) }
                 var renderState by remember(exoPlayer) {
                     mutableStateOf(
                         PlayerRenderState(
@@ -280,6 +284,26 @@ fun PlayerScreen(
                 val positionProvider = { exoPlayer.currentPosition.coerceAtLeast(0L) }
 
                 val coroutineScope = rememberCoroutineScope()
+                val requestClose = {
+                    if (isClosing) {
+                        Unit
+                    } else {
+                        isClosing = true
+                        exoPlayer.pause()
+                        viewModel.savePlaybackPosition(
+                            positionMs = exoPlayer.currentPosition,
+                            durationMs = exoPlayer.duration.coerceAtLeast(0L),
+                            isPaused = true,
+                        )
+                    }
+                }
+
+                LaunchedEffect(isClosing) {
+                    if (isClosing) {
+                        delay(EXIT_TRANSITION_DURATION_MS)
+                        onBack()
+                    }
+                }
 
                 PlayerLifecycleManager(
                     player = exoPlayer,
@@ -291,32 +315,40 @@ fun PlayerScreen(
                             if (nextId.isNotBlank()) {
                                 onOpenItem(nextId)
                             } else {
-                                onBack()
+                                requestClose()
                             }
                         }
                     }
                 )
 
-                PlayerPlaybackContent(
-                    exoPlayer = exoPlayer,
-                    uiState = uiState,
-                    renderState = renderState,
-                    positionProvider = positionProvider,
-                    onBack = onBack,
-                    onOpenItem = onOpenItem,
-                    onResumePlayback = { resume -> viewModel.onResumePlayback(resume) },
-                    onAudioTrackSelected = {
-                        viewModel.selectAudioTrack(it, positionProvider(), renderState.isPlaying)
-                    },
-                    onSubtitleTrackSelected = {
-                        viewModel.selectSubtitleTrack(it, positionProvider(), renderState.isPlaying)
-                    },
-                    onQualitySelected = {
-                        viewModel.setTranscodingQuality(it, positionProvider(), renderState.isPlaying)
-                    },
-                    onPlaybackSpeedSelected = { viewModel.setPlaybackSpeed(it) },
-                    onAutoPlayChange = { viewModel.setAutoPlayNextEpisode(it) },
-                )
+                Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+                    AnimatedVisibility(
+                        visible = !isClosing,
+                        enter = fadeIn(),
+                        exit = fadeOut(animationSpec = tween(durationMillis = EXIT_TRANSITION_DURATION_MS.toInt())),
+                    ) {
+                        PlayerPlaybackContent(
+                            exoPlayer = exoPlayer,
+                            uiState = uiState,
+                            renderState = renderState,
+                            positionProvider = positionProvider,
+                            onBack = requestClose,
+                            onOpenItem = onOpenItem,
+                            onResumePlayback = { resume -> viewModel.onResumePlayback(resume) },
+                            onAudioTrackSelected = {
+                                viewModel.selectAudioTrack(it, positionProvider(), renderState.isPlaying)
+                            },
+                            onSubtitleTrackSelected = {
+                                viewModel.selectSubtitleTrack(it, positionProvider(), renderState.isPlaying)
+                            },
+                            onQualitySelected = {
+                                viewModel.setTranscodingQuality(it, positionProvider(), renderState.isPlaying)
+                            },
+                            onPlaybackSpeedSelected = { viewModel.setPlaybackSpeed(it) },
+                            onAutoPlayChange = { viewModel.setAutoPlayNextEpisode(it) },
+                        )
+                    }
+                }
             }
         }
     }
@@ -375,6 +407,25 @@ internal fun PlayerPlaybackContent(
         lastInteraction = System.currentTimeMillis()
     }
 
+    val handleBack = {
+        when {
+            isTrackPanelVisible -> {
+                isTrackPanelVisible = false
+            }
+            isContentShelfVisible -> {
+                isContentShelfVisible = false
+                onInteract()
+            }
+            controlsVisible -> {
+                onInteract()
+                controlsVisible = false
+            }
+            else -> onBack()
+        }
+    }
+
+    BackHandler(onBack = handleBack)
+
     LaunchedEffect(controlsVisible, isTrackPanelVisible) {
         if (controlsVisible && !isTrackPanelVisible) {
             seekBarFocusRequester.requestFocus()
@@ -424,23 +475,8 @@ internal fun PlayerPlaybackContent(
                 if (keyEvent.type == KeyEventType.KeyDown) {
                     when (keyEvent.key) {
                         Key.Back, Key.Escape -> {
-                            when {
-                                isTrackPanelVisible -> {
-                                    isTrackPanelVisible = false
-                                    true
-                                }
-                                isContentShelfVisible -> {
-                                    isContentShelfVisible = false
-                                    onInteract()
-                                    true
-                                }
-                                controlsVisible -> {
-                                    onInteract()
-                                    controlsVisible = false
-                                    true
-                                }
-                                else -> false
-                            }
+                            handleBack()
+                            true
                         }
                         Key.DirectionCenter, Key.Enter, Key.Spacebar -> {
                             if (!controlsVisible && overlayActionFocused) {

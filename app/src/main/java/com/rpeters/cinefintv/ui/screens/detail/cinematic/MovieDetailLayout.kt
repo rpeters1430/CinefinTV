@@ -184,13 +184,19 @@ fun MovieDetailLayout(
                                             when {
                                                 nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
                                                     nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                                                    runCatching { overviewFocusRequester.requestFocus() }
+                                                    coroutineScope.launch {
+                                                        listState.scrollToItemAndAwaitLayout(1)
+                                                        runCatching { overviewFocusRequester.requestFocus() }
+                                                    }
                                                     true
                                                 }
                                                 similarItems.isNotEmpty() &&
                                                     nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
                                                     nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                                    runCatching { firstSimilarFocusRequester.requestFocus() }
+                                                    coroutineScope.launch {
+                                                        listState.scrollToItemAndAwaitLayout(3)
+                                                        runCatching { firstSimilarFocusRequester.requestFocus() }
+                                                    }
                                                     true
                                                 }
                                                 else -> false
@@ -240,9 +246,14 @@ fun MovieDetailLayout(
                                                 nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
                                                 nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
                                             ) {
-                                                runCatching {
-                                                    if (castItems.isNotEmpty()) firstCastFocusRequester.requestFocus()
-                                                    else overviewFocusRequester.requestFocus()
+                                                coroutineScope.launch {
+                                                    if (castItems.isNotEmpty()) {
+                                                        listState.scrollToItemAndAwaitLayout(2)
+                                                        runCatching { firstCastFocusRequester.requestFocus() }
+                                                    } else {
+                                                        listState.scrollToItemAndAwaitLayout(1)
+                                                        runCatching { overviewFocusRequester.requestFocus() }
+                                                    }
                                                 }
                                                 true
                                             } else {

@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -70,6 +71,7 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -174,8 +176,7 @@ fun TvShowDetailLayout(
                                 index == heroSecondaryActions.size -> action.copy(
                                 onClick = {
                                     coroutineScope.launch {
-                                        listState.animateScrollToItem(1 + if (hasNextUp) 1 else 0)
-                                        androidx.compose.runtime.withFrameNanos { }
+                                        listState.scrollToItemAndAwaitLayout(1 + if (hasNextUp) 1 else 0)
                                         runCatching { firstSeasonFocusRequester.requestFocus() }
                                     }
                                 }
@@ -183,8 +184,7 @@ fun TvShowDetailLayout(
                             index >= heroSecondaryActions.size -> action.copy(
                                 onClick = {
                                     coroutineScope.launch {
-                                        listState.animateScrollToItem(overviewItemIndex)
-                                        androidx.compose.runtime.withFrameNanos { }
+                                        listState.scrollToItemAndAwaitLayout(overviewItemIndex)
                                         runCatching { overviewFocusRequester.requestFocus() }
                                     }
                                 }
@@ -197,8 +197,13 @@ fun TvShowDetailLayout(
                     onDownNavigation = {
                         if (listState.isScrollInProgress) return@FlatDetailHero
                         coroutineScope.launch {
-                            listState.animateScrollToItem(1)
-                            androidx.compose.runtime.withFrameNanos { }
+                            listState.scrollToItemAndAwaitLayout(
+                                when {
+                                    hasNextUp -> 1
+                                    seasons.isNotEmpty() -> 1
+                                    else -> overviewItemIndex
+                                }
+                            )
                             runCatching { firstContentFocusRequester.requestFocus() }
                         }
                     },
@@ -257,16 +262,24 @@ fun TvShowDetailLayout(
                                                 nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
                                                 nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
                                             ) {
-                                                runCatching {
-                                                    if (hasNextUp) nextUpFocusRequester.requestFocus()
-                                                    else primaryActionFocusRequester.requestFocus()
+                                                coroutineScope.launch {
+                                                    if (hasNextUp) {
+                                                        listState.scrollToItemAndAwaitLayout(1)
+                                                        runCatching { nextUpFocusRequester.requestFocus() }
+                                                    } else {
+                                                        listState.scrollToItemAndAwaitLayout(0)
+                                                        runCatching { primaryActionFocusRequester.requestFocus() }
+                                                    }
                                                 }
                                                 true
                                             } else if (
                                                 nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
                                                 nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
                                             ) {
-                                                runCatching { overviewFocusRequester.requestFocus() }
+                                                coroutineScope.launch {
+                                                    listState.scrollToItemAndAwaitLayout(overviewItemIndex)
+                                                    runCatching { overviewFocusRequester.requestFocus() }
+                                                }
                                                 true
                                             } else {
                                                 false
@@ -298,27 +311,22 @@ fun TvShowDetailLayout(
                     else -> primaryActionFocusRequester
                 },
                 onNavigateUp = {
-                    if (listState.isScrollInProgress) return@DetailOverviewSection
-                    coroutineScope.launch {
-                        when {
-                            seasons.isNotEmpty() -> {
-                                listState.scrollToItem(1 + if (hasNextUp) 1 else 0)
-                                androidx.compose.runtime.withFrameNanos { }
-                                androidx.compose.runtime.withFrameNanos { }
-                                runCatching { firstSeasonFocusRequester.requestFocus() }
+                        if (listState.isScrollInProgress) return@DetailOverviewSection
+                        coroutineScope.launch {
+                            when {
+                                seasons.isNotEmpty() -> {
+                                    listState.scrollToItemAndAwaitLayout(1 + if (hasNextUp) 1 else 0)
+                                    runCatching { firstSeasonFocusRequester.requestFocus() }
+                                }
+                                hasNextUp -> {
+                                    listState.scrollToItemAndAwaitLayout(1)
+                                    runCatching { nextUpFocusRequester.requestFocus() }
+                                }
+                                else -> {
+                                    listState.scrollToItemAndAwaitLayout(0)
+                                    runCatching { primaryActionFocusRequester.requestFocus() }
+                                }
                             }
-                            hasNextUp -> {
-                                listState.scrollToItem(1)
-                                androidx.compose.runtime.withFrameNanos { }
-                                runCatching { nextUpFocusRequester.requestFocus() }
-                            }
-                            else -> {
-                                listState.scrollToItem(0)
-                                androidx.compose.runtime.withFrameNanos { }
-                                androidx.compose.runtime.withFrameNanos { }
-                                runCatching { primaryActionFocusRequester.requestFocus() }
-                            }
-                        }
                     }
                 },
                 onNavigateDown = if (castItems.isNotEmpty() || similarItems.isNotEmpty()) {
@@ -327,13 +335,11 @@ fun TvShowDetailLayout(
                         coroutineScope.launch {
                             when {
                                 castItems.isNotEmpty() -> {
-                                    listState.scrollToItem(overviewItemIndex + 1)
-                                    androidx.compose.runtime.withFrameNanos { }
+                                    listState.scrollToItemAndAwaitLayout(overviewItemIndex + 1)
                                     runCatching { firstCastFocusRequester.requestFocus() }
                                 }
                                 similarItems.isNotEmpty() -> {
-                                    listState.scrollToItem(overviewItemIndex + 1)
-                                    androidx.compose.runtime.withFrameNanos { }
+                                    listState.scrollToItemAndAwaitLayout(overviewItemIndex + 1)
                                     runCatching { firstSimilarFocusRequester.requestFocus() }
                                 }
                             }
@@ -377,13 +383,19 @@ fun TvShowDetailLayout(
                                             when {
                                                 nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
                                                     nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                                                    runCatching { overviewFocusRequester.requestFocus() }
+                                                    coroutineScope.launch {
+                                                        listState.scrollToItemAndAwaitLayout(overviewItemIndex)
+                                                        runCatching { overviewFocusRequester.requestFocus() }
+                                                    }
                                                     true
                                                 }
                                                 similarItems.isNotEmpty() &&
                                                     nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
                                                     nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                                    runCatching { firstSimilarFocusRequester.requestFocus() }
+                                                    coroutineScope.launch {
+                                                        listState.scrollToItemAndAwaitLayout(overviewItemIndex + 2)
+                                                        runCatching { firstSimilarFocusRequester.requestFocus() }
+                                                    }
                                                     true
                                                 }
                                                 else -> false
@@ -433,9 +445,14 @@ fun TvShowDetailLayout(
                                                 nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
                                                 nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
                                             ) {
-                                                runCatching {
-                                                    if (castItems.isNotEmpty()) firstCastFocusRequester.requestFocus()
-                                                    else overviewFocusRequester.requestFocus()
+                                                coroutineScope.launch {
+                                                    if (castItems.isNotEmpty()) {
+                                                        listState.scrollToItemAndAwaitLayout(overviewItemIndex + 1)
+                                                        runCatching { firstCastFocusRequester.requestFocus() }
+                                                    } else {
+                                                        listState.scrollToItemAndAwaitLayout(overviewItemIndex)
+                                                        runCatching { overviewFocusRequester.requestFocus() }
+                                                    }
                                                 }
                                                 true
                                             } else {
@@ -455,6 +472,16 @@ fun TvShowDetailLayout(
         }
     }
 }
+
+private suspend fun LazyListState.scrollToItemAndAwaitLayout(index: Int) {
+    if (!isIndexVisible(index)) {
+        scrollToItem(index)
+        snapshotFlow { isIndexVisible(index) }.first { it }
+    }
+}
+
+private fun LazyListState.isIndexVisible(index: Int): Boolean =
+    layoutInfo.visibleItemsInfo.any { it.index == index }
 
 @Composable
 private fun NextUpPanel(

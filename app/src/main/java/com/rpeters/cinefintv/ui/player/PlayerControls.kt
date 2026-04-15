@@ -1129,6 +1129,7 @@ private fun SeekBarControl(
                     seekPosition = positionProvider()
                 }
             }
+            .focusable()
             .onPreviewKeyEvent { keyEvent ->
                 when {
                     keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.DirectionLeft -> {

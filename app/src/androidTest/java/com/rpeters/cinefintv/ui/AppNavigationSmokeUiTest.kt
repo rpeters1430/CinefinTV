@@ -7,8 +7,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
@@ -361,8 +364,13 @@ private fun AppNavigationSmokeHarness() {
     val backStack: NavBackStack<NavKey> = rememberNavBackStack(Home)
     val currentDestination = backStack.lastOrNull() as? NavDestination
     val chromeSpec = appChromeRouteSpec(currentDestination)
+    var restoreHomeFocusSignal by remember { mutableIntStateOf(0) }
 
     BackHandler(enabled = backStack.size > 1) {
+        val previousDestination = backStack.getOrNull(backStack.size - 2) as? NavDestination
+        if (currentDestination is Player && previousDestination is Home) {
+            restoreHomeFocusSignal += 1
+        }
         backStack.removeAt(backStack.size - 1)
     }
 
@@ -379,6 +387,12 @@ private fun AppNavigationSmokeHarness() {
             is Home -> {
                 val primaryContentRequester = remember { FocusRequester() }
                 val destinationFocus = rememberTopLevelDestinationFocus(primaryContentRequester)
+                LaunchedEffect(restoreHomeFocusSignal) {
+                    if (restoreHomeFocusSignal > 0) {
+                        kotlinx.coroutines.delay(200)
+                        primaryContentRequester.requestFocus()
+                    }
+                }
                 SmokeScreen("Home") {
                     Button(
                         onClick = {},

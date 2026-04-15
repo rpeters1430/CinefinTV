@@ -26,8 +26,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
@@ -312,6 +310,9 @@ internal fun CinefinAppScaffold(
     if (!showNav && focusedTabIndex != null) {
         focusedTabIndex = null
     }
+    if (!showNav && chromeFocusController.primaryContentFocusRequester != null) {
+        chromeFocusController.primaryContentFocusRequester = null
+    }
 
     CompositionLocalProvider(LocalAppChromeFocusController provides chromeFocusController) {
         // After a delete-and-back action the content area may be reloading, leaving focus stranded
@@ -324,14 +325,15 @@ internal fun CinefinAppScaffold(
                 val target = chromeFocusController.primaryContentFocusRequester
                 if (target != null) {
                     chromeFocusController.shouldRestoreFocusToContent = false
-                    
-                    // Give the screen a moment to fully attach and lay out its focus targets
-                    // before we attempt to snatch focus away from the nav rail.
-                    withFrameNanos { }
-                    withFrameNanos { }
-                    delay(150)
-                    
-                    runCatching { target.requestFocus() }
+
+                    // Focus often settles on the nav rail for a few frames after restoring
+                    // a top-level destination, so retry briefly instead of firing once.
+                    repeat(5) { attempt ->
+                        withFrameNanos { }
+                        withFrameNanos { }
+                        delay(if (attempt == 0) 120L else 60L)
+                        runCatching { target.requestFocus() }
+                    }
                 }
             }
         }
@@ -361,7 +363,7 @@ internal fun CinefinAppScaffold(
                         ),
                         tonalElevation = 4.dp,
                     ) {
-                        LazyColumn(
+                        Column(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .focusProperties {
@@ -373,37 +375,37 @@ internal fun CinefinAppScaffold(
                                 .testTag(AppTestTags.NavBar),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(10.dp),
-                            contentPadding = PaddingValues(vertical = 16.dp, horizontal = 10.dp),
                         ) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .size(logoSize)
-                                        .clip(RoundedCornerShape(999.dp))
-                                        .background(
-                                            Brush.radialGradient(
-                                                colors = listOf(
-                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.88f),
-                                                    expressiveColors.titleAccent.copy(alpha = 0.42f),
-                                                )
-                                            )
-                                        ),
-                                    contentAlignment = Alignment.Center,
+                            Box(modifier = Modifier.padding(vertical = 16.dp, horizontal = 10.dp)) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
                                 ) {
-                                    Text(
-                                        text = "C",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                    )
-                                }
-                            }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(logoSize)
+                                            .clip(RoundedCornerShape(999.dp))
+                                            .background(
+                                                Brush.radialGradient(
+                                                    colors = listOf(
+                                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.88f),
+                                                        expressiveColors.titleAccent.copy(alpha = 0.42f),
+                                                    )
+                                                )
+                                            ),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(
+                                            text = "C",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                        )
+                                    }
 
-                            item {
-                                Spacer(modifier = Modifier.height(6.dp))
-                            }
+                                    Spacer(modifier = Modifier.height(6.dp))
 
-                            itemsIndexed(navTabItems) { index, item ->
+                                    navTabItems.forEachIndexed { index, item ->
                                 var isFocused by remember { mutableStateOf(false) }
                                 val showLabel = navHasFocus || index == selectedTabIndex
                                 Button(
@@ -512,6 +514,8 @@ internal fun CinefinAppScaffold(
                                             )
                                         }
                                     }
+                                }
+                            }
                                 }
                             }
                         }
