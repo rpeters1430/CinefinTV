@@ -13,9 +13,12 @@ import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import com.rpeters.cinefintv.data.PlaybackPositionStore
 import com.rpeters.cinefintv.data.playback.AdaptiveBitrateMonitor
 import com.rpeters.cinefintv.data.playback.EnhancedPlaybackManager
@@ -27,6 +30,7 @@ import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferencesRepos
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
+import com.rpeters.cinefintv.utils.NetworkOptimizer
 import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
@@ -390,19 +394,46 @@ class PlayerViewModel @Inject constructor(
     fun setupPlayer(context: Context): ExoPlayer {
         _player?.let { return it }
 
+        // Use a dedicated OkHttpClient for ExoPlayer streaming to ensure proper timeouts and pooling.
+        val exoOkHttpClient = NetworkOptimizer.createExoPlayerOkHttpClient()
+
+        // 1. Optimized LoadControl for 4K and fast TTFF (Time To First Frame)
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                50_000, // minBufferMs
+                30_000,  // minBufferMs (reduced from 50s for faster start but safe enough)
                 120_000, // maxBufferMs (up to 2 minutes)
-                5_000,  // bufferForPlaybackMs (fast start)
-                10_000  // bufferForPlaybackAfterRebufferMs (harden against micro-stutter)
+                1_500,   // bufferForPlaybackMs (reduced from 5s to 1.5s for fast TTFF)
+                5_000    // bufferForPlaybackAfterRebufferMs (reduced from 10s to 5s)
             )
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .setBackBuffer(30_000, true) // Enable back-buffering for smoother seeking
             .build()
         
-        val factory = DefaultMediaSourceFactory(OkHttpDataSource.Factory(okHttpClient))
-        val newPlayer = ExoPlayer.Builder(context)
-            .setMediaSourceFactory(factory)
+        // 2. RenderersFactory with extension renderers enabled for maximum format support
+        val renderersFactory = DefaultRenderersFactory(context)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+            .setEnableAudioTrackPlaybackParams(true)
+            .setEnableDecoderFallback(true)
+
+        // 3. Custom MediaSourceFactory with robust retry logic
+        val errorHandlingPolicy = DefaultLoadErrorHandlingPolicy(3) // 3 retries for common network errors
+        val dataSourceFactory = OkHttpDataSource.Factory(exoOkHttpClient)
+        val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory)
+            .setLoadErrorHandlingPolicy(errorHandlingPolicy)
+
+        // 4. TrackSelector for better bitrate handling
+        val trackSelector = DefaultTrackSelector(context).apply {
+            setParameters(
+                buildUponParameters()
+                    .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                    .setAllowVideoNonSeamlessAdaptiveness(true)
+            )
+        }
+
+        val newPlayer = ExoPlayer.Builder(context, renderersFactory)
+            .setMediaSourceFactory(mediaSourceFactory)
             .setLoadControl(loadControl)
+            .setTrackSelector(trackSelector)
             .build()
             .apply {
                 val streamUrl = uiState.value.streamUrl

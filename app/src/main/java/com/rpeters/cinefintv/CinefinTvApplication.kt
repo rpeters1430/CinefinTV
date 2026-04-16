@@ -19,12 +19,22 @@ class CinefinTvApplication : Application() {
     @Inject
     lateinit var remoteConfigRepository: RemoteConfigRepository
 
+    @Inject
+    lateinit var authRepository: com.rpeters.cinefintv.data.repository.JellyfinAuthRepository
+
     override fun onCreate() {
         super.onCreate()
         
+        val scope = MainScope()
+
         // Initialize Remote Config
-        MainScope().launch {
+        scope.launch {
             remoteConfigRepository.fetchAndActivate()
+        }
+
+        // Eagerly restore session to speed up startup
+        scope.launch {
+            authRepository.tryRestoreSession()
         }
     }
 

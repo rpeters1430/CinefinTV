@@ -51,6 +51,11 @@ class JellyfinMediaRepository @Inject constructor(
     }
 
     suspend fun getUserLibraries(forceRefresh: Boolean = false): ApiResult<List<BaseItemDto>> {
+        if (!forceRefresh) {
+            val cached = cache.getCachedLibraries()
+            if (cached != null) return ApiResult.Success(cached)
+        }
+
         // ✅ FIX: Use withServerClient helper to ensure fresh server/client on token refresh
         return withServerClient("getUserLibraries") { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
@@ -58,9 +63,13 @@ class JellyfinMediaRepository @Inject constructor(
                 userId = userUuid,
                 includeItemTypes = listOf(BaseItemKind.COLLECTION_FOLDER),
             )
-            response.content.items
+            val items = response.content.items
+            cache.cacheLibraries(items)
+            items
         }
     }
+
+    suspend fun getCachedLibraries(): List<BaseItemDto>? = cache.getCachedLibraries()
 
     suspend fun getLibraryItems(
         parentId: String? = null,
@@ -347,6 +356,13 @@ class JellyfinMediaRepository @Inject constructor(
     }
 
     suspend fun getRecentlyAddedByType(itemType: BaseItemKind, limit: Int = 20, forceRefresh: Boolean = false): ApiResult<List<BaseItemDto>> {
+        if (!forceRefresh) {
+            val cached = if (itemType == BaseItemKind.MOVIE || itemType == BaseItemKind.EPISODE) {
+                cache.getCachedRecentlyAdded()
+            } else null
+            if (cached != null) return ApiResult.Success(cached)
+        }
+
         // ✅ FIX: Use withServerClient helper to ensure fresh server/client on token refresh
         return withServerClient("getRecentlyAddedByType") { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
@@ -358,9 +374,15 @@ class JellyfinMediaRepository @Inject constructor(
                 sortOrder = listOf(SortOrder.DESCENDING),
                 limit = limit,
             )
-            response.content.items
+            val items = response.content.items
+            if (itemType == BaseItemKind.MOVIE || itemType == BaseItemKind.EPISODE) {
+                cache.cacheRecentlyAdded(items)
+            }
+            items
         }
     }
+
+    suspend fun getCachedRecentlyAdded(): List<BaseItemDto>? = cache.getCachedRecentlyAdded()
 
     suspend fun getRecentlyAddedFromLibrary(
         libraryId: String,
@@ -427,6 +449,11 @@ class JellyfinMediaRepository @Inject constructor(
     }
 
     suspend fun getContinueWatching(limit: Int = 20, forceRefresh: Boolean = false): ApiResult<List<BaseItemDto>> {
+        if (!forceRefresh) {
+            val cached = cache.getCachedContinueWatching()
+            if (cached != null) return ApiResult.Success(cached)
+        }
+
         return withServerClient("getContinueWatching") { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
             val response = client.itemsApi.getItems(
@@ -442,9 +469,13 @@ class JellyfinMediaRepository @Inject constructor(
                 filters = listOf(ItemFilter.IS_RESUMABLE),
                 limit = limit,
             )
-            response.content.items
+            val items = response.content.items
+            cache.cacheContinueWatching(items)
+            items
         }
     }
+
+    suspend fun getCachedContinueWatching(): List<BaseItemDto>? = cache.getCachedContinueWatching()
 
     suspend fun getFavorites(): ApiResult<List<BaseItemDto>> {
         return withServerClient("getFavorites") { server, client ->
@@ -691,8 +722,13 @@ class JellyfinMediaRepository @Inject constructor(
             response.content.items.firstOrNull()
         }
 
-    suspend fun getNextUp(limit: Int = 12): ApiResult<List<BaseItemDto>> =
-        withServerClient("getNextUp") { server, client ->
+    suspend fun getNextUp(limit: Int = 12, forceRefresh: Boolean = false): ApiResult<List<BaseItemDto>> {
+        if (!forceRefresh) {
+            val cached = cache.getCachedNextUp()
+            if (cached != null) return ApiResult.Success(cached)
+        }
+
+        return withServerClient("getNextUp") { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
 
             val response = client.tvShowsApi.getNextUp(
@@ -702,8 +738,13 @@ class JellyfinMediaRepository @Inject constructor(
                 enableUserData = true,
             )
 
-            response.content.items
+            val items = response.content.items
+            cache.cacheNextUp(items)
+            items
         }
+    }
+
+    suspend fun getCachedNextUp(): List<BaseItemDto>? = cache.getCachedNextUp()
 
     suspend fun getNextEpisode(episodeId: String): ApiResult<BaseItemDto?> =
         withServerClient("getNextEpisode") { server, client ->

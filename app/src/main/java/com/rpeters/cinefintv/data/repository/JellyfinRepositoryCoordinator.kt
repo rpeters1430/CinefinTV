@@ -1,5 +1,6 @@
 package com.rpeters.cinefintv.data.repository
 
+import dagger.Lazy
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -11,8 +12,12 @@ import javax.inject.Singleton
 @Singleton
 class JellyfinRepositoryCoordinator @Inject constructor(
     val media: JellyfinMediaRepository,
-    val user: JellyfinUserRepository,
-    val search: JellyfinSearchRepository,
-    val stream: JellyfinStreamRepository,
+    private val lazyUser: Lazy<JellyfinUserRepository>,
+    private val lazySearch: Lazy<JellyfinSearchRepository>,
+    private val lazyStream: Lazy<JellyfinStreamRepository>,
     val auth: JellyfinAuthRepository,
-)
+) {
+    val user: JellyfinUserRepository get() = lazyUser.get()
+    val search: JellyfinSearchRepository get() = lazySearch.get()
+    val stream: JellyfinStreamRepository get() = lazyStream.get()
+}

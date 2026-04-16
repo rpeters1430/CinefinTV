@@ -38,6 +38,8 @@ class JellyfinCache @Inject constructor(
         private const val MAX_MEMORY_CACHE_SIZE = 50 // Maximum number of entries in memory cache
         private const val RECENTLY_ADDED_KEY = "recently_added"
         private const val LIBRARIES_KEY = "libraries"
+        private const val CONTINUE_WATCHING_KEY = "continue_watching"
+        private const val NEXT_UP_KEY = "next_up"
         private const val FAVORITES_KEY = "favorites"
     }
 
@@ -409,6 +411,22 @@ class JellyfinCache @Inject constructor(
 
     suspend fun getCachedRecentlyAdded(): List<BaseItemDto>? {
         return getCachedItems(RECENTLY_ADDED_KEY)
+    }
+
+    suspend fun cacheContinueWatching(items: List<BaseItemDto>) {
+        cacheItems(CONTINUE_WATCHING_KEY, items, ttlMs = 15 * 60 * 1000L) // 15 minutes
+    }
+
+    suspend fun getCachedContinueWatching(): List<BaseItemDto>? {
+        return getCachedItems(CONTINUE_WATCHING_KEY)
+    }
+
+    suspend fun cacheNextUp(items: List<BaseItemDto>) {
+        cacheItems(NEXT_UP_KEY, items, ttlMs = 15 * 60 * 1000L) // 15 minutes
+    }
+
+    suspend fun getCachedNextUp(): List<BaseItemDto>? {
+        return getCachedItems(NEXT_UP_KEY)
     }
 
     suspend fun cacheLibraries(items: List<BaseItemDto>) {

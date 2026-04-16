@@ -55,6 +55,15 @@ class JellyfinAuthRepository @Inject constructor(
     private val _isAuthenticating = MutableStateFlow(false)
     val isAuthenticating: StateFlow<Boolean> = _isAuthenticating.asStateFlow()
 
+    private val _isSessionRestored = MutableStateFlow<Boolean?>(null)
+    /**
+     * Flow representing the initial session restoration state.
+     * null = restoration in progress or not started
+     * true = session successfully restored
+     * false = no session found or restoration failed
+     */
+    val isSessionRestored: StateFlow<Boolean?> = _isSessionRestored.asStateFlow()
+
     companion object {
         private const val TAG = "JellyfinAuthRepository"
     }
@@ -221,16 +230,22 @@ class JellyfinAuthRepository @Inject constructor(
     }
 
     suspend fun tryRestoreSession(): Boolean {
+        _isSessionRestored.update { null } // Mark as in-progress
         return try {
-            val savedServer = secureCredentialManager.loadServerState() ?: return false
-            if (savedServer.accessToken.isNullOrBlank() || savedServer.url.isBlank()) return false
+            val savedServer = secureCredentialManager.loadServerState()
+            if (savedServer == null || savedServer.accessToken.isNullOrBlank() || savedServer.url.isBlank()) {
+                _isSessionRestored.update { false }
+                return false
+            }
             seedCurrentServer(savedServer)
             Log.d(TAG, "tryRestoreSession: Restored session for ${savedServer.url}")
+            _isSessionRestored.update { true }
             true
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "tryRestoreSession: failed to restore session", e)
+            _isSessionRestored.update { false }
             false
         }
     }

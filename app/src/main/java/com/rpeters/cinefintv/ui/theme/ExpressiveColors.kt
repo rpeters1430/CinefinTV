@@ -1,7 +1,5 @@
 package com.rpeters.cinefintv.ui.theme
 
-import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.Easing
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
@@ -46,22 +44,6 @@ data class CinefinExpressiveColors(
     val playerOverlayEnd: Color = PlayerOverlayEnd,
 )
 
-/**
- * Material Expressive Motion Tokens
- */
-@Immutable
-object CinefinMotion {
-    /**
-     * Standard M3 Easing with a slight overshoot for expressive feedback on TV.
-     */
-    val Overshoot: Easing = CubicBezierEasing(0.3f, 0.0f, 0.2f, 1.4f)
-    val Emphasized: Easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
-    
-    const val DurationShort = 150
-    const val DurationMedium = 350
-    const val DurationLong = 600
-}
-
 val LocalCinefinExpressiveColors = staticCompositionLocalOf {
     CinefinExpressiveColors(
         backgroundTop = BackgroundTop,
@@ -72,8 +54,8 @@ val LocalCinefinExpressiveColors = staticCompositionLocalOf {
         accentSurface = SurfaceAccent,
         chromeSurface = SurfaceDark,
         borderSubtle = BorderSubtle,
-        focusRing = CinefinRed,
-        focusGlow = CinefinRed.copy(alpha = 0.28f),
+        focusRing = Color.White,
+        focusGlow = Color.White.copy(alpha = 0.12f),
         pillMuted = ProgressGray,
         pillStrong = CinefinRed.copy(alpha = 0.7f),
         titleAccent = CinefinGold,
@@ -87,5 +69,3 @@ val LocalCinefinExpressiveColors = staticCompositionLocalOf {
         watchedGreen = WatchedIndicator,
     )
 }
-
-val LocalCinefinMotion = staticCompositionLocalOf { CinefinMotion }

@@ -1,13 +1,13 @@
 package com.rpeters.cinefintv.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,9 +23,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
@@ -41,8 +43,6 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.StandardCardContainer
-import androidx.tv.material3.Surface
-import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -53,7 +53,6 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
 import com.rpeters.cinefintv.utils.LocalPerformanceProfile
-import com.rpeters.cinefintv.utils.coerceAlpha
 
 enum class WatchStatus { NONE, WATCHED, IN_PROGRESS }
 
@@ -82,22 +81,38 @@ fun TvMediaCard(
     var isFocused by remember { mutableStateOf(false) }
     var menuHandledForCurrentPress by remember { mutableStateOf(false) }
 
+    val focusedScaleValue = remember(aspectRatio, cardWidth, compactMetadata) {
+        if (compactMetadata) 1.0f
+        else if (aspectRatio > 1f || (cardWidth != null && cardWidth > 200.dp)) 1.035f
+        else 1.06f
+    }
+
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isFocused) focusedScaleValue else 1f,
+        animationSpec = tween(
+            durationMillis = CinefinMotion.DurationMedium,
+            easing = CinefinMotion.PremiumOvershoot
+        ),
+        label = "MediaCardScale"
+    )
+
     val titleColor by animateColorAsState(
         targetValue = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface,
-        animationSpec = tween(durationMillis = CinefinMotion.DurationShort),
+        animationSpec = tween(
+            durationMillis = CinefinMotion.DurationShort,
+            easing = CinefinMotion.Standard
+        ),
         label = "MediaCardTitleColor",
     )
     val subtitleColor by animateColorAsState(
         targetValue = if (isFocused) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(durationMillis = CinefinMotion.DurationShort),
+        animationSpec = tween(
+            durationMillis = CinefinMotion.DurationShort,
+            easing = CinefinMotion.Standard
+        ),
         label = "MediaCardSubtitleColor",
     )
 
-    val focusedScale = remember(aspectRatio, cardWidth, compactMetadata) {
-        if (compactMetadata) 1.0f
-        else if (aspectRatio > 1f || (cardWidth != null && cardWidth > 200.dp)) 1.03f
-        else 1.05f
-    }
     val imageRequest = remember(imageUrl, performanceProfile.tier, aspectRatio, context) {
         imageUrl?.let {
             ImageRequest.Builder(context)
@@ -120,6 +135,10 @@ fun TvMediaCard(
                 modifier = modifier
                     .fillMaxWidth()
                     .aspectRatio(aspectRatio)
+                    .graphicsLayer {
+                        scaleX = animatedScale
+                        scaleY = animatedScale
+                    }
                     .onPreviewKeyEvent { keyEvent ->
                         val nativeEvent = keyEvent.nativeKeyEvent
                         when {
@@ -144,9 +163,7 @@ fun TvMediaCard(
                             if (focused) onFocus()
                         }
                     },
-                scale = CardDefaults.scale(
-                    focusedScale = focusedScale
-                ),
+                scale = CardDefaults.scale(focusedScale = 1f), // Handled by graphicsLayer
                 border = CardDefaults.border(
                     focusedBorder = Border(
                         border = androidx.compose.foundation.BorderStroke(
@@ -185,15 +202,17 @@ fun TvMediaCard(
                         }
                     }
 
+                    // Bottom-heavy scrim for card title/badge legibility
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
                                 Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.Transparent,
-                                        expressiveColors.playerOverlayStart.copy(alpha = 0.04f),
-                                        expressiveColors.playerOverlayEnd.copy(alpha = 0.18f),
+                                    colorStops = arrayOf(
+                                        0.0f to Color.Transparent,
+                                        0.6f to Color.Black.copy(alpha = 0.08f),
+                                        0.85f to Color.Black.copy(alpha = 0.28f),
+                                        1.0f to Color.Black.copy(alpha = 0.55f),
                                     ),
                                 ),
                             ),
@@ -286,6 +305,13 @@ fun TvMediaCard(
     )
 }
 
+private fun shouldOpenCardMenu(event: android.view.KeyEvent): Boolean {
+    return event.keyCode == android.view.KeyEvent.KEYCODE_MENU || 
+           event.keyCode == android.view.KeyEvent.KEYCODE_INFO ||
+           (event.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.isLongPress) ||
+           (event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER && event.isLongPress)
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifier) {
@@ -306,7 +332,7 @@ private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifie
                     Text(
                         text = "✓",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        color = Color.White,
                     )
                 }
             }
@@ -342,7 +368,7 @@ private fun UnwatchedCountOverlay(count: Int, modifier: Modifier = Modifier) {
             modifier = Modifier
                 .size(28.dp)
                 .background(
-                    color = expressiveBadgeColor(),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f),
                     shape = RoundedCornerShape(999.dp),
                 ),
             contentAlignment = Alignment.Center,
@@ -358,6 +384,3 @@ private fun UnwatchedCountOverlay(count: Int, modifier: Modifier = Modifier) {
         }
     }
 }
-
-@Composable
-private fun expressiveBadgeColor(): Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f)

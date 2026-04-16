@@ -117,35 +117,38 @@ fun MetaFactItem(
     style: MetaFactStyle = MetaFactStyle.Card,
     modifier: Modifier = Modifier,
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    val spacing = LocalCinefinSpacing.current
+
     when (style) {
         MetaFactStyle.Card -> {
             Column(
                 modifier = modifier
                     .border(
                         width = 1.dp,
-                        color = LocalCinefinExpressiveColors.current.borderSubtle.copy(alpha = 0.7f),
-                        shape = RoundedCornerShape(18.dp),
+                        color = expressiveColors.borderSubtle.copy(alpha = 0.7f),
+                        shape = RoundedCornerShape(spacing.cornerCard),
                     )
                     .background(
-                        color = LocalCinefinExpressiveColors.current.detailPanelMuted,
-                        shape = RoundedCornerShape(18.dp),
+                        color = expressiveColors.detailPanelMuted,
+                        shape = RoundedCornerShape(spacing.cornerCard),
                     )
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(14.dp),
+                        modifier = Modifier.size(18.dp),
                     )
                     Text(
                         text = label.uppercase(),
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         maxLines = 1,
                     )
@@ -163,18 +166,18 @@ fun MetaFactItem(
             Row(
                 modifier = modifier
                     .background(
-                        color = LocalCinefinExpressiveColors.current.detailBadge,
-                        shape = RoundedCornerShape(20.dp),
+                        color = expressiveColors.detailBadge,
+                        shape = RoundedCornerShape(spacing.cornerCard),
                     )
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(20.dp),
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
@@ -410,7 +413,7 @@ private fun DetailMetaItemView(
         modifier = modifier
             .background(
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.22f),
-                shape = RoundedCornerShape(999.dp),
+                shape = RoundedCornerShape(LocalCinefinSpacing.current.cornerPill),
             )
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,

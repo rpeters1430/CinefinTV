@@ -12,6 +12,7 @@ import com.rpeters.cinefintv.utils.getItemTypeString
 import com.rpeters.cinefintv.utils.getMediaQualityLabel
 import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.isEpisode
+import com.rpeters.cinefintv.utils.isMovie
 import com.rpeters.cinefintv.utils.isSeries
 import com.rpeters.cinefintv.utils.toMediaCardPresentation
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -84,8 +85,98 @@ class HomeViewModel @Inject constructor(
     private val refreshMutex = Mutex()
 
     init {
-        refresh()
+        loadCachedData()
+        refresh(silent = true)
         observeUpdateEvents()
+    }
+
+    private fun loadCachedData() {
+        viewModelScope.launch {
+            val cachedLibraries = repositories.media.getCachedLibraries()
+            val cachedContinueWatching = repositories.media.getCachedContinueWatching()
+            val cachedNextUp = repositories.media.getCachedNextUp()
+            val cachedRecentlyAdded = repositories.media.getCachedRecentlyAdded()
+
+            if (cachedLibraries != null || cachedContinueWatching != null || cachedNextUp != null || cachedRecentlyAdded != null) {
+                val sections = buildList {
+                    cachedLibraries?.let { libs ->
+                        val filteredLibraries = libs.filter {
+                            it.collectionType?.toString() != "playlists" && it.name?.contains("Playlists", ignoreCase = true) != true
+                        }
+                        if (filteredLibraries.isNotEmpty()) {
+                            add(
+                                HomeSectionModel(
+                                    id = HomeSectionId.LIBRARIES,
+                                    title = HomeSectionId.LIBRARIES.displayTitle,
+                                    items = filteredLibraries.take(12).map(::toCardModel),
+                                )
+                            )
+                        }
+                    }
+
+                    cachedContinueWatching?.let { items ->
+                        val continueWatchingItems = items
+                            .filter { it.canResume() == true }
+                            .take(12)
+                            .map(::toCardModel)
+                        if (continueWatchingItems.isNotEmpty()) {
+                            add(
+                                HomeSectionModel(
+                                    id = HomeSectionId.CONTINUE_WATCHING,
+                                    title = HomeSectionId.CONTINUE_WATCHING.displayTitle,
+                                    items = continueWatchingItems,
+                                )
+                            )
+                        }
+                    }
+
+                    cachedNextUp?.let { items ->
+                        val nextUpItems = buildNextEpisodeSectionItems(ApiResult.Success(items))
+                        if (nextUpItems.isNotEmpty()) {
+                            add(
+                                HomeSectionModel(
+                                    id = HomeSectionId.NEXT_EPISODES,
+                                    title = HomeSectionId.NEXT_EPISODES.displayTitle,
+                                    items = nextUpItems,
+                                )
+                            )
+                        }
+                    }
+
+                    // For simplicity, we just use the first available recently added cache for both movies and episodes if applicable
+                    cachedRecentlyAdded?.let { items ->
+                        val movieItems = items.filter { it.isMovie() }.take(12).map(::toCardModel)
+                        if (movieItems.isNotEmpty()) {
+                            add(
+                                HomeSectionModel(
+                                    id = HomeSectionId.RECENT_MOVIES,
+                                    title = HomeSectionId.RECENT_MOVIES.displayTitle,
+                                    items = movieItems,
+                                )
+                            )
+                        }
+
+                        val episodeItems = items.filter { it.isEpisode() }.take(12).map(::toCardModel)
+                        if (episodeItems.isNotEmpty()) {
+                            add(
+                                HomeSectionModel(
+                                    id = HomeSectionId.RECENT_EPISODES,
+                                    title = HomeSectionId.RECENT_EPISODES.displayTitle,
+                                    items = episodeItems,
+                                )
+                            )
+                        }
+                    }
+                }
+
+                if (sections.isNotEmpty()) {
+                    _uiState.value = HomeUiState.Content(
+                        featuredItems = emptyList(), // Featured usually requires fresh context
+                        sections = sections
+                    )
+                }
+            }
+        }
     }
 
     private fun observeUpdateEvents() {

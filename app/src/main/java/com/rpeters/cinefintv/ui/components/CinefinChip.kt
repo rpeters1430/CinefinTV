@@ -67,7 +67,7 @@ fun CinefinChip(
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(999.dp))
+            .clip(RoundedCornerShape(LocalCinefinSpacing.current.cornerPill))
             .background(backgroundBrush)
             .border(
                 border = androidx.compose.foundation.BorderStroke(
@@ -78,9 +78,9 @@ fun CinefinChip(
                         expressiveColors.borderSubtle.copy(alpha = 0.3f)
                     }
                 ),
-                shape = RoundedCornerShape(999.dp),
+                shape = RoundedCornerShape(LocalCinefinSpacing.current.cornerPill),
             )
-            .padding(horizontal = 14.dp, vertical = 7.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -89,16 +89,16 @@ fun CinefinChip(
                     imageVector = icon,
                     contentDescription = null,
                     tint = contentColor,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(8.dp))
             }
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 13.sp,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.25.sp,
+                    letterSpacing = 0.3.sp,
                 ),
                 color = contentColor,
                 maxLines = 1,

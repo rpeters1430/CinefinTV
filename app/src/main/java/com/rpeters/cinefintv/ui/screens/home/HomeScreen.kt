@@ -39,9 +39,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
@@ -532,11 +534,13 @@ private fun FeaturedCarousel(
 ) {
     val carouselState = rememberCarouselState()
     val performanceProfile = LocalPerformanceProfile.current
+    var isFocused by remember { mutableStateOf(false) }
 
     Carousel(
         itemCount = items.size,
         carouselState = carouselState,
         autoScrollDurationMillis = when {
+            isFocused -> Long.MAX_VALUE
             items.size <= 1 -> Long.MAX_VALUE
             performanceProfile.tier == DevicePerformanceProfile.Tier.LOW -> 25000L
             else -> 15000L
@@ -545,8 +549,9 @@ private fun FeaturedCarousel(
             .testTag(HomeTestTags.FeaturedCarousel)
             .fillMaxWidth()
             .height(344.dp)
+            .onFocusChanged { isFocused = it.hasFocus }
             .focusGroup()
-            .onPreviewKeyEvent { keyEvent ->
+            .onKeyEvent { keyEvent ->
                 val nativeEvent = keyEvent.nativeKeyEvent
                 if (
                     onNavigateDown != null &&
@@ -589,6 +594,27 @@ private fun HeroItem(
     val performanceProfile = LocalPerformanceProfile.current
     val spacing = LocalCinefinSpacing.current
     val detailsButtonRequester = remember { FocusRequester() }
+    var playButtonFocused by remember { mutableStateOf(false) }
+    var detailsButtonFocused by remember { mutableStateOf(false) }
+
+    val playButtonScale by animateFloatAsState(
+        targetValue = if (playButtonFocused) 1.08f else 1f,
+        animationSpec = tween(
+            durationMillis = CinefinMotion.DurationMedium,
+            easing = CinefinMotion.PremiumOvershoot
+        ),
+        label = "HeroPlayButtonScale"
+    )
+
+    val detailsButtonScale by animateFloatAsState(
+        targetValue = if (detailsButtonFocused) 1.08f else 1f,
+        animationSpec = tween(
+            durationMillis = CinefinMotion.DurationMedium,
+            easing = CinefinMotion.PremiumOvershoot
+        ),
+        label = "HeroDetailsButtonScale"
+    )
+
     val heroImageUrl = item.backdropUrl ?: item.imageUrl
     val heroImageRequest = remember(heroImageUrl, performanceProfile.tier, context) {
         ImageRequest.Builder(context)
@@ -618,19 +644,23 @@ private fun HeroItem(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         )
+        // Multi-step horizontal scrim for content readability (left-to-right)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.horizontalGradient(
                         colorStops = arrayOf(
-                            0.0f to Color.Black.copy(alpha = 0.85f),
-                            0.35f to Color.Black.copy(alpha = 0.45f),
-                            0.65f to Color.Transparent,
+                            0.0f to Color.Black.copy(alpha = 0.88f),
+                            0.15f to Color.Black.copy(alpha = 0.82f),
+                            0.35f to Color.Black.copy(alpha = 0.55f),
+                            0.50f to Color.Black.copy(alpha = 0.25f),
+                            0.70f to Color.Transparent,
                         ),
                     ),
                 ),
         )
+        // Multi-step vertical scrim for bottom-heavy text readability
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -638,8 +668,9 @@ private fun HeroItem(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
                             0.0f to Color.Transparent,
-                            0.65f to Color.Black.copy(alpha = 0.35f),
-                            1.0f to Color.Black.copy(alpha = 0.85f),
+                            0.50f to Color.Black.copy(alpha = 0.15f),
+                            0.75f to Color.Black.copy(alpha = 0.65f),
+                            1.0f to Color.Black.copy(alpha = 0.92f),
                         ),
                     ),
                 ),
@@ -703,12 +734,17 @@ private fun HeroItem(
                     modifier = Modifier
                         .blockBringIntoView()
                         .focusRequester(primaryActionFocusRequester)
+                        .onFocusChanged { playButtonFocused = it.isFocused }
+                        .graphicsLayer {
+                            scaleX = playButtonScale
+                            scaleY = playButtonScale
+                        }
                         .then(destinationFocus.primaryContentModifier(
                             down = downRequester,
                             right = detailsButtonRequester,
                         ))
                         .testTag(HomeTestTags.FeaturedPlayButton),
-                    scale = ButtonDefaults.scale(focusedScale = 1.06f),
+                    scale = ButtonDefaults.scale(focusedScale = 1f),
                 ) {
                     Text("Play", style = MaterialTheme.typography.titleMedium)
                 }
@@ -717,12 +753,17 @@ private fun HeroItem(
                     modifier = Modifier
                         .blockBringIntoView()
                         .focusRequester(detailsButtonRequester)
+                        .onFocusChanged { detailsButtonFocused = it.isFocused }
+                        .graphicsLayer {
+                            scaleX = detailsButtonScale
+                            scaleY = detailsButtonScale
+                        }
                         .then(destinationFocus.drawerEscapeModifier(
                             down = downRequester,
                             left = primaryActionFocusRequester,
                         ))
                         .testTag(HomeTestTags.FeaturedDetailsButton),
-                    scale = ButtonDefaults.scale(focusedScale = 1.06f),
+                    scale = ButtonDefaults.scale(focusedScale = 1f),
                 ) {
                     Text("Details", style = MaterialTheme.typography.titleMedium)
                 }
@@ -756,17 +797,11 @@ private fun HomeSection(
 
     Column(
         modifier = modifier.testTag(HomeTestTags.section(sectionIndex)),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontSize = 24.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = (-0.01).em,
-            ),
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(start = spacing.gutter, end = spacing.gutter),
+        CinefinShelfTitle(
+            title = title,
+            modifier = Modifier.padding(start = spacing.gutter, end = spacing.gutter)
         )
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(rowSpacing),
@@ -813,7 +848,7 @@ private fun HomeSection(
                         )
                         .then(if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
                         .then(focusModifier)
-                        .onPreviewKeyEvent { keyEvent ->
+                        .onKeyEvent { keyEvent ->
                             val nativeEvent = keyEvent.nativeKeyEvent
                             when {
                                 onNavigateDown != null &&

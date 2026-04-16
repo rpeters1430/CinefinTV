@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -57,14 +59,29 @@ fun TvPersonCard(
     val expressiveColors = LocalCinefinExpressiveColors.current
     var isFocused by remember { mutableStateOf(false) }
 
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isFocused) 1.05f else 1f,
+        animationSpec = tween(
+            durationMillis = CinefinMotion.DurationMedium,
+            easing = CinefinMotion.PremiumOvershoot
+        ),
+        label = "PersonCardScale"
+    )
+
     val nameColor by animateColorAsState(
         targetValue = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface,
-        animationSpec = tween(durationMillis = CinefinMotion.DurationShort),
+        animationSpec = tween(
+            durationMillis = CinefinMotion.DurationShort,
+            easing = CinefinMotion.Standard
+        ),
         label = "PersonCardNameColor",
     )
     val roleColor by animateColorAsState(
         targetValue = if (isFocused) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(durationMillis = CinefinMotion.DurationShort),
+        animationSpec = tween(
+            durationMillis = CinefinMotion.DurationShort,
+            easing = CinefinMotion.Standard
+        ),
         label = "PersonCardRoleColor",
     )
 
@@ -75,6 +92,10 @@ fun TvPersonCard(
                 onClick = onClick,
                 modifier = modifier
                     .size(154.dp)
+                    .graphicsLayer {
+                        scaleX = animatedScale
+                        scaleY = animatedScale
+                    }
                     .onFocusChanged {
                         val focused = it.isFocused || it.hasFocus
                         if (focused != isFocused) {
@@ -82,7 +103,7 @@ fun TvPersonCard(
                             if (focused) onFocus()
                         }
                     },
-                scale = CardDefaults.scale(focusedScale = 1.04f),
+                scale = CardDefaults.scale(focusedScale = 1f),
                 glow = CardDefaults.glow(
                     focusedGlow = Glow(
                         elevation = 8.dp,

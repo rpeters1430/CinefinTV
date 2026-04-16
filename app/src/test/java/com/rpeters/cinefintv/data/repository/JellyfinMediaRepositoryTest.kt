@@ -12,13 +12,10 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
-import org.jellyfin.sdk.api.client.ApiClient
-import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.model.api.BaseItemDto
-import org.jellyfin.sdk.model.api.BaseItemKind
-import org.jellyfin.sdk.model.api.BaseItemDtoQueryResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.util.UUID
@@ -29,24 +26,41 @@ class JellyfinMediaRepositoryTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private val authRepository: JellyfinAuthRepository = mockk(relaxed = true)
-    private val sessionManager: JellyfinSessionManager = mockk()
-    private val cache: JellyfinCache = mockk(relaxed = true)
-    private val healthChecker: LibraryHealthChecker = mockk(relaxed = true)
-    private val apiClient: ApiClient = mockk()
+    private lateinit var authRepository: JellyfinAuthRepository
+    private lateinit var sessionManager: JellyfinSessionManager
+    private lateinit var cache: JellyfinCache
+    private lateinit var healthChecker: LibraryHealthChecker
+    private lateinit var repository: JellyfinMediaRepository
 
-    private val repository = JellyfinMediaRepository(
-        authRepository = authRepository,
-        sessionManager = sessionManager,
-        cache = cache,
-        healthChecker = healthChecker,
-        updateBus = MediaUpdateBus(),
-    )
+    @Before
+    fun setUp() {
+        authRepository = mockk(relaxed = true)
+        sessionManager = mockk()
+        cache = mockk(relaxed = true)
+        healthChecker = mockk(relaxed = true)
+        repository = JellyfinMediaRepository(
+            authRepository = authRepository,
+            sessionManager = sessionManager,
+            cache = cache,
+            healthChecker = healthChecker,
+            updateBus = MediaUpdateBus(),
+        )
+    }
 
     @Test
     fun getUserLibraries_whenSuccess_returnsLibraryList() = runTest {
         val mockItems = listOf(mockk<BaseItemDto> { every { name } returns "Movies" })
+        val mockServer = JellyfinServer(
+            id = "server-id",
+            name = "Test Server",
+            url = "http://localhost",
+            userId = UUID.randomUUID().toString(),
+            accessToken = "token",
+            isConnected = true
+        )
         
+        every { authRepository.getCurrentServer() } returns mockServer
+        coEvery { cache.getCachedLibraries() } returns null
         coEvery { sessionManager.executeWithAuth<List<BaseItemDto>>(any(), any()) } returns mockItems
         coEvery { authRepository.isTokenExpired() } returns false
 
@@ -58,6 +72,17 @@ class JellyfinMediaRepositoryTest {
 
     @Test
     fun getUserLibraries_whenError_returnsApiError() = runTest {
+        val mockServer = JellyfinServer(
+            id = "server-id",
+            name = "Test Server",
+            url = "http://localhost",
+            userId = UUID.randomUUID().toString(),
+            accessToken = "token",
+            isConnected = true
+        )
+        
+        every { authRepository.getCurrentServer() } returns mockServer
+        coEvery { cache.getCachedLibraries() } returns null
         coEvery { authRepository.isTokenExpired() } returns false
         coEvery { sessionManager.executeWithAuth<List<BaseItemDto>>(any(), any()) } throws RuntimeException("Network error")
 

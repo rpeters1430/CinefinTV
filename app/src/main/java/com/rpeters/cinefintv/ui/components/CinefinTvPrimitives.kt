@@ -349,8 +349,9 @@ fun CinefinTextInputField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
+    val spacing = LocalCinefinSpacing.current
     var isFocused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(spacing.cornerCard)
 
     Surface(
         modifier = Modifier.fillMaxWidth(),

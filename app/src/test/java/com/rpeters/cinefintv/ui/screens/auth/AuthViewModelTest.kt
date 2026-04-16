@@ -11,6 +11,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -31,10 +32,17 @@ class AuthViewModelTest {
 
     private val authRepository: JellyfinAuthRepository = mockk()
     private val secureCredentialManager: SecureCredentialManager = mockk()
+    private val isSessionRestoredFlow = MutableStateFlow<Boolean?>(null)
+
+    private fun setupMocks() {
+        every { authRepository.isSessionRestored } returns isSessionRestoredFlow
+        coEvery { authRepository.tryRestoreSession() } returns true // Keep for backward compatibility if needed, but we use flow now
+    }
 
     @Test
     fun testServerConnection_whenUrlInvalid_setsValidationError() = runTest {
-        coEvery { authRepository.tryRestoreSession() } returns false
+        setupMocks()
+        isSessionRestoredFlow.value = false
 
         val viewModel = AuthViewModel(authRepository, secureCredentialManager)
         advanceUntilIdle()
@@ -49,7 +57,8 @@ class AuthViewModelTest {
 
     @Test
     fun login_whenAuthSucceeds_setsSuccessAndSavesPassword() = runTest {
-        coEvery { authRepository.tryRestoreSession() } returns false
+        setupMocks()
+        isSessionRestoredFlow.value = false
         coEvery { authRepository.testServerConnection(any()) } returns ApiResult.Success(mockk())
         coEvery { authRepository.isQuickConnectEnabled(any()) } returns ApiResult.Success(false)
         coEvery { authRepository.authenticateUser(any(), any(), any()) } returns ApiResult.Success(mockk<AuthenticationResult>())
@@ -73,7 +82,8 @@ class AuthViewModelTest {
 
     @Test
     fun login_whenAuthFails_setsError() = runTest {
-        coEvery { authRepository.tryRestoreSession() } returns false
+        setupMocks()
+        isSessionRestoredFlow.value = false
         coEvery { authRepository.authenticateUser(any(), any(), any()) } returns ApiResult.Error("Bad credentials")
 
         val viewModel = AuthViewModel(authRepository, secureCredentialManager)
@@ -90,7 +100,8 @@ class AuthViewModelTest {
 
     @Test
     fun init_whenSessionRestored_marksSessionActive() = runTest {
-        coEvery { authRepository.tryRestoreSession() } returns true
+        setupMocks()
+        isSessionRestoredFlow.value = true
 
         val viewModel = AuthViewModel(authRepository, secureCredentialManager)
         advanceUntilIdle()
@@ -102,7 +113,8 @@ class AuthViewModelTest {
 
     @Test
     fun startQuickConnect_whenServerNotConnected_setsError() = runTest {
-        coEvery { authRepository.tryRestoreSession() } returns false
+        setupMocks()
+        isSessionRestoredFlow.value = false
 
         val viewModel = AuthViewModel(authRepository, secureCredentialManager)
         advanceUntilIdle()
@@ -118,7 +130,8 @@ class AuthViewModelTest {
 
     @Test
     fun startQuickConnect_whenInitiateSucceeds_setsCodeAndSecret() = runTest {
-        coEvery { authRepository.tryRestoreSession() } returns false
+        setupMocks()
+        isSessionRestoredFlow.value = false
         coEvery { authRepository.initiateQuickConnect(any()) } returns
             ApiResult.Success(com.rpeters.cinefintv.data.model.QuickConnectResult(code = "8374", secret = "secret123"))
         // Return Pending so the poll loop doesn't complete during this test
@@ -146,7 +159,8 @@ class AuthViewModelTest {
     @Test
     fun quickConnectPolling_whenApproved_setsLoginSucceeded() = runTest {
         val authResult: org.jellyfin.sdk.model.api.AuthenticationResult = mockk()
-        coEvery { authRepository.tryRestoreSession() } returns false
+        setupMocks()
+        isSessionRestoredFlow.value = false
         coEvery { authRepository.initiateQuickConnect(any()) } returns
             ApiResult.Success(com.rpeters.cinefintv.data.model.QuickConnectResult(code = "8374", secret = "secret123"))
         coEvery { authRepository.getQuickConnectState(any(), any()) } returns
@@ -172,7 +186,8 @@ class AuthViewModelTest {
 
     @Test
     fun quickConnectPolling_whenDenied_setsErrorAndStopsPolling() = runTest {
-        coEvery { authRepository.tryRestoreSession() } returns false
+        setupMocks()
+        isSessionRestoredFlow.value = false
         coEvery { authRepository.initiateQuickConnect(any()) } returns
             ApiResult.Success(com.rpeters.cinefintv.data.model.QuickConnectResult(code = "8374", secret = "secret123"))
         coEvery { authRepository.getQuickConnectState(any(), any()) } returns
@@ -194,7 +209,8 @@ class AuthViewModelTest {
 
     @Test
     fun stopQuickConnect_clearsAllQuickConnectState() = runTest {
-        coEvery { authRepository.tryRestoreSession() } returns false
+        setupMocks()
+        isSessionRestoredFlow.value = false
         coEvery { authRepository.initiateQuickConnect(any()) } returns
             ApiResult.Success(com.rpeters.cinefintv.data.model.QuickConnectResult(code = "8374", secret = "secret123"))
         coEvery { authRepository.getQuickConnectState(any(), any()) } returns

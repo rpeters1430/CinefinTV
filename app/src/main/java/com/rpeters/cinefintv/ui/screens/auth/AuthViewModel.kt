@@ -45,17 +45,20 @@ class AuthViewModel @Inject constructor(
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     init {
-        checkSavedSession()
+        observeSessionRestoration()
     }
 
-    private fun checkSavedSession() {
+    private fun observeSessionRestoration() {
         viewModelScope.launch {
-            val isActive = authRepository.tryRestoreSession()
-            _uiState.update {
-                it.copy(
-                    isSessionChecked = true,
-                    isSessionActive = isActive,
-                )
+            authRepository.isSessionRestored.collect { isRestored ->
+                if (isRestored != null) {
+                    _uiState.update {
+                        it.copy(
+                            isSessionChecked = true,
+                            isSessionActive = isRestored,
+                        )
+                    }
+                }
             }
         }
     }
