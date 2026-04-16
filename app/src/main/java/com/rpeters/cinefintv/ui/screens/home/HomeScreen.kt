@@ -1,6 +1,8 @@
 package com.rpeters.cinefintv.ui.screens.home
 
 import android.os.SystemClock
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -42,6 +44,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -55,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -75,10 +79,12 @@ import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.components.CinefinChip
+import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.MediaActionDialog
 import com.rpeters.cinefintv.ui.components.MediaActionDialogItem
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
+import com.rpeters.cinefintv.ui.theme.CinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.utils.DevicePerformanceProfile
@@ -594,8 +600,8 @@ private fun HeroItem(
     val performanceProfile = LocalPerformanceProfile.current
     val spacing = LocalCinefinSpacing.current
     val detailsButtonRequester = remember { FocusRequester() }
-    var playButtonFocused by remember { mutableStateOf(false) }
-    var detailsButtonFocused by remember { mutableStateOf(false) }
+    var playButtonFocused by remember { mutableStateOf<Boolean>(false) }
+    var detailsButtonFocused by remember { mutableStateOf<Boolean>(false) }
 
     val playButtonScale by animateFloatAsState(
         targetValue = if (playButtonFocused) 1.08f else 1f,
@@ -734,7 +740,7 @@ private fun HeroItem(
                     modifier = Modifier
                         .blockBringIntoView()
                         .focusRequester(primaryActionFocusRequester)
-                        .onFocusChanged { playButtonFocused = it.isFocused }
+                        .onFocusChanged { state: androidx.compose.ui.focus.FocusState -> playButtonFocused = state.isFocused }
                         .graphicsLayer {
                             scaleX = playButtonScale
                             scaleY = playButtonScale
@@ -753,7 +759,7 @@ private fun HeroItem(
                     modifier = Modifier
                         .blockBringIntoView()
                         .focusRequester(detailsButtonRequester)
-                        .onFocusChanged { detailsButtonFocused = it.isFocused }
+                        .onFocusChanged { state: androidx.compose.ui.focus.FocusState -> detailsButtonFocused = state.isFocused }
                         .graphicsLayer {
                             scaleX = detailsButtonScale
                             scaleY = detailsButtonScale

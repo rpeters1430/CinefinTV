@@ -305,13 +305,6 @@ fun TvMediaCard(
     )
 }
 
-private fun shouldOpenCardMenu(event: android.view.KeyEvent): Boolean {
-    return event.keyCode == android.view.KeyEvent.KEYCODE_MENU || 
-           event.keyCode == android.view.KeyEvent.KEYCODE_INFO ||
-           (event.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.isLongPress) ||
-           (event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER && event.isLongPress)
-}
-
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifier) {
