@@ -290,9 +290,10 @@ class HomeScreenUiTest {
 
         composeRule.settleInitialHomeFocus()
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0)).requestFocus()
+        composeRule.waitUntilNodeIsFocused(HomeTestTags.sectionItem(0, 0), timeoutMillis = 3_000)
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
             .performKeyInput { pressKey(Key.DirectionUp) }
-        composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton).assertIsFocused()
+        composeRule.waitUntilNodeIsFocused(HomeTestTags.FeaturedPlayButton, timeoutMillis = 5_000)
     }
 
     @Test
@@ -607,6 +608,18 @@ private fun SemanticsNodeInteraction.requestFocus(): SemanticsNodeInteraction =
 private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.settleInitialHomeFocus() {
     mainClock.advanceTimeBy(1_100)
     waitForIdle()
+}
+
+private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.waitUntilNodeIsFocused(
+    tag: String,
+    timeoutMillis: Long = 3_000L,
+) {
+    waitUntil(timeoutMillis) {
+        runCatching {
+            onNodeWithTag(tag).assertIsFocused()
+            true
+        }.getOrDefault(false)
+    }
 }
 
 @Composable

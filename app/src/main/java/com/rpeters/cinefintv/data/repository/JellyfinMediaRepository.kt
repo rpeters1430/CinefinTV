@@ -86,7 +86,10 @@ class JellyfinMediaRepository @Inject constructor(
             startIndex = startIndex,
             limit = limit,
             collectionType = collectionType,
-        ) ?: throw IllegalArgumentException("Invalid API parameters provided")
+        ) ?: return ApiResult.Error(
+            message = "Invalid API parameters provided",
+            errorType = ErrorType.VALIDATION,
+        )
 
         // Check if library is blocked due to repeated failures
         if (validatedParams.parentId != null && healthChecker.isLibraryBlocked(validatedParams.parentId)) {

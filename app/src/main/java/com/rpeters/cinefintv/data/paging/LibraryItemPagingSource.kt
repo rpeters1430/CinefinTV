@@ -102,6 +102,11 @@ class LibraryItemPagingSource(
             }
         } catch (exception: CancellationException) {
             throw exception
+        } catch (exception: Exception) {
+            if (BuildConfig.DEBUG) {
+                Log.e(TAG, "Unhandled exception while loading library page", exception)
+            }
+            LoadResult.Error(exception)
         }
     }
 

@@ -103,4 +103,37 @@ class LibraryItemPagingSourceTest {
         assertEquals(40, page.prevKey)
         assertTrue(page.nextKey == null)
     }
+
+    @Test
+    fun load_whenRepositoryThrows_returnsLoadError() = runTest {
+        val mediaRepository: JellyfinMediaRepository = mockk(relaxed = true)
+        val pagingSource = LibraryItemPagingSource(
+            mediaRepository = mediaRepository,
+            itemTypes = listOf(BaseItemKind.SERIES),
+            pageSize = 20,
+        )
+
+        coEvery {
+            mediaRepository.getLibraryItems(
+                parentId = null,
+                itemTypes = "Series",
+                startIndex = 0,
+                limit = 60,
+                collectionType = null,
+            )
+        } throws IllegalArgumentException("Invalid API parameters provided")
+
+        val result = pagingSource.load(
+            PagingSource.LoadParams.Refresh(
+                key = null,
+                loadSize = 60,
+                placeholdersEnabled = false,
+            ),
+        )
+
+        assertTrue(result is PagingSource.LoadResult.Error)
+        val error = result as PagingSource.LoadResult.Error
+        assertTrue(error.throwable is IllegalArgumentException)
+        assertEquals("Invalid API parameters provided", error.throwable.message)
+    }
 }

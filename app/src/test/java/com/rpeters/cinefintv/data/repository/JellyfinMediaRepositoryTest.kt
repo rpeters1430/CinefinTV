@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.data.repository
 
 import com.rpeters.cinefintv.data.JellyfinServer
+import com.rpeters.cinefintv.data.SecureCredentialManager
 import com.rpeters.cinefintv.data.cache.JellyfinCache
 import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.repository.common.ApiResult
@@ -12,6 +13,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -34,7 +36,10 @@ class JellyfinMediaRepositoryTest {
 
     @Before
     fun setUp() {
-        authRepository = mockk(relaxed = true)
+        authRepository = JellyfinAuthRepository(
+            jellyfin = mockk<Jellyfin>(relaxed = true),
+            secureCredentialManager = mockk<SecureCredentialManager>(relaxed = true),
+        )
         sessionManager = mockk()
         cache = mockk(relaxed = true)
         healthChecker = mockk(relaxed = true)
@@ -58,11 +63,10 @@ class JellyfinMediaRepositoryTest {
             accessToken = "token",
             isConnected = true
         )
-        
-        every { authRepository.getCurrentServer() } returns mockServer
+
+        authRepository.seedCurrentServer(mockServer)
         coEvery { cache.getCachedLibraries() } returns null
         coEvery { sessionManager.executeWithAuth<List<BaseItemDto>>(any(), any()) } returns mockItems
-        coEvery { authRepository.isTokenExpired() } returns false
 
         val result = repository.getUserLibraries()
 
@@ -80,10 +84,9 @@ class JellyfinMediaRepositoryTest {
             accessToken = "token",
             isConnected = true
         )
-        
-        every { authRepository.getCurrentServer() } returns mockServer
+
+        authRepository.seedCurrentServer(mockServer)
         coEvery { cache.getCachedLibraries() } returns null
-        coEvery { authRepository.isTokenExpired() } returns false
         coEvery { sessionManager.executeWithAuth<List<BaseItemDto>>(any(), any()) } throws RuntimeException("Network error")
 
         val result = repository.getUserLibraries()
