@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.key
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -118,9 +119,11 @@ fun CinefinTvApp(
         contrastLevel = themePrefs.contrastLevel,
     ) {
         CompositionLocalProvider(LocalCinefinThemeController provides themeViewModel) {
-            val backStack: NavBackStack<NavKey> = rememberNavBackStack(
-                if (isAuthenticated) Home else ServerConnection
-            )
+            val backStack: NavBackStack<NavKey> = key(isAuthenticated) {
+                rememberNavBackStack(
+                    if (isAuthenticated) Home else ServerConnection
+                )
+            }
             val currentDestination = backStack.lastOrNull() as? NavDestination
             
             val expressiveColors = LocalCinefinExpressiveColors.current
