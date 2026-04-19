@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -114,7 +115,11 @@ fun DetailOverviewSection(
                 shape = RoundedCornerShape(spacing.cornerContainer),
             )
             .border(
-                width = if (isFocused) 2.dp else 1.dp,
+                width = if (isFocused) {
+                    2.dp
+                } else {
+                    1.dp
+                },
                 color = if (isFocused) {
                     expressiveColors.focusRing
                 } else {
@@ -122,8 +127,8 @@ fun DetailOverviewSection(
                 },
                 shape = RoundedCornerShape(spacing.cornerContainer),
             )
-            .padding(horizontal = spacing.gutter, vertical = 22.dp),
-        verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
+            .padding(horizontal = spacing.gutter.div(1.5f), vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         OverviewSectionLabel(
             text = "Editorial Overview",
@@ -131,7 +136,7 @@ fun DetailOverviewSection(
         )
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(spacing.gutter),
+            horizontalArrangement = Arrangement.spacedBy(spacing.gutter.div(1.5f)),
             verticalAlignment = Alignment.Top,
         ) {
             if (posterUrl != null) {
@@ -139,14 +144,14 @@ fun DetailOverviewSection(
                     imageUrl = posterUrl,
                     title = posterTitle,
                     modifier = Modifier
-                        .width(220.dp)
-                        .height(330.dp),
+                        .width(180.dp)
+                        .height(270.dp),
                 )
             }
 
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 OverviewNarrativeCard(
                     title = title,
@@ -155,14 +160,14 @@ fun DetailOverviewSection(
                 )
 
                 if (summaryFacts.isNotEmpty()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(spacing.elementGap)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(spacing.elementGap.div(1.5f))) {
                         OverviewSectionLabel(
                             text = "At a Glance",
                             highlighted = false,
                         )
                         FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
-                            verticalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
+                            verticalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
                         ) {
                             summaryFacts.forEach { item ->
                                 MetaFactItem(
@@ -179,11 +184,11 @@ fun DetailOverviewSection(
                 if (detailFacts.isNotEmpty()) {
                     OverviewGroupedPanel(
                         title = "Details",
-                        contentPadding = PaddingValues(18.dp),
+                        contentPadding = PaddingValues(14.dp),
                     ) {
                         FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
-                            verticalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
+                            verticalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
                         ) {
                             detailFacts.forEach { item ->
                                 MetaFactItem(
@@ -200,7 +205,7 @@ fun DetailOverviewSection(
                 if (chips.isNotEmpty()) {
                     OverviewGroupedPanel(
                         title = "Categories",
-                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
                     ) {
                         DetailChipRow(labels = chips)
                     }
@@ -246,19 +251,20 @@ private fun OverviewNarrativeCard(
                 color = expressiveColors.borderSubtle.copy(alpha = 0.45f),
                 shape = RoundedCornerShape(spacing.cornerContainer),
             )
-            .padding(horizontal = 22.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(spacing.elementGap.div(1.5f)),
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp),
             color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.SemiBold,
         )
         Text(
             text = if (description.isNotBlank()) description else "No overview available.",
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp, lineHeight = 22.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 8,
+            maxLines = 6,
             overflow = TextOverflow.Ellipsis,
         )
     }
@@ -285,8 +291,8 @@ private fun OverviewGroupedPanel(
                 color = expressiveColors.borderSubtle.copy(alpha = 0.38f),
                 shape = RoundedCornerShape(spacing.cornerContainer),
             )
-            .padding(18.dp),
-        verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(spacing.elementGap.div(1.5f)),
     ) {
         OverviewSectionLabel(
             text = title,

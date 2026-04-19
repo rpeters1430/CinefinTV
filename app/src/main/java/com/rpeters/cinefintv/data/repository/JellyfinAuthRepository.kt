@@ -225,8 +225,8 @@ class JellyfinAuthRepository @Inject constructor(
     @VisibleForTesting
     fun seedCurrentServer(server: JellyfinServer?) {
         _currentServer.update { server }
-        _isConnected.update { server?.isConnected == true }
         _tokenState.update { server?.accessToken }
+        _isConnected.update { server?.isConnected == true }
     }
 
     suspend fun tryRestoreSession(): Boolean {
@@ -311,8 +311,8 @@ class JellyfinAuthRepository @Inject constructor(
         )
 
         _currentServer.update { server }
-        _isConnected.update { true }
         saveNewToken(authResult.accessToken)
+        _isConnected.update { true }
         try {
             secureCredentialManager.saveServerState(server)
         } catch (e: Exception) {

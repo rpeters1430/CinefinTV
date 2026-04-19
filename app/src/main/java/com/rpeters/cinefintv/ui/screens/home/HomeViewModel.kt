@@ -86,7 +86,11 @@ class HomeViewModel @Inject constructor(
 
     init {
         loadCachedData()
-        refresh(silent = true)
+        viewModelScope.launch {
+            // Give session restoration a moment to fully propagate across all flows
+            delay(100)
+            refresh(silent = true)
+        }
         observeUpdateEvents()
     }
 

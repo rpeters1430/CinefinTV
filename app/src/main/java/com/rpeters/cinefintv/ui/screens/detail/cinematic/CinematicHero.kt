@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -114,7 +115,7 @@ fun CinematicHero(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = screenHeight * 0.62f),
+            .heightIn(min = screenHeight * 0.5f),
     ) {
         // Backdrop
         if (backdropUrl != null) {
@@ -176,7 +177,7 @@ fun CinematicHero(
 
             Column(
                 modifier = Modifier
-                    .padding(top = 48.dp)
+                    .padding(top = 32.dp)
                     .requiredWidthIn(max = panelWidth)
                     .wrapContentHeight()
                     .background(
@@ -193,17 +194,17 @@ fun CinematicHero(
                         color = expressiveColors.borderSubtle.copy(alpha = 0.58f),
                         shape = MaterialTheme.shapes.extraLarge,
                     )
-                    .padding(32.dp),
-                verticalArrangement = Arrangement.spacedBy(spacing.rowGap),
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(spacing.rowGap.div(1.5f)),
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
                         modifier = Modifier
-                            .width(4.dp)
-                            .height(42.dp)
+                            .width(3.dp)
+                            .height(34.dp)
                             .background(
                                 brush = Brush.verticalGradient(
                                     listOf(MaterialTheme.colorScheme.primary, expressiveColors.titleAccent)
@@ -213,7 +214,7 @@ fun CinematicHero(
                     )
                     Text(
                         text = eyebrow.uppercase(),
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
                         fontWeight = FontWeight.Bold,
                     )
@@ -225,14 +226,14 @@ fun CinematicHero(
                         contentDescription = title,
                         modifier = Modifier
                             .testTag(DetailTestTags.HeroLogo)
-                            .heightIn(max = 120.dp)
+                            .heightIn(max = 100.dp)
                             .wrapContentWidth(),
                         contentScale = ContentScale.Fit,
                     )
                 } else {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.displaySmall,
+                        style = MaterialTheme.typography.displaySmall.copy(fontSize = 32.sp),
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.testTag(DetailTestTags.HeroTitle),
@@ -240,13 +241,13 @@ fun CinematicHero(
                 }
 
                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
-                    verticalArrangement = Arrangement.spacedBy(spacing.chipGap),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.chipGap.div(1.2f)),
+                    verticalArrangement = Arrangement.spacedBy(spacing.chipGap.div(1.2f)),
                 ) {
                     ratingText?.let {
                         Text(
                             text = it,
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
                             color = expressiveColors.titleAccent,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier
@@ -254,7 +255,7 @@ fun CinematicHero(
                                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.36f),
                                     shape = MaterialTheme.shapes.large,
                                 )
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
                         )
                     }
                     genres.take(4).forEach { genre ->

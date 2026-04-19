@@ -54,6 +54,7 @@ import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailTestTags
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -133,29 +134,29 @@ fun MetaFactItem(
                         color = expressiveColors.detailPanelMuted,
                         shape = RoundedCornerShape(spacing.cornerCard),
                     )
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(16.dp),
                     )
                     Text(
                         text = label.uppercase(),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         maxLines = 1,
                     )
                 }
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
                     color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -169,25 +170,25 @@ fun MetaFactItem(
                         color = expressiveColors.detailBadge,
                         shape = RoundedCornerShape(spacing.cornerCard),
                     )
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(18.dp),
                 )
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text(
                         text = label,
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp),
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Text(
                         text = value,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp),
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                 }
@@ -207,11 +208,11 @@ fun DetailPosterArt(
 
     Surface(
         modifier = modifier.graphicsLayer {
-            shadowElevation = 28.dp.toPx()
+            shadowElevation = 20.dp.toPx()
         },
         shape = RoundedCornerShape(spacing.cornerContainer),
         colors = SurfaceDefaults.colors(containerColor = expressiveColors.detailPanel),
-        tonalElevation = 10.dp,
+        tonalElevation = 8.dp,
     ) {
         Box(
             modifier = Modifier
@@ -228,7 +229,7 @@ fun DetailPosterArt(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(imageUrl)
                         .crossfade(true)
-                        .size(420, 630)
+                        .size(360, 540)
                         .build(),
                     contentDescription = title,
                     contentScale = ContentScale.Crop,
@@ -356,122 +357,187 @@ fun DetailShelfPanel(
             .padding(vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
         content = {
-            Column(
-                modifier = Modifier.padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.SemiBold,
+            )
+            subtitle?.takeIf { it.isNotBlank() }?.let {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontWeight = FontWeight.SemiBold,
+                    text = it,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                subtitle?.takeIf { it.isNotBlank() }?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
-            content()
-        },
-    )
-}
-
-@Composable
-fun DetailFactsColumn(
-    items: List<DetailLabeledMetaItem>,
-    modifier: Modifier = Modifier,
-) {
-    val filtered = items.mapNotNull { item ->
-        item.value.trim().takeIf { it.isNotBlank() }?.let { item.copy(value = it) }
-    }
-    if (filtered.isEmpty()) return
-
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        filtered.forEach { item ->
-            MetaFactItem(
-                icon = item.icon,
-                label = item.label,
-                value = item.value,
-                style = MetaFactStyle.Card,
-            )
         }
-    }
-}
+        content()
+        },
+        )
+        }
 
-@Composable
-private fun DetailMetaItemView(
-    item: DetailMetaItem,
-    modifier: Modifier = Modifier,
-) {
-    Row(
+        @Composable
+        fun DetailFactsColumn(
+        items: List<DetailLabeledMetaItem>,
+        modifier: Modifier = Modifier,
+        ) {
+        val filtered = items.mapNotNull { item ->
+        item.value.trim().takeIf { it.isNotBlank() }?.let { item.copy(value = it) }
+        }
+        if (filtered.isEmpty()) return
+
+        Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+        filtered.forEach { item ->
+        MetaFactItem(
+            icon = item.icon,
+            label = item.label,
+            value = item.value,
+            style = MetaFactStyle.Card,
+        )
+        }
+        }
+        }
+
+        @Composable
+        private fun DetailMetaItemView(
+        item: DetailMetaItem,
+        modifier: Modifier = Modifier,
+        ) {
+        Row(
         modifier = modifier
-            .background(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.22f),
-                shape = RoundedCornerShape(LocalCinefinSpacing.current.cornerPill),
-            )
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+        .background(
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.22f),
+            shape = RoundedCornerShape(LocalCinefinSpacing.current.cornerPill),
+        )
+        .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
         Icon(
-            imageVector = item.icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp),
+        imageVector = item.icon,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.size(16.dp),
         )
         Text(
-            text = item.value,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground,
+        text = item.value,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onBackground,
         )
-    }
-}
+        }
+        }
 
-@Composable
-fun DetailActionRow(
-    primaryLabel: String,
-    onPrimaryClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    secondaryActions: List<Pair<String, () -> Unit>> = emptyList(),
-    primaryFocusRequester: FocusRequester? = null,
-    primaryDownFocusRequester: FocusRequester? = null,
-    primaryButtonModifier: Modifier = Modifier,
-    onDownNavigation: (() -> Unit)? = null,
-) {
-    val expressiveColors = LocalCinefinExpressiveColors.current
-    val primaryTextColor = MaterialTheme.colorScheme.onPrimary
-    val secondaryFocusRequesters = remember(secondaryActions.size) {
+        @Composable
+        fun DetailActionRow(
+        primaryLabel: String,
+        onPrimaryClick: () -> Unit,
+        modifier: Modifier = Modifier,
+        secondaryActions: List<Pair<String, () -> Unit>> = emptyList(),
+        primaryFocusRequester: FocusRequester? = null,
+        primaryDownFocusRequester: FocusRequester? = null,
+        primaryButtonModifier: Modifier = Modifier,
+        onDownNavigation: (() -> Unit)? = null,
+        ) {
+        val expressiveColors = LocalCinefinExpressiveColors.current
+        val primaryTextColor = MaterialTheme.colorScheme.onPrimary
+        val secondaryFocusRequesters = remember(secondaryActions.size) {
         List(secondaryActions.size) { FocusRequester() }
-    }
-    val hasSecondaryAction = secondaryActions.isNotEmpty()
+        }
+        val hasSecondaryAction = secondaryActions.isNotEmpty()
 
-    FlowRow(
+        FlowRow(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
         Button(
-            onClick = onPrimaryClick,
+        onClick = onPrimaryClick,
+        modifier = Modifier
+            .then(
+                if (primaryFocusRequester != null) {
+                    Modifier.focusRequester(primaryFocusRequester)
+                } else {
+                    Modifier
+                }
+            )
+            .focusProperties {
+                if (primaryDownFocusRequester != null && onDownNavigation == null) {
+                    down = primaryDownFocusRequester
+                }
+                if (hasSecondaryAction) {
+                    right = secondaryFocusRequesters.first()
+                }
+            }
+            .onPreviewKeyEvent { keyEvent ->
+                val nativeEvent = keyEvent.nativeKeyEvent
+                if (
+                    onDownNavigation != null &&
+                    nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                ) {
+                    onDownNavigation()
+                    true
+                } else {
+                    false
+                }
+            }
+            .then(primaryButtonModifier)
+            .requiredWidthIn(min = 160.dp)
+            .defaultMinSize(minHeight = 44.dp),
+        scale = ButtonDefaults.scale(focusedScale = 1.03f),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
+        colors = ButtonDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = primaryTextColor,
+            focusedContainerColor = MaterialTheme.colorScheme.primary,
+            focusedContentColor = primaryTextColor,
+        ),
+        glow = ButtonDefaults.glow(
+            focusedGlow = androidx.tv.material3.Glow(
+                elevationColor = expressiveColors.focusGlow.copy(alpha = 0.48f),
+                elevation = 10.dp,
+            ),
+        ),
+        border = ButtonDefaults.border(
+            focusedBorder = Border(
+                border = androidx.compose.foundation.BorderStroke(
+                    width = 2.dp,
+                    color = expressiveColors.focusRing,
+                ),
+            ),
+        ),
+        ) {
+        Text(
+            text = primaryLabel,
+            style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        }
+        secondaryActions.forEachIndexed { index, (label, onClick) ->
+        OutlinedButton(
+            onClick = onClick,
             modifier = Modifier
-                .then(
-                    if (primaryFocusRequester != null) {
-                        Modifier.focusRequester(primaryFocusRequester)
-                    } else {
-                        Modifier
-                    }
-                )
+                .focusRequester(secondaryFocusRequesters[index])
+                .requiredWidthIn(min = 140.dp)
+                .defaultMinSize(minHeight = 44.dp)
                 .focusProperties {
+                    left = when (index) {
+                        0 -> primaryFocusRequester ?: FocusRequester.Default
+                        else -> secondaryFocusRequesters[index - 1]
+                    }
+                    if (index < secondaryFocusRequesters.lastIndex) {
+                        right = secondaryFocusRequesters[index + 1]
+                    }
                     if (primaryDownFocusRequester != null && onDownNavigation == null) {
                         down = primaryDownFocusRequester
-                    }
-                    if (hasSecondaryAction) {
-                        right = secondaryFocusRequesters.first()
                     }
                 }
                 .onPreviewKeyEvent { keyEvent ->
@@ -486,25 +552,28 @@ fun DetailActionRow(
                     } else {
                         false
                     }
-                }
-                .then(primaryButtonModifier)
-                .requiredWidthIn(min = 180.dp)
-                .defaultMinSize(minHeight = 50.dp),
+                },
             scale = ButtonDefaults.scale(focusedScale = 1.03f),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             colors = ButtonDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = primaryTextColor,
-                focusedContainerColor = MaterialTheme.colorScheme.primary,
-                focusedContentColor = primaryTextColor,
+                containerColor = expressiveColors.detailBadge,
+                contentColor = MaterialTheme.colorScheme.onBackground,
+                focusedContainerColor = expressiveColors.detailPanelFocused,
+                focusedContentColor = MaterialTheme.colorScheme.onBackground,
             ),
             glow = ButtonDefaults.glow(
                 focusedGlow = androidx.tv.material3.Glow(
-                    elevationColor = expressiveColors.focusGlow.copy(alpha = 0.48f),
-                    elevation = 12.dp,
+                    elevationColor = expressiveColors.focusGlow.copy(alpha = 0.34f),
+                    elevation = 8.dp,
                 ),
             ),
             border = ButtonDefaults.border(
+                border = Border(
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = 1.dp,
+                        color = expressiveColors.borderSubtle.copy(alpha = 0.65f),
+                    ),
+                ),
                 focusedBorder = Border(
                     border = androidx.compose.foundation.BorderStroke(
                         width = 2.dp,
@@ -514,466 +583,399 @@ fun DetailActionRow(
             ),
         ) {
             Text(
-                text = primaryLabel,
+                text = label,
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        secondaryActions.forEachIndexed { index, (label, onClick) ->
-            OutlinedButton(
-                onClick = onClick,
-                modifier = Modifier
-                    .focusRequester(secondaryFocusRequesters[index])
-                    .requiredWidthIn(min = 160.dp)
-                    .defaultMinSize(minHeight = 50.dp)
-                    .focusProperties {
-                        left = when (index) {
-                            0 -> primaryFocusRequester ?: FocusRequester.Default
-                            else -> secondaryFocusRequesters[index - 1]
-                        }
-                        if (index < secondaryFocusRequesters.lastIndex) {
-                            right = secondaryFocusRequesters[index + 1]
-                        }
-                        if (primaryDownFocusRequester != null && onDownNavigation == null) {
-                            down = primaryDownFocusRequester
-                        }
-                    }
-                    .onPreviewKeyEvent { keyEvent ->
-                        val nativeEvent = keyEvent.nativeKeyEvent
-                        if (
-                            onDownNavigation != null &&
-                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                            nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
-                        ) {
-                            onDownNavigation()
-                            true
-                        } else {
-                            false
-                        }
-                    },
-                scale = ButtonDefaults.scale(focusedScale = 1.03f),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
-                colors = ButtonDefaults.colors(
-                    containerColor = expressiveColors.detailBadge,
-                    contentColor = MaterialTheme.colorScheme.onBackground,
-                    focusedContainerColor = expressiveColors.detailPanelFocused,
-                    focusedContentColor = MaterialTheme.colorScheme.onBackground,
-                ),
-                glow = ButtonDefaults.glow(
-                    focusedGlow = androidx.tv.material3.Glow(
-                        elevationColor = expressiveColors.focusGlow.copy(alpha = 0.34f),
-                        elevation = 10.dp,
-                    ),
-                ),
-                border = ButtonDefaults.border(
-                    border = Border(
-                        border = androidx.compose.foundation.BorderStroke(
-                            width = 1.dp,
-                            color = expressiveColors.borderSubtle.copy(alpha = 0.65f),
-                        ),
-                    ),
-                    focusedBorder = Border(
-                        border = androidx.compose.foundation.BorderStroke(
-                            width = 2.dp,
-                            color = expressiveColors.focusRing,
-                        ),
-                    ),
-                ),
-            ) {
-                Text(
-                    text = label,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
         }
-    }
-}
+        }
+        }
 
-/**
- * Section with a heading label and arbitrary [content] below it.
- * Used for Cast, Similar, Seasons, Chapters rows.
- */
-@Composable
-fun DetailContentSection(
-    title: String,
-    eyebrow: String? = null,
-    icon: ImageVector? = null,
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    val expressiveColors = LocalCinefinExpressiveColors.current
-    var isSectionFocused by remember(title) { mutableStateOf(false) }
-
-    Column(
-        modifier = modifier
-            .padding(top = 36.dp)
-            .onFocusChanged { state ->
-                isSectionFocused = state.hasFocus || state.isFocused
-            },
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-    ) {
-        BoxWithConstraints(
-            modifier = Modifier.padding(horizontal = 56.dp)
+        /**
+        * Section with a heading label and arbitrary [content] below it.
+        * Used for Cast, Similar, Seasons, Chapters rows.
+        */
+        @Composable
+        fun DetailContentSection(
+        title: String,
+        eyebrow: String? = null,
+        icon: ImageVector? = null,
+        modifier: Modifier = Modifier,
+        content: @Composable ColumnScope.() -> Unit,
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    expressiveColors.detailPanel,
-                                    expressiveColors.detailPanelMuted,
-                                    Color.Transparent,
-                                )
-                            ),
-                            shape = RoundedCornerShape(24.dp),
+        val expressiveColors = LocalCinefinExpressiveColors.current
+        var isSectionFocused by remember(title) { mutableStateOf(false) }
+
+        Column(
+        modifier = modifier
+        .padding(top = 24.dp)
+        .onFocusChanged { state ->
+            isSectionFocused = state.hasFocus || state.isFocused
+        },
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+        BoxWithConstraints(
+        modifier = Modifier.padding(horizontal = 48.dp)
+        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                expressiveColors.detailPanel,
+                                expressiveColors.detailPanelMuted,
+                                Color.Transparent,
+                            )
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = expressiveColors.borderSubtle.copy(alpha = if (isSectionFocused) 0.7f else 0.32f),
+                        shape = RoundedCornerShape(16.dp),
+                    )
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    eyebrow?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isSectionFocused) {
+                                MaterialTheme.colorScheme.onBackground
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
                         )
-                        .border(
-                            width = 1.dp,
-                            color = expressiveColors.borderSubtle.copy(alpha = if (isSectionFocused) 0.7f else 0.32f),
-                            shape = RoundedCornerShape(24.dp),
-                        )
-                        .padding(horizontal = 18.dp, vertical = 16.dp),
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        eyebrow?.let {
-                            Text(
-                                text = it,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (isSectionFocused) {
-                                    MaterialTheme.colorScheme.onBackground
-                                } else {
-                                    MaterialTheme.colorScheme.primary
-                                },
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        icon?.let {
+                            Icon(
+                                imageVector = it,
+                                contentDescription = null,
+                                tint = if (isSectionFocused) expressiveColors.focusRing else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp),
                             )
                         }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            icon?.let {
-                                Icon(
-                                    imageVector = it,
-                                    contentDescription = null,
-                                    tint = if (isSectionFocused) expressiveColors.focusRing else MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            }
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontWeight = FontWeight.SemiBold,
+                        )
                     }
                 }
-                Box(
-                    modifier = Modifier
-                        .padding(start = 10.dp)
-                        .height(4.dp)
-                        .width((this@BoxWithConstraints.maxWidth * 0.22f).coerceAtLeast(92.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(
-                                    if (isSectionFocused) expressiveColors.focusRing else expressiveColors.titleAccent,
-                                    expressiveColors.titleAccent.copy(alpha = 0.4f),
-                                    Color.Transparent,
-                                )
-                            ),
-                            shape = RoundedCornerShape(999.dp),
-                        )
-                )
             }
+            Box(
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .height(3.dp)
+                    .width((this@BoxWithConstraints.maxWidth * 0.18f).coerceAtLeast(80.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                if (isSectionFocused) expressiveColors.focusRing else expressiveColors.titleAccent,
+                                expressiveColors.titleAccent.copy(alpha = 0.4f),
+                                Color.Transparent,
+                            )
+                        ),
+                        shape = RoundedCornerShape(999.dp),
+                    )
+            )
+        }
         }
         content()
-    }
-}
+        }
+        }
 
-/**
- * Shared error state for all detail screens.
- */
-@Composable
-fun DetailErrorState(
-    message: String,
-    onRetry: () -> Unit,
-) {
-    Column(
+        /**
+        * Shared error state for all detail screens.
+        */
+        @Composable
+        fun DetailErrorState(
+        message: String,
+        onRetry: () -> Unit,
+        ) {
+        Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+        ) {
         Text(text = message, color = MaterialTheme.colorScheme.error)
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Button(onClick = onRetry) { Text("Retry") }
-    }
-}
+        }
+        }
 
-/** Centered spinner used during loading. */
-@Composable
-fun DetailLoadingState() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
-    }
-}
+        /** Centered spinner used during loading. */
+        @Composable
+        fun DetailLoadingState() {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(modifier = Modifier.size(36.dp))
+        }
+        }
 
-/**
- * An invisible focus anchor that ensures the screen content is scrolled to the top
- * before transferring focus to the primary action.
- */
-@Composable
-fun DetailAnchor(
-    focusRequester: FocusRequester,
-    downFocusRequester: FocusRequester? = null,
-    onFocused: () -> Unit,
-) {
-    Spacer(
+        /**
+        * An invisible focus anchor that ensures the screen content is scrolled to the top
+        * before transferring focus to the primary action.
+        */
+        @Composable
+        fun DetailAnchor(
+        focusRequester: FocusRequester,
+        downFocusRequester: FocusRequester? = null,
+        onFocused: () -> Unit,
+        ) {
+        Spacer(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(1.dp)
-            .focusRequester(focusRequester)
-            .blockBringIntoView()
-            .focusable()
-            .onFocusChanged { if (it.isFocused) onFocused() }
-            .focusProperties {
-                canFocus = true
-                if (downFocusRequester != null) {
-                    down = downFocusRequester
-                }
+        .fillMaxWidth()
+        .height(1.dp)
+        .focusRequester(focusRequester)
+        .blockBringIntoView()
+        .focusable()
+        .onFocusChanged { if (it.isFocused) onFocused() }
+        .focusProperties {
+            canFocus = true
+            if (downFocusRequester != null) {
+                down = downFocusRequester
             }
-            .background(Color.Transparent)
-    )
-}
+        }
+        .background(Color.Transparent)
+        )
+        }
 
-/**
- * Full-width horizontal episode row for season episode lists.
- * Left: 16:9 thumbnail with watch status overlay and progress bar.
- * Right: episode code + duration, title, overview.
- */
-@Composable
-fun EpisodeListRow(
-    episode: com.rpeters.cinefintv.ui.screens.detail.EpisodeModel,
-    modifier: Modifier = Modifier,
-    isNext: Boolean = false,
-    onFocus: () -> Unit = {},
-    onMenuAction: (() -> Unit)? = null,
-    onClick: () -> Unit,
-) {
-    val expressiveColors = LocalCinefinExpressiveColors.current
-    val spacing = LocalCinefinSpacing.current
-    var isFocused by remember { mutableStateOf(false) }
-    var menuHandledForCurrentPress by remember { mutableStateOf(false) }
+        /**
+        * Full-width horizontal episode row for season episode lists.
+        * Left: 16:9 thumbnail with watch status overlay and progress bar.
+        * Right: episode code + duration, title, overview.
+        */
+        @Composable
+        fun EpisodeListRow(
+        episode: com.rpeters.cinefintv.ui.screens.detail.EpisodeModel,
+        modifier: Modifier = Modifier,
+        isNext: Boolean = false,
+        onFocus: () -> Unit = {},
+        onMenuAction: (() -> Unit)? = null,
+        onClick: () -> Unit,
+        ) {
+        val expressiveColors = LocalCinefinExpressiveColors.current
+        val spacing = LocalCinefinSpacing.current
+        var isFocused by remember { mutableStateOf(false) }
+        var menuHandledForCurrentPress by remember { mutableStateOf(false) }
 
-    androidx.tv.material3.Card(
+        androidx.tv.material3.Card(
         onClick = onClick,
         modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 52.dp, vertical = 8.dp)
-            .testTag(DetailTestTags.EpisodeItem)
-            .onPreviewKeyEvent { keyEvent ->
-                val nativeEvent = keyEvent.nativeKeyEvent
-                when {
-                    onMenuAction == null -> false
-                    nativeEvent.action == android.view.KeyEvent.ACTION_UP -> {
-                        menuHandledForCurrentPress = false
-                        false
-                    }
-                    shouldOpenCardMenu(nativeEvent) && !menuHandledForCurrentPress -> {
-                        menuHandledForCurrentPress = true
-                        onMenuAction()
-                        true
-                    }
-                    shouldOpenCardMenu(nativeEvent) -> true
-                    else -> false
+        .fillMaxWidth()
+        .padding(horizontal = 48.dp, vertical = 6.dp)
+        .testTag(DetailTestTags.EpisodeItem)
+        .onPreviewKeyEvent { keyEvent ->
+            val nativeEvent = keyEvent.nativeKeyEvent
+            when {
+                onMenuAction == null -> false
+                nativeEvent.action == android.view.KeyEvent.ACTION_UP -> {
+                    menuHandledForCurrentPress = false
+                    false
                 }
+                shouldOpenCardMenu(nativeEvent) && !menuHandledForCurrentPress -> {
+                    menuHandledForCurrentPress = true
+                    onMenuAction()
+                    true
+                }
+                shouldOpenCardMenu(nativeEvent) -> true
+                else -> false
             }
-            .onFocusChanged {
-                val focused = it.isFocused || it.hasFocus
-                if (focused != isFocused) {
-                    isFocused = focused
-                    if (focused) onFocus()
-                }
-            },
-        scale = androidx.tv.material3.CardDefaults.scale(focusedScale = 1.02f),
+        }
+        .onFocusChanged {
+            val focused = it.isFocused || it.hasFocus
+            if (focused != isFocused) {
+                isFocused = focused
+                if (focused) onFocus()
+            }
+        },
+        scale = androidx.tv.material3.CardDefaults.scale(focusedScale = 1.015f),
         border = androidx.tv.material3.CardDefaults.border(
-            focusedBorder = androidx.tv.material3.Border(
-                border = androidx.compose.foundation.BorderStroke(2.dp, expressiveColors.focusRing),
-            ),
+        focusedBorder = androidx.tv.material3.Border(
+            border = androidx.compose.foundation.BorderStroke(2.dp, expressiveColors.focusRing),
+        ),
         ),
         shape = androidx.tv.material3.CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),
         colors = androidx.tv.material3.CardDefaults.colors(
-            containerColor = expressiveColors.detailPanelMuted,
-            focusedContainerColor = expressiveColors.detailPanelFocused,
+        containerColor = expressiveColors.detailPanelMuted,
+        focusedContainerColor = expressiveColors.detailPanelFocused,
         ),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(112.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            expressiveColors.focusGlow.copy(alpha = if (isFocused) 0.16f else 0.07f),
-                            Color.Transparent,
-                        )
-                    )
-                ),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Thumbnail
-            Box(
-                modifier = Modifier
-                    .width(184.dp)
-                    .fillMaxHeight()
-            ) {
-                if (episode.imageUrl != null) {
-                    AsyncImage(
-                        model = coil3.request.ImageRequest.Builder(LocalContext.current)
-                            .data(episode.imageUrl)
-                            .crossfade(true)
-                            .size(368, 208)
-                            .build(),
-                        contentDescription = episode.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
+        Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(96.dp)
+            .background(
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        expressiveColors.focusGlow.copy(alpha = if (isFocused) 0.16f else 0.07f),
+                        Color.Transparent,
                     )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(expressiveColors.accentSurface),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = episode.number?.toString() ?: "?",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                
-                // NEXT badge
-                if (isNext) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp)
-                    ) {
-                        CinefinChip(
-                            label = "NEXT",
-                            strong = true
-                        )
-                    }
-                }
-
-                // Watch status overlay
-                val watchStatus = when {
-                    episode.isWatched -> com.rpeters.cinefintv.ui.components.WatchStatus.WATCHED
-                    (episode.playbackProgress ?: 0f) > 0f -> com.rpeters.cinefintv.ui.components.WatchStatus.IN_PROGRESS
-                    else -> com.rpeters.cinefintv.ui.components.WatchStatus.NONE
-                }
-                if (watchStatus == com.rpeters.cinefintv.ui.components.WatchStatus.WATCHED) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp)
-                            .size(24.dp)
-                            .background(expressiveColors.watchedGreen.copy(alpha = 0.95f), RoundedCornerShape(999.dp)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "✓",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    }
-                }
-                // Progress bar
-                val progress = episode.playbackProgress ?: 0f
-                if (progress > 0f && !episode.isWatched) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .fillMaxWidth()
-                            .height(3.dp)
-                            .background(expressiveColors.playerSurface.copy(alpha = 0.5f))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(progress.coerceIn(0f, 1f))
-                                .background(MaterialTheme.colorScheme.primary)
-                        )
-                    }
+                )
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+        ) {
+        // Thumbnail
+        Box(
+            modifier = Modifier
+                .width(160.dp)
+                .fillMaxHeight()
+        ) {
+            if (episode.imageUrl != null) {
+                AsyncImage(
+                    model = coil3.request.ImageRequest.Builder(LocalContext.current)
+                        .data(episode.imageUrl)
+                        .crossfade(true)
+                        .size(320, 180)
+                        .build(),
+                    contentDescription = episode.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(expressiveColors.accentSurface),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = episode.number?.toString() ?: "?",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
 
-            // Metadata
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .padding(start = 18.dp, end = 24.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.Start,
-            ) {
-                // Episode code + duration row
-                val metaLine = listOfNotNull(episode.episodeCode, episode.duration).joinToString("  •  ")
-                if (metaLine.isNotBlank()) {
-                    Text(
-                        text = metaLine,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
+            // NEXT badge
+            if (isNext) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(4.dp)
+                ) {
+                    CinefinChip(
+                        label = "NEXT",
+                        strong = true
                     )
                 }
-                val qualityLine = listOfNotNull(episode.videoQuality, episode.audioLabel)
-                if (qualityLine.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        episode.videoQuality?.let {
-                            EpisodeMetaBadge(
-                                icon = Icons.Default.HighQuality,
-                                label = it,
-                            )
-                        }
-                        episode.audioLabel?.let {
-                            EpisodeMetaBadge(
-                                icon = Icons.Default.GraphicEq,
-                                label = it,
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = episode.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    color = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                )
-                episode.overview?.let {
-                    Spacer(modifier = Modifier.height(6.dp))
+            }
+
+            // Watch status overlay
+            val watchStatus = when {
+                episode.isWatched -> com.rpeters.cinefintv.ui.components.WatchStatus.WATCHED
+                (episode.playbackProgress ?: 0f) > 0f -> com.rpeters.cinefintv.ui.components.WatchStatus.IN_PROGRESS
+                else -> com.rpeters.cinefintv.ui.components.WatchStatus.NONE
+            }
+            if (watchStatus == com.rpeters.cinefintv.ui.components.WatchStatus.WATCHED) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(4.dp)
+                        .size(20.dp)
+                        .background(expressiveColors.watchedGreen.copy(alpha = 0.95f), RoundedCornerShape(999.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        text = "✓",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                }
+            }
+            // Progress bar
+            val progress = episode.playbackProgress ?: 0f
+            if (progress > 0f && !episode.isWatched) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .height(2.5.dp)
+                        .background(expressiveColors.playerSurface.copy(alpha = 0.5f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(progress.coerceIn(0f, 1f))
+                            .background(MaterialTheme.colorScheme.primary)
                     )
                 }
             }
         }
-    }
-}
 
+        // Metadata
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .padding(start = 14.dp, end = 20.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.Start,
+        ) {
+            // Episode code + duration row
+            val metaLine = listOfNotNull(episode.episodeCode, episode.duration).joinToString("  •  ")
+            if (metaLine.isNotBlank()) {
+                Text(
+                    text = metaLine,
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+            val qualityLine = listOfNotNull(episode.videoQuality, episode.audioLabel)
+            if (qualityLine.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    episode.videoQuality?.let {
+                        EpisodeMetaBadge(
+                            icon = Icons.Default.HighQuality,
+                            label = it,
+                        )
+                    }
+                    episode.audioLabel?.let {
+                        EpisodeMetaBadge(
+                            icon = Icons.Default.GraphicEq,
+                            label = it,
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = episode.title,
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp),
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                color = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            episode.overview?.let {
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+            }
+        }
+        }
+        }
+        }
 @Composable
 private fun EpisodeMetaBadge(
     icon: ImageVector,

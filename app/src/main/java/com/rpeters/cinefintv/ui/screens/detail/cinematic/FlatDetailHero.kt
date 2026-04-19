@@ -106,7 +106,7 @@ fun FlatDetailHero(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 520.dp),
+            .heightIn(min = 440.dp),
     ) {
         if (backdropUrl != null) {
             AsyncImage(
@@ -162,27 +162,27 @@ fun FlatDetailHero(
         Column(
             modifier = Modifier
                 .fillMaxWidth(0.62f)
-                .padding(start = spacing.gutter, top = 48.dp, end = spacing.gutter)
+                .padding(start = spacing.gutter, top = 32.dp, end = spacing.gutter)
                 .background(
                     color = Color.Black.copy(alpha = 0.34f),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
                 )
                 .border(
                     width = 1.dp,
                     color = Color.White.copy(alpha = 0.08f),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
                 )
-                .padding(horizontal = 24.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+                .padding(horizontal = 22.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             if (!logoUrl.isNullOrBlank()) {
-                Box(modifier = Modifier.heightIn(max = 120.dp)) {
+                Box(modifier = Modifier.heightIn(max = 100.dp)) {
                     AsyncImage(
                         model = logoUrl,
                         contentDescription = title,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 120.dp)
+                            .heightIn(max = 100.dp)
                             .testTag(DetailTestTags.HeroLogo),
                         contentScale = ContentScale.Fit,
                     )
@@ -190,11 +190,12 @@ fun FlatDetailHero(
             } else {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.displayMedium.copy(
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        fontSize = 36.sp,
                         shadow = Shadow(
                             color = Color.Black.copy(alpha = 0.72f),
                             offset = Offset(0f, 4f),
-                            blurRadius = 22f,
+                            blurRadius = 18f,
                         ),
                     ),
                     fontWeight = FontWeight.ExtraBold,
@@ -205,7 +206,7 @@ fun FlatDetailHero(
 
             Text(
                 text = listOfNotNull(eyebrow.takeIf { it.isNotBlank() }, ratingText).joinToString("  •  "),
-                style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 0.3.sp),
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp, letterSpacing = 0.2.sp),
                 color = Color.White.copy(alpha = 0.84f),
             )
 
@@ -219,10 +220,10 @@ fun FlatDetailHero(
             tagline?.let {
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp),
                     fontStyle = FontStyle.Italic,
                     color = Color.White.copy(alpha = 0.98f),
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -230,7 +231,7 @@ fun FlatDetailHero(
             if (!summary.isNullOrBlank()) {
                 Text(
                     text = summary,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
                     color = Color.White.copy(alpha = 0.96f),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -241,7 +242,7 @@ fun FlatDetailHero(
             creditLine?.let {
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
                     color = Color(0xFFE3C08C),
                     fontWeight = FontWeight.Medium,
                 )
@@ -310,10 +311,10 @@ private fun HeroActionStrip(
                         false
                     }
                 }
-                .requiredWidthIn(min = 220.dp)
-                .defaultMinSize(minHeight = 58.dp),
+                .requiredWidthIn(min = 180.dp)
+                .defaultMinSize(minHeight = 48.dp),
             scale = ButtonDefaults.scale(focusedScale = 1.04f),
-            contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 10.dp),
             colors = ButtonDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -323,7 +324,7 @@ private fun HeroActionStrip(
             glow = ButtonDefaults.glow(
                 focusedGlow = Glow(
                     elevationColor = expressiveColors.focusGlow.copy(alpha = 0.48f),
-                    elevation = 12.dp,
+                    elevation = 10.dp,
                 ),
             ),
             border = ButtonDefaults.border(
@@ -337,7 +338,7 @@ private fun HeroActionStrip(
         ) {
             Text(
                 text = primaryLabel,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -347,8 +348,8 @@ private fun HeroActionStrip(
             OutlinedButton(
                 onClick = action.onClick,
                 modifier = Modifier
-                    .requiredWidthIn(min = 160.dp)
-                    .defaultMinSize(minHeight = 58.dp)
+                    .requiredWidthIn(min = 140.dp)
+                    .defaultMinSize(minHeight = 48.dp)
                     .focusRequester(secondaryFocusRequesters[index])
                     .blockBringIntoView()
                     .focusProperties {
@@ -377,7 +378,7 @@ private fun HeroActionStrip(
                         }
                     },
                 scale = ButtonDefaults.scale(focusedScale = 1.04f),
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
                 colors = ButtonDefaults.colors(
                     containerColor = expressiveColors.detailPanelFocused.copy(alpha = 0.32f),
                     contentColor = MaterialTheme.colorScheme.onBackground,
@@ -387,7 +388,7 @@ private fun HeroActionStrip(
                 glow = ButtonDefaults.glow(
                     focusedGlow = Glow(
                         elevationColor = expressiveColors.focusGlow.copy(alpha = 0.34f),
-                        elevation = 10.dp,
+                        elevation = 8.dp,
                     ),
                 ),
                 border = ButtonDefaults.border(
@@ -406,17 +407,17 @@ private fun HeroActionStrip(
                 ),
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         imageVector = action.icon,
                         contentDescription = action.contentDescription,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(16.dp),
                     )
                     Text(
                         text = action.contentDescription,
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )

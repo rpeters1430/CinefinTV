@@ -72,13 +72,13 @@ fun MovieDetailLayout(
     val overviewFocusRequester = remember { FocusRequester() }
     val firstCastFocusRequester = remember { FocusRequester() }
     val firstSimilarFocusRequester = remember { FocusRequester() }
-    val similarCardWidth: Dp = 196.dp
+    val similarCardWidth: Dp = 176.dp
     val firstContentFocusRequester = overviewFocusRequester
 
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = spacing.gutter * 2),
+        contentPadding = PaddingValues(bottom = spacing.gutter),
     ) {
         item {
             Column {
@@ -149,7 +149,7 @@ fun MovieDetailLayout(
                 } else {
                     null
                 },
-                modifier = Modifier.padding(top = spacing.rowGap),
+                modifier = Modifier.padding(top = spacing.rowGap.div(1.5f)),
             )
         }
 
@@ -157,14 +157,14 @@ fun MovieDetailLayout(
             item {
                 DetailShelfPanel(
                     modifier = Modifier
-                        .padding(top = spacing.rowGap / 2)
+                        .padding(top = spacing.rowGap.div(2.5f))
                         .testTag(DetailTestTags.MovieCastSection),
                     title = "People",
                     subtitle = "Cast and key performers",
                 ) {
                     LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
                     ) {
                         items(castItems) { person ->
                             TvPersonCard(
@@ -218,14 +218,14 @@ fun MovieDetailLayout(
             item {
                 DetailShelfPanel(
                     modifier = Modifier
-                        .padding(top = spacing.rowGap)
+                        .padding(top = spacing.rowGap.div(1.5f))
                         .testTag(DetailTestTags.MovieSimilarSection),
                     title = "More Like This",
                     subtitle = "Recommended from your library",
                 ) {
                     LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
                     ) {
                         items(similarItems, key = { it.id }) { mediaItem ->
                             TvMediaCard(
@@ -234,7 +234,7 @@ fun MovieDetailLayout(
                                 watchStatus = mediaItem.watchStatus,
                                 playbackProgress = mediaItem.playbackProgress,
                                 aspectRatio = 2f / 3f, // Standard poster ratio
-                                cardWidth = 220.dp,
+                                cardWidth = 180.dp,
                                 modifier = if (mediaItem.id == similarItems.firstOrNull()?.id) {
                                     Modifier
                                         .blockBringIntoView()

@@ -83,7 +83,7 @@ class JellyfinSessionManager @Inject constructor(
             // 401 path: single-flight reauth and retry once
             reauthMutex.withLock {
                 // If another coroutine already reauthed, skip
-                val inProgress = authRepository.isAuthenticating.first()
+                val inProgress = authRepository.isAuthenticating.value
                 if (!inProgress) {
                     Logger.d(LogCategory.NETWORK, "SessionManager", "$operationName: 401 detected, forcing re-authentication")
                     val success = authRepository.forceReAuthenticate()
@@ -95,6 +95,10 @@ class JellyfinSessionManager @Inject constructor(
                     delay(50)
                 } else {
                     Logger.d(LogCategory.NETWORK, "SessionManager", "$operationName: 401 detected, join ongoing re-auth")
+                    // CRITICAL FIX: Wait for the ongoing authentication to actually finish
+                    authRepository.isAuthenticating.first { !it }
+                    // Brief delay to allow token state to propagate
+                    delay(50)
                 }
             }
 

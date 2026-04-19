@@ -225,7 +225,7 @@ private fun StuffVideoContent(
             chips = chips,
             focusRequester = overviewFocusRequester,
             upFocusRequester = primaryActionFocusRequester,
-            modifier = Modifier.padding(top = 28.dp),
+            modifier = Modifier.padding(top = 16.dp),
         )
     }
 }
@@ -313,7 +313,7 @@ private fun StuffFolderContent(
             chips = chips,
             focusRequester = overviewFocusRequester,
             upFocusRequester = primaryActionFocusRequester,
-            modifier = Modifier.padding(top = 28.dp),
+            modifier = Modifier.padding(top = 16.dp),
         )
 
         DetailContentSection(
@@ -338,13 +338,13 @@ private fun StuffFolderContent(
             }
         } else {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
+                columns = GridCells.Fixed(4),
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-                contentPadding = PaddingValues(start = 56.dp, end = 56.dp, bottom = 48.dp),
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp),
+                contentPadding = PaddingValues(start = 48.dp, end = 48.dp, bottom = 32.dp),
+                horizontalArrangement = Arrangement.spacedBy(18.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
                 items(items, key = { it.id }) { item ->
                     TvMediaCard(

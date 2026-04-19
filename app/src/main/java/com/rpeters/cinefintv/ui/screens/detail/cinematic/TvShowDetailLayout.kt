@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Button
@@ -115,7 +116,7 @@ fun TvShowDetailLayout(
     val firstSeasonFocusRequester = remember { FocusRequester() }
     val firstCastFocusRequester = remember { FocusRequester() }
     val firstSimilarFocusRequester = remember { FocusRequester() }
-    val similarCardWidth: Dp = 196.dp
+    val similarCardWidth: Dp = 176.dp
     val hasNextUp = !nextUpTitle.isNullOrBlank() && onNextUpClick != null
     val firstContentFocusRequester = when {
         hasNextUp -> nextUpFocusRequester
@@ -147,7 +148,7 @@ fun TvShowDetailLayout(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = spacing.gutter * 2),
+        contentPadding = PaddingValues(bottom = spacing.gutter),
     ) {
         item {
             Column {
@@ -220,7 +221,7 @@ fun TvShowDetailLayout(
                     upFocusRequester = primaryActionFocusRequester,
                     downFocusRequester = if (seasons.isNotEmpty()) firstSeasonFocusRequester else overviewFocusRequester,
                     modifier = Modifier
-                        .padding(top = spacing.rowGap)
+                        .padding(top = spacing.rowGap.div(1.5f))
                         .padding(horizontal = spacing.gutter)
                         .testTag(DetailTestTags.TvNextUpPanel),
                 )
@@ -231,19 +232,19 @@ fun TvShowDetailLayout(
             item {
                 Column(
                     modifier = Modifier
-                        .padding(top = spacing.rowGap)
+                        .padding(top = spacing.rowGap.div(1.5f))
                         .testTag(DetailTestTags.TvEpisodesPanel), // Reusing tag for consistency
                 ) {
                     DetailStripTitle(
                         title = "Seasons",
                         modifier = Modifier.padding(
                             horizontal = spacing.gutter,
-                            vertical = spacing.elementGap,
+                            vertical = spacing.elementGap.div(1.5f),
                         ),
                     )
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = spacing.gutter),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
                     ) {
                         items(seasons) { season ->
                             SeasonShowcaseCard(
@@ -348,7 +349,7 @@ fun TvShowDetailLayout(
                 } else {
                     null
                 },
-                modifier = Modifier.padding(top = spacing.rowGap),
+                modifier = Modifier.padding(top = spacing.rowGap.div(1.5f)),
             )
         }
 
@@ -356,14 +357,14 @@ fun TvShowDetailLayout(
             item {
                 DetailShelfPanel(
                     modifier = Modifier
-                        .padding(top = spacing.rowGap)
+                        .padding(top = spacing.rowGap.div(1.5f))
                         .testTag(DetailTestTags.TvCastPanel),
                     title = "People",
                     subtitle = "Cast and recurring faces",
                 ) {
                     LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
                     ) {
                         items(castItems) { person ->
                             TvPersonCard(
@@ -417,14 +418,14 @@ fun TvShowDetailLayout(
             item {
                 DetailShelfPanel(
                     modifier = Modifier
-                        .padding(top = spacing.rowGap)
+                        .padding(top = spacing.rowGap.div(1.5f))
                         .testTag(DetailTestTags.TvSimilarPanel),
                     title = "More Like This",
                     subtitle = "Other shows with a similar vibe",
                 ) {
                     LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap),
+                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
                     ) {
                         items(similarItems, key = { it.id }) { item ->
                             TvMediaCard(
@@ -433,7 +434,7 @@ fun TvShowDetailLayout(
                                 watchStatus = item.watchStatus,
                                 playbackProgress = item.playbackProgress,
                                 aspectRatio = 2f / 3f,
-                                cardWidth = 220.dp,
+                                cardWidth = 180.dp,
                                 modifier = if (item.id == similarItems.firstOrNull()?.id) {
                                     Modifier
                                         .blockBringIntoView()
@@ -500,29 +501,29 @@ private fun NextUpPanel(
             .fillMaxWidth()
             .background(
                 color = expressiveColors.detailPanel.copy(alpha = 0.82f),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
             )
             .border(
                 width = 1.dp,
                 color = expressiveColors.borderSubtle.copy(alpha = 0.55f),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
             )
-            .padding(horizontal = 24.dp, vertical = 20.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
                 text = "NEXT UP",
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp),
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(
                 text = title,
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
                 text = "Resume the series from the next recommended episode.",
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Button(
@@ -562,13 +563,13 @@ private fun SeasonShowcaseCard(
     Card(
         onClick = onClick,
         modifier = modifier
-            .width(340.dp)
+            .width(280.dp)
             .onFocusChanged { state -> isFocused = state.isFocused || state.hasFocus },
         colors = CardDefaults.colors(
             containerColor = expressiveColors.detailPanel.copy(alpha = 0.88f),
             focusedContainerColor = expressiveColors.detailPanelFocused,
         ),
-        shape = CardDefaults.shape(androidx.compose.foundation.shape.RoundedCornerShape(24.dp)),
+        shape = CardDefaults.shape(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)),
         scale = CardDefaults.scale(focusedScale = 1.03f),
         border = CardDefaults.border(
             border = Border(
@@ -587,7 +588,7 @@ private fun SeasonShowcaseCard(
         glow = CardDefaults.glow(
             focusedGlow = Glow(
                 elevationColor = expressiveColors.focusGlow.copy(alpha = 0.24f),
-                elevation = 10.dp,
+                elevation = 8.dp,
             ),
         ),
     ) {
@@ -595,7 +596,7 @@ private fun SeasonShowcaseCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(190.dp)
+                    .height(150.dp)
                     .background(expressiveColors.accentSurface),
             ) {
                 if (season.imageUrl != null) {
@@ -641,15 +642,15 @@ private fun SeasonShowcaseCard(
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     Text(
                         text = season.title,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
@@ -666,8 +667,8 @@ private fun SeasonShowcaseCard(
             }
 
             Column(
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (season.playbackProgress != null && season.playbackProgress > 0f) {
                     Box(

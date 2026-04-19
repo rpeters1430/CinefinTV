@@ -216,7 +216,7 @@ private fun SeasonContent(
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = spacing.gutter * 2),
+        contentPadding = PaddingValues(bottom = spacing.gutter),
     ) {
         item {
             Column {
@@ -268,7 +268,7 @@ private fun SeasonContent(
                         runCatching { firstEpisodeFocusRequester.requestFocus() }
                     }
                 },
-                modifier = Modifier.padding(top = spacing.rowGap),
+                modifier = Modifier.padding(top = spacing.rowGap.div(1.5f)),
             )
         }
 
