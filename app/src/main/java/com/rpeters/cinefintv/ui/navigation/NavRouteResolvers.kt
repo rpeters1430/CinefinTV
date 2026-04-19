@@ -11,8 +11,8 @@ fun routeForBrowsableItem(
                 "movies" -> LibraryMovies
                 "tvshows" -> LibraryTvShows
                 "music" -> LibraryMusic
-                "homevideos" -> LibraryCollections
-                else -> CollectionDetail(itemId)
+                "homevideos" -> LibraryStuff
+                else -> StuffDetail(itemId)
             }
         }
         itemType.equals("Movie", ignoreCase = true) -> MovieDetail(itemId)
@@ -20,7 +20,7 @@ fun routeForBrowsableItem(
             itemType.equals("TV Show", ignoreCase = true) -> TvShowDetail(itemId)
         itemType.equals("Season", ignoreCase = true) -> SeasonDetail(itemId)
         itemType.equals("Episode", ignoreCase = true) -> Player(itemId)
-        else -> CollectionDetail(itemId)
+        else -> StuffDetail(itemId)
     }
 }
 
@@ -35,6 +35,6 @@ fun routeForLinkedDetailItem(
         itemType.equals("Season", ignoreCase = true) -> SeasonDetail(itemId)
         itemType.equals("Episode", ignoreCase = true) -> Player(itemId)
         itemType.equals("Person", ignoreCase = true) -> PersonDetail(itemId)
-        else -> CollectionDetail(itemId)
+        else -> StuffDetail(itemId)
     }
 }

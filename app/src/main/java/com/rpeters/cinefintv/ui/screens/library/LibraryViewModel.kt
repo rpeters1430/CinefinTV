@@ -104,7 +104,7 @@ class TvShowLibraryViewModel @Inject constructor(
 ) : BaseLibraryViewModel(repositories, updateBus, listOf(BaseItemKind.SERIES))
 
 @HiltViewModel
-class CollectionLibraryViewModel @Inject constructor(
+class StuffLibraryViewModel @Inject constructor(
     repositories: JellyfinRepositoryCoordinator,
     private val updateBus: MediaUpdateBus,
 ) : BaseLibraryViewModel(repositories, updateBus, listOf(BaseItemKind.VIDEO, BaseItemKind.COLLECTION_FOLDER)) {

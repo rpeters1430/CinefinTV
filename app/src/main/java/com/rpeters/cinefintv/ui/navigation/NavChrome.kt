@@ -13,7 +13,7 @@ fun appChromeRouteSpec(currentDestination: NavDestination?): AppChromeRouteSpec 
         is TvShowDetail,
         is SeasonDetail,
         is EpisodeDetail,
-        is CollectionDetail,
+        is StuffDetail,
         is PersonDetail,
         is Player,
         is AudioPlayer -> false

@@ -387,9 +387,10 @@ class SecureCredentialManager @Inject constructor(
     suspend fun saveServerState(server: JellyfinServer) {
         try {
             val json = kotlinx.serialization.json.Json.encodeToString(server)
+            val encryptedJson = encrypt(json)
             withContext(NonCancellable + Dispatchers.IO) {
                 secureCredentialsDataStore.edit { prefs ->
-                    prefs[stringPreferencesKey(SERVER_STATE_KEY)] = json
+                    prefs[stringPreferencesKey(SERVER_STATE_KEY)] = encryptedJson
                 }
             }
         } catch (e: CancellationException) {
@@ -402,8 +403,26 @@ class SecureCredentialManager @Inject constructor(
     suspend fun loadServerState(): JellyfinServer? {
         return try {
             val prefs = secureCredentialsDataStore.data.first()
-            val json = prefs[stringPreferencesKey(SERVER_STATE_KEY)] ?: return null
-            jsonSerializer.decodeFromString<JellyfinServer>(json)
+            val savedValue = prefs[stringPreferencesKey(SERVER_STATE_KEY)] ?: return null
+            
+            // Try to decrypt first
+            val decryptedJson = decrypt(savedValue)
+            
+            val finalJson = if (decryptedJson != null) {
+                decryptedJson
+            } else {
+                // Fallback: If decryption failed, it might be an unencrypted legacy session
+                // We verify if it's valid JSON before using it
+                if (savedValue.trim().startsWith("{") && savedValue.trim().endsWith("}")) {
+                    logDebug { "loadServerState: Using plaintext fallback for legacy session" }
+                    savedValue
+                } else {
+                    logDebug { "loadServerState: Value is not valid encrypted data nor valid plaintext JSON" }
+                    return null
+                }
+            }
+            
+            jsonSerializer.decodeFromString<JellyfinServer>(finalJson)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

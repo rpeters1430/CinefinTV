@@ -3,6 +3,10 @@ package com.rpeters.cinefintv.ui.player
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
@@ -221,11 +225,14 @@ private fun PlaybackShellHarness(
     onOpenItem: (String) -> Unit = {},
     onResumePlayback: (Boolean) -> Unit = {},
 ) {
+    var controlsVisible by remember { mutableStateOf(initialControlsVisible) }
     PlayerPlaybackContent(
         exoPlayer = player,
         uiState = uiState,
         renderState = renderState,
         positionProvider = positionProvider,
+        controlsVisible = controlsVisible,
+        onControlsVisibleChange = { controlsVisible = it },
         onBack = {},
         onOpenItem = onOpenItem,
         onResumePlayback = onResumePlayback,
@@ -235,7 +242,6 @@ private fun PlaybackShellHarness(
         onPlaybackSpeedSelected = {},
         onAutoPlayChange = {},
         showVideoSurface = false,
-        initialControlsVisible = initialControlsVisible,
         controlsHideDelayMs = 5_000L,
     )
 }

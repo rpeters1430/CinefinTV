@@ -81,8 +81,9 @@ fun TvMediaCard(
     var isFocused by remember { mutableStateOf(false) }
     var menuHandledForCurrentPress by remember { mutableStateOf(false) }
 
-    val focusedScaleValue = remember(aspectRatio, cardWidth, compactMetadata) {
+    val focusedScaleValue = remember(aspectRatio, cardWidth, compactMetadata, performanceProfile.tier) {
         if (compactMetadata) 1.0f
+        else if (performanceProfile.tier == DevicePerformanceProfile.Tier.LOW) 1.03f
         else if (aspectRatio > 1f || (cardWidth != null && cardWidth > 200.dp)) 1.035f
         else 1.06f
     }
@@ -96,22 +97,35 @@ fun TvMediaCard(
         label = "MediaCardScale"
     )
 
-    val titleColor by animateColorAsState(
-        targetValue = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface,
-        animationSpec = tween(
-            durationMillis = CinefinMotion.DurationShort,
-            easing = CinefinMotion.Standard
-        ),
-        label = "MediaCardTitleColor",
-    )
-    val subtitleColor by animateColorAsState(
-        targetValue = if (isFocused) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(
-            durationMillis = CinefinMotion.DurationShort,
-            easing = CinefinMotion.Standard
-        ),
-        label = "MediaCardSubtitleColor",
-    )
+    val useAnimations = performanceProfile.tier != DevicePerformanceProfile.Tier.LOW
+
+    val titleColorValue = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface
+    val titleColor by if (useAnimations) {
+        animateColorAsState(
+            targetValue = titleColorValue,
+            animationSpec = tween(
+                durationMillis = CinefinMotion.DurationShort,
+                easing = CinefinMotion.Standard
+            ),
+            label = "MediaCardTitleColor",
+        )
+    } else {
+        remember(titleColorValue) { mutableStateOf(titleColorValue) }
+    }
+
+    val subtitleColorValue = if (isFocused) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+    val subtitleColor by if (useAnimations) {
+        animateColorAsState(
+            targetValue = subtitleColorValue,
+            animationSpec = tween(
+                durationMillis = CinefinMotion.DurationShort,
+                easing = CinefinMotion.Standard
+            ),
+            label = "MediaCardSubtitleColor",
+        )
+    } else {
+        remember(subtitleColorValue) { mutableStateOf(subtitleColorValue) }
+    }
 
     val imageRequest = remember(imageUrl, performanceProfile.tier, aspectRatio, context) {
         imageUrl?.let {
@@ -173,10 +187,14 @@ fun TvMediaCard(
                     ),
                 ),
                 glow = CardDefaults.glow(
-                    focusedGlow = androidx.tv.material3.Glow(
-                        elevationColor = expressiveColors.focusGlow.copy(alpha = 0.22f),
-                        elevation = 8.dp
-                    )
+                    focusedGlow = if (performanceProfile.tier != DevicePerformanceProfile.Tier.LOW) {
+                        androidx.tv.material3.Glow(
+                            elevationColor = expressiveColors.focusGlow.copy(alpha = 0.22f),
+                            elevation = 8.dp
+                        )
+                    } else {
+                        androidx.tv.material3.Glow.None
+                    }
                 ),
                 shape = CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),
             ) {
@@ -208,12 +226,19 @@ fun TvMediaCard(
                             .fillMaxSize()
                             .background(
                                 Brush.verticalGradient(
-                                    colorStops = arrayOf(
-                                        0.0f to Color.Transparent,
-                                        0.6f to Color.Black.copy(alpha = 0.08f),
-                                        0.85f to Color.Black.copy(alpha = 0.28f),
-                                        1.0f to Color.Black.copy(alpha = 0.55f),
-                                    ),
+                                    colorStops = if (performanceProfile.tier != DevicePerformanceProfile.Tier.LOW) {
+                                        arrayOf(
+                                            0.0f to Color.Transparent,
+                                            0.6f to Color.Black.copy(alpha = 0.08f),
+                                            0.85f to Color.Black.copy(alpha = 0.28f),
+                                            1.0f to Color.Black.copy(alpha = 0.55f),
+                                        )
+                                    } else {
+                                        arrayOf(
+                                            0.0f to Color.Transparent,
+                                            1.0f to Color.Black.copy(alpha = 0.5f),
+                                        )
+                                    }
                                 ),
                             ),
                     )

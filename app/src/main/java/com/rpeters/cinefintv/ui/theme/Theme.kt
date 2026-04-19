@@ -181,7 +181,7 @@ fun CinefinTvTheme(
     content: @Composable () -> Unit
 ) {
     val spacing = CinefinSpacing()
-    val motion = CinefinMotion
+    val motion = CinefinMotionSpec()
     val systemDarkTheme = isSystemInDarkTheme()
     val isDarkTheme = when (themeMode) {
         ThemeMode.SYSTEM -> systemDarkTheme

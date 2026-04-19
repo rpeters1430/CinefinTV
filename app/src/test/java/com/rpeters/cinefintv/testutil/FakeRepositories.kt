@@ -109,15 +109,15 @@ class FakeSeasonDetailRepositories(
     }
 }
 
-class FakeCollectionDetailRepositories(
+class FakeStuffDetailRepositories(
     val media: JellyfinMediaRepository = mockk(relaxed = true),
     val stream: JellyfinStreamRepository = mockk(relaxed = true),
     val user: JellyfinUserRepository = mockk(relaxed = true),
 ) {
     val coordinator: JellyfinRepositoryCoordinator = mockk {
-        every { this@mockk.media } returns this@FakeCollectionDetailRepositories.media
-        every { this@mockk.stream } returns this@FakeCollectionDetailRepositories.stream
-        every { this@mockk.user } returns this@FakeCollectionDetailRepositories.user
+        every { this@mockk.media } returns this@FakeStuffDetailRepositories.media
+        every { this@mockk.stream } returns this@FakeStuffDetailRepositories.stream
+        every { this@mockk.user } returns this@FakeStuffDetailRepositories.user
         every { this@mockk.search } returns mockk(relaxed = true)
         every { this@mockk.auth } returns mockk(relaxed = true)
     }

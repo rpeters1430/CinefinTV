@@ -49,12 +49,12 @@ import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
 
 @Composable
-fun CollectionDetailScreen(
+fun StuffDetailScreen(
     itemId: String,
     onOpenItem: (String, String?) -> Unit,
     onPlayItem: (String) -> Unit,
     onBack: () -> Unit,
-    viewModel: CollectionDetailViewModel = hiltViewModel(),
+    viewModel: StuffDetailViewModel = hiltViewModel(),
 ) {
     LaunchedEffect(itemId) {
         viewModel.init(itemId)
@@ -85,14 +85,14 @@ fun CollectionDetailScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
-            is CollectionDetailUiState.Loading -> DetailLoadingState()
-            is CollectionDetailUiState.Error -> DetailErrorState(
+            is StuffDetailUiState.Loading -> DetailLoadingState()
+            is StuffDetailUiState.Error -> DetailErrorState(
                 message = state.message,
                 onRetry = { viewModel.load() },
             )
-            is CollectionDetailUiState.Content -> {
+            is StuffDetailUiState.Content -> {
                 if (state.stuff.isCollection) {
-                    CollectionFolderContent(
+                    StuffFolderContent(
                         stuff = state.stuff,
                         items = state.items,
                         onOpenItem = onOpenItem,
@@ -102,7 +102,7 @@ fun CollectionDetailScreen(
                         destinationFocus = destinationFocus,
                     )
                 } else {
-                    CollectionVideoContent(
+                    StuffVideoContent(
                         stuff = state.stuff,
                         onPlayItem = onPlayItem,
                         onBack = onBack,
@@ -117,11 +117,11 @@ fun CollectionDetailScreen(
 }
 
 @Composable
-private fun CollectionVideoContent(
-    stuff: CollectionDetailModel,
+private fun StuffVideoContent(
+    stuff: StuffDetailModel,
     onPlayItem: (String) -> Unit,
     onBack: () -> Unit,
-    viewModel: CollectionDetailViewModel,
+    viewModel: StuffDetailViewModel,
     primaryActionFocusRequester: FocusRequester,
     destinationFocus: TopLevelDestinationFocus,
 ) {
@@ -231,12 +231,12 @@ private fun CollectionVideoContent(
 }
 
 @Composable
-private fun CollectionFolderContent(
-    stuff: CollectionDetailModel,
-    items: List<CollectionItemModel>,
+private fun StuffFolderContent(
+    stuff: StuffDetailModel,
+    items: List<StuffItemModel>,
     onOpenItem: (String, String?) -> Unit,
     onBack: () -> Unit,
-    viewModel: CollectionDetailViewModel,
+    viewModel: StuffDetailViewModel,
     primaryActionFocusRequester: FocusRequester,
     destinationFocus: TopLevelDestinationFocus,
 ) {

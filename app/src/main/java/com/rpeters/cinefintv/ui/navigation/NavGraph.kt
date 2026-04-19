@@ -36,11 +36,11 @@ import com.rpeters.cinefintv.ui.screens.auth.LoginScreen
 import com.rpeters.cinefintv.ui.screens.auth.ServerConnectionScreen
 import com.rpeters.cinefintv.ui.screens.detail.MovieDetailScreen
 import com.rpeters.cinefintv.ui.screens.detail.SeasonScreen
-import com.rpeters.cinefintv.ui.screens.detail.CollectionDetailScreen
+import com.rpeters.cinefintv.ui.screens.detail.StuffDetailScreen
 import com.rpeters.cinefintv.ui.screens.detail.TvShowDetailScreen
 import com.rpeters.cinefintv.ui.screens.home.HomeScreen
 import com.rpeters.cinefintv.ui.screens.library.MovieLibraryScreen
-import com.rpeters.cinefintv.ui.screens.library.CollectionLibraryScreen
+import com.rpeters.cinefintv.ui.screens.library.StuffLibraryScreen
 import com.rpeters.cinefintv.ui.screens.library.TvShowLibraryScreen
 import com.rpeters.cinefintv.ui.screens.music.MusicScreen
 import com.rpeters.cinefintv.ui.screens.person.PersonScreen
@@ -187,10 +187,10 @@ fun CinefinTvNavGraph(
                         }
                     )
                 }
-                is LibraryCollections -> {
-                    CollectionLibraryScreen(
+                is LibraryStuff -> {
+                    StuffLibraryScreen(
                         onOpenItem = { item ->
-                            backStack.add(CollectionDetail(item.id))
+                            backStack.add(StuffDetail(item.id))
                         },
                         onPlayItem = { item ->
                             backStack.add(Player(item.id))
@@ -252,8 +252,8 @@ fun CinefinTvNavGraph(
                 is EpisodeDetail -> {
                     PlaceholderScreen("Episode Detail", onBack = { backStack.pop() })
                 }
-                is CollectionDetail -> {
-                    CollectionDetailScreen(
+                is StuffDetail -> {
+                    StuffDetailScreen(
                         itemId = destination.itemId,
                         onOpenItem = { id, type ->
                             backStack.add(routeForLinkedDetailItem(id, type))

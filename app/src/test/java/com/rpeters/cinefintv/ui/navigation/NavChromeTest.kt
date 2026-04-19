@@ -18,7 +18,7 @@ class NavChromeTest {
             MovieDetail("movie-1"),
             TvShowDetail("series-1"),
             SeasonDetail("season-1"),
-            CollectionDetail("collection-1"),
+            StuffDetail("collection-1"),
             PersonDetail("person-1"),
             EpisodeDetail("episode-1"),
         )
@@ -53,7 +53,7 @@ class NavChromeTest {
             Search,
             LibraryMovies,
             LibraryTvShows,
-            LibraryCollections,
+            LibraryStuff,
             LibraryMusic,
             Settings,
         )

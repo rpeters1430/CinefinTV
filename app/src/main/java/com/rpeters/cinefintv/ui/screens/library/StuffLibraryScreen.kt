@@ -17,10 +17,10 @@ import com.rpeters.cinefintv.ui.components.WatchStatus
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun CollectionLibraryScreen(
+fun StuffLibraryScreen(
     onOpenItem: (LibraryCardModel) -> Unit,
     onPlayItem: (LibraryCardModel) -> Unit,
-    viewModel: CollectionLibraryViewModel = hiltViewModel()
+    viewModel: StuffLibraryViewModel = hiltViewModel()
 ) {
     val pagedItems = viewModel.pagedItems.collectAsLazyPagingItems()
     val gridState = rememberLazyGridState()

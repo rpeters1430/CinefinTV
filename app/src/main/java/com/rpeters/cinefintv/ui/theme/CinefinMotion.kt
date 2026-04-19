@@ -10,36 +10,46 @@ import androidx.compose.runtime.staticCompositionLocalOf
  * Defines standard easing and duration tokens for a premium TV experience.
  */
 @Immutable
-object CinefinMotion {
-    /**
-     * Standard M3 Easing with a slight overshoot for expressive feedback on TV.
-     */
-    val Overshoot: Easing = CubicBezierEasing(0.3f, 0.0f, 0.2f, 1.4f)
-    
-    /**
-     * Premium overshoot effect for focus transitions.
-     * Offers a snappy entry with a soft, high-quality rebound.
-     */
-    val PremiumOvershoot: Easing = CubicBezierEasing(0.18f, 0.89f, 0.32f, 1.28f)
-    
-    /**
-     * Emphasized easing for significant UI transitions (e.g., screen changes, large panels).
-     */
-    val Emphasized: Easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
+data class CinefinMotionSpec(
+    val overshoot: Easing = CubicBezierEasing(0.3f, 0.0f, 0.2f, 1.4f),
+    val premiumOvershoot: Easing = CubicBezierEasing(0.18f, 0.89f, 0.32f, 1.28f),
+    val emphasized: Easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f),
+    val standard: Easing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f),
+    val durationExtraShort: Int = 100,
+    val durationShort: Int = 150,
+    val durationMedium: Int = 350,
+    val durationLong: Int = 600,
+)
 
-    /**
-     * Standard easing for subtle property changes (e.g., color, alpha).
-     */
+/**
+ * Static tokens for reference.
+ */
+object CinefinMotion {
+    val Overshoot: Easing = CubicBezierEasing(0.3f, 0.0f, 0.2f, 1.4f)
+    val PremiumOvershoot: Easing = CubicBezierEasing(0.18f, 0.89f, 0.32f, 1.28f)
+    val Emphasized: Easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
     val Standard: Easing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
 
-    // Standard Durations
     const val DurationExtraShort = 100
     const val DurationShort = 150
     const val DurationMedium = 350
     const val DurationLong = 600
+
+    fun create(reduceMotion: Boolean = false): CinefinMotionSpec {
+        return if (reduceMotion) {
+            CinefinMotionSpec(
+                durationExtraShort = 0,
+                durationShort = 0,
+                durationMedium = 0,
+                durationLong = 0,
+            )
+        } else {
+            CinefinMotionSpec()
+        }
+    }
 }
 
 /**
  * CompositionLocal for CinefinMotion tokens.
  */
-val LocalCinefinMotion = staticCompositionLocalOf { CinefinMotion }
+val LocalCinefinMotion = staticCompositionLocalOf { CinefinMotionSpec() }

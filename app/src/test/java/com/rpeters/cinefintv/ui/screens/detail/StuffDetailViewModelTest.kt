@@ -2,7 +2,7 @@ package com.rpeters.cinefintv.ui.screens.detail
 
 import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.repository.common.ApiResult
-import com.rpeters.cinefintv.testutil.FakeCollectionDetailRepositories
+import com.rpeters.cinefintv.testutil.FakeStuffDetailRepositories
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.every
@@ -22,7 +22,7 @@ import org.junit.Rule
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class CollectionDetailViewModelTest {
+class StuffDetailViewModelTest {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
@@ -62,7 +62,7 @@ class CollectionDetailViewModelTest {
 
     @Test
     fun load_whenVideo_populatesPolishedMetadata() = runTest {
-        val fakeRepos = FakeCollectionDetailRepositories()
+        val fakeRepos = FakeStuffDetailRepositories()
         val itemId = UUID.randomUUID().toString()
         val dto = makeItemDto(
             id = itemId,
@@ -77,10 +77,10 @@ class CollectionDetailViewModelTest {
         every { fakeRepos.stream.getBackdropUrl(any()) } returns "https://img/backdrop.jpg"
         every { fakeRepos.stream.getPosterCardImageUrl(any()) } returns "https://img/poster.jpg"
 
-        val vm = CollectionDetailViewModel(fakeRepos.coordinator, updateBus).apply { init(itemId) }
+        val vm = StuffDetailViewModel(fakeRepos.coordinator, updateBus).apply { init(itemId) }
         advanceUntilIdle()
 
-        val state = vm.uiState.value as CollectionDetailUiState.Content
+        val state = vm.uiState.value as StuffDetailUiState.Content
         assertFalse(state.stuff.isCollection)
         assertEquals("Concert Cut", state.stuff.title)
         assertEquals(2025, state.stuff.year)
@@ -93,7 +93,7 @@ class CollectionDetailViewModelTest {
 
     @Test
     fun load_whenCollection_mapsChildrenWithSubtitles() = runTest {
-        val fakeRepos = FakeCollectionDetailRepositories()
+        val fakeRepos = FakeStuffDetailRepositories()
         val itemId = UUID.randomUUID().toString()
         val collectionDto = makeItemDto(
             id = itemId,
@@ -121,10 +121,10 @@ class CollectionDetailViewModelTest {
         every { fakeRepos.stream.getBackdropUrl(any()) } returns null
         every { fakeRepos.stream.getPosterCardImageUrl(any()) } returns "https://img/poster.jpg"
 
-        val vm = CollectionDetailViewModel(fakeRepos.coordinator, updateBus).apply { init(itemId) }
+        val vm = StuffDetailViewModel(fakeRepos.coordinator, updateBus).apply { init(itemId) }
         advanceUntilIdle()
 
-        val state = vm.uiState.value as CollectionDetailUiState.Content
+        val state = vm.uiState.value as StuffDetailUiState.Content
         assertTrue(state.stuff.isCollection)
         assertEquals(2, state.items.size)
         assertEquals(2, state.stuff.itemCount)
@@ -134,7 +134,7 @@ class CollectionDetailViewModelTest {
 
     @Test
     fun updateBus_refreshItemForCurrentCollection_reloadsContent() = runTest {
-        val fakeRepos = FakeCollectionDetailRepositories()
+        val fakeRepos = FakeStuffDetailRepositories()
         val itemId = UUID.randomUUID().toString()
         val initialDto = makeItemDto(id = itemId, title = "Initial Title")
         val refreshedDto = makeItemDto(id = itemId, title = "Updated Title")
@@ -146,14 +146,14 @@ class CollectionDetailViewModelTest {
         every { fakeRepos.stream.getBackdropUrl(any()) } returns null
         every { fakeRepos.stream.getPosterCardImageUrl(any()) } returns null
 
-        val vm = CollectionDetailViewModel(fakeRepos.coordinator, updateBus).apply { init(itemId) }
+        val vm = StuffDetailViewModel(fakeRepos.coordinator, updateBus).apply { init(itemId) }
         advanceUntilIdle()
 
-        assertEquals("Initial Title", (vm.uiState.value as CollectionDetailUiState.Content).stuff.title)
+        assertEquals("Initial Title", (vm.uiState.value as StuffDetailUiState.Content).stuff.title)
 
         updateBus.refreshItem(itemId)
         advanceUntilIdle()
 
-        assertEquals("Updated Title", (vm.uiState.value as CollectionDetailUiState.Content).stuff.title)
+        assertEquals("Updated Title", (vm.uiState.value as StuffDetailUiState.Content).stuff.title)
     }
 }

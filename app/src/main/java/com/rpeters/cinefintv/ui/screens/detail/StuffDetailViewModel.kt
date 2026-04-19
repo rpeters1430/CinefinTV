@@ -24,7 +24,7 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import javax.inject.Inject
 
-data class CollectionDetailModel(
+data class StuffDetailModel(
     val id: String,
     val title: String,
     val overview: String?,
@@ -41,7 +41,7 @@ data class CollectionDetailModel(
     val playbackProgress: Float?,
 )
 
-data class CollectionItemModel(
+data class StuffItemModel(
     val id: String,
     val title: String,
     val subtitle: String?,
@@ -52,31 +52,31 @@ data class CollectionItemModel(
     val unwatchedCount: Int?,
 )
 
-sealed class CollectionDetailUiState {
-    data object Loading : CollectionDetailUiState()
-    data class Error(val message: String) : CollectionDetailUiState()
+sealed class StuffDetailUiState {
+    data object Loading : StuffDetailUiState()
+    data class Error(val message: String) : StuffDetailUiState()
     data class Content(
-        val stuff: CollectionDetailModel,
-        val items: List<CollectionItemModel>,
-    ) : CollectionDetailUiState()
+        val stuff: StuffDetailModel,
+        val items: List<StuffItemModel>,
+    ) : StuffDetailUiState()
 }
 
 @HiltViewModel
-class CollectionDetailViewModel @Inject constructor(
+class StuffDetailViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
     private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
 ) : ViewModel() {
 
     private var itemId: String = ""
 
-    private val _uiState = MutableStateFlow<CollectionDetailUiState>(CollectionDetailUiState.Loading)
-    val uiState: StateFlow<CollectionDetailUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow<StuffDetailUiState>(StuffDetailUiState.Loading)
+    val uiState: StateFlow<StuffDetailUiState> = _uiState.asStateFlow()
 
     fun init(id: String) {
         if (itemId == id) return
         itemId = id
         if (itemId.isBlank()) {
-            _uiState.value = CollectionDetailUiState.Error("Invalid item ID")
+            _uiState.value = StuffDetailUiState.Error("Invalid item ID")
         } else {
             load()
             observeUpdateEvents()
@@ -100,9 +100,9 @@ class CollectionDetailViewModel @Inject constructor(
 
     fun load(silent: Boolean = false) {
         viewModelScope.launch {
-            val hasContent = _uiState.value is CollectionDetailUiState.Content
+            val hasContent = _uiState.value is StuffDetailUiState.Content
             if (!silent || !hasContent) {
-                _uiState.value = CollectionDetailUiState.Loading
+                _uiState.value = StuffDetailUiState.Loading
             }
 
             val itemResult = repositories.media.getItemDetails(itemId)
@@ -116,7 +116,7 @@ class CollectionDetailViewModel @Inject constructor(
                 val items = if (isCollection) {
                     val contentResult = repositories.media.getLibraryItems(parentId = itemId)
                     if (contentResult is ApiResult.Success) {
-                        contentResult.data.map { it.toCollectionItemModel() }
+                        contentResult.data.map { it.toStuffItemModel() }
                     } else {
                         emptyList()
                     }
@@ -124,12 +124,12 @@ class CollectionDetailViewModel @Inject constructor(
                     emptyList()
                 }
 
-                _uiState.value = CollectionDetailUiState.Content(
-                    stuff = itemDto.toCollectionDetailModel(isCollection),
+                _uiState.value = StuffDetailUiState.Content(
+                    stuff = itemDto.toStuffDetailModel(isCollection),
                     items = items
                 )
             } else if (itemResult is ApiResult.Error) {
-                _uiState.value = CollectionDetailUiState.Error(itemResult.message)
+                _uiState.value = StuffDetailUiState.Error(itemResult.message)
             }
         }
     }
@@ -161,8 +161,8 @@ class CollectionDetailViewModel @Inject constructor(
         }
     }
 
-    private fun BaseItemDto.toCollectionDetailModel(isCollection: Boolean): CollectionDetailModel {
-        return CollectionDetailModel(
+    private fun BaseItemDto.toStuffDetailModel(isCollection: Boolean): StuffDetailModel {
+        return StuffDetailModel(
             id = id.toString(),
             title = getDisplayTitle(),
             overview = overview,
@@ -180,10 +180,10 @@ class CollectionDetailViewModel @Inject constructor(
         )
     }
 
-    private fun BaseItemDto.toCollectionItemModel(): CollectionItemModel {
+    private fun BaseItemDto.toStuffItemModel(): StuffItemModel {
         val presentation = toMediaCardPresentation()
 
-        return CollectionItemModel(
+        return StuffItemModel(
             id = id.toString(),
             title = getDisplayTitle(),
             subtitle = presentation.subtitle,

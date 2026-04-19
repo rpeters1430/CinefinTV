@@ -76,7 +76,8 @@ import com.rpeters.cinefintv.data.preferences.SubtitleTextColor
 import com.rpeters.cinefintv.ui.player.PlayerConstants.CONTROLS_HIDE_DELAY_MS
 import com.rpeters.cinefintv.ui.player.PlayerConstants.EXIT_TRANSITION_DURATION_MS
 import com.rpeters.cinefintv.ui.player.PlayerConstants.NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS
-import com.rpeters.cinefintv.ui.player.PlayerConstants.PROGRESS_UPDATE_INTERVAL_MS
+import com.rpeters.cinefintv.ui.player.PlayerConstants.PROGRESS_UPDATE_INTERVAL_ACTIVE_MS
+import com.rpeters.cinefintv.ui.player.PlayerConstants.PROGRESS_UPDATE_INTERVAL_IDLE_MS
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -245,6 +246,7 @@ fun PlayerScreen(
             } else {
                 val exoPlayer = player ?: return
                 var isClosing by remember(uiState.itemId) { mutableStateOf(false) }
+                var controlsVisible by remember { mutableStateOf(true) }
                 var renderState by remember(exoPlayer) {
                     mutableStateOf(
                         PlayerRenderState(
@@ -257,30 +259,50 @@ fun PlayerScreen(
                 }
 
                 DisposableEffect(exoPlayer) {
-                    fun captureState() {
-                        renderState = PlayerRenderState(
-                            isPlaying = exoPlayer.isPlaying,
-                            isBuffering = exoPlayer.playbackState == Player.STATE_BUFFERING,
-                            duration = exoPlayer.duration.coerceAtLeast(0L),
-                            bufferedFraction = exoPlayer.bufferedPercentage / 100f,
-                        )
-                    }
-
                     val listener = object : Player.Listener {
                         override fun onEvents(player: Player, events: Player.Events) {
-                            captureState()
+                            // Only update on major events, skip progress polling here
+                            if (events.containsAny(
+                                    Player.EVENT_PLAY_WHEN_READY_CHANGED,
+                                    Player.EVENT_PLAYBACK_STATE_CHANGED,
+                                    Player.EVENT_IS_PLAYING_CHANGED,
+                                    Player.EVENT_MEDIA_ITEM_TRANSITION,
+                                )) {
+                                renderState = PlayerRenderState(
+                                    isPlaying = exoPlayer.isPlaying,
+                                    isBuffering = exoPlayer.playbackState == Player.STATE_BUFFERING,
+                                    duration = exoPlayer.duration.coerceAtLeast(0L),
+                                    bufferedFraction = exoPlayer.bufferedPercentage / 100f,
+                                )
+                            }
                         }
                     }
 
-                    captureState()
                     exoPlayer.addListener(listener)
                     onDispose {
                         exoPlayer.removeListener(listener)
                     }
                 }
 
+                // Throttled polling for progress-dependent state
+                LaunchedEffect(exoPlayer, controlsVisible) {
+                    while (true) {
+                        renderState = PlayerRenderState(
+                            isPlaying = exoPlayer.isPlaying,
+                            isBuffering = exoPlayer.playbackState == Player.STATE_BUFFERING,
+                            duration = exoPlayer.duration.coerceAtLeast(0L),
+                            bufferedFraction = exoPlayer.bufferedPercentage / 100f,
+                        )
+                        val interval = if (controlsVisible) {
+                            PROGRESS_UPDATE_INTERVAL_ACTIVE_MS
+                        } else {
+                            PROGRESS_UPDATE_INTERVAL_IDLE_MS
+                        }
+                        delay(interval)
+                    }
+                }
+
                 // Periodic progress updates to keep seeker and time in sync
-                // We use a provider to avoid recomposing the whole screen every 50ms.
                 val positionProvider = { exoPlayer.currentPosition.coerceAtLeast(0L) }
 
                 val coroutineScope = rememberCoroutineScope()
@@ -332,6 +354,8 @@ fun PlayerScreen(
                             uiState = uiState,
                             renderState = renderState,
                             positionProvider = positionProvider,
+                            controlsVisible = controlsVisible,
+                            onControlsVisibleChange = { controlsVisible = it },
                             onBack = requestClose,
                             onOpenItem = onOpenItem,
                             onResumePlayback = { resume -> viewModel.onResumePlayback(resume) },
@@ -361,6 +385,8 @@ internal fun PlayerPlaybackContent(
     uiState: PlayerUiState,
     renderState: PlayerRenderState,
     positionProvider: () -> Long,
+    controlsVisible: Boolean,
+    onControlsVisibleChange: (Boolean) -> Unit,
     onBack: () -> Unit,
     onOpenItem: (String) -> Unit,
     onResumePlayback: (Boolean) -> Unit,
@@ -371,7 +397,6 @@ internal fun PlayerPlaybackContent(
     onAutoPlayChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     showVideoSurface: Boolean = true,
-    initialControlsVisible: Boolean = true,
     controlsHideDelayMs: Long = CONTROLS_HIDE_DELAY_MS,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -383,27 +408,26 @@ internal fun PlayerPlaybackContent(
     val playerFocusRequester = remember { FocusRequester() }
     val skipFocusRequester = remember { FocusRequester() }
     var overlayActionFocused by remember { mutableStateOf(false) }
-    var controlsVisible by remember { mutableStateOf(initialControlsVisible) }
     var isContentShelfVisible by remember { mutableStateOf(false) }
     var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val expressiveColors = LocalCinefinExpressiveColors.current
 
     LaunchedEffect(renderState.isPlaying) {
         if (!renderState.isPlaying) {
-            controlsVisible = true
+            onControlsVisibleChange(true)
         }
     }
 
     LaunchedEffect(lastInteraction, renderState.isPlaying, isTrackPanelVisible, controlsHideDelayMs) {
         if (renderState.isPlaying && !isTrackPanelVisible) {
             delay(controlsHideDelayMs)
-            controlsVisible = false
+            onControlsVisibleChange(false)
             isContentShelfVisible = false
         }
     }
 
     fun onInteract() {
-        controlsVisible = true
+        onControlsVisibleChange(true)
         lastInteraction = System.currentTimeMillis()
     }
 
@@ -418,7 +442,7 @@ internal fun PlayerPlaybackContent(
             }
             controlsVisible -> {
                 onInteract()
-                controlsVisible = false
+                onControlsVisibleChange(false)
             }
             else -> onBack()
         }
@@ -485,7 +509,7 @@ internal fun PlayerPlaybackContent(
                             val wereControlsVisible = controlsVisible
                             onInteract()
                             if (!wereControlsVisible) {
-                                controlsVisible = true
+                                onControlsVisibleChange(true)
                             } else {
                                 if (renderState.isPlaying) exoPlayer.pause() else exoPlayer.play()
                             }
@@ -582,109 +606,45 @@ internal fun PlayerPlaybackContent(
             }
         }
 
-        Column(
-            modifier = Modifier
-                .zIndex(2f)
-                .align(Alignment.TopEnd)
-                .padding(horizontal = 32.dp, vertical = 28.dp),
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            AnimatedVisibility(
-                visible = uiState.isHdrPlayback,
-                enter = fadeIn() + slideInHorizontally { it / 2 },
-                exit = fadeOut() + slideOutHorizontally { it / 2 },
-            ) {
-                Box(
-                    modifier = Modifier
-                        .background(
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(50),
-                        )
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "HDR",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                    )
-                }
-            }
+        // Top badges localized
+        PlayerTopBadges(
+            isHdr = uiState.isHdrPlayback,
+            qualityLabel = uiState.transcodingQuality.takeIf { it != com.rpeters.cinefintv.data.preferences.TranscodingQuality.AUTO }?.label,
+            playbackSpeed = uiState.playbackSpeed,
+            modifier = Modifier.align(Alignment.TopEnd)
+        )
 
-            AnimatedVisibility(
-                visible = uiState.playbackSpeed != 1.0f,
-                enter = fadeIn(),
-                exit = fadeOut(),
-            ) {
-                val speedLabel = if (uiState.playbackSpeed == 1.0f) "1×" else "${uiState.playbackSpeed}×"
-                Box(
-                    modifier = Modifier
-                        .background(
-                            color = expressiveColors.pillStrong,
-                            shape = RoundedCornerShape(50),
-                        )
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = speedLabel,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-            }
-        }
-
-        Column(
+        // Skip actions localized
+        PlayerSkipActions(
+            activeSkipLabel = activeSkipLabel,
+            onSkip = {
+                exoPlayer.seekTo(activeSkipTargetMs)
+                onInteract()
+            },
+            focusRequester = skipFocusRequester,
             modifier = Modifier
-                .zIndex(2f)
                 .align(Alignment.BottomEnd)
-                .padding(bottom = 96.dp, end = 48.dp),
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            AnimatedVisibility(
-                visible = activeSkipLabel != null,
-                enter = fadeIn() + slideInHorizontally { it },
-                exit = fadeOut() + slideOutHorizontally { it },
-            ) {
-                SkipActionCard(
-                    label = activeSkipLabel ?: "Skip",
-                    subtitle = "Available now",
-                    onSkip = {
-                        exoPlayer.seekTo(activeSkipTargetMs)
-                        onInteract()
-                    },
-                    buttonFocusRequester = skipFocusRequester,
-                    modifier = Modifier
-                        .testTag(PlayerTestTags.SkipAction)
-                        .onFocusChanged { overlayActionFocused = it.hasFocus },
-                )
-            }
+                .padding(bottom = 96.dp, end = 48.dp)
+                .onFocusChanged { overlayActionFocused = it.hasFocus }
+        )
 
-            AnimatedVisibility(
-                visible = showNextUp,
-                enter = fadeIn() + slideInHorizontally { it },
-                exit = fadeOut() + slideOutHorizontally { it },
-            ) {
-                NextEpisodeCard(
-                    seriesTitle = uiState.title,
-                    title = uiState.nextEpisodeTitle ?: "Next Episode",
-                    thumbnailUrl = uiState.nextEpisodeThumbnailUrl,
-                    remainingMs = remaining.coerceAtLeast(0L),
-                    autoPlayEnabled = uiState.autoPlayNextEpisode,
-                    autoFocusPlayNow = showNextUp && !controlsVisible,
-                    onActionFocusChanged = { overlayActionFocused = it },
-                    onPlayNow = {
-                        uiState.nextEpisodeId?.let { onOpenItem(it) }
-                    },
-                    modifier = Modifier.testTag(PlayerTestTags.NextEpisodeCard),
-                )
-            }
-        }
+        // Next Episode Overlay
+        NextEpisodeOverlay(
+            shouldShow = showNextUp,
+            seriesTitle = uiState.title,
+            nextEpisodeTitle = uiState.nextEpisodeTitle,
+            nextEpisodeThumbnailUrl = uiState.nextEpisodeThumbnailUrl,
+            remainingMs = remaining.coerceAtLeast(0L),
+            autoPlayEnabled = uiState.autoPlayNextEpisode,
+            autoFocusPlayNow = showNextUp && !controlsVisible,
+            onPlayNow = {
+                uiState.nextEpisodeId?.let { onOpenItem(it) }
+            },
+            onFocusChanged = { overlayActionFocused = it },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 96.dp, end = 48.dp)
+        )
 
         if (uiState.shouldShowResumeDialog) {
             ResumeDialog(
@@ -713,6 +673,112 @@ internal fun PlayerPlaybackContent(
             },
             onInteract = ::onInteract
         )
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun NextEpisodeOverlay(
+    shouldShow: Boolean,
+    seriesTitle: String?,
+    nextEpisodeTitle: String?,
+    nextEpisodeThumbnailUrl: String?,
+    remainingMs: Long,
+    autoPlayEnabled: Boolean,
+    autoFocusPlayNow: Boolean,
+    onPlayNow: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AnimatedVisibility(
+        visible = shouldShow,
+        enter = fadeIn() + slideInHorizontally { it },
+        exit = fadeOut() + slideOutHorizontally { it },
+        modifier = modifier,
+    ) {
+        NextEpisodeCard(
+            seriesTitle = seriesTitle,
+            title = nextEpisodeTitle ?: "Next Episode",
+            thumbnailUrl = nextEpisodeThumbnailUrl,
+            remainingMs = remainingMs,
+            autoPlayEnabled = autoPlayEnabled,
+            autoFocusPlayNow = autoFocusPlayNow,
+            onActionFocusChanged = onFocusChanged,
+            onPlayNow = onPlayNow,
+            modifier = Modifier.testTag(PlayerTestTags.NextEpisodeCard),
+        )
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun PlayerTopBadges(
+    isHdr: Boolean,
+    qualityLabel: String?,
+    playbackSpeed: Float,
+    modifier: Modifier = Modifier,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    Row(
+        modifier = modifier.padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (isHdr) {
+            Badge("HDR")
+        }
+        qualityLabel?.let {
+            Badge(it)
+        }
+        if (playbackSpeed != 1.0f) {
+            Badge("${playbackSpeed}x")
+        }
+    }
+}
+
+@Composable
+private fun Badge(text: String) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    Box(
+        modifier = Modifier
+            .background(
+                expressiveColors.playerContentPrimary.copy(alpha = 0.15f),
+                RoundedCornerShape(4.dp)
+            )
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = expressiveColors.playerContentPrimary.copy(alpha = 0.9f),
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun PlayerSkipActions(
+    activeSkipLabel: String?,
+    onSkip: () -> Unit,
+    focusRequester: FocusRequester,
+    modifier: Modifier = Modifier,
+) {
+    AnimatedVisibility(
+        visible = activeSkipLabel != null,
+        enter = fadeIn() + slideInHorizontally { it / 2 },
+        exit = fadeOut() + slideOutHorizontally { it / 2 },
+        modifier = modifier
+    ) {
+        if (activeSkipLabel != null) {
+            SkipActionCard(
+                label = activeSkipLabel,
+                subtitle = "Press to skip",
+                onSkip = onSkip,
+                buttonFocusRequester = focusRequester,
+                modifier = Modifier.testTag(PlayerTestTags.SkipAction)
+            )
+        }
     }
 }
 

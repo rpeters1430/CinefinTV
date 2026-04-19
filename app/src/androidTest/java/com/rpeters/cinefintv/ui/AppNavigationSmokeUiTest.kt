@@ -36,9 +36,8 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.rpeters.cinefintv.ui.navigation.CollectionDetail
 import com.rpeters.cinefintv.ui.navigation.Home
-import com.rpeters.cinefintv.ui.navigation.LibraryCollections
+import com.rpeters.cinefintv.ui.navigation.LibraryStuff
 import com.rpeters.cinefintv.ui.navigation.LibraryMovies
 import com.rpeters.cinefintv.ui.navigation.LibraryMusic
 import com.rpeters.cinefintv.ui.navigation.LibraryTvShows
@@ -49,6 +48,7 @@ import com.rpeters.cinefintv.ui.navigation.Player
 import com.rpeters.cinefintv.ui.navigation.Search
 import com.rpeters.cinefintv.ui.navigation.SeasonDetail
 import com.rpeters.cinefintv.ui.navigation.Settings
+import com.rpeters.cinefintv.ui.navigation.StuffDetail
 import com.rpeters.cinefintv.ui.navigation.TvShowDetail
 import com.rpeters.cinefintv.ui.navigation.appChromeRouteSpec
 import com.rpeters.cinefintv.ui.navigation.navigateToTopLevelDestination
@@ -445,7 +445,7 @@ private fun AppNavigationSmokeHarness() {
                 }
             }
 
-            is LibraryCollections -> SmokeScreen("Collections")
+            is LibraryStuff -> SmokeScreen("Stuff")
             is LibraryMusic -> SmokeScreen("Music")
             is Search -> SmokeScreen("Search")
             is Settings -> SmokeScreen("Settings")
@@ -476,7 +476,7 @@ private fun AppNavigationSmokeHarness() {
 
             is SeasonDetail -> SmokeScreen("Season Detail")
             is com.rpeters.cinefintv.ui.navigation.EpisodeDetail -> SmokeScreen("Episode Detail")
-            is CollectionDetail -> SmokeScreen("Collection Detail")
+            is StuffDetail -> SmokeScreen("Stuff Detail")
             is PersonDetail -> SmokeScreen("Person Detail")
             is com.rpeters.cinefintv.ui.navigation.ServerConnection -> SmokeScreen("Server Connection")
             is com.rpeters.cinefintv.ui.navigation.Login -> SmokeScreen("Login")

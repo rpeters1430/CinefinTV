@@ -20,11 +20,11 @@ class NavRouteResolversTest {
             routeForBrowsableItem("music-folder", "CollectionFolder", "music"),
         )
         assertEquals(
-            LibraryCollections,
+            LibraryStuff,
             routeForBrowsableItem("homevideos-folder", "CollectionFolder", "homevideos"),
         )
         assertEquals(
-            CollectionDetail("other-folder"),
+            StuffDetail("other-folder"),
             routeForBrowsableItem("other-folder", "CollectionFolder", "books"),
         )
     }
@@ -52,13 +52,13 @@ class NavRouteResolversTest {
             routeForBrowsableItem("episode-1", "Episode", null),
         )
         assertEquals(
-            CollectionDetail("unknown-1"),
+            StuffDetail("unknown-1"),
             routeForBrowsableItem("unknown-1", "BoxSet", null),
         )
     }
 
     @Test
-    fun routeForLinkedDetailItem_mapsKnownTypes_andFallsBackToCollectionDetail() {
+    fun routeForLinkedDetailItem_mapsKnownTypes_andFallsBackToStuffDetail() {
         assertEquals(
             MovieDetail("movie-1"),
             routeForLinkedDetailItem("movie-1", "Movie"),
@@ -82,6 +82,10 @@ class NavRouteResolversTest {
         assertEquals(
             PersonDetail("person-1"),
             routeForLinkedDetailItem("person-1", "Person"),
+        )
+        assertEquals(
+            StuffDetail("unknown-1"),
+            routeForLinkedDetailItem("unknown-1", "Unknown"),
         )
     }
 }

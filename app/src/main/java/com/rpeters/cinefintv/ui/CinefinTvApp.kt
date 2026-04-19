@@ -86,6 +86,7 @@ import com.rpeters.cinefintv.ui.navigation.navigateToTopLevelDestination
 import com.rpeters.cinefintv.ui.navigation.navTabItems
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import com.rpeters.cinefintv.ui.theme.LocalCinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.ui.theme.ThemeColorController
 import com.rpeters.cinefintv.ui.theme.ThemeViewModel
@@ -110,6 +111,7 @@ fun CinefinTvApp(
     themeViewModel: ThemeViewModel = hiltViewModel()
 ) {
     val themePrefs by themeViewModel.themePreferences.collectAsState()
+    val motionSpec by themeViewModel.motionSpec.collectAsState()
     
     CinefinTvTheme(
         seedColor = themeViewModel.currentSeedColor,
@@ -118,7 +120,10 @@ fun CinefinTvApp(
         accentColor = themePrefs.accentColor,
         contrastLevel = themePrefs.contrastLevel,
     ) {
-        CompositionLocalProvider(LocalCinefinThemeController provides themeViewModel) {
+        CompositionLocalProvider(
+            LocalCinefinThemeController provides themeViewModel,
+            LocalCinefinMotion provides motionSpec,
+        ) {
             val backStack: NavBackStack<NavKey> = key(isAuthenticated) {
                 rememberNavBackStack(
                     if (isAuthenticated) Home else ServerConnection

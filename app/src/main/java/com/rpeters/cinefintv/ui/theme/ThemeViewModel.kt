@@ -11,6 +11,7 @@ import com.rpeters.cinefintv.data.preferences.ThemePreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
@@ -35,6 +36,17 @@ class ThemeViewModel @Inject constructor(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = ThemePreferences.DEFAULT
+        )
+
+    /**
+     * Derived motion spec based on user preferences.
+     */
+    val motionSpec: StateFlow<CinefinMotionSpec> = themePreferences
+        .map { prefs -> CinefinMotion.create(reduceMotion = prefs.respectReduceMotion) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = CinefinMotion.create()
         )
 
     /**
