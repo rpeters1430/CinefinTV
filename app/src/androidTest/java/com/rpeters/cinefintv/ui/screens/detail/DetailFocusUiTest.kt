@@ -1,23 +1,17 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailTestTags
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.HeroSecondaryAction
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.MovieDetailLayout
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowDetailLayout
 import org.junit.Assert.assertTrue
@@ -33,7 +27,7 @@ class DetailFocusUiTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun movieDetail_rendersHeroAndOverview() {
+    fun movieDetail_rendersHeroCastAndSimilar() {
         composeRule.setContent {
             val primaryActionFocusRequester = remember { FocusRequester() }
             val listState = rememberLazyListState()
@@ -42,22 +36,25 @@ class DetailFocusUiTest {
                 MovieDetailLayout(
                     backdropUrl = null,
                     posterUrl = null,
-                    logoUrl = null,
                     title = "Example Movie",
-                    eyebrow = "2026 · 2h 10m",
-                    ratingText = "★ 8.3",
+                    metadataItems = listOf("2026", "2h 10m", "PG-13"),
+                    qualityBadges = listOf("4K", "HDR"),
                     genres = listOf("Action", "Thriller"),
-                    primaryActionLabel = "▶ Play",
+                    primaryActionLabel = "Play",
                     onPrimaryAction = {},
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     description = "A test movie overview.",
-                    heroTagline = null,
-                    directorLine = "Director · Studio",
-                    heroBadges = emptyList(),
-                    heroSecondaryActions = emptyList(),
-                    factItems = emptyList(),
-                    castItems = emptyList(),
-                    similarItems = emptyList(),
+                    heroSecondaryActions = listOf(HeroSecondaryAction(label = "+ Watchlist", onClick = {})),
+                    castItems = listOf(CastModel(id = "p1", name = "Jane Doe", role = "Lead", imageUrl = null)),
+                    similarItems = listOf(
+                        SimilarMovieModel(
+                            id = "s1",
+                            title = "Another Movie",
+                            imageUrl = null,
+                            watchStatus = WatchStatus.NONE,
+                            playbackProgress = null,
+                        )
+                    ),
                     onCastClick = {},
                     onSimilarClick = {},
                     listState = listState,
@@ -67,31 +64,31 @@ class DetailFocusUiTest {
 
         assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.HeroTitle).fetchSemanticsNodes().isNotEmpty())
         assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.PrimaryAction).fetchSemanticsNodes().isNotEmpty())
-        assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.Overview).fetchSemanticsNodes().isNotEmpty())
-        assertTrue(composeRule.onAllNodesWithText("A test movie overview.").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.MovieCastSection).fetchSemanticsNodes().isNotEmpty())
+        assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.MovieSimilarSection).fetchSemanticsNodes().isNotEmpty())
+        assertTrue(composeRule.onAllNodesWithText("Jane Doe").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(composeRule.onAllNodesWithText("Another Movie").fetchSemanticsNodes().isNotEmpty())
     }
 
     @Test
-    fun tvShowDetail_rendersSeasonsShelf() {
+    fun tvShowDetail_rendersSeasonsNextUpCastAndSimilar() {
         composeRule.setContent {
             val primaryActionFocusRequester = remember { FocusRequester() }
-            // Pre-scroll to ensure it's composed
-            val listState = remember { LazyListState(firstVisibleItemIndex = 2) }
+            val listState = rememberLazyListState()
 
             DetailTestHost {
                 TvShowDetailLayout(
                     backdropUrl = null,
                     posterUrl = null,
-                    logoUrl = null,
                     title = "Example Show",
-                    eyebrow = "TV SERIES · 2 SEASONS",
-                    ratingText = "★ 8.9",
-                    genres = listOf("Drama", "Mystery"),
-                    primaryActionLabel = "▶ Play",
+                    metadataItems = listOf("2021-2026", "3 seasons", "Airing"),
+                    qualityBadges = listOf("4K"),
+                    genres = listOf("Drama"),
+                    primaryActionLabel = "Resume",
                     onPrimaryAction = {},
                     primaryActionFocusRequester = primaryActionFocusRequester,
-                    nextUpTitle = null,
-                    onNextUpClick = null,
+                    nextUpTitle = "S3 · E4",
+                    onNextUpClick = {},
                     seasons = listOf(
                         SeasonModel(
                             id = "season-1",
@@ -103,146 +100,28 @@ class DetailFocusUiTest {
                         )
                     ),
                     onSeasonClick = {},
-                    castItems = emptyList(),
-                    similarItems = emptyList(),
+                    castItems = listOf(CastModel(id = "p1", name = "Actor One", role = "Lead", imageUrl = null)),
+                    similarItems = listOf(
+                        SimilarMovieModel(
+                            id = "show-2",
+                            title = "Similar Show",
+                            imageUrl = null,
+                            watchStatus = WatchStatus.NONE,
+                            playbackProgress = null,
+                        )
+                    ),
                     onCastClick = {},
                     onSimilarClick = {},
                     description = "A test show overview.",
-                    heroTagline = null,
-                    creditLine = null,
-                    heroBadges = emptyList(),
-                    heroSecondaryActions = emptyList(),
-                    factItems = emptyList(),
+                    heroSecondaryActions = listOf(HeroSecondaryAction(label = "···", onClick = {})),
                     listState = listState,
                 )
             }
         }
 
         assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.TvEpisodesPanel).fetchSemanticsNodes().isNotEmpty())
-        assertTrue(composeRule.onAllNodesWithText("Season 1").fetchSemanticsNodes().isNotEmpty())
-    }
-
-    @Test
-    fun movieDetail_rendersCastAndSimilarSections() {
-        composeRule.setContent {
-            val primaryActionFocusRequester = remember { FocusRequester() }
-            // Start near the cast shelf so both cast and similar sections are laid out.
-            val listState = remember { LazyListState(firstVisibleItemIndex = 2) }
-
-            DetailTestHost {
-                MovieDetailLayout(
-                    backdropUrl = null,
-                    posterUrl = null,
-                    logoUrl = null,
-                    title = "Coverage Movie",
-                    eyebrow = "2026 · 1h 55m",
-                    ratingText = "★ 7.8",
-                    genres = listOf("Sci-Fi", "Drama"),
-                    primaryActionLabel = "▶ Play",
-                    onPrimaryAction = {},
-                    primaryActionFocusRequester = primaryActionFocusRequester,
-                    description = "Coverage overview text.",
-                    heroTagline = null,
-                    directorLine = "Writer · Studio",
-                    heroBadges = emptyList(),
-                    heroSecondaryActions = emptyList(),
-                    factItems = emptyList(),
-                    castItems = listOf(
-                        CastModel(id = "person-1", name = "Jane Doe", role = "Lead", imageUrl = null),
-                    ),
-                    similarItems = listOf(
-                        SimilarMovieModel(
-                            id = "movie-2",
-                            title = "Another Movie",
-                            imageUrl = null,
-                            watchStatus = WatchStatus.NONE,
-                            playbackProgress = null,
-                        ),
-                    ),
-                    onCastClick = {},
-                    onSimilarClick = {},
-                    listState = listState,
-                )
-            }
-        }
-
-        assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.MovieCastSection).fetchSemanticsNodes().isNotEmpty())
-        assertTrue(composeRule.onAllNodesWithText("Jane Doe").fetchSemanticsNodes().isNotEmpty())
-        assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.MovieSimilarSection).fetchSemanticsNodes().isNotEmpty())
-        assertTrue(composeRule.onAllNodesWithText("Another Movie").fetchSemanticsNodes().isNotEmpty())
-    }
-
-    @Test
-    fun movieDetail_withoutLogo_keepsHeroTitleVisible() {
-        composeRule.setContent {
-            val primaryActionFocusRequester = remember { FocusRequester() }
-            val listState = rememberLazyListState()
-
-            DetailTestHost {
-                MovieDetailLayout(
-                    backdropUrl = null,
-                    posterUrl = null,
-                    logoUrl = null,
-                    title = "Fallback Movie",
-                    eyebrow = "2026 · 1h 30m",
-                    ratingText = "★ 7.1",
-                    genres = listOf("Adventure"),
-                    primaryActionLabel = "▶ Play",
-                    onPrimaryAction = {},
-                    primaryActionFocusRequester = primaryActionFocusRequester,
-                    description = "Fallback movie overview.",
-                    heroTagline = null,
-                    directorLine = "Studio",
-                    heroBadges = emptyList(),
-                    heroSecondaryActions = emptyList(),
-                    factItems = emptyList(),
-                    castItems = emptyList(),
-                    similarItems = emptyList(),
-                    onCastClick = {},
-                    onSimilarClick = {},
-                    listState = listState,
-                )
-            }
-        }
-
-        assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.HeroTitle).fetchSemanticsNodes().isNotEmpty())
-        assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.HeroLogo).fetchSemanticsNodes().isEmpty())
-    }
-
-    @Test
-    fun movieDetail_blankOverview_showsFallbackCopy() {
-        composeRule.setContent {
-            val primaryActionFocusRequester = remember { FocusRequester() }
-            val listState = rememberLazyListState()
-
-            DetailTestHost {
-                MovieDetailLayout(
-                    backdropUrl = null,
-                    posterUrl = null,
-                    logoUrl = null,
-                    title = "No Overview Movie",
-                    eyebrow = "2026 · 1h 20m",
-                    ratingText = "★ 6.9",
-                    genres = listOf("Comedy"),
-                    primaryActionLabel = "▶ Play",
-                    onPrimaryAction = {},
-                    primaryActionFocusRequester = primaryActionFocusRequester,
-                    description = "",
-                    heroTagline = null,
-                    directorLine = "Studio",
-                    heroBadges = emptyList(),
-                    heroSecondaryActions = emptyList(),
-                    factItems = emptyList(),
-                    castItems = emptyList(),
-                    similarItems = emptyList(),
-                    onCastClick = {},
-                    onSimilarClick = {},
-                    listState = listState,
-                )
-            }
-        }
-
-        assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.Overview).fetchSemanticsNodes().isNotEmpty())
-        assertTrue(composeRule.onAllNodesWithText("No overview available.").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.TvNextUpPanel).fetchSemanticsNodes().isNotEmpty())
+        assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.TvCastPanel).fetchSemanticsNodes().isNotEmpty())
+        assertTrue(composeRule.onAllNodesWithTag(DetailTestTags.TvSimilarPanel).fetchSemanticsNodes().isNotEmpty())
     }
 }

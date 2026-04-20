@@ -172,6 +172,24 @@ class TvShowDetailViewModel @Inject constructor(
         }
     }
 
+    fun markWatched() {
+        viewModelScope.launch {
+            if (repositories.user.markAsWatched(showId) is ApiResult.Success) {
+                updateBus.refreshItem(showId)
+                refreshWatchStatus()
+            }
+        }
+    }
+
+    fun markUnwatched() {
+        viewModelScope.launch {
+            if (repositories.user.markAsUnwatched(showId) is ApiResult.Success) {
+                updateBus.refreshItem(showId)
+                refreshWatchStatus()
+            }
+        }
+    }
+
     private fun BaseItemDto.toDetailModel(nextUpDto: BaseItemDto?): TvShowDetailModel {
         return TvShowDetailModel(
             id = id.toString(),

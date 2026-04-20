@@ -3,7 +3,6 @@
 package com.rpeters.cinefintv.ui.screens.detail.cinematic
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -22,13 +21,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.Dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.components.TvMediaCard
-import com.rpeters.cinefintv.ui.components.TvPersonCard
 import com.rpeters.cinefintv.ui.screens.detail.CastModel
 import com.rpeters.cinefintv.ui.screens.detail.DetailAnchor
-import com.rpeters.cinefintv.ui.screens.detail.DetailLabeledMetaItem
 import com.rpeters.cinefintv.ui.screens.detail.DetailShelfPanel
 import com.rpeters.cinefintv.ui.screens.detail.SimilarMovieModel
 import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
@@ -36,28 +32,19 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-/**
- * Movie detail screen content: CinematicHero + continuous vertical scroll.
- * [listState] must be owned by MovieDetailScreen for the scroll-anchor fix.
- */
 @Composable
 fun MovieDetailLayout(
     backdropUrl: String?,
     posterUrl: String?,
-    logoUrl: String?,
     title: String,
-    eyebrow: String,
-    ratingText: String?,
+    metadataItems: List<String>,
+    qualityBadges: List<String>,
     genres: List<String>,
     primaryActionLabel: String,
     onPrimaryAction: () -> Unit,
     primaryActionFocusRequester: FocusRequester,
     description: String,
-    heroTagline: String?,
-    directorLine: String?,
-    heroBadges: List<String>,
-    heroSecondaryActions: List<HeroIconAction>,
-    factItems: List<DetailLabeledMetaItem>,
+    heroSecondaryActions: List<HeroSecondaryAction>,
     castItems: List<CastModel>,
     similarItems: List<SimilarMovieModel>,
     onCastClick: (String) -> Unit,
@@ -69,11 +56,13 @@ fun MovieDetailLayout(
 ) {
     val spacing = LocalCinefinSpacing.current
     val coroutineScope = rememberCoroutineScope()
-    val overviewFocusRequester = remember { FocusRequester() }
     val firstCastFocusRequester = remember { FocusRequester() }
     val firstSimilarFocusRequester = remember { FocusRequester() }
-    val similarCardWidth: Dp = 176.dp
-    val firstContentFocusRequester = overviewFocusRequester
+    val firstContentFocusRequester = when {
+        castItems.isNotEmpty() -> firstCastFocusRequester
+        similarItems.isNotEmpty() -> firstSimilarFocusRequester
+        else -> null
+    }
 
     LazyColumn(
         state = listState,
@@ -81,75 +70,36 @@ fun MovieDetailLayout(
         contentPadding = PaddingValues(bottom = spacing.gutter),
     ) {
         item {
-            Column {
-                DetailAnchor(
-                    focusRequester = topFocusRequester,
-                    downFocusRequester = primaryActionFocusRequester,
-                    onFocused = {},
-                )
-                FlatDetailHero(
-                    backdropUrl = backdropUrl,
-                    logoUrl = logoUrl,
-                    title = title,
-                    eyebrow = eyebrow,
-                    ratingText = ratingText,
-                    badges = heroBadges,
-                    tagline = heroTagline,
-                    summary = heroTagline ?: description.takeIf { it.isNotBlank() },
-                    creditLine = directorLine,
-                    primaryActionLabel = primaryActionLabel,
-                    onPrimaryAction = onPrimaryAction,
-                    secondaryIconActions = heroSecondaryActions,
-                    primaryActionFocusRequester = primaryActionFocusRequester,
-                    primaryActionDownFocusRequester = firstContentFocusRequester,
-                    drawerFocusRequester = drawerFocusRequester,
-                    onDownNavigation = {
+            DetailAnchor(
+                focusRequester = topFocusRequester,
+                downFocusRequester = primaryActionFocusRequester,
+                onFocused = {},
+            )
+            FlatDetailHero(
+                backdropUrl = backdropUrl,
+                posterUrl = posterUrl,
+                title = title,
+                metadataItems = metadataItems,
+                qualityBadges = qualityBadges,
+                genres = genres,
+                summary = description,
+                primaryActionLabel = primaryActionLabel,
+                onPrimaryAction = onPrimaryAction,
+                secondaryActions = heroSecondaryActions,
+                primaryActionFocusRequester = primaryActionFocusRequester,
+                primaryActionDownFocusRequester = firstContentFocusRequester,
+                drawerFocusRequester = drawerFocusRequester,
+                onDownNavigation = if (firstContentFocusRequester != null) {
+                    {
                         if (listState.isScrollInProgress) return@FlatDetailHero
                         coroutineScope.launch {
                             listState.scrollToItemAndAwaitLayout(1)
                             runCatching { firstContentFocusRequester.requestFocus() }
                         }
-                    },
-                )
-            }
-        }
-
-        item {
-            DetailOverviewSection(
-                title = title,
-                posterUrl = posterUrl,
-                description = description,
-                factItems = factItems,
-                chips = genres,
-                focusRequester = overviewFocusRequester,
-                upFocusRequester = primaryActionFocusRequester,
-                onNavigateUp = {
-                    if (listState.isScrollInProgress) return@DetailOverviewSection
-                    coroutineScope.launch {
-                        listState.scrollToItemAndAwaitLayout(0)
-                        runCatching { primaryActionFocusRequester.requestFocus() }
-                    }
-                },
-                onNavigateDown = if (castItems.isNotEmpty() || similarItems.isNotEmpty()) {
-                    {
-                        if (listState.isScrollInProgress) return@DetailOverviewSection
-                        coroutineScope.launch {
-                            when {
-                                castItems.isNotEmpty() -> {
-                                    listState.scrollToItemAndAwaitLayout(2)
-                                    runCatching { firstCastFocusRequester.requestFocus() }
-                                }
-                                similarItems.isNotEmpty() -> {
-                                    listState.scrollToItemAndAwaitLayout(2)
-                                    runCatching { firstSimilarFocusRequester.requestFocus() }
-                                }
-                            }
-                        }
                     }
                 } else {
                     null
                 },
-                modifier = Modifier.padding(top = spacing.rowGap.div(1.5f)),
             )
         }
 
@@ -157,17 +107,17 @@ fun MovieDetailLayout(
             item {
                 DetailShelfPanel(
                     modifier = Modifier
-                        .padding(top = spacing.rowGap.div(2.5f))
+                        .padding(top = spacing.rowGap.div(1.5f))
                         .testTag(DetailTestTags.MovieCastSection),
-                    title = "People",
-                    subtitle = "Cast and key performers",
+                    title = "Cast",
+                    subtitle = "",
                 ) {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         items(castItems) { person ->
-                            TvPersonCard(
+                            PersonCircleCard(
                                 name = person.name,
                                 role = person.role,
                                 imageUrl = person.imageUrl,
@@ -176,7 +126,7 @@ fun MovieDetailLayout(
                                         .blockBringIntoView()
                                         .focusRequester(firstCastFocusRequester)
                                         .focusProperties {
-                                            up = overviewFocusRequester
+                                            up = primaryActionFocusRequester
                                             down = if (similarItems.isNotEmpty()) firstSimilarFocusRequester else firstCastFocusRequester
                                         }
                                         .onPreviewKeyEvent { keyEvent ->
@@ -185,8 +135,8 @@ fun MovieDetailLayout(
                                                 nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
                                                     nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP -> {
                                                     coroutineScope.launch {
-                                                        listState.scrollToItemAndAwaitLayout(1)
-                                                        runCatching { overviewFocusRequester.requestFocus() }
+                                                        listState.scrollToItemAndAwaitLayout(0)
+                                                        runCatching { primaryActionFocusRequester.requestFocus() }
                                                     }
                                                     true
                                                 }
@@ -194,7 +144,7 @@ fun MovieDetailLayout(
                                                     nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
                                                     nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
                                                     coroutineScope.launch {
-                                                        listState.scrollToItemAndAwaitLayout(3)
+                                                        listState.scrollToItemAndAwaitLayout(2)
                                                         runCatching { firstSimilarFocusRequester.requestFocus() }
                                                     }
                                                     true
@@ -217,11 +167,9 @@ fun MovieDetailLayout(
         if (similarItems.isNotEmpty()) {
             item {
                 DetailShelfPanel(
-                    modifier = Modifier
-                        .padding(top = spacing.rowGap.div(1.5f))
-                        .testTag(DetailTestTags.MovieSimilarSection),
+                    modifier = Modifier.testTag(DetailTestTags.MovieSimilarSection),
                     title = "More Like This",
-                    subtitle = "Recommended from your library",
+                    subtitle = "",
                 ) {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
@@ -233,13 +181,15 @@ fun MovieDetailLayout(
                                 imageUrl = mediaItem.imageUrl,
                                 watchStatus = mediaItem.watchStatus,
                                 playbackProgress = mediaItem.playbackProgress,
-                                aspectRatio = 2f / 3f, // Standard poster ratio
-                                cardWidth = 180.dp,
+                                aspectRatio = 16f / 9f,
+                                cardWidth = 200.dp,
                                 modifier = if (mediaItem.id == similarItems.firstOrNull()?.id) {
                                     Modifier
                                         .blockBringIntoView()
                                         .focusRequester(firstSimilarFocusRequester)
-                                        .focusProperties { up = if (castItems.isNotEmpty()) firstCastFocusRequester else overviewFocusRequester }
+                                        .focusProperties {
+                                            up = if (castItems.isNotEmpty()) firstCastFocusRequester else primaryActionFocusRequester
+                                        }
                                         .onPreviewKeyEvent { keyEvent ->
                                             val nativeEvent = keyEvent.nativeKeyEvent
                                             if (
@@ -248,11 +198,11 @@ fun MovieDetailLayout(
                                             ) {
                                                 coroutineScope.launch {
                                                     if (castItems.isNotEmpty()) {
-                                                        listState.scrollToItemAndAwaitLayout(2)
+                                                        listState.scrollToItemAndAwaitLayout(1)
                                                         runCatching { firstCastFocusRequester.requestFocus() }
                                                     } else {
-                                                        listState.scrollToItemAndAwaitLayout(1)
-                                                        runCatching { overviewFocusRequester.requestFocus() }
+                                                        listState.scrollToItemAndAwaitLayout(0)
+                                                        runCatching { primaryActionFocusRequester.requestFocus() }
                                                     }
                                                 }
                                                 true

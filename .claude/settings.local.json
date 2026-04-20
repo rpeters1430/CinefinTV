@@ -31,7 +31,11 @@
       "Bash(./gradlew :app:compileDebugAndroidTestKotlin)",
       "Bash(adb shell:*)",
       "Bash(adb pull:*)",
-      "Bash(./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.rpeters.cinefintv.ui.AppNavigationSmokeUiTest)"
+      "Bash(./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.rpeters.cinefintv.ui.AppNavigationSmokeUiTest)",
+      "Bash(bash *)",
+      "Bash(curl -s http://localhost:52075/nav-to -X POST -H \"Content-Type: application/json\" -d '{\"file\":\"episode-rows.html\"}')",
+      "Bash(curl -s -X GET \"http://localhost:52075/nav?file=episode-rows.html\")",
+      "Bash(curl -s http://localhost:52075/)"
     ]
   }
 }

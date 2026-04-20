@@ -22,6 +22,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.launch
@@ -87,8 +88,7 @@ class HomeViewModel @Inject constructor(
     init {
         loadCachedData()
         viewModelScope.launch {
-            // Give session restoration a moment to fully propagate across all flows
-            delay(100)
+            repositories.auth.currentServer.first { it != null }
             refresh(silent = true)
         }
         observeUpdateEvents()

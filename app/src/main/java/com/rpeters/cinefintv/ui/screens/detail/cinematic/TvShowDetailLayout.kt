@@ -3,89 +3,60 @@
 package com.rpeters.cinefintv.ui.screens.detail.cinematic
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.VideoLibrary
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.Dp
-import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
-import androidx.tv.material3.Border
-import androidx.tv.material3.Card
-import androidx.tv.material3.CardDefaults
-import androidx.tv.material3.Glow
-import androidx.tv.material3.Icon
+import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.TvMediaCard
-import com.rpeters.cinefintv.ui.components.TvPersonCard
-import com.rpeters.cinefintv.ui.components.WatchStatus
-import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.screens.detail.CastModel
 import com.rpeters.cinefintv.ui.screens.detail.DetailAnchor
-import com.rpeters.cinefintv.ui.screens.detail.DetailLabeledMetaItem
 import com.rpeters.cinefintv.ui.screens.detail.DetailShelfPanel
 import com.rpeters.cinefintv.ui.screens.detail.SeasonModel
 import com.rpeters.cinefintv.ui.screens.detail.SimilarMovieModel
+import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
-import com.rpeters.cinefintv.utils.DevicePerformanceProfile
-import com.rpeters.cinefintv.utils.LocalPerformanceProfile
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-/**
- * TV Show detail screen content: CinematicHero + continuous vertical scroll.
- */
 @Composable
 fun TvShowDetailLayout(
     backdropUrl: String?,
     posterUrl: String?,
-    logoUrl: String?,
     title: String,
-    eyebrow: String,
-    ratingText: String?,
+    metadataItems: List<String>,
+    qualityBadges: List<String>,
     genres: List<String>,
     primaryActionLabel: String,
     onPrimaryAction: () -> Unit,
@@ -99,11 +70,7 @@ fun TvShowDetailLayout(
     onCastClick: (String) -> Unit,
     onSimilarClick: (String) -> Unit,
     description: String,
-    heroTagline: String?,
-    creditLine: String?,
-    heroBadges: List<String>,
-    heroSecondaryActions: List<HeroIconAction>,
-    factItems: List<DetailLabeledMetaItem>,
+    heroSecondaryActions: List<HeroSecondaryAction>,
     listState: LazyListState,
     modifier: Modifier = Modifier,
     topFocusRequester: FocusRequester = remember { FocusRequester() },
@@ -111,39 +78,26 @@ fun TvShowDetailLayout(
 ) {
     val spacing = LocalCinefinSpacing.current
     val coroutineScope = rememberCoroutineScope()
-    val overviewFocusRequester = remember { FocusRequester() }
+    val seasonFocusRequester = remember { FocusRequester() }
     val nextUpFocusRequester = remember { FocusRequester() }
-    val firstSeasonFocusRequester = remember { FocusRequester() }
     val firstCastFocusRequester = remember { FocusRequester() }
     val firstSimilarFocusRequester = remember { FocusRequester() }
-    val similarCardWidth: Dp = 176.dp
     val hasNextUp = !nextUpTitle.isNullOrBlank() && onNextUpClick != null
+
+    var indexCursor = 1
+    val seasonIndex = if (seasons.isNotEmpty()) indexCursor++ else -1
+    val nextUpIndex = if (hasNextUp) indexCursor++ else -1
+    val castIndex = if (castItems.isNotEmpty()) indexCursor++ else -1
+    val similarIndex = if (similarItems.isNotEmpty()) indexCursor else -1
+
     val firstContentFocusRequester = when {
+        seasons.isNotEmpty() -> seasonFocusRequester
         hasNextUp -> nextUpFocusRequester
-        seasons.isNotEmpty() -> firstSeasonFocusRequester
-        else -> overviewFocusRequester
+        castItems.isNotEmpty() -> firstCastFocusRequester
+        similarItems.isNotEmpty() -> firstSimilarFocusRequester
+        else -> null
     }
-    val overviewItemIndex = 1 + (if (hasNextUp) 1 else 0) + (if (seasons.isNotEmpty()) 1 else 0)
-    val navigationHeroActions = remember(seasons, castItems) {
-        buildList {
-            if (seasons.isNotEmpty()) {
-                add(
-                    HeroIconAction(
-                        icon = Icons.Default.VideoLibrary,
-                        contentDescription = "Jump to seasons",
-                        onClick = {},
-                    )
-                )
-            }
-            add(
-                HeroIconAction(
-                    icon = Icons.Default.Info,
-                    contentDescription = "Jump to details",
-                    onClick = {},
-                )
-            )
-        }
-    }
+    val firstContentIndex = listOf(seasonIndex, nextUpIndex, castIndex, similarIndex).firstOrNull { it >= 0 } ?: -1
 
     LazyColumn(
         state = listState,
@@ -151,97 +105,48 @@ fun TvShowDetailLayout(
         contentPadding = PaddingValues(bottom = spacing.gutter),
     ) {
         item {
-            Column {
-                DetailAnchor(
-                    focusRequester = topFocusRequester,
-                    downFocusRequester = primaryActionFocusRequester,
-                    onFocused = {},
-                )
-                FlatDetailHero(
-                    backdropUrl = backdropUrl,
-                    logoUrl = logoUrl,
-                    title = title,
-                    eyebrow = eyebrow,
-                    ratingText = ratingText,
-                    badges = heroBadges,
-                    tagline = heroTagline,
-                    summary = heroTagline ?: description.takeIf { it.isNotBlank() },
-                    creditLine = creditLine,
-                    primaryActionLabel = primaryActionLabel,
-                    onPrimaryAction = onPrimaryAction,
-                    drawerFocusRequester = drawerFocusRequester,
-                    secondaryIconActions = (heroSecondaryActions + navigationHeroActions).mapIndexed { index, action ->
-                        when {
-                            index >= heroSecondaryActions.size &&
-                                seasons.isNotEmpty() &&
-                                index == heroSecondaryActions.size -> action.copy(
-                                onClick = {
-                                    coroutineScope.launch {
-                                        listState.scrollToItemAndAwaitLayout(1 + if (hasNextUp) 1 else 0)
-                                        runCatching { firstSeasonFocusRequester.requestFocus() }
-                                    }
-                                }
-                            )
-                            index >= heroSecondaryActions.size -> action.copy(
-                                onClick = {
-                                    coroutineScope.launch {
-                                        listState.scrollToItemAndAwaitLayout(overviewItemIndex)
-                                        runCatching { overviewFocusRequester.requestFocus() }
-                                    }
-                                }
-                            )
-                            else -> action
-                        }
-                    },
-                    primaryActionFocusRequester = primaryActionFocusRequester,
-                    primaryActionDownFocusRequester = firstContentFocusRequester,
-                    onDownNavigation = {
+            DetailAnchor(
+                focusRequester = topFocusRequester,
+                downFocusRequester = primaryActionFocusRequester,
+                onFocused = {},
+            )
+            FlatDetailHero(
+                backdropUrl = backdropUrl,
+                posterUrl = posterUrl,
+                title = title,
+                metadataItems = metadataItems,
+                qualityBadges = qualityBadges,
+                genres = genres,
+                summary = description,
+                primaryActionLabel = primaryActionLabel,
+                onPrimaryAction = onPrimaryAction,
+                secondaryActions = heroSecondaryActions,
+                primaryActionFocusRequester = primaryActionFocusRequester,
+                primaryActionDownFocusRequester = firstContentFocusRequester,
+                drawerFocusRequester = drawerFocusRequester,
+                onDownNavigation = if (firstContentFocusRequester != null && firstContentIndex >= 0) {
+                    {
                         if (listState.isScrollInProgress) return@FlatDetailHero
                         coroutineScope.launch {
-                            listState.scrollToItemAndAwaitLayout(
-                                when {
-                                    hasNextUp -> 1
-                                    seasons.isNotEmpty() -> 1
-                                    else -> overviewItemIndex
-                                }
-                            )
+                            listState.scrollToItem(firstContentIndex)
                             runCatching { firstContentFocusRequester.requestFocus() }
                         }
-                    },
-                )
-            }
-        }
-
-        if (hasNextUp) {
-            item {
-                NextUpPanel(
-                    title = nextUpTitle.orEmpty(),
-                    onPlay = onNextUpClick,
-                    focusRequester = nextUpFocusRequester,
-                    upFocusRequester = primaryActionFocusRequester,
-                    downFocusRequester = if (seasons.isNotEmpty()) firstSeasonFocusRequester else overviewFocusRequester,
-                    modifier = Modifier
-                        .padding(top = spacing.rowGap.div(1.5f))
-                        .padding(horizontal = spacing.gutter)
-                        .testTag(DetailTestTags.TvNextUpPanel),
-                )
-            }
+                    }
+                } else {
+                    null
+                },
+            )
         }
 
         if (seasons.isNotEmpty()) {
             item {
-                Column(
+                DetailShelfPanel(
                     modifier = Modifier
                         .padding(top = spacing.rowGap.div(1.5f))
-                        .testTag(DetailTestTags.TvEpisodesPanel), // Reusing tag for consistency
+                        .testTag(DetailTestTags.TvEpisodesPanel),
+                    title = "Seasons",
+                    subtitle = "",
                 ) {
-                    DetailStripTitle(
-                        title = "Seasons",
-                        modifier = Modifier.padding(
-                            horizontal = spacing.gutter,
-                            vertical = spacing.elementGap.div(1.5f),
-                        ),
-                    )
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = spacing.gutter),
                         horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
@@ -252,10 +157,15 @@ fun TvShowDetailLayout(
                                 modifier = if (season.id == seasons.firstOrNull()?.id) {
                                     Modifier
                                         .blockBringIntoView()
-                                        .focusRequester(firstSeasonFocusRequester)
+                                        .focusRequester(seasonFocusRequester)
                                         .focusProperties {
-                                            up = if (hasNextUp) nextUpFocusRequester else primaryActionFocusRequester
-                                            down = overviewFocusRequester
+                                            up = primaryActionFocusRequester
+                                            down = when {
+                                                hasNextUp -> nextUpFocusRequester
+                                                castItems.isNotEmpty() -> firstCastFocusRequester
+                                                similarItems.isNotEmpty() -> firstSimilarFocusRequester
+                                                else -> seasonFocusRequester
+                                            }
                                         }
                                         .onPreviewKeyEvent { keyEvent ->
                                             val nativeEvent = keyEvent.nativeKeyEvent
@@ -264,22 +174,8 @@ fun TvShowDetailLayout(
                                                 nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
                                             ) {
                                                 coroutineScope.launch {
-                                                    if (hasNextUp) {
-                                                        listState.scrollToItemAndAwaitLayout(1)
-                                                        runCatching { nextUpFocusRequester.requestFocus() }
-                                                    } else {
-                                                        listState.scrollToItemAndAwaitLayout(0)
-                                                        runCatching { primaryActionFocusRequester.requestFocus() }
-                                                    }
-                                                }
-                                                true
-                                            } else if (
-                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
-                                            ) {
-                                                coroutineScope.launch {
-                                                    listState.scrollToItemAndAwaitLayout(overviewItemIndex)
-                                                    runCatching { overviewFocusRequester.requestFocus() }
+                                                    listState.scrollToItem(0)
+                                                    runCatching { primaryActionFocusRequester.requestFocus() }
                                                 }
                                                 true
                                             } else {
@@ -298,59 +194,24 @@ fun TvShowDetailLayout(
             }
         }
 
-        item {
-            DetailOverviewSection(
-                title = title,
-                posterUrl = posterUrl,
-                description = description,
-                factItems = factItems,
-                chips = genres,
-                focusRequester = overviewFocusRequester,
-                upFocusRequester = when {
-                    seasons.isNotEmpty() -> firstSeasonFocusRequester
-                    hasNextUp -> nextUpFocusRequester
-                    else -> primaryActionFocusRequester
-                },
-                onNavigateUp = {
-                        if (listState.isScrollInProgress) return@DetailOverviewSection
-                        coroutineScope.launch {
-                            when {
-                                seasons.isNotEmpty() -> {
-                                    listState.scrollToItemAndAwaitLayout(1 + if (hasNextUp) 1 else 0)
-                                    runCatching { firstSeasonFocusRequester.requestFocus() }
-                                }
-                                hasNextUp -> {
-                                    listState.scrollToItemAndAwaitLayout(1)
-                                    runCatching { nextUpFocusRequester.requestFocus() }
-                                }
-                                else -> {
-                                    listState.scrollToItemAndAwaitLayout(0)
-                                    runCatching { primaryActionFocusRequester.requestFocus() }
-                                }
-                            }
-                    }
-                },
-                onNavigateDown = if (castItems.isNotEmpty() || similarItems.isNotEmpty()) {
-                    {
-                        if (listState.isScrollInProgress) return@DetailOverviewSection
-                        coroutineScope.launch {
-                            when {
-                                castItems.isNotEmpty() -> {
-                                    listState.scrollToItemAndAwaitLayout(overviewItemIndex + 1)
-                                    runCatching { firstCastFocusRequester.requestFocus() }
-                                }
-                                similarItems.isNotEmpty() -> {
-                                    listState.scrollToItemAndAwaitLayout(overviewItemIndex + 1)
-                                    runCatching { firstSimilarFocusRequester.requestFocus() }
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    null
-                },
-                modifier = Modifier.padding(top = spacing.rowGap.div(1.5f)),
-            )
+        if (hasNextUp) {
+            item {
+                NextUpPanel(
+                    title = nextUpTitle.orEmpty(),
+                    onPlay = onNextUpClick,
+                    focusRequester = nextUpFocusRequester,
+                    upFocusRequester = if (seasons.isNotEmpty()) seasonFocusRequester else primaryActionFocusRequester,
+                    downFocusRequester = when {
+                        castItems.isNotEmpty() -> firstCastFocusRequester
+                        similarItems.isNotEmpty() -> firstSimilarFocusRequester
+                        else -> nextUpFocusRequester
+                    },
+                    modifier = Modifier
+                        .padding(top = spacing.rowGap.div(1.5f))
+                        .padding(horizontal = spacing.gutter)
+                        .testTag(DetailTestTags.TvNextUpPanel),
+                )
+            }
         }
 
         if (castItems.isNotEmpty()) {
@@ -359,15 +220,15 @@ fun TvShowDetailLayout(
                     modifier = Modifier
                         .padding(top = spacing.rowGap.div(1.5f))
                         .testTag(DetailTestTags.TvCastPanel),
-                    title = "People",
-                    subtitle = "Cast and recurring faces",
+                    title = "Cast",
+                    subtitle = "",
                 ) {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         items(castItems) { person ->
-                            TvPersonCard(
+                            PersonCircleCard(
                                 name = person.name,
                                 role = person.role,
                                 imageUrl = person.imageUrl,
@@ -376,31 +237,12 @@ fun TvShowDetailLayout(
                                         .blockBringIntoView()
                                         .focusRequester(firstCastFocusRequester)
                                         .focusProperties {
-                                            up = overviewFocusRequester
-                                            down = if (similarItems.isNotEmpty()) firstSimilarFocusRequester else firstCastFocusRequester
-                                        }
-                                        .onPreviewKeyEvent { keyEvent ->
-                                            val nativeEvent = keyEvent.nativeKeyEvent
-                                            when {
-                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                                                    coroutineScope.launch {
-                                                        listState.scrollToItemAndAwaitLayout(overviewItemIndex)
-                                                        runCatching { overviewFocusRequester.requestFocus() }
-                                                    }
-                                                    true
-                                                }
-                                                similarItems.isNotEmpty() &&
-                                                    nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                                    coroutineScope.launch {
-                                                        listState.scrollToItemAndAwaitLayout(overviewItemIndex + 2)
-                                                        runCatching { firstSimilarFocusRequester.requestFocus() }
-                                                    }
-                                                    true
-                                                }
-                                                else -> false
+                                            up = when {
+                                                hasNextUp -> nextUpFocusRequester
+                                                seasons.isNotEmpty() -> seasonFocusRequester
+                                                else -> primaryActionFocusRequester
                                             }
+                                            down = if (similarItems.isNotEmpty()) firstSimilarFocusRequester else firstCastFocusRequester
                                         }
                                         .testTag(DetailTestTags.FirstCastItem)
                                 } else {
@@ -421,7 +263,7 @@ fun TvShowDetailLayout(
                         .padding(top = spacing.rowGap.div(1.5f))
                         .testTag(DetailTestTags.TvSimilarPanel),
                     title = "More Like This",
-                    subtitle = "Other shows with a similar vibe",
+                    subtitle = "",
                 ) {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
@@ -433,32 +275,14 @@ fun TvShowDetailLayout(
                                 imageUrl = item.imageUrl,
                                 watchStatus = item.watchStatus,
                                 playbackProgress = item.playbackProgress,
-                                aspectRatio = 2f / 3f,
-                                cardWidth = 180.dp,
+                                aspectRatio = 16f / 9f,
+                                cardWidth = 200.dp,
                                 modifier = if (item.id == similarItems.firstOrNull()?.id) {
                                     Modifier
                                         .blockBringIntoView()
                                         .focusRequester(firstSimilarFocusRequester)
-                                        .focusProperties { up = if (castItems.isNotEmpty()) firstCastFocusRequester else overviewFocusRequester }
-                                        .onPreviewKeyEvent { keyEvent ->
-                                            val nativeEvent = keyEvent.nativeKeyEvent
-                                            if (
-                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
-                                            ) {
-                                                coroutineScope.launch {
-                                                    if (castItems.isNotEmpty()) {
-                                                        listState.scrollToItemAndAwaitLayout(overviewItemIndex + 1)
-                                                        runCatching { firstCastFocusRequester.requestFocus() }
-                                                    } else {
-                                                        listState.scrollToItemAndAwaitLayout(overviewItemIndex)
-                                                        runCatching { overviewFocusRequester.requestFocus() }
-                                                    }
-                                                }
-                                                true
-                                            } else {
-                                                false
-                                            }
+                                        .focusProperties {
+                                            up = if (castItems.isNotEmpty()) firstCastFocusRequester else if (hasNextUp) nextUpFocusRequester else if (seasons.isNotEmpty()) seasonFocusRequester else primaryActionFocusRequester
                                         }
                                         .testTag(DetailTestTags.FirstSimilarItem)
                                 } else {
@@ -474,16 +298,6 @@ fun TvShowDetailLayout(
     }
 }
 
-private suspend fun LazyListState.scrollToItemAndAwaitLayout(index: Int) {
-    if (!isIndexVisible(index)) {
-        scrollToItem(index)
-        snapshotFlow { isIndexVisible(index) }.first { it }
-    }
-}
-
-private fun LazyListState.isIndexVisible(index: Int): Boolean =
-    layoutInfo.visibleItemsInfo.any { it.index == index }
-
 @Composable
 private fun NextUpPanel(
     title: String,
@@ -493,7 +307,6 @@ private fun NextUpPanel(
     downFocusRequester: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
-    val spacing = LocalCinefinSpacing.current
     val expressiveColors = LocalCinefinExpressiveColors.current
 
     Box(
@@ -521,11 +334,6 @@ private fun NextUpPanel(
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground,
             )
-            Text(
-                text = "Resume the series from the next recommended episode.",
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
             Button(
                 onClick = onPlay,
                 modifier = Modifier
@@ -537,13 +345,13 @@ private fun NextUpPanel(
                     .testTag(DetailTestTags.TvNextUpAction),
                 scale = ButtonDefaults.scale(focusedScale = 1.03f),
             ) {
-                Icon(
+                androidx.tv.material3.Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = null,
                 )
                 Text(
                     text = "Play Next Episode",
-                    modifier = Modifier.padding(start = spacing.elementGap),
+                    modifier = Modifier.padding(start = 8.dp),
                 )
             }
         }
@@ -556,194 +364,43 @@ private fun SeasonShowcaseCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val expressiveColors = LocalCinefinExpressiveColors.current
-    val performanceProfile = LocalPerformanceProfile.current
     var isFocused by remember { mutableStateOf(false) }
 
-    Card(
+    androidx.tv.material3.Card(
         onClick = onClick,
         modifier = modifier
-            .width(280.dp)
             .onFocusChanged { state -> isFocused = state.isFocused || state.hasFocus },
-        colors = CardDefaults.colors(
-            containerColor = expressiveColors.detailPanel.copy(alpha = 0.88f),
-            focusedContainerColor = expressiveColors.detailPanelFocused,
+        colors = androidx.tv.material3.CardDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f),
         ),
-        shape = CardDefaults.shape(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)),
-        scale = CardDefaults.scale(focusedScale = 1.03f),
-        border = CardDefaults.border(
-            border = Border(
-                border = androidx.compose.foundation.BorderStroke(
-                    width = 1.dp,
-                    color = expressiveColors.borderSubtle.copy(alpha = 0.42f),
-                ),
-            ),
-            focusedBorder = Border(
+        shape = androidx.tv.material3.CardDefaults.shape(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)),
+        scale = androidx.tv.material3.CardDefaults.scale(focusedScale = 1.03f),
+        border = androidx.tv.material3.CardDefaults.border(
+            focusedBorder = androidx.tv.material3.Border(
                 border = androidx.compose.foundation.BorderStroke(
                     width = 2.dp,
-                    color = expressiveColors.focusRing,
+                    color = MaterialTheme.colorScheme.primary,
                 ),
             ),
         ),
-        glow = CardDefaults.glow(
-            focusedGlow = Glow(
-                elevationColor = expressiveColors.focusGlow.copy(alpha = 0.24f),
-                elevation = 8.dp,
-            ),
-        ),
     ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-                    .background(expressiveColors.accentSurface),
-            ) {
-                if (season.imageUrl != null) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                            .data(season.imageUrl)
-                            .crossfade(performanceProfile.tier != DevicePerformanceProfile.Tier.LOW)
-                            .size(680, 380)
-                            .build(),
-                        contentDescription = season.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                0f to Color.Transparent,
-                                1f to Color.Black.copy(alpha = 0.78f),
-                            ),
-                        ),
-                )
-
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    when (season.watchStatus) {
-                        WatchStatus.WATCHED -> SeasonHeroPill("Watched")
-                        WatchStatus.IN_PROGRESS -> SeasonHeroPill("Resume")
-                        WatchStatus.NONE -> Unit
-                    }
-                    if (season.unwatchedCount > 0) {
-                        SeasonHeroPill("${season.unwatchedCount} new")
-                    }
-                }
-
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Text(
-                        text = season.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = when {
-                            season.playbackProgress != null && season.playbackProgress > 0f ->
-                                "${(season.playbackProgress * 100).toInt()}% watched"
-                            season.unwatchedCount > 0 -> "${season.unwatchedCount} unwatched episodes"
-                            else -> "Open season"
-                        },
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White.copy(alpha = 0.86f),
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (season.playbackProgress != null && season.playbackProgress > 0f) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .background(
-                                color = expressiveColors.chromeSurface.copy(alpha = 0.55f),
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(999.dp),
-                            ),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(season.playbackProgress.coerceIn(0f, 1f))
-                                .height(8.dp)
-                                .background(
-                                    brush = Brush.horizontalGradient(
-                                        listOf(
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.95f),
-                                            expressiveColors.titleAccent.copy(alpha = 0.88f),
-                                        ),
-                                    ),
-                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(999.dp),
-                                ),
-                        )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = when {
-                            season.watchStatus == WatchStatus.WATCHED -> "Completed season"
-                            season.unwatchedCount > 0 -> "Continue with new episodes"
-                            else -> "Browse episodes"
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = "Open",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalAlignment = Alignment.Start,
+        ) {
+            Text(
+                text = season.title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = if (season.unwatchedCount > 0) "${season.unwatchedCount} unwatched" else "Open season",
+                style = MaterialTheme.typography.labelLarge,
+                color = if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
-    }
-}
-
-@Composable
-private fun SeasonHeroPill(
-    label: String,
-) {
-    Box(
-        modifier = Modifier
-            .background(
-                color = Color.Black.copy(alpha = 0.5f),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(999.dp),
-            )
-            .border(
-                width = 1.dp,
-                color = Color.White.copy(alpha = 0.15f),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(999.dp),
-            )
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.White,
-        )
     }
 }

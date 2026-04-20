@@ -8,16 +8,22 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredWidthIn
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -26,40 +32,29 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Glow
-import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
-import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
-import kotlinx.coroutines.launch
 
-data class HeroIconAction(
-    val icon: ImageVector,
-    val contentDescription: String,
+data class HeroSecondaryAction(
+    val label: String,
     val onClick: () -> Unit,
 )
 
@@ -82,31 +77,27 @@ fun DetailStripTitle(
 @Composable
 fun FlatDetailHero(
     backdropUrl: String?,
-    logoUrl: String?,
+    posterUrl: String?,
     title: String,
-    eyebrow: String,
-    ratingText: String?,
-    badges: List<String>,
-    tagline: String?,
+    metadataItems: List<String>,
+    qualityBadges: List<String>,
+    genres: List<String>,
     summary: String?,
-    creditLine: String?,
     primaryActionLabel: String,
     onPrimaryAction: () -> Unit,
-    secondaryIconActions: List<HeroIconAction>,
+    secondaryActions: List<HeroSecondaryAction>,
     primaryActionFocusRequester: FocusRequester,
     primaryActionDownFocusRequester: FocusRequester? = null,
     onDownNavigation: (() -> Unit)? = null,
     drawerFocusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier,
 ) {
-    val spacing = LocalCinefinSpacing.current
-    val expressiveColors = LocalCinefinExpressiveColors.current
     val context = LocalContext.current
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 440.dp),
+            .aspectRatio(16f / 9f),
     ) {
         if (backdropUrl != null) {
             AsyncImage(
@@ -118,6 +109,12 @@ fun FlatDetailHero(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF101318)),
+            )
         }
 
         Box(
@@ -125,104 +122,83 @@ fun FlatDetailHero(
                 .fillMaxSize()
                 .background(
                     Brush.horizontalGradient(
-                        0.0f to Color.Black.copy(alpha = 0.9f),
-                        0.32f to Color.Black.copy(alpha = 0.68f),
-                        0.58f to Color.Black.copy(alpha = 0.3f),
-                        0.82f to Color.Transparent,
+                        0.0f to Color(0xF20A0D14),
+                        0.6f to Color.Transparent,
                     )
-                )
+                ),
         )
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        0.0f to Color.Black.copy(alpha = 0.14f),
-                        0.58f to Color.Black.copy(alpha = 0.18f),
-                        0.8f to MaterialTheme.colorScheme.background.copy(alpha = 0.48f),
-                        1.0f to MaterialTheme.colorScheme.background,
+                        0.0f to Color.Transparent,
+                        0.45f to Color.Transparent,
+                        1.0f to Color(0xFA0A0D14),
                     )
-                )
+                ),
         )
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.66f)
-                .fillMaxSize()
-                .background(
-                    Brush.horizontalGradient(
-                        0.0f to Color.Black.copy(alpha = 0.3f),
-                        0.72f to Color.Black.copy(alpha = 0.08f),
-                        1.0f to Color.Transparent,
+        posterUrl?.let {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(it)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 18.dp, bottom = 18.dp)
+                    .width(64.dp)
+                    .aspectRatio(2f / 3f)
+                    .border(
+                        width = 1.dp,
+                        color = Color.White.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(8.dp),
                     )
-                )
-        )
+                    .background(
+                        color = Color.Black.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(8.dp),
+                    ),
+            )
+        }
 
         Column(
             modifier = Modifier
-                .fillMaxWidth(0.62f)
-                .padding(start = spacing.gutter, top = 32.dp, end = spacing.gutter)
-                .background(
-                    color = Color.Black.copy(alpha = 0.34f),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-                )
-                .border(
-                    width = 1.dp,
-                    color = Color.White.copy(alpha = 0.08f),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-                )
-                .padding(horizontal = 22.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .align(Alignment.BottomStart)
+                .padding(start = 84.dp, end = 20.dp, bottom = 18.dp)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
         ) {
-            if (!logoUrl.isNullOrBlank()) {
-                Box(modifier = Modifier.heightIn(max = 100.dp)) {
-                    AsyncImage(
-                        model = logoUrl,
-                        contentDescription = title,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 100.dp)
-                            .testTag(DetailTestTags.HeroLogo),
-                        contentScale = ContentScale.Fit,
-                    )
-                }
-            } else {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.displaySmall.copy(
-                        fontSize = 36.sp,
-                        shadow = Shadow(
-                            color = Color.Black.copy(alpha = 0.72f),
-                            offset = Offset(0f, 4f),
-                            blurRadius = 18f,
-                        ),
-                    ),
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
-                    modifier = Modifier.testTag(DetailTestTags.HeroTitle),
-                )
-            }
-
             Text(
-                text = listOfNotNull(eyebrow.takeIf { it.isNotBlank() }, ratingText).joinToString("  •  "),
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp, letterSpacing = 0.2.sp),
-                color = Color.White.copy(alpha = 0.84f),
+                text = title,
+                color = Color.White,
+                fontWeight = FontWeight.ExtraBold,
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontSize = 28.sp,
+                    letterSpacing = (-0.5).sp,
+                    lineHeight = 28.sp,
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.7f),
+                        blurRadius = 16f,
+                    ),
+                ),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag(DetailTestTags.HeroTitle),
             )
 
-            if (badges.isNotEmpty()) {
-                HeroBadgeRow(
-                    labels = badges,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            HeroMetadataLine(
+                metadataItems = metadataItems,
+                qualityBadges = qualityBadges,
+            )
 
-            tagline?.let {
+            if (genres.isNotEmpty()) {
                 Text(
-                    text = it,
-                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp),
-                    fontStyle = FontStyle.Italic,
-                    color = Color.White.copy(alpha = 0.98f),
+                    text = genres.joinToString(" · "),
+                    color = Color(0xFF888888),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -231,27 +207,17 @@ fun FlatDetailHero(
             if (!summary.isNullOrBlank()) {
                 Text(
                     text = summary,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
-                    color = Color.White.copy(alpha = 0.96f),
-                    maxLines = 2,
+                    color = Color(0xFF999999),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 19.sp),
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth(0.95f),
-                )
-            }
-
-            creditLine?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
-                    color = Color(0xFFE3C08C),
-                    fontWeight = FontWeight.Medium,
                 )
             }
 
             HeroActionStrip(
                 primaryLabel = primaryActionLabel,
                 onPrimaryClick = onPrimaryAction,
-                secondaryActions = secondaryIconActions,
+                secondaryActions = secondaryActions,
                 primaryFocusRequester = primaryActionFocusRequester,
                 primaryDownFocusRequester = primaryActionDownFocusRequester,
                 onDownNavigation = onDownNavigation,
@@ -262,10 +228,79 @@ fun FlatDetailHero(
 }
 
 @Composable
+private fun HeroMetadataLine(
+    metadataItems: List<String>,
+    qualityBadges: List<String>,
+) {
+    val filteredMetadata = metadataItems.filter { it.isNotBlank() }
+    val filteredBadges = qualityBadges.filter { it.isNotBlank() }
+    if (filteredMetadata.isEmpty() && filteredBadges.isEmpty()) return
+
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        filteredMetadata.forEachIndexed { index, value ->
+            Text(
+                text = value,
+                color = Color(0xFFBBBBBB),
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
+                maxLines = 1,
+            )
+            if (index != filteredMetadata.lastIndex || filteredBadges.isNotEmpty()) {
+                Text(
+                    text = "•",
+                    color = Color(0xFF555555),
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
+                )
+            }
+        }
+        filteredBadges.forEachIndexed { index, badge ->
+            HeroQualityBadge(label = badge)
+            if (index != filteredBadges.lastIndex) {
+                Text(
+                    text = "•",
+                    color = Color(0xFF555555),
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeroQualityBadge(label: String) {
+    val normalized = label.trim().uppercase()
+    val tint = when {
+        normalized.contains("DV") || normalized.contains("DOLBY VISION") -> Color(0xFF8A5BFF)
+        normalized.contains("HDR") -> Color(0xFFFFB347)
+        normalized.contains("4K") -> Color(0xFFF2F2F2)
+        else -> Color(0xFFE0E0E0)
+    }
+    Text(
+        text = normalized,
+        color = tint,
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+        modifier = Modifier
+            .background(
+                color = Color.White.copy(alpha = 0.09f),
+                shape = RoundedCornerShape(999.dp),
+            )
+            .border(
+                width = 1.dp,
+                color = tint.copy(alpha = 0.4f),
+                shape = RoundedCornerShape(999.dp),
+            )
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+    )
+}
+
+@Composable
 private fun HeroActionStrip(
     primaryLabel: String,
     onPrimaryClick: () -> Unit,
-    secondaryActions: List<HeroIconAction>,
+    secondaryActions: List<HeroSecondaryAction>,
     primaryFocusRequester: FocusRequester,
     primaryDownFocusRequester: FocusRequester?,
     onDownNavigation: (() -> Unit)?,
@@ -276,9 +311,9 @@ private fun HeroActionStrip(
         List(secondaryActions.size) { FocusRequester() }
     }
 
-    FlowRow(
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Button(
             onClick = onPrimaryClick,
@@ -311,28 +346,18 @@ private fun HeroActionStrip(
                         false
                     }
                 }
-                .requiredWidthIn(min = 180.dp)
-                .defaultMinSize(minHeight = 48.dp),
-            scale = ButtonDefaults.scale(focusedScale = 1.04f),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 10.dp),
+                .defaultMinSize(minHeight = 44.dp),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+            scale = ButtonDefaults.scale(focusedScale = 1.03f),
             colors = ButtonDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                focusedContainerColor = MaterialTheme.colorScheme.primary,
-                focusedContentColor = MaterialTheme.colorScheme.onPrimary,
-            ),
-            glow = ButtonDefaults.glow(
-                focusedGlow = Glow(
-                    elevationColor = expressiveColors.focusGlow.copy(alpha = 0.48f),
-                    elevation = 10.dp,
-                ),
+                containerColor = Color(0xFFE50914),
+                focusedContainerColor = Color(0xFFE50914),
+                contentColor = Color.White,
+                focusedContentColor = Color.White,
             ),
             border = ButtonDefaults.border(
                 focusedBorder = Border(
-                    border = androidx.compose.foundation.BorderStroke(
-                        width = 2.dp,
-                        color = expressiveColors.focusRing,
-                    ),
+                    border = androidx.compose.foundation.BorderStroke(2.dp, expressiveColors.focusRing),
                 ),
             ),
         ) {
@@ -340,23 +365,27 @@ private fun HeroActionStrip(
                 text = primaryLabel,
                 style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
 
         secondaryActions.forEachIndexed { index, action ->
+            val isMoreAction = action.label == "···"
             OutlinedButton(
                 onClick = action.onClick,
                 modifier = Modifier
-                    .requiredWidthIn(min = 140.dp)
-                    .defaultMinSize(minHeight = 48.dp)
+                    .then(
+                        if (isMoreAction) {
+                            Modifier
+                                .requiredWidth(52.dp)
+                                .height(44.dp)
+                        } else {
+                            Modifier.defaultMinSize(minHeight = 44.dp)
+                        },
+                    )
                     .focusRequester(secondaryFocusRequesters[index])
                     .blockBringIntoView()
                     .focusProperties {
-                        left = when (index) {
-                            0 -> primaryFocusRequester
-                            else -> secondaryFocusRequesters[index - 1]
-                        }
+                        left = if (index == 0) primaryFocusRequester else secondaryFocusRequesters[index - 1]
                         if (index < secondaryFocusRequesters.lastIndex) {
                             right = secondaryFocusRequesters[index + 1]
                         }
@@ -377,74 +406,40 @@ private fun HeroActionStrip(
                             false
                         }
                     },
-                scale = ButtonDefaults.scale(focusedScale = 1.04f),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                contentPadding = if (isMoreAction) {
+                    PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                } else {
+                    PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                },
+                scale = ButtonDefaults.scale(focusedScale = 1.03f),
                 colors = ButtonDefaults.colors(
-                    containerColor = expressiveColors.detailPanelFocused.copy(alpha = 0.32f),
-                    contentColor = MaterialTheme.colorScheme.onBackground,
-                    focusedContainerColor = expressiveColors.detailPanelFocused,
-                    focusedContentColor = MaterialTheme.colorScheme.onBackground,
-                ),
-                glow = ButtonDefaults.glow(
-                    focusedGlow = Glow(
-                        elevationColor = expressiveColors.focusGlow.copy(alpha = 0.34f),
-                        elevation = 8.dp,
-                    ),
+                    containerColor = Color.White.copy(alpha = 0.1f),
+                    focusedContainerColor = Color.White.copy(alpha = 0.18f),
+                    contentColor = Color.White,
+                    focusedContentColor = Color.White,
                 ),
                 border = ButtonDefaults.border(
                     border = Border(
                         border = androidx.compose.foundation.BorderStroke(
                             width = 1.dp,
-                            color = expressiveColors.borderSubtle.copy(alpha = 0.58f),
+                            color = Color.White.copy(alpha = 0.15f),
                         ),
                     ),
                     focusedBorder = Border(
-                        border = androidx.compose.foundation.BorderStroke(
-                            width = 2.dp,
-                            color = expressiveColors.focusRing,
-                        ),
+                        border = androidx.compose.foundation.BorderStroke(2.dp, expressiveColors.focusRing),
                     ),
                 ),
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = action.icon,
-                        contentDescription = action.contentDescription,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Text(
-                        text = action.contentDescription,
-                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                Text(
+                    text = action.label,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontSize = if (isMoreAction) 18.sp else 14.sp,
+                        fontWeight = if (isMoreAction) FontWeight.Black else FontWeight.Medium,
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
-        }
-    }
-}
-
-@Composable
-private fun HeroBadgeRow(
-    labels: List<String>,
-    modifier: Modifier = Modifier,
-) {
-    val filtered = labels.filter { it.isNotBlank() }
-    if (filtered.isEmpty()) return
-
-    FlowRow(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        filtered.forEachIndexed { index, label ->
-            CinefinChip(
-                label = label,
-                strong = index < 2,
-            )
         }
     }
 }

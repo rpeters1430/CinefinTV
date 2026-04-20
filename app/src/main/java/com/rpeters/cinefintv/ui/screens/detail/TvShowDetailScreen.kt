@@ -3,14 +3,6 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.CastConnected
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -31,8 +23,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
+import com.rpeters.cinefintv.ui.components.MediaActionDialog
+import com.rpeters.cinefintv.ui.components.MediaActionDialogItem
 import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
-import com.rpeters.cinefintv.ui.screens.detail.cinematic.HeroIconAction
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.HeroSecondaryAction
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.TvShowDetailLayout
 
 @Composable
@@ -51,6 +45,7 @@ fun TvShowDetailScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showMoreDialog by remember { mutableStateOf(false) }
     val chromeFocusController = LocalAppChromeFocusController.current
     BackHandler(onBack = onBack)
 
@@ -114,100 +109,77 @@ fun TvShowDetailScreen(
                     )
                 }
 
-                val factItems = remember(show) {
-                    buildList {
-                        if (show.seasonCount > 0) {
-                            add(DetailLabeledMetaItem(Icons.Default.VideoLibrary, "Seasons", show.seasonCount.toString()))
-                        }
-                        show.status?.let {
-                            add(DetailLabeledMetaItem(Icons.Default.Tv, "Status", it))
-                        }
-                        show.endedDate?.let {
-                            add(DetailLabeledMetaItem(Icons.Default.Event, "Ends", it))
-                        }
-                        show.premieredDate?.let {
-                            add(DetailLabeledMetaItem(Icons.Default.CalendarToday, "First Aired", it))
-                        } ?: show.yearRange?.let {
-                            add(DetailLabeledMetaItem(Icons.Default.CalendarToday, "Years", it))
-                        }
-                        if (show.networks.isNotEmpty()) {
+                if (showMoreDialog) {
+                    MediaActionDialog(
+                        title = show.title,
+                        actions = buildList {
                             add(
-                                DetailLabeledMetaItem(
-                                    Icons.Default.CastConnected,
-                                    "Network",
-                                    show.networks.take(2).joinToString(", "),
+                                MediaActionDialogItem(
+                                    label = if (show.nextUpEpisodeId != null) "Play Next Up" else "Open Seasons",
+                                    supportingText = "Start watching this series.",
+                                    onClick = {
+                                        if (show.nextUpEpisodeId != null) onPlayEpisode(show.nextUpEpisodeId)
+                                        else state.seasons.firstOrNull()?.let { onOpenSeason(it.id) }
+                                    },
                                 )
                             )
-                        }
-                        if (show.creators.isNotEmpty()) {
                             add(
-                                DetailLabeledMetaItem(
-                                    Icons.Default.Edit,
-                                    "Created by",
-                                    show.creators.take(2).joinToString(", "),
+                                MediaActionDialogItem(
+                                    label = if (show.isWatched) "Remove from Watchlist" else "Add to Watchlist",
+                                    supportingText = "Toggle this show's saved state.",
+                                    onClick = {
+                                        if (show.isWatched) viewModel.markUnwatched()
+                                        else viewModel.markWatched()
+                                    },
                                 )
                             )
-                        }
-                    }
-                }
-
-                val eyebrow = remember(show) {
-                    val parts = mutableListOf("TV SERIES")
-                    if (show.seasonCount > 0) parts.add("${show.seasonCount} SEASONS")
-                    parts.joinToString(" · ")
-                }
-
-                val ratingText = remember(show) {
-                    show.rating?.let { "★ $it" }
+                            add(
+                                MediaActionDialogItem(
+                                    label = "Delete",
+                                    supportingText = "Remove this show from your Jellyfin library.",
+                                    isDestructive = true,
+                                    onClick = { showDeleteDialog = true },
+                                )
+                            )
+                        },
+                        onDismissRequest = { showMoreDialog = false },
+                    )
                 }
 
                 val primaryActionLabel = remember(show) {
                     when {
-                        show.nextUpEpisodeId != null -> "▶ ${show.nextUpTitle ?: "Next Up"}"
-                        else -> "▶ Play"
+                        show.nextUpEpisodeId != null -> "Resume"
+                        else -> "Play"
                     }
                 }
 
-                val heroTagline = remember(show) {
-                    show.overview
-                        ?.substringBefore(".")
-                        ?.trim()
-                        ?.takeIf { it.length in 24..96 }
-                        ?.let { "$it." }
-                }
-
-                val heroSummary = remember(show, heroTagline) {
-                    heroTagline ?: show.overview
-                        ?.trim()
-                        ?.takeIf { it.isNotBlank() }
-                        ?.let { overview ->
-                            if (overview.length <= 140) overview else overview.take(137).trimEnd() + "..."
-                        }
-                }
-
-                val heroBadges = remember(show) {
+                val qualityBadges = remember(show) {
                     buildList {
                         show.officialRating?.let(::add)
-                        show.status?.let(::add)
-                        show.networks.firstOrNull()?.let(::add)
-                        addAll(show.genres.take(2))
+                        if (show.rating?.toDoubleOrNull()?.let { it >= 8.0 } == true) add("4K")
                     }
                 }
 
-                val creditLine = remember(show) {
-                    show.creators
-                        .take(2)
-                        .takeIf { it.isNotEmpty() }
-                        ?.joinToString(", ")
-                        ?.let { "Created by $it" }
+                val metadataItems = remember(show) {
+                    buildList {
+                        show.yearRange?.let(::add)
+                        if (show.seasonCount > 0) add("${show.seasonCount} seasons")
+                        show.status?.let(::add)
+                    }
                 }
 
                 val heroSecondaryActions = remember(show.isWatched) {
                     listOf(
-                        HeroIconAction(
-                            icon = Icons.Default.Delete,
-                            contentDescription = "Delete show",
-                            onClick = { showDeleteDialog = true },
+                        HeroSecondaryAction(
+                            label = if (show.isWatched) "✓ In Watchlist" else "+ Watchlist",
+                            onClick = {
+                                if (show.isWatched) viewModel.markUnwatched()
+                                else viewModel.markWatched()
+                            },
+                        ),
+                        HeroSecondaryAction(
+                            label = "···",
+                            onClick = { showMoreDialog = true },
                         )
                     )
                 }
@@ -215,10 +187,9 @@ fun TvShowDetailScreen(
                 TvShowDetailLayout(
                     backdropUrl = show.backdropUrl,
                     posterUrl = show.posterUrl,
-                    logoUrl = show.logoUrl,
                     title = show.title,
-                    eyebrow = eyebrow,
-                    ratingText = ratingText,
+                    metadataItems = metadataItems,
+                    qualityBadges = qualityBadges,
                     genres = show.genres,
                     primaryActionLabel = primaryActionLabel,
                     onPrimaryAction = {
@@ -239,11 +210,7 @@ fun TvShowDetailScreen(
                     onCastClick = { personId -> onOpenPerson(personId) },
                     onSimilarClick = { showId -> onOpenShow(showId) },
                     description = show.overview ?: "",
-                    heroTagline = heroSummary,
-                    creditLine = creditLine,
-                    heroBadges = heroBadges,
                     heroSecondaryActions = heroSecondaryActions,
-                    factItems = factItems,
                     listState = listState,
                     drawerFocusRequester = destinationFocus.drawerFocusRequester,
                 )

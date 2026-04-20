@@ -3,13 +3,6 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apartment
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -30,8 +23,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
+import com.rpeters.cinefintv.ui.components.MediaActionDialog
+import com.rpeters.cinefintv.ui.components.MediaActionDialogItem
 import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
-import com.rpeters.cinefintv.ui.screens.detail.cinematic.HeroIconAction
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.HeroSecondaryAction
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.MovieDetailLayout
 
 @Composable
@@ -49,6 +44,7 @@ fun MovieDetailScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showMoreDialog by remember { mutableStateOf(false) }
     val chromeFocusController = LocalAppChromeFocusController.current
     BackHandler(onBack = onBack)
 
@@ -112,89 +108,65 @@ fun MovieDetailScreen(
                     )
                 }
 
-                val factItems = remember(movie) {
+                if (showMoreDialog) {
+                    MediaActionDialog(
+                        title = movie.title,
+                        actions = buildList {
+                            add(
+                                MediaActionDialogItem(
+                                    label = if (movie.playbackProgress != null) "Resume" else "Play",
+                                    supportingText = "Start playback immediately.",
+                                    onClick = { onPlayMovie(movie.id) },
+                                )
+                            )
+                            add(
+                                MediaActionDialogItem(
+                                    label = if (movie.isWatched) "Remove from Watchlist" else "Add to Watchlist",
+                                    supportingText = "Toggle this item's saved state.",
+                                    onClick = {
+                                        if (movie.isWatched) viewModel.markUnwatched()
+                                        else viewModel.markWatched()
+                                    },
+                                )
+                            )
+                            add(
+                                MediaActionDialogItem(
+                                    label = "Delete",
+                                    supportingText = "Remove this item from your Jellyfin library.",
+                                    isDestructive = true,
+                                    onClick = { showDeleteDialog = true },
+                                )
+                            )
+                        },
+                        onDismissRequest = { showMoreDialog = false },
+                    )
+                }
+
+                val metadataItems = remember(movie) {
                     buildList {
-                        movie.duration?.let {
-                            add(DetailLabeledMetaItem(Icons.Default.Schedule, "Runtime", it))
-                        }
-                        movie.premieredDate?.let {
-                            add(DetailLabeledMetaItem(Icons.Default.CalendarToday, "Released", it))
-                        } ?: movie.year?.let {
-                            add(DetailLabeledMetaItem(Icons.Default.CalendarToday, "Released", "$it"))
-                        }
-                        if (movie.directors.isNotEmpty()) {
-                            add(
-                                DetailLabeledMetaItem(
-                                    Icons.Default.Movie,
-                                    "Directed by",
-                                    movie.directors.take(2).joinToString(", "),
-                                )
-                            )
-                        }
-                        if (movie.studios.isNotEmpty()) {
-                            add(
-                                DetailLabeledMetaItem(
-                                    Icons.Default.Apartment,
-                                    "Studio",
-                                    movie.studios.take(2).joinToString(", "),
-                                )
-                            )
-                        }
+                        movie.year?.toString()?.let(::add)
+                        movie.duration?.let(::add)
+                        movie.officialRating?.let(::add)
                     }
                 }
 
-                val eyebrow = remember(movie) {
-                    listOfNotNull(movie.year?.toString(), movie.duration).joinToString(" · ")
-                }
-
-                val ratingText = remember(movie) {
-                    movie.rating?.let { "★ $it" }
-                }
-
-                val heroTagline = remember(movie) {
-                    movie.overview
-                        ?.substringBefore(".")
-                        ?.trim()
-                        ?.takeIf { it.length in 24..96 }
-                        ?.let { "$it." }
-                }
-
-                val heroSummary = remember(movie, heroTagline) {
-                    heroTagline ?: movie.overview
-                        ?.trim()
-                        ?.takeIf { it.isNotBlank() }
-                        ?.let { overview ->
-                            if (overview.length <= 140) overview else overview.take(137).trimEnd() + "..."
-                        }
-                }
-
-                val heroBadges = remember(movie) {
+                val qualityBadges = remember(movie) {
                     buildList {
                         movie.videoQuality?.let(::add)
-                        movie.audioLabel?.let(::add)
-                        movie.officialRating?.let(::add)
-                        addAll(movie.genres.take(2))
+                        if (movie.audioLabel?.contains("HDR", ignoreCase = true) == true) add("HDR")
+                        if (movie.audioLabel?.contains("DV", ignoreCase = true) == true) add("DV")
                     }
-                }
-
-                val directorLine = remember(movie) {
-                    movie.directors
-                        .take(2)
-                        .takeIf { it.isNotEmpty() }
-                        ?.joinToString(", ")
-                        ?.let { "Directed by $it" }
                 }
 
                 val primaryActionLabel = when {
-                    movie.playbackProgress != null -> "▶ Resume"
-                    else -> "▶ Play"
+                    movie.playbackProgress != null -> "Resume"
+                    else -> "Play"
                 }
 
                 val heroSecondaryActions = remember(movie.isWatched) {
                     listOf(
-                        HeroIconAction(
-                            icon = Icons.Default.Check,
-                            contentDescription = if (movie.isWatched) "Mark unwatched" else "Mark watched",
+                        HeroSecondaryAction(
+                            label = if (movie.isWatched) "✓ In Watchlist" else "+ Watchlist",
                             onClick = {
                                 if (movie.isWatched) {
                                     viewModel.markUnwatched()
@@ -203,10 +175,9 @@ fun MovieDetailScreen(
                                 }
                             },
                         ),
-                        HeroIconAction(
-                            icon = Icons.Default.Delete,
-                            contentDescription = "Delete movie",
-                            onClick = { showDeleteDialog = true },
+                        HeroSecondaryAction(
+                            label = "···",
+                            onClick = { showMoreDialog = true },
                         ),
                     )
                 }
@@ -214,21 +185,16 @@ fun MovieDetailScreen(
                 MovieDetailLayout(
                     backdropUrl = movie.backdropUrl,
                     posterUrl = movie.posterUrl,
-                    logoUrl = movie.logoUrl,
                     title = movie.title,
-                    eyebrow = eyebrow,
-                    ratingText = ratingText,
+                    metadataItems = metadataItems,
+                    qualityBadges = qualityBadges,
                     genres = movie.genres,
                     primaryActionLabel = primaryActionLabel,
                     onPrimaryAction = { onPlayMovie(movie.id) },
                     topFocusRequester = topFocus,
                     primaryActionFocusRequester = primaryActionFocus,
                     description = movie.overview ?: "",
-                    heroTagline = heroSummary,
-                    directorLine = directorLine,
-                    heroBadges = heroBadges,
                     heroSecondaryActions = heroSecondaryActions,
-                    factItems = factItems,
                     castItems = state.cast,
                     similarItems = state.similarMovies,
                     onCastClick = { personId -> onOpenPerson(personId) },

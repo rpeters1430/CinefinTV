@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
@@ -56,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.clip
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -750,232 +752,214 @@ fun DetailShelfPanel(
         )
         }
 
-        /**
-        * Full-width horizontal episode row for season episode lists.
-        * Left: 16:9 thumbnail with watch status overlay and progress bar.
-        * Right: episode code + duration, title, overview.
-        */
-        @Composable
-        fun EpisodeListRow(
-        episode: com.rpeters.cinefintv.ui.screens.detail.EpisodeModel,
-        modifier: Modifier = Modifier,
-        isNext: Boolean = false,
-        onFocus: () -> Unit = {},
-        onMenuAction: (() -> Unit)? = null,
-        onClick: () -> Unit,
-        ) {
-        val expressiveColors = LocalCinefinExpressiveColors.current
-        val spacing = LocalCinefinSpacing.current
-        var isFocused by remember { mutableStateOf(false) }
-        var menuHandledForCurrentPress by remember { mutableStateOf(false) }
+/**
+ * Full-width horizontal episode row for season episode lists.
+ */
+@Composable
+fun EpisodeListRow(
+    episode: com.rpeters.cinefintv.ui.screens.detail.EpisodeModel,
+    modifier: Modifier = Modifier,
+    isNext: Boolean = false,
+    onFocus: () -> Unit = {},
+    onMenuAction: (() -> Unit)? = null,
+    onClick: () -> Unit,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    var isFocused by remember { mutableStateOf(false) }
+    var menuHandledForCurrentPress by remember { mutableStateOf(false) }
+    val progress = (episode.playbackProgress ?: 0f).coerceIn(0f, 1f)
+    val isInProgress = progress > 0f && !episode.isWatched
 
-        androidx.tv.material3.Card(
+    androidx.tv.material3.Card(
         onClick = onClick,
         modifier = modifier
-        .fillMaxWidth()
-        .padding(horizontal = 48.dp, vertical = 6.dp)
-        .testTag(DetailTestTags.EpisodeItem)
-        .onPreviewKeyEvent { keyEvent ->
-            val nativeEvent = keyEvent.nativeKeyEvent
-            when {
-                onMenuAction == null -> false
-                nativeEvent.action == android.view.KeyEvent.ACTION_UP -> {
-                    menuHandledForCurrentPress = false
-                    false
-                }
-                shouldOpenCardMenu(nativeEvent) && !menuHandledForCurrentPress -> {
-                    menuHandledForCurrentPress = true
-                    onMenuAction()
-                    true
-                }
-                shouldOpenCardMenu(nativeEvent) -> true
-                else -> false
-            }
-        }
-        .onFocusChanged {
-            val focused = it.isFocused || it.hasFocus
-            if (focused != isFocused) {
-                isFocused = focused
-                if (focused) onFocus()
-            }
-        },
-        scale = androidx.tv.material3.CardDefaults.scale(focusedScale = 1.015f),
-        border = androidx.tv.material3.CardDefaults.border(
-        focusedBorder = androidx.tv.material3.Border(
-            border = androidx.compose.foundation.BorderStroke(2.dp, expressiveColors.focusRing),
-        ),
-        ),
-        shape = androidx.tv.material3.CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),
-        colors = androidx.tv.material3.CardDefaults.colors(
-        containerColor = expressiveColors.detailPanelMuted,
-        focusedContainerColor = expressiveColors.detailPanelFocused,
-        ),
-        ) {
-        Row(
-        modifier = Modifier
             .fillMaxWidth()
-            .height(96.dp)
-            .background(
-                Brush.horizontalGradient(
-                    colors = listOf(
-                        expressiveColors.focusGlow.copy(alpha = if (isFocused) 0.16f else 0.07f),
-                        Color.Transparent,
-                    )
-                )
+            .padding(horizontal = 24.dp, vertical = 4.dp)
+            .testTag(DetailTestTags.EpisodeItem)
+            .onPreviewKeyEvent { keyEvent ->
+                val nativeEvent = keyEvent.nativeKeyEvent
+                when {
+                    onMenuAction == null -> false
+                    nativeEvent.action == android.view.KeyEvent.ACTION_UP -> {
+                        menuHandledForCurrentPress = false
+                        false
+                    }
+                    shouldOpenCardMenu(nativeEvent) && !menuHandledForCurrentPress -> {
+                        menuHandledForCurrentPress = true
+                        onMenuAction()
+                        true
+                    }
+                    shouldOpenCardMenu(nativeEvent) -> true
+                    else -> false
+                }
+            }
+            .onFocusChanged {
+                val focused = it.isFocused || it.hasFocus
+                if (focused != isFocused) {
+                    isFocused = focused
+                    if (focused) onFocus()
+                }
+            },
+        scale = androidx.tv.material3.CardDefaults.scale(focusedScale = 1.02f),
+        shape = androidx.tv.material3.CardDefaults.shape(RoundedCornerShape(8.dp)),
+        border = androidx.tv.material3.CardDefaults.border(
+            border = androidx.tv.material3.Border(
+                border = androidx.compose.foundation.BorderStroke(
+                    width = 1.dp,
+                    color = if (isInProgress) Color(0x33E50914) else Color.Transparent,
+                ),
             ),
-        verticalAlignment = Alignment.CenterVertically,
-        ) {
-        // Thumbnail
-        Box(
+            focusedBorder = androidx.tv.material3.Border(
+                border = androidx.compose.foundation.BorderStroke(2.dp, expressiveColors.focusRing),
+            ),
+        ),
+        colors = androidx.tv.material3.CardDefaults.colors(
+            containerColor = when {
+                episode.isWatched -> expressiveColors.detailPanelMuted.copy(alpha = 0.5f)
+                isInProgress -> Color(0x10E50914)
+                else -> expressiveColors.detailPanelMuted.copy(alpha = 0.88f)
+            },
+            focusedContainerColor = when {
+                episode.isWatched -> expressiveColors.detailPanelMuted.copy(alpha = 0.6f)
+                isInProgress -> Color(0x18E50914)
+                else -> expressiveColors.detailPanelFocused
+            },
+        ),
+    ) {
+        Row(
             modifier = Modifier
-                .width(160.dp)
-                .fillMaxHeight()
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (episode.imageUrl != null) {
-                AsyncImage(
-                    model = coil3.request.ImageRequest.Builder(LocalContext.current)
-                        .data(episode.imageUrl)
-                        .crossfade(true)
-                        .size(320, 180)
-                        .build(),
-                    contentDescription = episode.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(expressiveColors.accentSurface),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = episode.number?.toString() ?: "?",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Box(
+                modifier = Modifier
+                    .width(160.dp)
+                    .height(90.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(expressiveColors.accentSurface),
+            ) {
+                if (episode.imageUrl != null) {
+                    AsyncImage(
+                        model = coil3.request.ImageRequest.Builder(LocalContext.current)
+                            .data(episode.imageUrl)
+                            .crossfade(true)
+                            .size(320, 180)
+                            .build(),
+                        contentDescription = episode.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
-            }
 
-            // NEXT badge
-            if (isNext) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(4.dp)
-                ) {
-                    CinefinChip(
-                        label = "NEXT",
-                        strong = true
-                    )
-                }
-            }
-
-            // Watch status overlay
-            val watchStatus = when {
-                episode.isWatched -> com.rpeters.cinefintv.ui.components.WatchStatus.WATCHED
-                (episode.playbackProgress ?: 0f) > 0f -> com.rpeters.cinefintv.ui.components.WatchStatus.IN_PROGRESS
-                else -> com.rpeters.cinefintv.ui.components.WatchStatus.NONE
-            }
-            if (watchStatus == com.rpeters.cinefintv.ui.components.WatchStatus.WATCHED) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(4.dp)
-                        .size(20.dp)
-                        .background(expressiveColors.watchedGreen.copy(alpha = 0.95f), RoundedCornerShape(999.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "✓",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                }
-            }
-            // Progress bar
-            val progress = episode.playbackProgress ?: 0f
-            if (progress > 0f && !episode.isWatched) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .fillMaxWidth()
-                        .height(2.5.dp)
-                        .background(expressiveColors.playerSurface.copy(alpha = 0.5f))
-                ) {
+                episode.duration?.let { duration ->
                     Box(
                         modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(progress.coerceIn(0f, 1f))
-                            .background(MaterialTheme.colorScheme.primary)
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 4.dp, bottom = 4.dp)
+                            .background(Color(0xBF000000), RoundedCornerShape(999.dp))
+                            .padding(horizontal = 7.dp, vertical = 2.dp),
+                    ) {
+                        Text(
+                            text = duration,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
+                            color = Color.White,
+                        )
+                    }
+                }
+
+                if (episode.isWatched) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp)
+                            .size(16.dp)
+                            .background(Color(0xFF2E7D32), CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "✓",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                            color = Color.White,
+                        )
+                    }
+                }
+
+                if (isInProgress) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(start = 4.dp, end = 4.dp, bottom = 4.dp)
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(2.dp)),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(progress)
+                                .background(Color(0xFFE50914), RoundedCornerShape(2.dp)),
+                        )
+                    }
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(top = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = episode.episodeCode ?: episode.number?.let { "E$it" } ?: "Episode",
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
+                    color = Color(0xFF888888),
+                    maxLines = 1,
+                )
+                Text(
+                    text = episode.title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+                    color = if (episode.isWatched) Color(0xFFBBBBBB) else Color.White,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = listOfNotNull(episode.duration, episode.audioLabel).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp),
+                    color = Color(0xFF666666),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+                episode.overview?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp),
+                        color = Color(0xFF999999),
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
+                }
+            }
+
+            if (isNext || isInProgress) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterVertically)
+                        .background(Color(0x18E50914), RoundedCornerShape(999.dp))
+                        .border(1.dp, Color(0x66E50914), RoundedCornerShape(999.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        text = "RESUME",
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                        color = Color(0xFFE50914),
                     )
                 }
             }
         }
-
-        // Metadata
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
-                .padding(start = 14.dp, end = 20.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.Start,
-        ) {
-            // Episode code + duration row
-            val metaLine = listOfNotNull(episode.episodeCode, episode.duration).joinToString("  •  ")
-            if (metaLine.isNotBlank()) {
-                Text(
-                    text = metaLine,
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-            }
-            val qualityLine = listOfNotNull(episode.videoQuality, episode.audioLabel)
-            if (qualityLine.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    episode.videoQuality?.let {
-                        EpisodeMetaBadge(
-                            icon = Icons.Default.HighQuality,
-                            label = it,
-                        )
-                    }
-                    episode.audioLabel?.let {
-                        EpisodeMetaBadge(
-                            icon = Icons.Default.GraphicEq,
-                            label = it,
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = episode.title,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp),
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                color = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            )
-            episode.overview?.let {
-                Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                )
-            }
-        }
-        }
-        }
-        }
+    }
+}
 @Composable
 private fun EpisodeMetaBadge(
     icon: ImageVector,

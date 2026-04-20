@@ -3,12 +3,7 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Subscriptions
-import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -21,13 +16,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -36,14 +29,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
-import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.components.MediaActionDialog
 import com.rpeters.cinefintv.ui.components.MediaActionDialogItem
-import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
-import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
+import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailStripTitle
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.FlatDetailHero
+import com.rpeters.cinefintv.ui.screens.detail.cinematic.HeroSecondaryAction
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.yield
 
 @Composable
 fun SeasonScreen(
@@ -66,7 +60,7 @@ fun SeasonScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_PAUSE  -> hasBeenPaused = true
+                Lifecycle.Event.ON_PAUSE -> hasBeenPaused = true
                 Lifecycle.Event.ON_RESUME -> if (hasBeenPaused) {
                     hasBeenPaused = false
                     viewModel.refreshWatchStatus()
@@ -115,30 +109,17 @@ private fun SeasonContent(
     val topFocusRequester = remember { FocusRequester() }
     val primaryActionFocusRequester = remember { FocusRequester() }
     val destinationFocus = rememberTopLevelDestinationFocus(primaryActionFocusRequester)
-    val overviewFocusRequester = remember { FocusRequester() }
     val firstEpisodeFocusRequester = remember { FocusRequester() }
     var selectedEpisode by remember { mutableStateOf<EpisodeModel?>(null) }
     var pendingDeleteEpisode by remember { mutableStateOf<EpisodeModel?>(null) }
+    var showSeasonMenu by remember { mutableStateOf(false) }
 
     val resumeEpisode = remember(episodes) {
         episodes.firstOrNull { (it.playbackProgress ?: 0f) > 0f && !it.isWatched }
             ?: episodes.firstOrNull { !it.isWatched }
     }
-    
-    val factItems = remember(season, episodes) {
-        buildList {
-            season.seriesName?.let {
-                add(DetailLabeledMetaItem(Icons.Default.Subscriptions, "Series", it))
-            }
-            add(DetailLabeledMetaItem(Icons.Default.VideoLibrary, "Episodes", episodes.size.toString()))
-            resumeEpisode?.episodeCode?.let {
-                add(DetailLabeledMetaItem(Icons.Default.VideoLibrary, "Continue With", it))
-            }
-        }
-    }
 
-    var didInitialFocus by remember { mutableStateOf(false) }
-
+    var didInitialFocus by remember(season.id) { mutableStateOf(false) }
     LaunchedEffect(season.id) {
         if (!didInitialFocus) {
             focusDetailScreenAtTop(
@@ -148,6 +129,32 @@ private fun SeasonContent(
             )
             didInitialFocus = true
         }
+    }
+
+    if (showSeasonMenu) {
+        MediaActionDialog(
+            title = season.title,
+            actions = buildList {
+                if (episodes.isNotEmpty()) {
+                    add(
+                        MediaActionDialogItem(
+                            label = "Play From Episode 1",
+                            supportingText = "Start playback from the beginning of this season.",
+                            onClick = { onOpenEpisode(episodes.first().id) },
+                        )
+                    )
+                }
+                add(
+                    MediaActionDialogItem(
+                        label = "Delete Season",
+                        supportingText = "Remove this season from the library.",
+                        isDestructive = true,
+                        onClick = { onShowDeleteDialogChange(true) },
+                    )
+                )
+            },
+            onDismissRequest = { showSeasonMenu = false },
+        )
     }
 
     selectedEpisode?.let { episode ->
@@ -166,11 +173,8 @@ private fun SeasonContent(
                         label = if (episode.isWatched) "Mark unwatched" else "Mark watched",
                         supportingText = "Update the watched state for this episode.",
                         onClick = {
-                            if (episode.isWatched) {
-                                viewModel.markEpisodeUnwatched(episode.id)
-                            } else {
-                                viewModel.markEpisodeWatched(episode.id)
-                            }
+                            if (episode.isWatched) viewModel.markEpisodeUnwatched(episode.id)
+                            else viewModel.markEpisodeWatched(episode.id)
                         },
                     )
                 )
@@ -219,65 +223,49 @@ private fun SeasonContent(
         contentPadding = PaddingValues(bottom = spacing.gutter),
     ) {
         item {
-            Column {
-                DetailAnchor(
-                    focusRequester = topFocusRequester,
-                    downFocusRequester = primaryActionFocusRequester,
-                    onFocused = {},
-                )
-                CinematicHero(
-                    backdropUrl = season.backdropUrl,
-                    logoUrl = null,
-                    title = season.title,
-                    eyebrow = listOfNotNull(season.seriesName, "${episodes.size} episodes").joinToString(" · "),
-                    ratingText = null,
-                    genres = emptyList(),
-                    primaryActionLabel = if (resumeEpisode != null) "▶ Resume" else "▶ Play",
-                    onPrimaryAction = {
-                        val target = resumeEpisode ?: episodes.firstOrNull()
-                        if (target != null) onOpenEpisode(target.id)
-                    },
-                    secondaryActions = buildList {
-                        if (episodes.isNotEmpty()) {
-                            add("Start From Episode 1" to { onOpenEpisode(episodes.first().id) })
-                        }
-                        add("Delete" to { onShowDeleteDialogChange(true) })
-                    },
-                    primaryActionFocusRequester = primaryActionFocusRequester,
-                    primaryActionDownFocusRequester = overviewFocusRequester,
-                    listState = listState,
-                    drawerFocusRequester = destinationFocus.drawerFocusRequester,
-                )
-            }
-        }
-
-        item {
-            DetailOverviewSection(
-                title = season.title,
+            DetailAnchor(
+                focusRequester = topFocusRequester,
+                downFocusRequester = primaryActionFocusRequester,
+                onFocused = {},
+            )
+            FlatDetailHero(
+                backdropUrl = season.backdropUrl,
                 posterUrl = season.posterUrl,
-                description = season.overview.orEmpty(),
-                factItems = factItems,
-                chips = emptyList(),
-                focusRequester = overviewFocusRequester,
-                upFocusRequester = primaryActionFocusRequester,
-                onNavigateDown = {
-                    if (episodes.isEmpty() || listState.isScrollInProgress) return@DetailOverviewSection
-                    coroutineScope.launch {
-                        listState.scrollToItem(2)
-                        yield()
-                        runCatching { firstEpisodeFocusRequester.requestFocus() }
-                    }
+                title = season.title,
+                metadataItems = listOf("${episodes.size} episodes"),
+                qualityBadges = emptyList(),
+                genres = emptyList(),
+                summary = season.overview,
+                primaryActionLabel = if (resumeEpisode != null) "Resume" else "Play",
+                onPrimaryAction = {
+                    val target = resumeEpisode ?: episodes.firstOrNull()
+                    if (target != null) onOpenEpisode(target.id)
                 },
-                modifier = Modifier.padding(top = spacing.rowGap.div(1.5f)),
+                secondaryActions = listOf(HeroSecondaryAction(label = "···", onClick = { showSeasonMenu = true })),
+                primaryActionFocusRequester = primaryActionFocusRequester,
+                primaryActionDownFocusRequester = if (episodes.isNotEmpty()) firstEpisodeFocusRequester else null,
+                drawerFocusRequester = destinationFocus.drawerFocusRequester,
+                onDownNavigation = if (episodes.isNotEmpty()) {
+                    {
+                        if (listState.isScrollInProgress) return@FlatDetailHero
+                        coroutineScope.launch {
+                            listState.scrollToItem(2)
+                            runCatching { firstEpisodeFocusRequester.requestFocus() }
+                        }
+                    }
+                } else {
+                    null
+                },
             )
         }
 
         item {
-            DetailContentSection(
+            DetailStripTitle(
                 title = "Episodes",
-                eyebrow = "${episodes.count { !it.isWatched }} unwatched",
-                icon = Icons.Default.VideoLibrary,
-            ) {}
+                modifier = Modifier
+                    .padding(top = spacing.rowGap.div(1.5f))
+                    .padding(horizontal = spacing.gutter),
+            )
         }
 
         items(episodes, key = { it.id }) { episode ->
@@ -287,7 +275,7 @@ private fun SeasonContent(
                 modifier = if (episode.id == episodes.firstOrNull()?.id) {
                     Modifier
                         .focusRequester(firstEpisodeFocusRequester)
-                        .focusProperties { up = overviewFocusRequester }
+                        .focusProperties { up = primaryActionFocusRequester }
                 } else {
                     Modifier
                 },
