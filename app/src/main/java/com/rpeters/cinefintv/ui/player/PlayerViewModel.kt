@@ -465,6 +465,7 @@ class PlayerViewModel @Inject constructor(
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY && newPlayer.playWhenReady) {
                     if (uiState.value.retryCount > 0 || uiState.value.errorMessage != null || uiState.value.isRetrying) {
+                        retryJob?.cancel()
                         _uiState.value = _uiState.value.copy(
                             isRetrying = false,
                             retryCount = 0,
