@@ -40,6 +40,7 @@ import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -80,6 +81,7 @@ class PlayerViewModel @Inject constructor(
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
     private var isInitialized = false
+    private var retryJob: Job? = null
 
     fun init(id: String, start: Long) {
         if (isInitialized && itemId == id) return
@@ -154,6 +156,14 @@ class PlayerViewModel @Inject constructor(
             )
             return
         }
+
+        retryJob?.cancel()
+        _uiState.value = _uiState.value.copy(
+            isLoading = true,
+            isRetrying = false,
+            retryCount = 0,
+            errorMessage = null,
+        )
 
         viewModelScope.launch {
             loadInternal()
@@ -454,6 +464,13 @@ class PlayerViewModel @Inject constructor(
         newPlayer.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY && newPlayer.playWhenReady) {
+                    if (uiState.value.retryCount > 0 || uiState.value.errorMessage != null || uiState.value.isRetrying) {
+                        _uiState.value = _uiState.value.copy(
+                            isRetrying = false,
+                            retryCount = 0,
+                            errorMessage = null,
+                        )
+                    }
                     flushPendingPlaybackStart()
                 }
             }
@@ -656,6 +673,7 @@ class PlayerViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        retryJob?.cancel()
         adaptiveBitrateMonitor.stopMonitoring()
         _player?.release()
         _player = null
@@ -687,6 +705,11 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun onPlayerError(error: PlaybackException) {
+        if (uiState.value.isRetrying) {
+            Log.w("PlayerViewModel", "Ignoring playback error while retry is already in progress.")
+            return
+        }
+
         val canRetry = when (error.errorCode) {
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
@@ -716,6 +739,11 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun attemptRetry(error: PlaybackException) {
+        if (retryJob?.isActive == true) {
+            Log.w("PlayerViewModel", "Retry already active; skipping duplicate retry request.")
+            return
+        }
+
         val nextRetryCount = uiState.value.retryCount + 1
         Log.w("PlayerViewModel", "Playback error (code ${error.errorCode}). Attempting retry $nextRetryCount/$MAX_RETRIES...")
         
@@ -725,7 +753,7 @@ class PlayerViewModel @Inject constructor(
             errorMessage = null
         )
 
-        viewModelScope.launch {
+        retryJob = viewModelScope.launch {
             val delayMs = (2.0.pow(nextRetryCount - 1).toLong() * 1000L)
             delay(delayMs)
 
