@@ -835,7 +835,11 @@ class JellyfinMediaRepository @Inject constructor(
     }
 
     suspend fun logHttpError(requestUrl: String, status: Int, body: String?) {
-        Log.e("JellyfinMediaRepository", "HTTP error for $requestUrl\n$status ${body.orEmpty()}")
+        SecureLogger.networkError(
+            tag = "JellyfinMediaRepository",
+            error = "HTTP $status ${body.orEmpty()}",
+            url = requestUrl
+        )
     }
 
     /**

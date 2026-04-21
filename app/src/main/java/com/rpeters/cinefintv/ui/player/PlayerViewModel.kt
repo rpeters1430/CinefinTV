@@ -467,8 +467,6 @@ class PlayerViewModel @Inject constructor(
                     if (uiState.value.retryCount > 0 || uiState.value.errorMessage != null || uiState.value.isRetrying) {
                         retryJob?.cancel()
                         _uiState.value = _uiState.value.copy(
-                        retryJob?.cancel()
-                        _uiState.value = _uiState.value.copy(
                             isRetrying = false,
                             retryCount = 0,
                             errorMessage = null,

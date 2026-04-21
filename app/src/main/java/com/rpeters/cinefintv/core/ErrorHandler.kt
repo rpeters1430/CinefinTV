@@ -1,8 +1,8 @@
 package com.rpeters.cinefintv.core
 
-import android.util.Log
 import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.data.repository.common.ApiResult
+import com.rpeters.cinefintv.utils.SecureLogger
 import kotlinx.coroutines.CancellationException
 import java.io.IOException
 import java.net.ConnectException
@@ -267,7 +267,7 @@ object ErrorHandler {
         when (error.type) {
             JellyfinErrorType.OPERATION_CANCELLED -> {
                 if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "[${error.type.code}] ${error.message} $contextInfo")
+                    SecureLogger.d(TAG, "[${error.type.code}] ${error.message} $contextInfo")
                 }
             }
 
@@ -276,24 +276,24 @@ object ErrorHandler {
             JellyfinErrorType.UNKNOWN_HOST,
             JellyfinErrorType.DNS_RESOLUTION,
             -> {
-                Log.w(TAG, "[${error.type.code}] ${error.message} $contextInfo", error.cause)
+                SecureLogger.w(TAG, "[${error.type.code}] ${error.message} $contextInfo", error.cause)
             }
 
             JellyfinErrorType.SSL_ERROR,
             JellyfinErrorType.UNAUTHORIZED,
             JellyfinErrorType.FORBIDDEN,
             -> {
-                Log.w(TAG, "[${error.type.code}] ${error.message} $contextInfo", error.cause)
+                SecureLogger.w(TAG, "[${error.type.code}] ${error.message} $contextInfo", error.cause)
             }
 
             JellyfinErrorType.SERVER_ERROR,
             JellyfinErrorType.UNKNOWN,
             -> {
-                Log.e(TAG, "[${error.type.code}] ${error.message} $contextInfo", error.cause)
+                SecureLogger.e(TAG, "[${error.type.code}] ${error.message} $contextInfo", error.cause)
             }
 
             else -> {
-                Log.i(TAG, "[${error.type.code}] ${error.message} $contextInfo", error.cause)
+                SecureLogger.i(TAG, "[${error.type.code}] ${error.message} $contextInfo")
             }
         }
     }

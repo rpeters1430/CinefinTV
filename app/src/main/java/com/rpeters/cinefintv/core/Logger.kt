@@ -194,7 +194,7 @@ object Logger {
             }
         }
 
-        return builder.toString().trim()
+        return com.rpeters.cinefintv.utils.SecureLogger.sanitizeForLogging(builder.toString().trim())
     }
 
     /**

@@ -136,7 +136,7 @@ object SecureLogger {
     /**
      * Sanitize sensitive information from log messages.
      */
-    private fun sanitizeForLogging(text: String): String {
+    internal fun sanitizeForLogging(text: String): String {
         var sanitized = text
 
         // Apply credential/token patterns with $1$2*** replacement

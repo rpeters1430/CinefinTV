@@ -79,7 +79,7 @@ object NetworkModule {
             .sslSocketFactory(sslSocketFactory, pinningTrustManager)
             .hostnameVerifier(hostnameVerifier)
             // Configure TLS versions to avoid handshake failures
-            .connectionSpecs(listOf(modernTls, compatibleTls, ConnectionSpec.CLEARTEXT))
+            .connectionSpecs(listOf(modernTls, compatibleTls))
 
         if (BuildConfig.DEBUG) {
             val loggingInterceptor = HttpLoggingInterceptor().apply {
