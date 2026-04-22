@@ -24,6 +24,8 @@ class FakeHomeRepositories(
         every { this@mockk.search } returns mockk(relaxed = true)
         every { this@mockk.auth } returns mockk(relaxed = true)
     }
+    
+    val auth: JellyfinAuthRepository get() = coordinator.auth
 }
 
 class FakePlayerRepositories(

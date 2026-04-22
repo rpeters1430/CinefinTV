@@ -360,9 +360,11 @@ class JellyfinMediaRepository @Inject constructor(
 
     suspend fun getRecentlyAddedByType(itemType: BaseItemKind, limit: Int = 20, forceRefresh: Boolean = false): ApiResult<List<BaseItemDto>> {
         if (!forceRefresh) {
-            val cached = if (itemType == BaseItemKind.MOVIE || itemType == BaseItemKind.EPISODE) {
-                cache.getCachedRecentlyAdded()
-            } else null
+            val cached = when (itemType) {
+                BaseItemKind.MOVIE -> cache.getCachedRecentlyAddedMovies()
+                BaseItemKind.EPISODE -> cache.getCachedRecentlyAddedEpisodes()
+                else -> null
+            }
             if (cached != null) return ApiResult.Success(cached)
         }
 
@@ -378,14 +380,17 @@ class JellyfinMediaRepository @Inject constructor(
                 limit = limit,
             )
             val items = response.content.items
-            if (itemType == BaseItemKind.MOVIE || itemType == BaseItemKind.EPISODE) {
-                cache.cacheRecentlyAdded(items)
+            when (itemType) {
+                BaseItemKind.MOVIE -> cache.cacheRecentlyAddedMovies(items)
+                BaseItemKind.EPISODE -> cache.cacheRecentlyAddedEpisodes(items)
+                else -> { /* No dedicated cache for other types */ }
             }
             items
         }
     }
 
-    suspend fun getCachedRecentlyAdded(): List<BaseItemDto>? = cache.getCachedRecentlyAdded()
+    suspend fun getCachedRecentlyAddedMovies(): List<BaseItemDto>? = cache.getCachedRecentlyAddedMovies()
+    suspend fun getCachedRecentlyAddedEpisodes(): List<BaseItemDto>? = cache.getCachedRecentlyAddedEpisodes()
 
     suspend fun getRecentlyAddedFromLibrary(
         libraryId: String,

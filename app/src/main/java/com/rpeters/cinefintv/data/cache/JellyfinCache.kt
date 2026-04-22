@@ -36,10 +36,11 @@ class JellyfinCache @Inject constructor(
         private const val MAX_CACHE_SIZE_MB = 100L // 100 MB cache limit
         private const val MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000L // 24 hours
         private const val MAX_MEMORY_CACHE_SIZE = 50 // Maximum number of entries in memory cache
-        private const val RECENTLY_ADDED_KEY = "recently_added"
         private const val LIBRARIES_KEY = "libraries"
         private const val CONTINUE_WATCHING_KEY = "continue_watching"
         private const val NEXT_UP_KEY = "next_up"
+        private const val RECENTLY_ADDED_MOVIES_KEY = "recently_added_movies"
+        private const val RECENTLY_ADDED_EPISODES_KEY = "recently_added_episodes"
         private const val FAVORITES_KEY = "favorites"
     }
 
@@ -63,36 +64,29 @@ class JellyfinCache @Inject constructor(
     private val _cacheStats = MutableStateFlow(CacheStats())
     val cacheStats: StateFlow<CacheStats> = _cacheStats.asStateFlow()
 
-    // Use lateinit to avoid file I/O during lazy initialization
-    // Directory creation happens on background thread during init
-    private lateinit var cacheDir: File
-
-    private fun ensureCacheDir(): File {
-        if (!::cacheDir.isInitialized) {
-            cacheDir = File(context.cacheDir, CACHE_DIR)
+    // Use lazy initialization for thread-safe cache directory access
+    private val cacheDir: File by lazy {
+        File(context.cacheDir, CACHE_DIR).apply {
+            if (!exists()) {
+                mkdirs()
+            }
         }
-        if (!cacheDir.exists()) {
-            cacheDir.mkdirs()
-        }
-        return cacheDir
     }
+
+    private fun ensureCacheDir(): File = cacheDir
 
     init {
         // Clean up old cache entries on initialization
         // Using ApplicationScope for app-wide cache initialization that should complete independently
-        // This is a singleton called at app startup and must complete even if the caller is destroyed
         applicationScope.launch(Dispatchers.IO) {
             try {
-                // Initialize cache directory on background thread
-                cacheDir = File(context.cacheDir, CACHE_DIR).apply {
-                    if (!exists()) {
-                        mkdirs()
-                    }
-                }
+                // Trigger lazy initialization of cacheDir
+                ensureCacheDir()
                 cleanupOldEntries()
                 updateCacheStats()
-            } catch (e: CancellationException) {
-                throw e
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "Failed to initialize cache", e)
             }
         }
     }
@@ -124,7 +118,7 @@ class JellyfinCache @Inject constructor(
                     memoryCache[key] = cacheEntry
                 }
 
-                // Store on disk (ensure cache directory exists first)
+                // Store on disk
                 val file = File(ensureCacheDir(), "$key.json")
                 file.writeText(json.encodeToString(CacheData.serializer(), cacheData))
 
@@ -134,8 +128,10 @@ class JellyfinCache @Inject constructor(
 
                 updateCacheStats()
                 true
-            } catch (e: CancellationException) {
-                throw e
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "Failed to cache items for key: $key", e)
+                false
             }
         }
     }
@@ -166,10 +162,13 @@ class JellyfinCache @Inject constructor(
                     }
                 }
 
-                // Check disk cache (ensure cache directory exists first)
+                // Check disk cache
                 val file = File(ensureCacheDir(), "$key.json")
                 if (file.exists()) {
-                    val cacheData = json.decodeFromString<CacheData>(file.readText())
+                    val content = file.readText()
+                    if (content.isBlank()) return@withContext null
+
+                    val cacheData = json.decodeFromString<CacheData>(content)
                     val isValid = (System.currentTimeMillis() - cacheData.timestamp) < cacheData.ttlMs
 
                     if (isValid) {
@@ -196,8 +195,10 @@ class JellyfinCache @Inject constructor(
                 }
 
                 null
-            } catch (e: CancellationException) {
-                throw e
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w(TAG, "Failed to retrieve cached items for key: $key", e)
+                null
             }
         }
     }
@@ -207,27 +208,31 @@ class JellyfinCache @Inject constructor(
      * Performs I/O operations on background thread.
      */
     suspend fun isCached(key: String): Boolean = withContext(Dispatchers.IO) {
-        // Check memory cache (synchronized for thread safety)
-        synchronized(memoryCache) {
-            memoryCache[key]?.let { entry ->
-                if (entry.isValid()) {
-                    return@withContext true
-                } else {
-                    memoryCache.remove(key)
+        try {
+            // Check memory cache (synchronized for thread safety)
+            synchronized(memoryCache) {
+                memoryCache[key]?.let { entry ->
+                    if (entry.isValid()) {
+                        return@withContext true
+                    } else {
+                        memoryCache.remove(key)
+                    }
                 }
             }
-        }
 
-        // Check disk cache (ensure cache directory exists first)
-        val file = File(ensureCacheDir(), "$key.json")
-        if (file.exists()) {
-            try {
-                val cacheData = json.decodeFromString<CacheData>(file.readText())
+            // Check disk cache
+            val file = File(ensureCacheDir(), "$key.json")
+            if (file.exists()) {
+                val content = file.readText()
+                if (content.isBlank()) return@withContext false
+                
+                val cacheData = json.decodeFromString<CacheData>(content)
                 val isValid = (System.currentTimeMillis() - cacheData.timestamp) < cacheData.ttlMs
                 return@withContext isValid
-            } catch (e: CancellationException) {
-                throw e
             }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "Failed to check cache status for key: $key", e)
         }
 
         false
@@ -405,12 +410,20 @@ class JellyfinCache @Inject constructor(
      * Convenient methods for common cache operations.
      */
 
-    suspend fun cacheRecentlyAdded(items: List<BaseItemDto>) {
-        cacheItems(RECENTLY_ADDED_KEY, items, ttlMs = 30 * 60 * 1000L) // 30 minutes
+    suspend fun cacheRecentlyAddedMovies(items: List<BaseItemDto>) {
+        cacheItems(RECENTLY_ADDED_MOVIES_KEY, items, ttlMs = 30 * 60 * 1000L) // 30 minutes
     }
 
-    suspend fun getCachedRecentlyAdded(): List<BaseItemDto>? {
-        return getCachedItems(RECENTLY_ADDED_KEY)
+    suspend fun getCachedRecentlyAddedMovies(): List<BaseItemDto>? {
+        return getCachedItems(RECENTLY_ADDED_MOVIES_KEY)
+    }
+
+    suspend fun cacheRecentlyAddedEpisodes(items: List<BaseItemDto>) {
+        cacheItems(RECENTLY_ADDED_EPISODES_KEY, items, ttlMs = 30 * 60 * 1000L) // 30 minutes
+    }
+
+    suspend fun getCachedRecentlyAddedEpisodes(): List<BaseItemDto>? {
+        return getCachedItems(RECENTLY_ADDED_EPISODES_KEY)
     }
 
     suspend fun cacheContinueWatching(items: List<BaseItemDto>) {
