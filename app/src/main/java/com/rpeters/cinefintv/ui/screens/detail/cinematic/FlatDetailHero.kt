@@ -149,17 +149,17 @@ fun FlatDetailHero(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 18.dp, bottom = 18.dp)
-                    .width(64.dp)
+                    .padding(start = 20.dp, bottom = 24.dp)
+                    .width(100.dp)
                     .aspectRatio(2f / 3f)
                     .border(
                         width = 1.dp,
                         color = Color.White.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(10.dp),
                     )
                     .background(
                         color = Color.Black.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(10.dp),
                     ),
             )
         }
@@ -167,18 +167,18 @@ fun FlatDetailHero(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = 84.dp, end = 20.dp, bottom = 18.dp)
+                .padding(start = 136.dp, end = 24.dp, bottom = 24.dp)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(7.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
                 text = title,
                 color = Color.White,
                 fontWeight = FontWeight.ExtraBold,
                 style = MaterialTheme.typography.headlineLarge.copy(
-                    fontSize = 28.sp,
+                    fontSize = 30.sp,
                     letterSpacing = (-0.5).sp,
-                    lineHeight = 28.sp,
+                    lineHeight = 32.sp,
                     shadow = Shadow(
                         color = Color.Black.copy(alpha = 0.7f),
                         blurRadius = 16f,
@@ -198,7 +198,7 @@ fun FlatDetailHero(
                 Text(
                     text = genres.joinToString(" · "),
                     color = Color(0xFF888888),
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 18.sp),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -208,8 +208,8 @@ fun FlatDetailHero(
                 Text(
                     text = summary,
                     color = Color(0xFF999999),
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 19.sp),
-                    maxLines = 3,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 18.sp, lineHeight = 26.sp),
+                    maxLines = 4,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -244,14 +244,14 @@ private fun HeroMetadataLine(
             Text(
                 text = value,
                 color = Color(0xFFBBBBBB),
-                style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = 18.sp),
                 maxLines = 1,
             )
             if (index != filteredMetadata.lastIndex || filteredBadges.isNotEmpty()) {
                 Text(
                     text = "•",
                     color = Color(0xFF555555),
-                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 18.sp),
                 )
             }
         }
@@ -261,7 +261,7 @@ private fun HeroMetadataLine(
                 Text(
                     text = "•",
                     color = Color(0xFF555555),
-                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 18.sp),
                 )
             }
         }
