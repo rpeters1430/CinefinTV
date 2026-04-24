@@ -16,7 +16,9 @@ import com.rpeters.cinefintv.data.repository.JellyfinUserRepository
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.testutil.FakePlayerRepositories
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
+import androidx.media3.common.PlaybackException
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -29,6 +31,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -773,6 +776,74 @@ class PlayerViewModelTest {
 
         assertEquals(5, viewModel.uiState.value.selectedAudioTrack?.streamIndex)
         assertTrue(requestedAudioStreamIndexes.contains(5))
+    }
+
+    @Test
+    fun retryAfterError_usesCurrentPlayerPositionForPlaybackInfoNotServerPosition() = runTest {
+        val fakeRepositories = FakePlayerRepositories()
+        val ITEM_UUID = "00000000-0000-0000-0000-000000000501"
+        // Store a local saved position so that loadInternal picks up a non-zero start.
+        // PlaybackPreferences.DEFAULT.resumePlaybackMode = ALWAYS, so local position is used.
+        val LOCAL_POSITION_MS = 45 * 60 * 1000L // 45 min in ms
+
+        val movieItem: BaseItemDto = mockk()
+        every { movieItem.id } returns UUID.fromString(ITEM_UUID)
+        every { movieItem.name } returns "Retry Test Movie"
+        every { movieItem.type } returns BaseItemKind.MOVIE
+        every { movieItem.seriesId } returns null
+        every { movieItem.userData } returns null
+        every { movieItem.chapters } returns null
+
+        coEvery { fakeRepositories.media.getItemDetails("movie-501") } returns ApiResult.Success(movieItem)
+        every { fakeRepositories.stream.getStreamUrl(ITEM_UUID) } returns "https://stream/movie-501"
+        every { fakeRepositories.stream.getLogoUrl(any()) } returns null
+        // Non-zero local position → loadInternal will use this as startPositionMs on initial load
+        coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, ITEM_UUID) } returns LOCAL_POSITION_MS
+        // Override class-level mock so any startPositionMs is accepted (not just 0L)
+        coEvery { enhancedPlaybackManager.getOptimalPlaybackUrl(any(), any(), any(), any(), any()) } returns
+            com.rpeters.cinefintv.data.playback.PlaybackResult.Error("mock error")
+
+        val viewModel = PlayerViewModel(
+            repositories = fakeRepositories.coordinator,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
+            playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
+            appContext = appContext,
+            okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
+        ).apply { init("movie-501", -1L) } // -1L = no explicit start, falls back to server position
+        runCurrent()
+
+        // Verify initial load used the local saved position
+        coVerify {
+            fakeRepositories.stream.getPlaybackInfo(
+                itemId = ITEM_UUID,
+                startPositionMs = LOCAL_POSITION_MS,
+            )
+        }
+
+        // Trigger a retryable network error
+        val error = PlaybackException(
+            "Network error",
+            null,
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+        )
+        viewModel.onPlayerError(error)
+
+        // Advance past the first retry delay (2^0 * 1000ms = 1000ms) and allow retry to complete
+        advanceTimeBy(1500L)
+        advanceUntilIdle()
+
+        // On retry, _player is null so currentPos = 0L.
+        // The fix sets requestedStartPositionMs = currentPos before loadInternal(), so
+        // getPlaybackInfo should be called with startPositionMs = 0L, not the server position.
+        coVerify(exactly = 1) {
+            fakeRepositories.stream.getPlaybackInfo(
+                itemId = ITEM_UUID,
+                startPositionMs = 0L,
+            )
+        }
     }
 
     private fun createPlaybackPreferencesRepository(): PlaybackPreferencesRepository {

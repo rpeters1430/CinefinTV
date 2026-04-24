@@ -9,6 +9,7 @@ import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.toMediaCardPresentation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,12 +52,12 @@ class SearchViewModel @Inject constructor(
     @OptIn(FlowPreview::class)
     private fun observeQuery() {
         viewModelScope.launch {
-            _uiState
-                .debounce(350)
-                .distinctUntilChanged { old, new -> old.query == new.query }
-                .collect { state ->
-                    runSearch(state.query)
-                }
+                _uiState
+                    .debounce(350)
+                    .distinctUntilChanged { old, new -> old.query == new.query }
+                    .collectLatest { state ->
+                        runSearch(state.query)
+                    }
         }
     }
 

@@ -46,6 +46,7 @@ class AuthViewModel @Inject constructor(
 
     init {
         observeSessionRestoration()
+        observeConnectionState()
     }
 
     private fun observeSessionRestoration() {
@@ -58,6 +59,16 @@ class AuthViewModel @Inject constructor(
                             isSessionActive = isRestored,
                         )
                     }
+                }
+            }
+        }
+    }
+
+    private fun observeConnectionState() {
+        viewModelScope.launch {
+            authRepository.isConnected.collect { isConnected ->
+                _uiState.update {
+                    it.copy(isSessionActive = isConnected)
                 }
             }
         }

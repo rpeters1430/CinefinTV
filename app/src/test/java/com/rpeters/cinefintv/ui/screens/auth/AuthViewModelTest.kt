@@ -33,9 +33,11 @@ class AuthViewModelTest {
     private val authRepository: JellyfinAuthRepository = mockk()
     private val secureCredentialManager: SecureCredentialManager = mockk()
     private val isSessionRestoredFlow = MutableStateFlow<Boolean?>(null)
+    private val isConnectedFlow = MutableStateFlow(false)
 
     private fun setupMocks() {
         every { authRepository.isSessionRestored } returns isSessionRestoredFlow
+        every { authRepository.isConnected } returns isConnectedFlow
         coEvery { authRepository.tryRestoreSession() } returns true // Keep for backward compatibility if needed, but we use flow now
     }
 
@@ -102,6 +104,7 @@ class AuthViewModelTest {
     fun init_whenSessionRestored_marksSessionActive() = runTest {
         setupMocks()
         isSessionRestoredFlow.value = true
+        isConnectedFlow.value = true
 
         val viewModel = AuthViewModel(authRepository, secureCredentialManager)
         advanceUntilIdle()
@@ -109,6 +112,23 @@ class AuthViewModelTest {
         val state = viewModel.uiState.value
         assertTrue(state.isSessionChecked)
         assertTrue(state.isSessionActive)
+    }
+
+    @Test
+    fun connectionState_whenDisconnected_clearsSessionActive() = runTest {
+        setupMocks()
+        isSessionRestoredFlow.value = true
+        isConnectedFlow.value = true
+
+        val viewModel = AuthViewModel(authRepository, secureCredentialManager)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isSessionActive)
+
+        isConnectedFlow.value = false
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isSessionActive)
+        assertTrue(viewModel.uiState.value.isSessionChecked)
     }
 
     @Test

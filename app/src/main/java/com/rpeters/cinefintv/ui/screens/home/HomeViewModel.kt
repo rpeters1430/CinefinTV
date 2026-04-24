@@ -17,9 +17,7 @@ import com.rpeters.cinefintv.utils.isSeries
 import com.rpeters.cinefintv.utils.toMediaCardPresentation
 import com.rpeters.cinefintv.data.common.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -223,29 +221,24 @@ class HomeViewModel @Inject constructor(
                     val episodesDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12) }
                     val videosDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12) }
                     val musicDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12) }
-
-                    val results = awaitAll(
-                        librariesDeferred,
-                        continueDeferred,
-                        nextUpDeferred,
-                        moviesDeferred,
-                        episodesDeferred,
-                        videosDeferred,
-                        musicDeferred,
-                    )
-                    android.util.Log.d("HomeViewModel", "All network requests completed")
+                    val librariesResult = librariesDeferred.await()
+                    val continueResult = continueDeferred.await()
+                    val nextUpResult = nextUpDeferred.await()
+                    val moviesResult = moviesDeferred.await()
+                    val episodesResult = episodesDeferred.await()
+                    val videosResult = videosDeferred.await()
+                    val musicResult = musicDeferred.await()
 
                     // Offload intensive data processing to background thread
                     val (sections, featuredItems) = withContext(dispatchers.default) {
-                        val nextEpisodesSectionItems = buildNextEpisodeSectionItems(results[2])
-                        val continueWatchingItems = (results[1] as? ApiResult.Success)?.data
+                        val nextEpisodesSectionItems = buildNextEpisodeSectionItems(nextUpResult)
+                        val continueWatchingItems = (continueResult as? ApiResult.Success)?.data
                             ?.filter { it.canResume() }
                             ?.take(12)
                             ?.map { toCardModel(it) }
                             .orEmpty()
 
                         val builtSections = buildList<HomeSectionModel> {
-                            val librariesResult = results[0]
                             if (librariesResult is ApiResult.Success) {
                                 val filteredLibraries = librariesResult.data.filter {
                                     it.collectionType?.toString() != "playlists" && it.name?.contains("Playlists", ignoreCase = true) != true
@@ -278,13 +271,13 @@ class HomeViewModel @Inject constructor(
                                     )
                                 )
                             }
-                            addSection(HomeSectionId.RECENT_EPISODES, results[4])
-                            addSection(HomeSectionId.RECENT_MOVIES, results[3])
-                            addSection(HomeSectionId.RECENT_MUSIC, results[6])
-                            addSection(HomeSectionId.RECENT_COLLECTIONS, results[5])
+                            addSection(HomeSectionId.RECENT_EPISODES, episodesResult)
+                            addSection(HomeSectionId.RECENT_MOVIES, moviesResult)
+                            addSection(HomeSectionId.RECENT_MUSIC, musicResult)
+                            addSection(HomeSectionId.RECENT_COLLECTIONS, videosResult)
                         }
 
-                        val builtFeaturedItems = (results[3] as? ApiResult.Success<List<BaseItemDto>>)
+                        val builtFeaturedItems = (moviesResult as? ApiResult.Success<List<BaseItemDto>>)
                             ?.data?.take(6)?.map { toCardModel(it) }
                             ?: emptyList()
 
@@ -292,9 +285,17 @@ class HomeViewModel @Inject constructor(
                     }
 
                     val newState = if (sections.isEmpty() && featuredItems.isEmpty()) {
-                        val errorMessage = results.filterIsInstance<ApiResult.Error<List<BaseItemDto>>>()
-                            .firstOrNull()
-                            ?.message
+                        val errorMessage = listOf(
+                            librariesResult,
+                            continueResult,
+                            nextUpResult,
+                            moviesResult,
+                            episodesResult,
+                            videosResult,
+                            musicResult,
+                        ).firstNotNullOfOrNull { result ->
+                            (result as? ApiResult.Error)?.message
+                        }
                             ?: "No content is available yet."
                         HomeUiState.Error(errorMessage)
                     } else {
@@ -318,88 +319,93 @@ class HomeViewModel @Inject constructor(
     }
 
     fun refreshWatchStatus() {
-        val currentState = _uiState.value as? HomeUiState.Content ?: return
+        _uiState.value as? HomeUiState.Content ?: return
         viewModelScope.launch {
             // Give server a moment to process the stop report
             delay(500)
             val continueDeferred = async { repositories.media.getContinueWatching(limit = 24) }
             val nextUpDeferred = async { repositories.media.getNextUp(limit = 12) }
 
-            when (val continueResult = continueDeferred.await()) {
-                is ApiResult.Success -> {
-                    // Re-read state after the suspension point to avoid overwriting concurrent mutations
-                    val latestState = _uiState.value as? HomeUiState.Content ?: return@launch
-                    val nextEpisodeItems = buildNextEpisodeSectionItems(nextUpDeferred.await())
-                    
-                    val continueWatchingItems = continueResult.data
-                        .filter { it.canResume() }
-                        .take(12)
-                        .map { toCardModel(it) }
+            val continueResult = continueDeferred.await()
+            val nextUpResult = nextUpDeferred.await()
 
-                    val updatedSections = buildList {
-                        for (section in latestState.sections) {
-                            when (section.id) {
-                                HomeSectionId.CONTINUE_WATCHING -> {
-                                    if (continueWatchingItems.isNotEmpty()) {
-                                        add(section.copy(items = continueWatchingItems))
-                                    }
-                                    // If empty, omit the section
-                                }
-                                HomeSectionId.NEXT_EPISODES -> {
-                                    // Will be re-added after the loop
-                                }
-                                else -> add(section)
-                            }
-                        }
-                    }.toMutableList()
+            if (continueResult !is ApiResult.Success && nextUpResult !is ApiResult.Success) {
+                return@launch
+            }
 
-                    val myLibrariesIdx = updatedSections.indexOfFirst { it.id == HomeSectionId.LIBRARIES }
-                    val insertAfter = if (myLibrariesIdx >= 0) myLibrariesIdx else -1
+            // Re-read state after the suspension point to avoid overwriting concurrent mutations
+            val latestState = _uiState.value as? HomeUiState.Content ?: return@launch
+            val continueWatchingItems = (continueResult as? ApiResult.Success)?.data
+                ?.filter { it.canResume() }
+                ?.take(12)
+                ?.map { toCardModel(it) }
+            val nextEpisodeItems = if (nextUpResult is ApiResult.Success) {
+                buildNextEpisodeSectionItems(nextUpResult)
+            } else {
+                null
+            }
 
-                    val withoutCW = updatedSections.filter {
-                        it.id != HomeSectionId.CONTINUE_WATCHING && it.id != HomeSectionId.NEXT_EPISODES
-                    }.toMutableList()
+            val finalSections = rebuildWatchSections(
+                baseSections = latestState.sections,
+                continueWatchingItems = continueWatchingItems,
+                nextEpisodeItems = nextEpisodeItems,
+            )
 
-                    val toInsert = buildList {
-                        if (continueWatchingItems.isNotEmpty()) {
-                            add(
-                                HomeSectionModel(
-                                    id = HomeSectionId.CONTINUE_WATCHING,
-                                    title = HomeSectionId.CONTINUE_WATCHING.displayTitle,
-                                    items = continueWatchingItems,
-                                )
-                            )
-                        }
-                        if (nextEpisodeItems.isNotEmpty()) {
-                            add(
-                                HomeSectionModel(
-                                    id = HomeSectionId.NEXT_EPISODES,
-                                    title = HomeSectionId.NEXT_EPISODES.displayTitle,
-                                    items = nextEpisodeItems,
-                                )
-                            )
-                        }
-                    }
+            val stabilizedState = latestState
+                .copy(sections = latestState.stabilizeSections(finalSections))
+                .stabilizeAgainst(latestState)
 
-                    val finalSections = if (toInsert.isNotEmpty()) {
-                        withoutCW.toMutableList().apply {
-                            addAll(insertAfter + 1, toInsert)
-                        }
-                    } else {
-                        withoutCW
-                    }
-
-                    val stabilizedState = latestState
-                        .copy(sections = latestState.stabilizeSections(finalSections))
-                        .stabilizeAgainst(latestState)
-
-                    if (_uiState.value != stabilizedState) {
-                        _uiState.value = stabilizedState
-                    }
-                }
-                else -> { /* no-op on error — stale data is better than a flicker */ }
+            if (_uiState.value != stabilizedState) {
+                _uiState.value = stabilizedState
             }
         }
+    }
+
+    private fun rebuildWatchSections(
+        baseSections: List<HomeSectionModel>,
+        continueWatchingItems: List<HomeCardModel>?,
+        nextEpisodeItems: List<HomeCardModel>?,
+    ): List<HomeSectionModel> {
+        val nonWatchSections = baseSections.filter {
+            it.id != HomeSectionId.CONTINUE_WATCHING && it.id != HomeSectionId.NEXT_EPISODES
+        }.toMutableList()
+        val librariesIndex = nonWatchSections.indexOfFirst { it.id == HomeSectionId.LIBRARIES }
+        val insertIndex = if (librariesIndex >= 0) librariesIndex + 1 else 0
+
+        val refreshedWatchSections = buildList {
+            when {
+                continueWatchingItems != null && continueWatchingItems.isNotEmpty() -> {
+                    add(
+                        HomeSectionModel(
+                            id = HomeSectionId.CONTINUE_WATCHING,
+                            title = HomeSectionId.CONTINUE_WATCHING.displayTitle,
+                            items = continueWatchingItems,
+                        )
+                    )
+                }
+                continueWatchingItems == null -> {
+                    baseSections.firstOrNull { it.id == HomeSectionId.CONTINUE_WATCHING }?.let(::add)
+                }
+            }
+
+            when {
+                nextEpisodeItems != null && nextEpisodeItems.isNotEmpty() -> {
+                    add(
+                        HomeSectionModel(
+                            id = HomeSectionId.NEXT_EPISODES,
+                            title = HomeSectionId.NEXT_EPISODES.displayTitle,
+                            items = nextEpisodeItems,
+                        )
+                    )
+                }
+                nextEpisodeItems == null -> {
+                    baseSections.firstOrNull { it.id == HomeSectionId.NEXT_EPISODES }?.let(::add)
+                }
+            }
+        }
+
+        nonWatchSections.addAll(insertIndex, refreshedWatchSections)
+        return nonWatchSections
     }
 
     private fun MutableList<HomeSectionModel>.addSection(

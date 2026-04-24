@@ -102,6 +102,11 @@ private enum class SettingsCategory(
         description = "Readability and style",
         icon = Icons.Default.Subtitles,
     ),
+    ACCOUNT(
+        label = "Account",
+        description = "Session and sign-out controls",
+        icon = Icons.Default.Tune,
+    ),
 }
 
 @Composable
@@ -405,6 +410,20 @@ fun SettingsScreen(
                                 description = "Set the subtitle text color used in the player.",
                                 selectedLabel = uiState.subtitles.textColor.name.replace('_', ' '),
                                 onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_TEXT_COLOR },
+                            )
+                        }
+                        SettingsCategory.ACCOUNT -> SettingsSectionCard(
+                            title = "Account",
+                            description = "Manage the current Jellyfin session on this device.",
+                            icon = Icons.Default.Tune,
+                        ) {
+                            SettingsChoiceRow(
+                                icon = Icons.Default.Tune,
+                                title = "Sign out",
+                                description = uiState.signOutError ?: "Remove this device session and return to server sign-in.",
+                                selectedLabel = if (uiState.isSigningOut) "Signing out..." else "Sign out",
+                                onClick = viewModel::logout,
+                                modifier = firstSectionItemModifier,
                             )
                         }
                     }

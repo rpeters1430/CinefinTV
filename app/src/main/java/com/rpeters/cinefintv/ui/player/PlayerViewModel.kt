@@ -405,7 +405,7 @@ class PlayerViewModel @Inject constructor(
         _player?.let { return it }
 
         // Use a dedicated OkHttpClient for ExoPlayer streaming to ensure proper timeouts and pooling.
-        val exoOkHttpClient = NetworkOptimizer.createExoPlayerOkHttpClient()
+        val exoOkHttpClient = NetworkOptimizer.createExoPlayerOkHttpClient(okHttpClient)
 
         // 1. Optimized LoadControl for 4K and fast TTFF (Time To First Frame)
         val loadControl = DefaultLoadControl.Builder()
@@ -759,6 +759,11 @@ class PlayerViewModel @Inject constructor(
             delay(delayMs)
 
             val currentPos = _player?.currentPosition ?: 0L
+            // Tell loadInternal to request a play session starting at the current position.
+            // Without this, loadInternal uses the original requestedStartPositionMs (-1 = "use
+            // server saved position"), causing HLS transcode URLs to be generated at the wrong
+            // offset while reloadStream seeks the player to currentPos.
+            requestedStartPositionMs = currentPos
             val didLoad = loadInternal()
             if (didLoad) {
                 reloadStream(positionMs = currentPos, playWhenReady = true)

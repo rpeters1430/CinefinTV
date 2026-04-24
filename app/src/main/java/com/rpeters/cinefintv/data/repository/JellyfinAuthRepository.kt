@@ -162,17 +162,7 @@ class JellyfinAuthRepository @Inject constructor(
 
     suspend fun forceReAuthenticate(): Boolean {
         return authMutex.withLock {
-            Log.d(TAG, "forceReAuthenticate: Force refresh requested, checking if re-auth still needed")
-
-            // Double-check: if another thread just successfully re-authenticated,
-            // we might not need to do it again
-            val currentServer = _currentServer.value
-            if (currentServer?.accessToken != null) {
-                Log.d(TAG, "forceReAuthenticate: Access token is already present, skipping forced re-authentication")
-                return@withLock true
-            }
-
-            Log.d(TAG, "forceReAuthenticate: No access token available, proceeding with re-authentication")
+            Log.d(TAG, "forceReAuthenticate: Forcing re-authentication with persisted credentials")
             reAuthenticateInternal()
         }
     }
@@ -214,12 +204,11 @@ class JellyfinAuthRepository @Inject constructor(
     }
 
     /**
-     * Checks if the token is approaching expiration and should be refreshed proactively.
-     * Returns true if the token is within the refresh threshold (5 minutes before expiration).
-     * This allows the interceptor to refresh tokens before they expire, reducing blocking.
+     * We do not currently have server-issued expiry metadata for Jellyfin access tokens.
+     * Until that exists, only treat missing tokens as refreshable via the proactive path.
      */
     fun shouldRefreshToken(): Boolean {
-        return false
+        return isTokenExpired()
     }
 
     @VisibleForTesting

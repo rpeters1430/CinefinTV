@@ -22,6 +22,7 @@ import com.rpeters.cinefintv.data.preferences.ThemePreferences
 import com.rpeters.cinefintv.data.preferences.ThemePreferencesRepository
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.preferences.VideoSeekIncrement
+import com.rpeters.cinefintv.data.repository.JellyfinUserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +34,8 @@ import javax.inject.Inject
 
 data class SettingsUiState(
     val isLoading: Boolean = true,
+    val isSigningOut: Boolean = false,
+    val signOutError: String? = null,
     val appearance: ThemePreferences = ThemePreferences.DEFAULT,
     val playback: PlaybackPreferences = PlaybackPreferences.DEFAULT,
     val subtitles: SubtitleAppearancePreferences = SubtitleAppearancePreferences.DEFAULT,
@@ -45,6 +48,7 @@ class SettingsViewModel @Inject constructor(
     private val playbackPreferencesRepository: PlaybackPreferencesRepository,
     private val subtitleAppearancePreferencesRepository: SubtitleAppearancePreferencesRepository,
     private val libraryActionsPreferencesRepository: LibraryActionsPreferencesRepository,
+    private val userRepository: JellyfinUserRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -68,8 +72,17 @@ class SettingsViewModel @Inject constructor(
                     subtitles = subtitles,
                     libraryActions = libraryActions,
                 )
-            }.collect { state ->
-                _uiState.value = state
+            }.collect { preferenceState ->
+                // Atomically merge preference state with transient logout state.
+                // Reading _uiState.value inside the combine lambda is unsafe because the
+                // lambda may run on the upstream (IO) dispatcher while logout() mutates
+                // state on Main, creating a race where isSigningOut/signOutError are lost.
+                _uiState.update { current ->
+                    preferenceState.copy(
+                        isSigningOut = current.isSigningOut,
+                        signOutError = current.signOutError,
+                    )
+                }
             }
         }
     }
@@ -162,6 +175,32 @@ class SettingsViewModel @Inject constructor(
     fun setLibraryManagementActions(enabled: Boolean) {
         updatePreference { libraryActionsPreferencesRepository.setEnableManagementActions(enabled) }
         _uiState.update { it.copy(libraryActions = it.libraryActions.copy(enableManagementActions = enabled)) }
+    }
+
+    fun logout() {
+        if (_uiState.value.isSigningOut) return
+
+        _uiState.update {
+            it.copy(
+                isSigningOut = true,
+                signOutError = null,
+            )
+        }
+
+        viewModelScope.launch {
+            try {
+                userRepository.logout()
+                _uiState.update { it.copy(isSigningOut = false) }
+            } catch (error: Exception) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                _uiState.update {
+                    it.copy(
+                        isSigningOut = false,
+                        signOutError = error.message ?: "Unable to sign out.",
+                    )
+                }
+            }
+        }
     }
 
     private fun updatePreference(block: suspend () -> Unit) {

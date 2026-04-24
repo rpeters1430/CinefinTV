@@ -78,8 +78,8 @@ object NetworkOptimizer {
     /**
      * Create a properly configured OkHttpClient for ExoPlayer data sources
      */
-    fun createExoPlayerOkHttpClient(): OkHttpClient {
-        return OkHttpClient.Builder()
+    fun createExoPlayerOkHttpClient(baseClient: OkHttpClient): OkHttpClient {
+        return baseClient.newBuilder()
             .addNetworkInterceptor { chain ->
                 TrafficStats.setThreadStatsTag("exoplayer_media".hashCode())
                 try {

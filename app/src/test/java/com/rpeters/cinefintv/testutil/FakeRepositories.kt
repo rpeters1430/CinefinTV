@@ -1,5 +1,6 @@
 package com.rpeters.cinefintv.testutil
 
+import com.rpeters.cinefintv.data.SecureCredentialManager
 import com.rpeters.cinefintv.data.repository.JellyfinAuthRepository
 import com.rpeters.cinefintv.data.repository.JellyfinMediaRepository
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
@@ -8,6 +9,7 @@ import com.rpeters.cinefintv.data.repository.JellyfinStreamRepository
 import com.rpeters.cinefintv.data.repository.JellyfinUserRepository
 import io.mockk.every
 import io.mockk.mockk
+import org.jellyfin.sdk.Jellyfin
 
 class FakeAuthRepository {
     val instance: JellyfinAuthRepository = mockk(relaxed = true)
@@ -17,15 +19,19 @@ class FakeHomeRepositories(
     val media: JellyfinMediaRepository = mockk(relaxed = true),
     val stream: JellyfinStreamRepository = mockk(relaxed = true),
 ) {
+    val authRepository: JellyfinAuthRepository = JellyfinAuthRepository(
+        jellyfin = mockk<Jellyfin>(relaxed = true),
+        secureCredentialManager = mockk<SecureCredentialManager>(relaxed = true),
+    )
     val coordinator: JellyfinRepositoryCoordinator = mockk {
         every { this@mockk.media } returns this@FakeHomeRepositories.media
         every { this@mockk.stream } returns this@FakeHomeRepositories.stream
         every { this@mockk.user } returns mockk(relaxed = true)
         every { this@mockk.search } returns mockk(relaxed = true)
-        every { this@mockk.auth } returns mockk(relaxed = true)
+        every { this@mockk.auth } returns authRepository
     }
-    
-    val auth: JellyfinAuthRepository get() = coordinator.auth
+
+    val auth: JellyfinAuthRepository get() = authRepository
 }
 
 class FakePlayerRepositories(

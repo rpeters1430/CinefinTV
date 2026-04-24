@@ -282,6 +282,7 @@ internal fun CinefinAppScaffold(
     val tabFocusRequesters = remember {
         List(navTabItems.size) { FocusRequester() }
     }
+    val fallbackTabFocusRequester = remember { FocusRequester() }
     val chromeFocusController = remember { AppChromeFocusController() }
     var lastShowNav by remember { mutableStateOf(showNav) }
 
@@ -294,7 +295,7 @@ internal fun CinefinAppScaffold(
         lastShowNav = showNav
     }
 
-    val selectedTabFocusRequester = tabFocusRequesters.getOrElse(selectedTabIndex) { FocusRequester() }
+    val selectedTabFocusRequester = tabFocusRequesters.getOrElse(selectedTabIndex) { fallbackTabFocusRequester }
     var focusedTabIndex by remember { mutableStateOf<Int?>(null) }
     val navHasFocus = focusedTabIndex != null
     val railWidth = 196.dp
