@@ -13,6 +13,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemDto
 import retrofit2.HttpException
@@ -70,14 +71,17 @@ open class BaseJellyfinRepository @Inject constructor(
                 // Double-check after acquiring lock (another thread might have refreshed)
                 if (authRepository.isTokenExpired()) {
                     Logger.d(LogCategory.NETWORK, javaClass.simpleName, "Token expired, proactively refreshing with force")
-
-                    val refreshResult = authRepository.forceReAuthenticate()
-                    if (refreshResult) {
-                        Logger.d(LogCategory.NETWORK, javaClass.simpleName, "Proactive force token refresh successful")
-                        sessionManager.invalidateClients()
-                    } else {
-                        Logger.w(LogCategory.NETWORK, javaClass.simpleName, "Proactive force token refresh failed")
-                        // Don't throw here - let the subsequent API call handle the 401
+                    try {
+                        val refreshResult = withTimeout(10_000L) { authRepository.forceReAuthenticate() }
+                        if (refreshResult) {
+                            Logger.d(LogCategory.NETWORK, javaClass.simpleName, "Proactive force token refresh successful")
+                            sessionManager.invalidateClients()
+                        } else {
+                            Logger.w(LogCategory.NETWORK, javaClass.simpleName, "Proactive force token refresh failed")
+                            // Don't throw here - let the subsequent API call handle the 401
+                        }
+                    } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                        Logger.w(LogCategory.NETWORK, javaClass.simpleName, "Proactive token refresh timed out — will let the API call handle auth")
                     }
                 }
             }

@@ -18,6 +18,7 @@ import com.rpeters.cinefintv.utils.toMediaCardPresentation
 import com.rpeters.cinefintv.data.common.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +28,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import javax.inject.Inject
@@ -89,6 +91,8 @@ class HomeViewModel @Inject constructor(
 
     init {
         android.util.Log.d("HomeViewModel", "Initializing HomeViewModel")
+        // Show cached content immediately — don't wait for the server before displaying it.
+        loadCachedData()
         viewModelScope.launch {
             android.util.Log.d("HomeViewModel", "Waiting for current server...")
             try {
@@ -96,16 +100,14 @@ class HomeViewModel @Inject constructor(
                     repositories.auth.currentServer.first { it != null }
                 }
                 android.util.Log.d("HomeViewModel", "Server connected, loading data...")
-                loadCachedData()
-                refresh(silent = false)
+                // Silent so cached content stays visible while the network refresh runs.
+                refresh(silent = true)
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
                 android.util.Log.e("HomeViewModel", "Timed out waiting for server connection")
                 if (repositories.auth.currentServer.value == null) {
                     _uiState.value = HomeUiState.Error("No server connection available. Please log in.")
                 } else {
-                    // We actually have a server but the flow didn't emit for some reason
-                    loadCachedData()
-                    refresh(silent = false)
+                    refresh(silent = true)
                 }
             }
         }
@@ -231,99 +233,113 @@ class HomeViewModel @Inject constructor(
                         _uiState.value = HomeUiState.Loading
                     }
 
-                    val librariesDeferred = async { repositories.media.getUserLibraries() }
-                    val continueDeferred = async { repositories.media.getContinueWatching(limit = 24) }
-                    val nextUpDeferred = async { repositories.media.getNextUp(limit = 12) }
-                    val moviesDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12) }
-                    val episodesDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12) }
-                    val videosDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12) }
-                    val musicDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12) }
-                    val librariesResult = librariesDeferred.await()
-                    val continueResult = continueDeferred.await()
-                    val nextUpResult = nextUpDeferred.await()
-                    val moviesResult = moviesDeferred.await()
-                    val episodesResult = episodesDeferred.await()
-                    val videosResult = videosDeferred.await()
-                    val musicResult = musicDeferred.await()
+                    // coroutineScope groups the 7 parallel requests so a timeout cancels them all.
+                    withTimeout(30_000L) {
+                        coroutineScope {
+                            val librariesDeferred = async { repositories.media.getUserLibraries() }
+                            val continueDeferred = async { repositories.media.getContinueWatching(limit = 24) }
+                            val nextUpDeferred = async { repositories.media.getNextUp(limit = 12) }
+                            val moviesDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12) }
+                            val episodesDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12) }
+                            val videosDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12) }
+                            val musicDeferred = async { repositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12) }
+                            val librariesResult = librariesDeferred.await()
+                            val continueResult = continueDeferred.await()
+                            val nextUpResult = nextUpDeferred.await()
+                            val moviesResult = moviesDeferred.await()
+                            val episodesResult = episodesDeferred.await()
+                            val videosResult = videosDeferred.await()
+                            val musicResult = musicDeferred.await()
 
-                    // Offload intensive data processing to background thread
-                    val (sections, featuredItems) = withContext(dispatchers.default) {
-                        val nextEpisodesSectionItems = buildNextEpisodeSectionItems(nextUpResult)
-                        val continueWatchingItems = (continueResult as? ApiResult.Success)?.data
-                            ?.filter { it.canResume() }
-                            ?.take(12)
-                            ?.map { toCardModel(it) }
-                            .orEmpty()
+                            // Offload intensive data processing to background thread
+                            val (sections, featuredItems) = withContext(dispatchers.default) {
+                                val nextEpisodesSectionItems = buildNextEpisodeSectionItems(nextUpResult)
+                                val continueWatchingItems = (continueResult as? ApiResult.Success)?.data
+                                    ?.filter { it.canResume() }
+                                    ?.take(12)
+                                    ?.map { toCardModel(it) }
+                                    .orEmpty()
 
-                        val builtSections = buildList<HomeSectionModel> {
-                            if (librariesResult is ApiResult.Success) {
-                                val filteredLibraries = librariesResult.data.filter {
-                                    it.collectionType?.toString() != "playlists" && it.name?.contains("Playlists", ignoreCase = true) != true
-                                }
-                                if (filteredLibraries.isNotEmpty()) {
-                                    add(
-                                        HomeSectionModel(
-                                            id = HomeSectionId.LIBRARIES,
-                                            title = HomeSectionId.LIBRARIES.displayTitle,
-                                            items = filteredLibraries.take(12).map { toCardModel(it) },
+                                val builtSections = buildList<HomeSectionModel> {
+                                    if (librariesResult is ApiResult.Success) {
+                                        val filteredLibraries = librariesResult.data.filter {
+                                            it.collectionType?.toString() != "playlists" && it.name?.contains("Playlists", ignoreCase = true) != true
+                                        }
+                                        if (filteredLibraries.isNotEmpty()) {
+                                            add(
+                                                HomeSectionModel(
+                                                    id = HomeSectionId.LIBRARIES,
+                                                    title = HomeSectionId.LIBRARIES.displayTitle,
+                                                    items = filteredLibraries.take(12).map { toCardModel(it) },
+                                                )
+                                            )
+                                        }
+                                    }
+                                    if (continueWatchingItems.isNotEmpty()) {
+                                        add(
+                                            HomeSectionModel(
+                                                id = HomeSectionId.CONTINUE_WATCHING,
+                                                title = HomeSectionId.CONTINUE_WATCHING.displayTitle,
+                                                items = continueWatchingItems,
+                                            )
                                         )
-                                    )
+                                    }
+                                    if (nextEpisodesSectionItems.isNotEmpty()) {
+                                        add(
+                                            HomeSectionModel(
+                                                id = HomeSectionId.NEXT_EPISODES,
+                                                title = HomeSectionId.NEXT_EPISODES.displayTitle,
+                                                items = nextEpisodesSectionItems,
+                                            )
+                                        )
+                                    }
+                                    addSection(HomeSectionId.RECENT_EPISODES, episodesResult)
+                                    addSection(HomeSectionId.RECENT_MOVIES, moviesResult)
+                                    addSection(HomeSectionId.RECENT_MUSIC, musicResult)
+                                    addSection(HomeSectionId.RECENT_COLLECTIONS, videosResult)
+                                }
+
+                                val builtFeaturedItems = (moviesResult as? ApiResult.Success<List<BaseItemDto>>)
+                                    ?.data?.take(6)?.map { toCardModel(it) }
+                                    ?: emptyList()
+
+                                builtSections to builtFeaturedItems
+                            }
+
+                            val newState = if (sections.isEmpty() && featuredItems.isEmpty()) {
+                                val errorMessage = listOf(
+                                    librariesResult,
+                                    continueResult,
+                                    nextUpResult,
+                                    moviesResult,
+                                    episodesResult,
+                                    videosResult,
+                                    musicResult,
+                                ).firstNotNullOfOrNull { result ->
+                                    (result as? ApiResult.Error)?.message
+                                }
+                                    ?: "No content is available yet."
+                                HomeUiState.Error(errorMessage)
+                            } else {
+                                HomeUiState.Content(
+                                    featuredItems = featuredItems,
+                                    sections = sections,
+                                ).stabilizeAgainst(_uiState.value as? HomeUiState.Content)
+                            }
+
+                            if (_uiState.value != newState) {
+                                // Don't replace visible cached content with an error from a failing silent refresh.
+                                val shouldApply = !(silent && _uiState.value is HomeUiState.Content && newState is HomeUiState.Error)
+                                if (shouldApply) {
+                                    _uiState.value = newState
                                 }
                             }
-                            if (continueWatchingItems.isNotEmpty()) {
-                                add(
-                                    HomeSectionModel(
-                                        id = HomeSectionId.CONTINUE_WATCHING,
-                                        title = HomeSectionId.CONTINUE_WATCHING.displayTitle,
-                                        items = continueWatchingItems,
-                                    )
-                                )
-                            }
-                            if (nextEpisodesSectionItems.isNotEmpty()) {
-                                add(
-                                    HomeSectionModel(
-                                        id = HomeSectionId.NEXT_EPISODES,
-                                        title = HomeSectionId.NEXT_EPISODES.displayTitle,
-                                        items = nextEpisodesSectionItems,
-                                    )
-                                )
-                            }
-                            addSection(HomeSectionId.RECENT_EPISODES, episodesResult)
-                            addSection(HomeSectionId.RECENT_MOVIES, moviesResult)
-                            addSection(HomeSectionId.RECENT_MUSIC, musicResult)
-                            addSection(HomeSectionId.RECENT_COLLECTIONS, videosResult)
                         }
-
-                        val builtFeaturedItems = (moviesResult as? ApiResult.Success<List<BaseItemDto>>)
-                            ?.data?.take(6)?.map { toCardModel(it) }
-                            ?: emptyList()
-
-                        builtSections to builtFeaturedItems
                     }
-
-                    val newState = if (sections.isEmpty() && featuredItems.isEmpty()) {
-                        val errorMessage = listOf(
-                            librariesResult,
-                            continueResult,
-                            nextUpResult,
-                            moviesResult,
-                            episodesResult,
-                            videosResult,
-                            musicResult,
-                        ).firstNotNullOfOrNull { result ->
-                            (result as? ApiResult.Error)?.message
-                        }
-                            ?: "No content is available yet."
-                        HomeUiState.Error(errorMessage)
-                    } else {
-                        HomeUiState.Content(
-                            featuredItems = featuredItems,
-                            sections = sections,
-                        ).stabilizeAgainst(_uiState.value as? HomeUiState.Content)
-                    }
-
-                    if (_uiState.value != newState) {
-                        _uiState.value = newState
+                } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                    android.util.Log.w("HomeViewModel", "refresh timed out after 30s")
+                    if (_uiState.value is HomeUiState.Loading) {
+                        _uiState.value = HomeUiState.Error("Server took too long to respond. Please check your connection and try again.")
                     }
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e

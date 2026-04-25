@@ -10,6 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeout
 import org.jellyfin.sdk.api.client.ApiClient
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -60,11 +61,15 @@ class JellyfinSessionManager @Inject constructor(
             reauthMutex.withLock {
                 if (authRepository.isTokenExpired()) {
                     Logger.d(LogCategory.NETWORK, "SessionManager", "Token expired for $operationName, forcing re-authentication")
-                    val success = authRepository.forceReAuthenticate()
-                    if (success) {
-                        Logger.i(LogCategory.NETWORK, "SessionManager", "Proactive re-authentication successful for $operationName")
-                    } else {
-                        Logger.w(LogCategory.NETWORK, "SessionManager", "Proactive re-authentication failed for $operationName")
+                    try {
+                        val success = withTimeout(10_000L) { authRepository.forceReAuthenticate() }
+                        if (success) {
+                            Logger.i(LogCategory.NETWORK, "SessionManager", "Proactive re-authentication successful for $operationName")
+                        } else {
+                            Logger.w(LogCategory.NETWORK, "SessionManager", "Proactive re-authentication failed for $operationName")
+                        }
+                    } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                        Logger.w(LogCategory.NETWORK, "SessionManager", "Proactive re-authentication timed out for $operationName")
                     }
                     // Give client cache a moment to rebuild with new token
                     delay(50)
@@ -86,17 +91,25 @@ class JellyfinSessionManager @Inject constructor(
                 val inProgress = authRepository.isAuthenticating.value
                 if (!inProgress) {
                     Logger.d(LogCategory.NETWORK, "SessionManager", "$operationName: 401 detected, forcing re-authentication")
-                    val success = authRepository.forceReAuthenticate()
-                    if (success) {
-                        Logger.i(LogCategory.NETWORK, "SessionManager", "Retry re-authentication successful for $operationName")
-                    } else {
-                        Logger.w(LogCategory.NETWORK, "SessionManager", "Retry re-authentication failed for $operationName")
+                    try {
+                        val success = withTimeout(10_000L) { authRepository.forceReAuthenticate() }
+                        if (success) {
+                            Logger.i(LogCategory.NETWORK, "SessionManager", "Retry re-authentication successful for $operationName")
+                        } else {
+                            Logger.w(LogCategory.NETWORK, "SessionManager", "Retry re-authentication failed for $operationName")
+                        }
+                    } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                        Logger.w(LogCategory.NETWORK, "SessionManager", "Retry re-authentication timed out for $operationName")
                     }
                     delay(50)
                 } else {
                     Logger.d(LogCategory.NETWORK, "SessionManager", "$operationName: 401 detected, join ongoing re-auth")
-                    // CRITICAL FIX: Wait for the ongoing authentication to actually finish
-                    authRepository.isAuthenticating.first { !it }
+                    // Wait for the ongoing authentication to finish, but don't block indefinitely.
+                    try {
+                        withTimeout(10_000L) { authRepository.isAuthenticating.first { !it } }
+                    } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                        Logger.w(LogCategory.NETWORK, "SessionManager", "Timed out waiting for ongoing re-auth for $operationName")
+                    }
                     // Brief delay to allow token state to propagate
                     delay(50)
                 }
