@@ -56,12 +56,12 @@ class JellyfinMediaRepository @Inject constructor(
             if (cached != null) return ApiResult.Success(cached)
         }
 
-        // ✅ FIX: Use withServerClient helper to ensure fresh server/client on token refresh
+        // ✅ FIX: include both COLLECTION_FOLDER and USER_VIEW for complete library detection
         return withServerClient("getUserLibraries") { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
             val response = client.itemsApi.getItems(
                 userId = userUuid,
-                includeItemTypes = listOf(BaseItemKind.COLLECTION_FOLDER),
+                includeItemTypes = listOf(BaseItemKind.COLLECTION_FOLDER, BaseItemKind.USER_VIEW),
             )
             val items = response.content.items
             cache.cacheLibraries(items)

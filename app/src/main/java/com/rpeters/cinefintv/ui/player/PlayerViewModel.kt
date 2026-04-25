@@ -422,7 +422,6 @@ class PlayerViewModel @Inject constructor(
         // 2. RenderersFactory with extension renderers enabled for maximum format support
         val renderersFactory = DefaultRenderersFactory(context)
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
-            .setEnableAudioTrackPlaybackParams(true)
             .setEnableDecoderFallback(true)
 
         // 3. Custom MediaSourceFactory with robust retry logic

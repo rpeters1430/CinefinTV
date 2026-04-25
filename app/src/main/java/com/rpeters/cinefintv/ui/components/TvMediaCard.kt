@@ -335,7 +335,11 @@ fun TvMediaCard(
 private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifier) {
     val spacing = LocalCinefinSpacing.current
     val expressiveColors = LocalCinefinExpressiveColors.current
-    Box(modifier = modifier.padding(spacing.chipGap.coerceAtLeast(0.dp).div(1.5f))) {
+    // Ensure padding is non-negative and finite
+    val padding = remember(spacing.chipGap) {
+        (spacing.chipGap.value / 1.5f).coerceAtLeast(0f).dp
+    }
+    Box(modifier = modifier.padding(padding)) {
         when (status) {
             WatchStatus.WATCHED -> {
                 Box(

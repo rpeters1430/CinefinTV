@@ -88,16 +88,33 @@ class HomeViewModel @Inject constructor(
     private val refreshMutex = Mutex()
 
     init {
-        loadCachedData()
+        android.util.Log.d("HomeViewModel", "Initializing HomeViewModel")
         viewModelScope.launch {
-            repositories.auth.currentServer.first { it != null }
-            refresh(silent = true)
+            android.util.Log.d("HomeViewModel", "Waiting for current server...")
+            try {
+                kotlinx.coroutines.withTimeout(5000) {
+                    repositories.auth.currentServer.first { it != null }
+                }
+                android.util.Log.d("HomeViewModel", "Server connected, loading data...")
+                loadCachedData()
+                refresh(silent = false)
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                android.util.Log.e("HomeViewModel", "Timed out waiting for server connection")
+                if (repositories.auth.currentServer.value == null) {
+                    _uiState.value = HomeUiState.Error("No server connection available. Please log in.")
+                } else {
+                    // We actually have a server but the flow didn't emit for some reason
+                    loadCachedData()
+                    refresh(silent = false)
+                }
+            }
         }
         observeUpdateEvents()
     }
 
     private fun loadCachedData() {
-        viewModelScope.launch {
+        viewModelScope.launch(dispatchers.io) {
+            android.util.Log.d("HomeViewModel", "Loading cached data...")
             val cachedLibraries = repositories.media.getCachedLibraries()
             val cachedContinueWatching = repositories.media.getCachedContinueWatching()
             val cachedNextUp = repositories.media.getCachedNextUp()
