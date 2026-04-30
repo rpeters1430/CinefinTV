@@ -12,11 +12,14 @@ import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.data.utils.RepositoryUtils
 import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.utils.normalizeServerUrl
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -41,6 +44,9 @@ class JellyfinAuthRepository @Inject constructor(
     private val timeProvider: () -> Long = System::currentTimeMillis,
 ) : TokenProvider {
     private val authMutex = Mutex()
+
+    // Background scope for fire-and-forget tasks (e.g. session validation after restore)
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // Token state for TokenProvider implementation
     private val _tokenState = MutableStateFlow<String?>(null)
@@ -232,9 +238,10 @@ class JellyfinAuthRepository @Inject constructor(
             Log.d(TAG, "tryRestoreSession: Restored session for ${savedServer.url}")
             _isSessionRestored.update { true }
 
-            // Background validation — doesn't block startup; UI proceeds optimistically.
-            // On a definitive 401/403, logout() will redirect to ServerConnection.
-            validateRestoredSession(savedServer)
+            // Background validation — fire-and-forget so tryRestoreSession returns immediately.
+            // UI proceeds optimistically; on a definitive 401/403, logout() redirects to
+            // ServerConnection. Network errors are ignored so offline sessions stay intact.
+            repositoryScope.launch { validateRestoredSession(savedServer) }
 
             true
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -250,18 +257,20 @@ class JellyfinAuthRepository @Inject constructor(
      * Validates the restored session against the live server in the background.
      * On a definitive 401/403 (token revoked), logs out and clears state.
      * On network errors, leaves the session intact — the user may be offline.
+     *
+     * Called from [repositoryScope] (Dispatchers.IO), so no withContext is needed.
      */
     private suspend fun validateRestoredSession(server: JellyfinServer) {
         try {
             val client = createApiClient(server.url, server.accessToken)
-            withContext(Dispatchers.IO) {
-                client.systemApi.getPublicSystemInfo()
-            }
+            client.systemApi.getPublicSystemInfo()
             Log.d(TAG, "validateRestoredSession: token still valid")
         } catch (e: InvalidStatusException) {
             if (e.status == 401 || e.status == 403) {
                 Log.w(TAG, "validateRestoredSession: token rejected (${e.status}), logging out")
                 logout()
+                // logout() clears connection/server state but does not update _isSessionRestored;
+                // explicitly reset it so downstream observers (e.g. MainActivity) redirect to login.
                 _isSessionRestored.update { false }
             }
             // Other HTTP errors (500, 503) — server is up but broken; leave session intact
