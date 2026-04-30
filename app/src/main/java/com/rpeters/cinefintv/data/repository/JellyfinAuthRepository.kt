@@ -226,9 +226,16 @@ class JellyfinAuthRepository @Inject constructor(
                 _isSessionRestored.update { false }
                 return false
             }
+
+            // Optimistically seed local state so UI can start immediately
             seedCurrentServer(savedServer)
             Log.d(TAG, "tryRestoreSession: Restored session for ${savedServer.url}")
             _isSessionRestored.update { true }
+
+            // Background validation — doesn't block startup; UI proceeds optimistically.
+            // On a definitive 401/403, logout() will redirect to ServerConnection.
+            validateRestoredSession(savedServer)
+
             true
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
@@ -236,6 +243,33 @@ class JellyfinAuthRepository @Inject constructor(
             Log.w(TAG, "tryRestoreSession: failed to restore session", e)
             _isSessionRestored.update { false }
             false
+        }
+    }
+
+    /**
+     * Validates the restored session against the live server in the background.
+     * On a definitive 401/403 (token revoked), logs out and clears state.
+     * On network errors, leaves the session intact — the user may be offline.
+     */
+    private suspend fun validateRestoredSession(server: JellyfinServer) {
+        try {
+            val client = createApiClient(server.url, server.accessToken)
+            withContext(Dispatchers.IO) {
+                client.systemApi.getPublicSystemInfo()
+            }
+            Log.d(TAG, "validateRestoredSession: token still valid")
+        } catch (e: InvalidStatusException) {
+            if (e.status == 401 || e.status == 403) {
+                Log.w(TAG, "validateRestoredSession: token rejected (${e.status}), logging out")
+                logout()
+                _isSessionRestored.update { false }
+            }
+            // Other HTTP errors (500, 503) — server is up but broken; leave session intact
+        } catch (e: IOException) {
+            // Network unreachable — leave session intact; Home will show connection errors
+            Log.d(TAG, "validateRestoredSession: network unavailable, proceeding optimistically")
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         }
     }
 

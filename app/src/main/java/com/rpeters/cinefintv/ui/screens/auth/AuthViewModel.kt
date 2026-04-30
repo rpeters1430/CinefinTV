@@ -45,6 +45,19 @@ class AuthViewModel @Inject constructor(
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     init {
+        // isSessionRestored is already non-null by the time NavGraph renders
+        // (CinefinTvApplication eagerly calls tryRestoreSession before MainActivity renders).
+        // Seed the checked state synchronously so NavGraph never shows AuthBootstrapScreen
+        // on a restored session and the user sees only one loading screen.
+        val currentRestoreState = authRepository.isSessionRestored.value
+        if (currentRestoreState != null) {
+            _uiState.update {
+                it.copy(
+                    isSessionChecked = true,
+                    isSessionActive = currentRestoreState,
+                )
+            }
+        }
         observeSessionRestoration()
         observeConnectionState()
     }

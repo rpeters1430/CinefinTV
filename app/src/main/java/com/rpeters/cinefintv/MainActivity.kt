@@ -67,6 +67,7 @@ class MainActivity : ComponentActivity() {
                 }
             } else {
                 CinefinTvApp(
+                    initiallyAuthenticated = isSessionRestored == true,
                     isAuthenticated = isConnected,
                     updateManager = updateManager
                 )
