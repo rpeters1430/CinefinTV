@@ -106,6 +106,7 @@ val LocalCinefinThemeController = compositionLocalOf<ThemeColorController> {
 @UnstableApi
 @Composable
 fun CinefinTvApp(
+    initiallyAuthenticated: Boolean = false,
     isAuthenticated: Boolean = false,
     updateManager: UpdateManager? = null,
     themeViewModel: ThemeViewModel = hiltViewModel()
@@ -126,7 +127,7 @@ fun CinefinTvApp(
         ) {
             val backStack: NavBackStack<NavKey> = key(isAuthenticated) {
                 rememberNavBackStack(
-                    if (isAuthenticated) Home else ServerConnection
+                    if (initiallyAuthenticated) Home else ServerConnection
                 )
             }
             val currentDestination = backStack.lastOrNull() as? NavDestination
