@@ -72,6 +72,9 @@ class JellyfinAuthRepository @Inject constructor(
 
     companion object {
         private const val TAG = "JellyfinAuthRepository"
+
+        /** HTTP status codes that indicate the access token has been definitively rejected. */
+        private fun isTokenRejectedStatus(status: Int) = status == 401 || status == 403
     }
 
     // TokenProvider implementation
@@ -266,7 +269,7 @@ class JellyfinAuthRepository @Inject constructor(
             client.systemApi.getPublicSystemInfo()
             Log.d(TAG, "validateRestoredSession: token still valid")
         } catch (e: InvalidStatusException) {
-            if (e.status == 401 || e.status == 403) {
+            if (isTokenRejectedStatus(e.status)) {
                 Log.w(TAG, "validateRestoredSession: token rejected (${e.status}), logging out")
                 logout()
                 // logout() clears connection/server state but does not update _isSessionRestored;
@@ -282,6 +285,13 @@ class JellyfinAuthRepository @Inject constructor(
         }
     }
 
+    /**
+     * Clears all authentication state and persisted credentials.
+     *
+     * Note: intentionally does **not** update [_isSessionRestored]. Callers that need to
+     * redirect to the login screen (e.g. [validateRestoredSession] on token rejection) must
+     * update [_isSessionRestored] themselves after calling this function.
+     */
     suspend fun logout() {
         authMutex.withLock {
             _isAuthenticating.update { false }
