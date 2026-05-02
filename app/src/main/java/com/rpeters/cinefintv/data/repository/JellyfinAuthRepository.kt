@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.exception.InvalidStatusException
@@ -72,9 +73,17 @@ class JellyfinAuthRepository @Inject constructor(
 
     companion object {
         private const val TAG = "JellyfinAuthRepository"
+        private const val RESTORE_STATE_TIMEOUT_MS = 5_000L
+        private const val RESTORE_VALIDATION_TIMEOUT_MS = 5_000L
 
         /** HTTP status codes that indicate the access token has been definitively rejected. */
         private fun isTokenRejectedStatus(status: Int) = status == 401 || status == 403
+    }
+
+    private enum class RestoreValidationResult {
+        VALID,
+        UNREACHABLE,
+        INVALID,
     }
 
     // TokenProvider implementation
@@ -230,29 +239,83 @@ class JellyfinAuthRepository @Inject constructor(
     suspend fun tryRestoreSession(): Boolean {
         _isSessionRestored.update { null } // Mark as in-progress
         return try {
-            val savedServer = secureCredentialManager.loadServerState()
+            val savedServer = withTimeout(RESTORE_STATE_TIMEOUT_MS) {
+                withContext(Dispatchers.IO) {
+                    secureCredentialManager.loadServerState()
+                }
+            }
             if (savedServer == null || savedServer.accessToken.isNullOrBlank() || savedServer.url.isBlank()) {
                 _isSessionRestored.update { false }
                 return false
             }
 
-            // Optimistically seed local state so UI can start immediately
             seedCurrentServer(savedServer)
-            Log.d(TAG, "tryRestoreSession: Restored session for ${savedServer.url}")
-            _isSessionRestored.update { true }
+            val validationResult = try {
+                withTimeout(RESTORE_VALIDATION_TIMEOUT_MS) {
+                    validateOrRecoverRestoredSession(savedServer)
+                }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                Log.w(TAG, "tryRestoreSession: validation timed out, proceeding optimistically")
+                RestoreValidationResult.UNREACHABLE
+            }
 
-            // Background validation — fire-and-forget so tryRestoreSession returns immediately.
-            // UI proceeds optimistically; on a definitive 401/403, logout() redirects to
-            // ServerConnection. Network errors are ignored so offline sessions stay intact.
-            repositoryScope.launch { validateRestoredSession(savedServer) }
-
-            true
+            when (validationResult) {
+                RestoreValidationResult.INVALID -> {
+                    logout()
+                    _isSessionRestored.update { false }
+                    false
+                }
+                RestoreValidationResult.VALID -> {
+                    Log.d(TAG, "tryRestoreSession: Restored validated session for ${savedServer.url}")
+                    _isSessionRestored.update { true }
+                    true
+                }
+                RestoreValidationResult.UNREACHABLE -> {
+                    Log.d(TAG, "tryRestoreSession: Restored session for ${savedServer.url} without live validation")
+                    _isSessionRestored.update { true }
+                    repositoryScope.launch { validateRestoredSession(savedServer) }
+                    true
+                }
+            }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "tryRestoreSession: failed to restore session", e)
             _isSessionRestored.update { false }
             false
+        }
+    }
+
+    private suspend fun validateOrRecoverRestoredSession(server: JellyfinServer): RestoreValidationResult {
+        return try {
+            withContext(Dispatchers.IO) {
+                val client = createApiClient(server.url, server.accessToken)
+                client.systemApi.getPublicSystemInfo()
+            }
+            Log.d(TAG, "validateOrRecoverRestoredSession: token still valid")
+            RestoreValidationResult.VALID
+        } catch (e: InvalidStatusException) {
+            if (!isTokenRejectedStatus(e.status)) {
+                Log.w(TAG, "validateOrRecoverRestoredSession: non-auth status ${e.status}, proceeding optimistically")
+                return RestoreValidationResult.UNREACHABLE
+            }
+
+            Log.w(TAG, "validateOrRecoverRestoredSession: token rejected (${e.status}), attempting re-authentication")
+            if (forceReAuthenticate()) {
+                Log.d(TAG, "validateOrRecoverRestoredSession: re-authentication succeeded")
+                RestoreValidationResult.VALID
+            } else {
+                Log.w(TAG, "validateOrRecoverRestoredSession: re-authentication failed")
+                RestoreValidationResult.INVALID
+            }
+        } catch (e: IOException) {
+            Log.d(TAG, "validateOrRecoverRestoredSession: network unavailable, proceeding optimistically")
+            RestoreValidationResult.UNREACHABLE
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "validateOrRecoverRestoredSession: validation failed unexpectedly", e)
+            RestoreValidationResult.UNREACHABLE
         }
     }
 
@@ -265,8 +328,10 @@ class JellyfinAuthRepository @Inject constructor(
      */
     private suspend fun validateRestoredSession(server: JellyfinServer) {
         try {
-            val client = createApiClient(server.url, server.accessToken)
-            client.systemApi.getPublicSystemInfo()
+            withContext(Dispatchers.IO) {
+                val client = createApiClient(server.url, server.accessToken)
+                client.systemApi.getPublicSystemInfo()
+            }
             Log.d(TAG, "validateRestoredSession: token still valid")
         } catch (e: InvalidStatusException) {
             if (isTokenRejectedStatus(e.status)) {
@@ -331,6 +396,38 @@ class JellyfinAuthRepository @Inject constructor(
             baseUrl = serverUrl,
             accessToken = accessToken,
         )
+    }
+
+    /**
+     * Ensures the current session is usable before a screen fans out multiple requests.
+     * If the token was rejected, attempt a single re-authentication first.
+     * Network failures are treated as non-fatal so offline flows can continue.
+     */
+    suspend fun ensureSessionReady(): Boolean {
+        val server = _currentServer.value ?: return false
+
+        return try {
+            withContext(Dispatchers.IO) {
+                createApiClient(server.url, server.accessToken).systemApi.getPublicSystemInfo()
+            }
+            true
+        } catch (e: InvalidStatusException) {
+            if (isTokenRejectedStatus(e.status)) {
+                Log.w(TAG, "ensureSessionReady: token rejected (${e.status}), attempting re-authentication")
+                forceReAuthenticate()
+            } else {
+                Log.w(TAG, "ensureSessionReady: non-auth status ${e.status}, proceeding")
+                true
+            }
+        } catch (e: IOException) {
+            Log.d(TAG, "ensureSessionReady: network unavailable, proceeding")
+            true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "ensureSessionReady: unexpected validation failure, proceeding", e)
+            true
+        }
     }
 
     private suspend fun persistAuthenticationState(

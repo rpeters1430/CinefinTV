@@ -1,9 +1,11 @@
 package com.rpeters.cinefintv
 
 import android.app.Application
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import com.rpeters.cinefintv.data.repository.RemoteConfigRepository
 import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -24,8 +26,8 @@ class CinefinTvApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        
-        val scope = MainScope()
+
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         // Initialize Remote Config
         scope.launch {

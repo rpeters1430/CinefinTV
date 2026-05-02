@@ -52,13 +52,13 @@ class LibraryLoadingManager @Inject constructor(
     suspend fun loadLibraries(forceRefresh: Boolean = false): ApiResult<List<BaseItemDto>> {
         val operationKey = "load_libraries"
 
-        return operationsMutex.withLock {
+        val operation = operationsMutex.withLock {
             // Check if operation is already in progress
             ongoingOperations[operationKey]?.let { ongoing ->
                 if (BuildConfig.DEBUG) {
                     Log.d(TAG, "Joining ongoing library loading operation")
                 }
-                return@withLock ongoing.await()
+                return@withLock ongoing
             }
 
             // Start new operation
@@ -95,8 +95,10 @@ class LibraryLoadingManager @Inject constructor(
             }
 
             ongoingOperations[operationKey] = operation
-            operation.await()
+            operation
         }
+
+        return operation.await()
     }
 
     /**
@@ -112,23 +114,25 @@ class LibraryLoadingManager @Inject constructor(
     ): ApiResult<List<BaseItemDto>> {
         val operationKey = "load_library_${libraryId}_${startIndex}_$limit"
 
-        return operationsMutex.withLock {
+        val operation = operationsMutex.withLock {
             // Check for ongoing operation
             ongoingOperations[operationKey]?.let { ongoing ->
                 if (BuildConfig.DEBUG) {
                     Log.d(TAG, "Joining ongoing library items operation: $operationKey")
                 }
-                return@withLock ongoing.await()
+                return@withLock ongoing
             }
 
             // Validate and sanitize parameters
             val validatedParams = validateLibraryParams(libraryId, collectionType, itemTypes, startIndex, limit)
             if (validatedParams == null) {
-                return@withLock ApiResult.Error(
-                    "Invalid library parameters",
-                    null,
-                    ErrorType.VALIDATION,
-                )
+                return@withLock loadingScope.async {
+                    ApiResult.Error(
+                        "Invalid library parameters",
+                        null,
+                        ErrorType.VALIDATION,
+                    )
+                }
             }
 
             val operation = loadingScope.async {
@@ -170,8 +174,10 @@ class LibraryLoadingManager @Inject constructor(
             }
 
             ongoingOperations[operationKey] = operation
-            operation.await()
+            operation
         }
+
+        return operation.await()
     }
 
     /**

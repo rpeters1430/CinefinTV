@@ -80,6 +80,8 @@ class JellyfinCache @Inject constructor(
         // Using ApplicationScope for app-wide cache initialization that should complete independently
         applicationScope.launch(Dispatchers.IO) {
             try {
+                // Delay cleanup to avoid I/O contention during cold startup
+                kotlinx.coroutines.delay(10_000L)
                 // Trigger lazy initialization of cacheDir
                 ensureCacheDir()
                 cleanupOldEntries()

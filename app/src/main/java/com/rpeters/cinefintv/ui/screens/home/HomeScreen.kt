@@ -128,7 +128,7 @@ fun HomeScreen(
                     shouldRestoreFocusOnResume = true
                     val pausedDurationMs = SystemClock.elapsedRealtime() - lastPausedAtMs
                     if (pausedDurationMs >= HOME_RESUME_REFRESH_THRESHOLD_MS) {
-                        viewModel.refresh(silent = true)
+                        viewModel.refresh(silent = true, forceRefresh = true)
                     }
                 }
                 else -> {}
@@ -142,7 +142,7 @@ fun HomeScreen(
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (isActive) {
                 delay(HOME_AUTO_REFRESH_INTERVAL_MS)
-                viewModel.refresh(silent = true)
+                viewModel.refresh(silent = true, forceRefresh = true)
             }
         }
     }
@@ -153,7 +153,7 @@ fun HomeScreen(
         onPlayItem = onPlayItem,
         onOpenSeries = onOpenSeries,
         onOpenSeason = onOpenSeason,
-        onRetry = { viewModel.refresh() },
+        onRetry = { viewModel.refresh(forceRefresh = true) },
         shouldRestoreFocusOnResume = shouldRestoreFocusOnResume,
         onConsumedRestore = { shouldRestoreFocusOnResume = false }
     )
