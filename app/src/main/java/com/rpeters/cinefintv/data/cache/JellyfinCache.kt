@@ -128,7 +128,7 @@ class JellyfinCache @Inject constructor(
                     Log.d(TAG, "Cached ${items.size} items with key: $key")
                 }
 
-                updateCacheStats()
+                scheduleCacheStatsUpdate()
                 true
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -254,7 +254,7 @@ class JellyfinCache @Inject constructor(
                 Log.d(TAG, "Invalidated cache for key: $key")
             }
         }
-        updateCacheStats()
+        scheduleCacheStatsUpdate()
     }
 
     /**
@@ -274,7 +274,7 @@ class JellyfinCache @Inject constructor(
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "Cleared all cache")
         }
-        updateCacheStats()
+        scheduleCacheStatsUpdate()
     }
 
     /**
@@ -405,6 +405,18 @@ class JellyfinCache @Inject constructor(
             }
         } catch (e: CancellationException) {
             throw e
+        }
+    }
+
+    private fun scheduleCacheStatsUpdate() {
+        applicationScope.launch(Dispatchers.IO) {
+            try {
+                updateCacheStats()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to update cache stats", e)
+            }
         }
     }
 

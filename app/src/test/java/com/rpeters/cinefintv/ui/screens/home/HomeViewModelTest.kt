@@ -12,6 +12,8 @@ import io.mockk.every
 import io.mockk.mockk
 import java.util.UUID
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -455,6 +457,72 @@ class HomeViewModelTest {
         coVerify(atLeast = 1) { fakeRepositories.media.getUserLibraries(forceRefresh = true) }
         coVerify(atLeast = 1) { fakeRepositories.media.getContinueWatching(limit = 24, forceRefresh = true) }
         coVerify(atLeast = 1) { fakeRepositories.media.getNextUp(limit = 12, forceRefresh = true) }
+    }
+
+    @Test
+    fun startupRefresh_whenServerArrivesLate_stillLoadsLibraries() = runTest {
+        val fakeRepositories = FakeHomeRepositories()
+        val library = mockBaseItemDto("Movies Library", BaseItemKind.COLLECTION_FOLDER)
+
+        coEvery { fakeRepositories.media.getUserLibraries(any()) } returns ApiResult.Success(listOf(library))
+        coEvery { fakeRepositories.media.getContinueWatching(any(), any()) } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getNextUp(any(), any()) } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getRecentlyAddedByType(any(), any(), any()) } returns ApiResult.Success(emptyList())
+        every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
+        every { fakeRepositories.stream.getBackdropUrl(any()) } returns null
+
+        val viewModel = HomeViewModel(
+            fakeRepositories.coordinator,
+            updateBus,
+            TestDispatcherProvider(mainDispatcherRule.dispatcher),
+        )
+
+        advanceTimeBy(5_100)
+        runCurrent()
+        activateAuth(fakeRepositories)
+        yieldUntilContent(viewModel)
+
+        val state = viewModel.uiState.value
+        assertTrue("Expected Content state, but was ${state.javaClass.simpleName}", state is HomeUiState.Content)
+        val librariesSection = (state as HomeUiState.Content).sections.firstOrNull {
+            it.id == HomeSectionId.LIBRARIES
+        }
+        assertTrue("Expected Libraries section after late server restore", librariesSection != null)
+        assertEquals("Movies Library", librariesSection!!.items.single().title)
+        coVerify(atLeast = 1) { fakeRepositories.media.getUserLibraries(forceRefresh = true) }
+    }
+
+    @Test
+    fun startupRefresh_whenSecondaryRequestIsStillPending_publishesLibraries() = runTest {
+        val fakeRepositories = FakeHomeRepositories()
+        val library = mockBaseItemDto("Movies Library", BaseItemKind.COLLECTION_FOLDER)
+
+        coEvery { fakeRepositories.media.getUserLibraries(any()) } returns ApiResult.Success(listOf(library))
+        coEvery { fakeRepositories.media.getContinueWatching(any(), any()) } coAnswers { awaitCancellation() }
+        coEvery { fakeRepositories.media.getNextUp(any(), any()) } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getRecentlyAddedByType(any(), any(), any()) } returns ApiResult.Success(emptyList())
+        every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
+        every { fakeRepositories.stream.getBackdropUrl(any()) } returns null
+
+        val viewModel = HomeViewModel(
+            fakeRepositories.coordinator,
+            updateBus,
+            TestDispatcherProvider(mainDispatcherRule.dispatcher),
+        )
+        activateAuth(fakeRepositories)
+
+        repeat(20) {
+            yield()
+            runCurrent()
+        }
+
+        val state = viewModel.uiState.value
+        assertTrue("Expected Content state, but was ${state.javaClass.simpleName}", state is HomeUiState.Content)
+        val librariesSection = (state as HomeUiState.Content).sections.firstOrNull {
+            it.id == HomeSectionId.LIBRARIES
+        }
+        assertTrue("Expected Libraries section while secondary request is pending", librariesSection != null)
+        assertEquals("Movies Library", librariesSection!!.items.single().title)
     }
 
     private fun mockBaseItemDto(

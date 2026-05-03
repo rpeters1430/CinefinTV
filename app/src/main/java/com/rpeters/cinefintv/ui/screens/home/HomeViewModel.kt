@@ -20,10 +20,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.launch
@@ -31,6 +31,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.ImageType
 import javax.inject.Inject
 
 data class HomeCardModel(
@@ -93,25 +94,27 @@ class HomeViewModel @Inject constructor(
         android.util.Log.d("HomeViewModel", "Initializing HomeViewModel")
         // Show cached content immediately — don't wait for the server before displaying it.
         loadCachedData()
+        observeServerAvailability()
+        observeUpdateEvents()
+    }
+
+    private fun observeServerAvailability() {
         viewModelScope.launch {
             android.util.Log.d("HomeViewModel", "Waiting for current server...")
-            try {
-                kotlinx.coroutines.withTimeout(5000) {
-                    repositories.auth.currentServer.first { it != null }
+            repositories.auth.currentServer
+                .distinctUntilChangedBy { server ->
+                    (server?.normalizedUrl ?: server?.url) to server?.userId
                 }
-                android.util.Log.d("HomeViewModel", "Server connected, loading data...")
-                // Silent so cached content stays visible while the network refresh runs.
-                refresh(silent = true, forceRefresh = true)
-            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                android.util.Log.e("HomeViewModel", "Timed out waiting for server connection")
-                if (repositories.auth.currentServer.value == null) {
-                    _uiState.value = HomeUiState.Error("No server connection available. Please log in.")
-                } else {
-                    refresh(silent = true, forceRefresh = true)
+                .collect { server ->
+                    if (server != null) {
+                        android.util.Log.d("HomeViewModel", "Server connected, loading data...")
+                        // Silent so cached content stays visible while the network refresh runs.
+                        refresh(silent = true, forceRefresh = true)
+                    } else if (repositories.auth.isSessionRestored.value == false && _uiState.value !is HomeUiState.Content) {
+                        _uiState.value = HomeUiState.Error("No server connection available. Please log in.")
+                    }
                 }
-            }
         }
-        observeUpdateEvents()
     }
 
     private fun loadCachedData() {
@@ -124,6 +127,7 @@ class HomeViewModel @Inject constructor(
             val episodesDeferred = async { repositories.media.getCachedRecentlyAddedEpisodes() }
 
             val cachedLibraries = librariesDeferred.await()
+            publishCachedLibraries(cachedLibraries)
             val cachedContinueWatching = continueDeferred.await()
             val cachedNextUp = nextUpDeferred.await()
             val cachedMovies = moviesDeferred.await()
@@ -142,7 +146,7 @@ class HomeViewModel @Inject constructor(
                                     HomeSectionModel(
                                         id = HomeSectionId.LIBRARIES,
                                         title = HomeSectionId.LIBRARIES.displayTitle,
-                                        items = filteredLibraries.take(12).map { toCardModel(it) },
+                                        items = filteredLibraries.take(12).map(::toLibraryCardModel),
                                     )
                                 )
                             }
@@ -257,28 +261,48 @@ class HomeViewModel @Inject constructor(
                     val resultsMutex = Mutex()
 
                     suspend fun updateResultsAndUi(
+                        source: String,
                         update: (RefreshResults) -> Unit,
                     ) {
-                        resultsMutex.withLock {
+                        val snapshot = resultsMutex.withLock {
                             update(results)
-                            val currentContent = _uiState.value as? HomeUiState.Content
-                            val sections = withContext(dispatchers.default) {
-                                buildSections(results)
-                            }
-                            val featuredItems = withContext(dispatchers.default) {
-                                (results.movies as? ApiResult.Success)?.data?.take(6)?.map { toCardModel(it) } ?: emptyList()
-                            }
+                            results.copy()
+                        }
 
-                            if (sections.isNotEmpty() || featuredItems.isNotEmpty()) {
-                                val newState = HomeUiState.Content(
-                                    featuredItems = featuredItems,
-                                    sections = sections,
-                                ).stabilizeAgainst(currentContent)
+                        runCatching {
+                            publishSnapshot(snapshot)
+                        }.onFailure { error ->
+                            if (error is kotlinx.coroutines.CancellationException) throw error
+                            android.util.Log.e("HomeViewModel", "Failed to publish $source home results", error)
+                        }
+                    }
 
-                                // Apply content immediately if it's an improvement over current state
-                                if (_uiState.value != newState) {
-                                    _uiState.value = newState
-                                }
+                    suspend fun fetchAndPublish(
+                        source: String,
+                        fetch: suspend () -> ApiResult<List<BaseItemDto>>,
+                        update: (RefreshResults, ApiResult<List<BaseItemDto>>) -> Unit,
+                    ) {
+                        val res = fetch()
+                        updateResultsAndUi(source) {
+                            update(it, res)
+                        }
+                    }
+
+                    suspend fun finalizeIfStillLoading() {
+                        if (_uiState.value is HomeUiState.Loading) {
+                            val errorMessage = listOfNotNull(
+                                results.libraries,
+                                results.continueWatching,
+                                results.nextUp,
+                                results.movies,
+                                results.episodes,
+                                results.videos,
+                                results.music,
+                            ).firstNotNullOfOrNull { (it as? ApiResult.Error)?.message }
+                                ?: "No content is available yet."
+
+                            if (!(silent && hasContent)) {
+                                _uiState.value = HomeUiState.Error(errorMessage)
                             }
                         }
                     }
@@ -286,53 +310,44 @@ class HomeViewModel @Inject constructor(
                     withTimeout(30_000L) {
                         coroutineScope {
                             launch {
-                                val res = repositories.media.getUserLibraries(forceRefresh = forceRefresh)
-                                updateResultsAndUi { it.libraries = res }
+                                fetchAndPublish("libraries", { repositories.media.getUserLibraries(forceRefresh = forceRefresh) }) { results, res ->
+                                    results.libraries = res
+                                }
                             }
                             launch {
-                                val res = repositories.media.getContinueWatching(limit = 24, forceRefresh = forceRefresh)
-                                updateResultsAndUi { it.continueWatching = res }
+                                fetchAndPublish("continueWatching", { repositories.media.getContinueWatching(limit = 24, forceRefresh = forceRefresh) }) { results, res ->
+                                    results.continueWatching = res
+                                }
                             }
                             launch {
-                                val res = repositories.media.getNextUp(limit = 12, forceRefresh = forceRefresh)
-                                updateResultsAndUi { it.nextUp = res }
+                                fetchAndPublish("nextUp", { repositories.media.getNextUp(limit = 12, forceRefresh = forceRefresh) }) { results, res ->
+                                    results.nextUp = res
+                                }
                             }
                             launch {
-                                val res = repositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12, forceRefresh = forceRefresh)
-                                updateResultsAndUi { it.movies = res }
+                                fetchAndPublish("movies", { repositories.media.getRecentlyAddedByType(BaseItemKind.MOVIE, limit = 12, forceRefresh = forceRefresh) }) { results, res ->
+                                    results.movies = res
+                                }
                             }
                             launch {
-                                val res = repositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12, forceRefresh = forceRefresh)
-                                updateResultsAndUi { it.episodes = res }
+                                fetchAndPublish("episodes", { repositories.media.getRecentlyAddedByType(BaseItemKind.EPISODE, limit = 12, forceRefresh = forceRefresh) }) { results, res ->
+                                    results.episodes = res
+                                }
                             }
                             launch {
-                                val res = repositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12, forceRefresh = forceRefresh)
-                                updateResultsAndUi { it.videos = res }
+                                fetchAndPublish("videos", { repositories.media.getRecentlyAddedByType(BaseItemKind.VIDEO, limit = 12, forceRefresh = forceRefresh) }) { results, res ->
+                                    results.videos = res
+                                }
                             }
                             launch {
-                                val res = repositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12, forceRefresh = forceRefresh)
-                                updateResultsAndUi { it.music = res }
+                                fetchAndPublish("music", { repositories.media.getRecentlyAddedByType(BaseItemKind.AUDIO, limit = 12, forceRefresh = forceRefresh) }) { results, res ->
+                                    results.music = res
+                                }
                             }
                         }
                     }
 
-                    // Final check for errors if no content appeared
-                    if (_uiState.value is HomeUiState.Loading) {
-                        val errorMessage = listOfNotNull(
-                            results.libraries,
-                            results.continueWatching,
-                            results.nextUp,
-                            results.movies,
-                            results.episodes,
-                            results.videos,
-                            results.music,
-                        ).firstNotNullOfOrNull { (it as? ApiResult.Error)?.message }
-                            ?: "No content is available yet."
-                        
-                        if (!(silent && hasContent)) {
-                            _uiState.value = HomeUiState.Error(errorMessage)
-                        }
-                    }
+                    finalizeIfStillLoading()
                 } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
                     android.util.Log.w("HomeViewModel", "refresh timed out after 30s")
                     if (_uiState.value is HomeUiState.Loading) {
@@ -350,17 +365,64 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun publishCachedLibraries(cachedLibraries: List<BaseItemDto>?) {
+        val filteredLibraries = cachedLibraries
+            ?.filter(::isVisibleLibrary)
+            .orEmpty()
+        if (filteredLibraries.isEmpty()) return
+
+        val librariesSection = HomeSectionModel(
+            id = HomeSectionId.LIBRARIES,
+            title = HomeSectionId.LIBRARIES.displayTitle,
+            items = filteredLibraries.take(12).map(::toLibraryCardModel),
+        )
+        val currentContent = _uiState.value as? HomeUiState.Content
+        val newState = HomeUiState.Content(
+            featuredItems = currentContent?.featuredItems.orEmpty(),
+            sections = listOf(librariesSection) + currentContent
+                ?.sections
+                .orEmpty()
+                .filterNot { it.id == HomeSectionId.LIBRARIES },
+        ).stabilizeAgainst(currentContent)
+
+        if (_uiState.value != newState) {
+            _uiState.value = newState
+        }
+    }
+
+    private suspend fun publishSnapshot(results: RefreshResults) {
+        val currentContent = _uiState.value as? HomeUiState.Content
+        val sections = withContext(dispatchers.default) {
+            buildSections(results)
+        }
+        val featuredItems = withContext(dispatchers.default) {
+            (results.movies as? ApiResult.Success)?.data
+                ?.take(6)
+                ?.mapNotNull(::toCardModelSafely)
+                ?: emptyList()
+        }
+
+        if (sections.isNotEmpty() || featuredItems.isNotEmpty()) {
+            val newState = HomeUiState.Content(
+                featuredItems = featuredItems,
+                sections = sections,
+            ).stabilizeAgainst(currentContent)
+
+            if (_uiState.value != newState) {
+                _uiState.value = newState
+            }
+        }
+    }
+
     private fun buildSections(results: RefreshResults): List<HomeSectionModel> = buildList {
         (results.libraries as? ApiResult.Success)?.data?.let { libs ->
-            val filteredLibraries = libs.filter {
-                it.collectionType?.toString() != "playlists" && it.name?.contains("Playlists", ignoreCase = true) != true
-            }
+            val filteredLibraries = libs.filter(::isVisibleLibrary)
             if (filteredLibraries.isNotEmpty()) {
                 add(
                     HomeSectionModel(
                         id = HomeSectionId.LIBRARIES,
                         title = HomeSectionId.LIBRARIES.displayTitle,
-                        items = filteredLibraries.take(12).map { toCardModel(it) },
+                        items = filteredLibraries.take(12).map(::toLibraryCardModel),
                     )
                 )
             }
@@ -369,7 +431,7 @@ class HomeViewModel @Inject constructor(
         val continueWatchingItems = (results.continueWatching as? ApiResult.Success)?.data
             ?.filter { it.canResume() }
             ?.take(12)
-            ?.map { toCardModel(it) }
+            ?.mapNotNull(::toCardModelSafely)
         if (continueWatchingItems != null && continueWatchingItems.isNotEmpty()) {
             add(
                 HomeSectionModel(
@@ -504,7 +566,7 @@ class HomeViewModel @Inject constructor(
                     title = sectionId.displayTitle,
                     items = result.data
                         .take(12)
-                        .map(::toCardModel),
+                        .mapNotNull(::toCardModelSafely),
                 ),
             )
         }
@@ -530,7 +592,44 @@ class HomeViewModel @Inject constructor(
             }
             .distinctBy { it.id.toString() }
             .take(12)
-            .map(::toCardModel)
+            .mapNotNull(::toCardModelSafely)
+    }
+
+    private fun toCardModelSafely(item: BaseItemDto): HomeCardModel? {
+        return runCatching {
+            toCardModel(item)
+        }.onFailure { error ->
+            android.util.Log.w("HomeViewModel", "Failed to map home item ${item.id}", error)
+        }.getOrNull()
+    }
+
+    private fun toLibraryCardModel(item: BaseItemDto): HomeCardModel {
+        return HomeCardModel(
+            id = item.id.toString(),
+            title = item.getDisplayTitle(),
+            subtitle = null,
+            imageUrl = getLibraryImageUrl(item),
+            collectionType = item.collectionType?.toString(),
+            itemType = item.getItemTypeString(),
+        )
+    }
+
+    private fun getLibraryImageUrl(item: BaseItemDto): String? {
+        return runCatching {
+            repositories.stream.getLandscapeImageUrl(item)
+                ?: repositories.stream.getImageUrl(
+                    itemId = item.id.toString(),
+                    imageType = "Primary",
+                    tag = item.imageTags?.get(ImageType.PRIMARY),
+                )
+        }.onFailure { error ->
+            android.util.Log.w("HomeViewModel", "Failed to build library image URL for ${item.id}", error)
+        }.getOrNull()
+    }
+
+    private fun isVisibleLibrary(item: BaseItemDto): Boolean {
+        return item.collectionType?.toString() != "playlists" &&
+            item.name?.contains("Playlists", ignoreCase = true) != true
     }
 
     private fun toCardModel(item: BaseItemDto): HomeCardModel {
