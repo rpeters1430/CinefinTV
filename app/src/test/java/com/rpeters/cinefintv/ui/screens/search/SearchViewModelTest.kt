@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.ui.screens.search
 
 import com.rpeters.cinefintv.data.repository.common.ApiResult
+import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.testutil.FakeHomeRepositories
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
 import io.mockk.coEvery
@@ -31,7 +32,7 @@ class SearchViewModelTest {
         val fakeRepo = FakeHomeRepositories()
         coEvery { fakeRepo.coordinator.search.searchItems(any(), any(), any()) } returns ApiResult.Success(emptyList())
 
-        val viewModel = SearchViewModel(fakeRepo.coordinator)
+        val viewModel = SearchViewModel(fakeRepo.coordinator, MediaUpdateBus())
         advanceUntilIdle()
 
         viewModel.updateQuery("    ")
@@ -65,7 +66,7 @@ class SearchViewModelTest {
             }
         }
 
-        val viewModel = SearchViewModel(fakeRepo.coordinator)
+        val viewModel = SearchViewModel(fakeRepo.coordinator, MediaUpdateBus())
         advanceUntilIdle()
 
         viewModel.updateQuery("bat")

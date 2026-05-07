@@ -30,12 +30,14 @@ data class SearchUiState(
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
+    private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
     init {
         observeQuery()
+        observeUpdateEvents()
     }
 
     fun updateQuery(value: String) {
@@ -94,6 +96,28 @@ class SearchViewModel @Inject constructor(
                 }
             }
             is ApiResult.Loading -> Unit
+        }
+    }
+
+    private fun observeUpdateEvents() {
+        viewModelScope.launch {
+            updateBus.events.collect { event ->
+                val state = _uiState.value
+                if (state.query.isBlank() || state.results.isEmpty()) {
+                    return@collect
+                }
+
+                when (event) {
+                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshItem -> {
+                        if (state.results.any { event.affects(it.id) }) {
+                            runSearch(state.query)
+                        }
+                    }
+                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshAll -> {
+                        runSearch(state.query)
+                    }
+                }
+            }
         }
     }
 

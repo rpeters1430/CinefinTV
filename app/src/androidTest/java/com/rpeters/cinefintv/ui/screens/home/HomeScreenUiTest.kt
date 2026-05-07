@@ -488,6 +488,37 @@ class HomeScreenUiTest {
     }
 
     @Test
+    fun topNavDown_returnsFocusToLastFocusedShelfItem() {
+        composeRule.setContent {
+            HomeTestHost(showTopNav = true) {
+                HomeScreenContent(
+                    uiState = sampleContentState(featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))),
+                    onOpenItem = {},
+                    onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
+                    onRetry = {},
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
+                )
+            }
+        }
+
+        composeRule.settleInitialHomeFocus()
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 1))
+            .requestFocus()
+            .assertIsFocused()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("top_nav").requestFocus()
+        composeRule.onNodeWithTag("top_nav")
+            .performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 1))
+            .assertIsFocused()
+    }
+
+    @Test
     fun returningFromPlayer_preservesHomeContent() {
         composeRule.setContent {
             HomeTestHost {

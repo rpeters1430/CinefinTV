@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.ui.screens.person
 
 import com.rpeters.cinefintv.data.repository.common.ApiResult
+import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.testutil.FakeHomeRepositories
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
 import io.mockk.coEvery
@@ -35,7 +36,7 @@ class PersonViewModelTest {
         every { fakeRepositories.stream.getImageUrl(any(), any(), any()) } returns "https://img/person.jpg"
         every { fakeRepositories.stream.getPosterCardImageUrl(any(), any()) } returns "https://img/poster.jpg"
 
-        val viewModel = PersonViewModel(fakeRepositories.coordinator)
+        val viewModel = PersonViewModel(fakeRepositories.coordinator, MediaUpdateBus())
         viewModel.init(personId)
         advanceUntilIdle()
 

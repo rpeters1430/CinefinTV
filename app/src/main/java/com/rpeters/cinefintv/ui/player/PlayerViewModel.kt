@@ -825,8 +825,24 @@ class PlayerViewModel @Inject constructor(
                 }
             }
 
-            // Broadcast after the sync attempt so listeners pull the latest server state.
-            updateBus.refreshItem(resolvedItemId)
+            // Broadcast final/user-visible saves so listeners pull the latest server state
+            // after the server has accepted the progress or stopped report.
+            if (isPaused || isCompleted) {
+                updateBus.refreshItem(
+                    itemId = resolvedItemId,
+                    relatedItemIds = currentItem.relatedPlaybackRefreshIds(),
+                )
+            }
+        }
+    }
+
+    private fun BaseItemDto?.relatedPlaybackRefreshIds(): Set<String> {
+        this ?: return emptySet()
+
+        return buildSet {
+            runCatching { parentId }.getOrNull()?.toString()?.takeIf(String::isNotBlank)?.let(::add)
+            runCatching { seasonId }.getOrNull()?.toString()?.takeIf(String::isNotBlank)?.let(::add)
+            runCatching { seriesId }.getOrNull()?.toString()?.takeIf(String::isNotBlank)?.let(::add)
         }
     }
 

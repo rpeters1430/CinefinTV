@@ -583,7 +583,7 @@ class PlayerViewModelTest {
                 positionTicks = 5_000L * 10_000L,
                 mediaSourceId = any(),
                 playMethod = any(),
-                isPaused = false,
+                isPaused = true,
                 isMuted = any(),
                 canSeek = any(),
             )
@@ -616,7 +616,7 @@ class PlayerViewModelTest {
         viewModel.savePlaybackPosition(
             positionMs = 5_000L,
             durationMs = 20_000L,
-            isPaused = false,
+            isPaused = true,
             shouldSyncToServer = true,
         )
         runCurrent()

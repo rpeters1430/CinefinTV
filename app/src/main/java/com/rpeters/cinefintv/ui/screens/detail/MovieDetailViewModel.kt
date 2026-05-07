@@ -82,7 +82,7 @@ class MovieDetailViewModel @Inject constructor(
             updateBus.events.collect { event ->
                 when (event) {
                     is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshItem -> {
-                        if (event.itemId == movieId) {
+                        if (event.affects(movieId)) {
                             refreshSilently()
                         }
                     }

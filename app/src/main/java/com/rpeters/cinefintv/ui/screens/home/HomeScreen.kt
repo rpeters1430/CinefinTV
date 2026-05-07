@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -37,9 +36,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
@@ -47,7 +44,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -55,7 +51,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -101,6 +96,7 @@ private const val HOME_FOCUS_RESTORE_SETTLE_MS = 1_000L
 private const val HOME_RESUME_REFRESH_THRESHOLD_MS = 30_000L
 
 private val NAV_RAIL_SLOT_WIDTH = 216.dp  // 196dp rail + 12dp start padding + 8dp content host start padding (matches CinefinAppScaffold)
+private val NetflixRed = Color(0xFFE50914)
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -270,9 +266,15 @@ private fun HomeLoadedContent(
     shouldRestoreFocusOnResume: Boolean,
     onConsumedRestore: () -> Unit,
 ) {
-    val sectionIds = remember(state.sections) { state.sections.map(HomeSectionModel::id) }
-    val sectionFocusRequesters = remember(sectionIds) {
-        List(state.sections.size) { FocusRequester() }
+    val sectionItemKeys = remember(state.sections) {
+        state.sections.map { section ->
+            section.id to section.items.take(12).map(HomeCardModel::id)
+        }
+    }
+    val sectionItemFocusRequesters = remember(sectionItemKeys) {
+        sectionItemKeys.map { (_, itemIds) ->
+            List(itemIds.size) { FocusRequester() }
+        }
     }
     val featuredPrimaryActionRequester = remember { FocusRequester() }
     var lastFocusedSectionId by rememberSaveable { mutableStateOf<HomeSectionId?>(null) }
@@ -287,21 +289,29 @@ private fun HomeLoadedContent(
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     val availableWidth = screenWidth - NAV_RAIL_SLOT_WIDTH
     val rowSpacing = remember(spacing.cardGap) {
-        (spacing.cardGap - 4.dp).coerceAtLeast(12.dp)
+        (spacing.cardGap - 8.dp).coerceAtLeast(10.dp)
     }
     val cardWidth = remember(availableWidth, spacing.gutter, rowSpacing) {
-        ((availableWidth - (spacing.gutter * 2) - (rowSpacing * 2)) / 3f)
-            .coerceIn(220.dp, 400.dp)
+        ((availableWidth - (spacing.gutter * 2) - (rowSpacing * 4)) / 5f)
+            .coerceIn(170.dp, 260.dp)
     }
 
     val preferredFocusRequester = when {
         lastFocusedSectionId != null -> {
-            state.sections.indexOfFirst { it.id == lastFocusedSectionId }
-                .takeIf { it >= 0 }
-                ?.let(sectionFocusRequesters::get)
+            val sectionIndex = state.sections.indexOfFirst { it.id == lastFocusedSectionId }
+            val itemIndex = state.sections
+                .getOrNull(sectionIndex)
+                ?.items
+                ?.take(12)
+                ?.indexOfFirst { it.id == lastFocusedItemId }
+                ?.takeIf { it >= 0 }
+
+            sectionItemFocusRequesters
+                .getOrNull(sectionIndex)
+                ?.getOrNull(itemIndex ?: 0)
         }
         state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
-        else -> sectionFocusRequesters.firstOrNull()
+        else -> sectionItemFocusRequesters.firstOrNull()?.firstOrNull()
     }
     val destinationFocus = rememberTopLevelDestinationFocus(preferredFocusRequester)
 
@@ -334,7 +344,7 @@ private fun HomeLoadedContent(
         val fallbackRequester = if (state.featuredItems.isNotEmpty()) {
             featuredPrimaryActionRequester
         } else {
-            sectionFocusRequesters.firstOrNull()
+            sectionItemFocusRequesters.firstOrNull()?.firstOrNull()
         }
         val requester = preferredFocusRequester ?: fallbackRequester ?: return@LaunchedEffect
         val targetListIndex = when {
@@ -392,16 +402,28 @@ private fun HomeLoadedContent(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0.0f to Color.Black,
+                        0.42f to Color.Black,
+                        1.0f to MaterialTheme.colorScheme.background,
+                    ),
+                ),
+            ),
+    ) {
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(top = 0.dp, bottom = 120.dp),
-            verticalArrangement = Arrangement.spacedBy(spacing.elementGap),
+            verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
             if (state.featuredItems.isNotEmpty()) {
                 item {
-                    val firstSectionRequester = sectionFocusRequesters.firstOrNull()
+                    val firstSectionRequester = sectionItemFocusRequesters.firstOrNull()?.firstOrNull()
                     FeaturedCarousel(
                         items = state.featuredItems,
                         onMoreInfo = onOpenItem,
@@ -414,7 +436,7 @@ private fun HomeLoadedContent(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 0.dp, start = spacing.gutter, end = spacing.gutter),
+                            .padding(top = 0.dp),
                     )
                 }
             }
@@ -426,8 +448,11 @@ private fun HomeLoadedContent(
                 val upFocusRequester = when {
                     index == 0 && state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
                     index == 0 -> destinationFocus.drawerFocusRequester
-                    else -> sectionFocusRequesters[index - 1]
+                    else -> sectionItemFocusRequesters[index - 1].firstOrNull()
                 }
+                val previousSectionFocusRequester = sectionItemFocusRequesters
+                    .getOrNull(index - 1)
+                    ?.firstOrNull()
 
                 HomeSection(
                     sectionIndex = index,
@@ -447,7 +472,7 @@ private fun HomeLoadedContent(
                         ensureSectionVisible(index)
                     },
                     onEpisodeMenuRequested = { selectedEpisodeMenuItem = it },
-                    firstItemFocusRequester = sectionFocusRequesters[index],
+                    itemFocusRequesters = sectionItemFocusRequesters[index],
                     upFocusRequester = upFocusRequester,
                     onNavigateUp = when {
                         index == 0 && state.featuredItems.isNotEmpty() -> {
@@ -456,15 +481,15 @@ private fun HomeLoadedContent(
                                 listIndex = 0,
                             )
                         }
-                        index > 0 -> {
+                        previousSectionFocusRequester != null -> {
                             requestFocusAtListIndex(
-                                requester = sectionFocusRequesters[index - 1],
+                                requester = previousSectionFocusRequester,
                                 listIndex = if (state.featuredItems.isNotEmpty()) index else index - 1,
                             )
                         }
                         else -> null
                     },
-                    onNavigateDown = sectionFocusRequesters.getOrNull(index + 1)?.let { nextRequester ->
+                    onNavigateDown = sectionItemFocusRequesters.getOrNull(index + 1)?.firstOrNull()?.let { nextRequester ->
                         requestFocusAtListIndex(
                             requester = nextRequester,
                             listIndex = if (state.featuredItems.isNotEmpty()) index + 2 else index + 1,
@@ -556,7 +581,7 @@ private fun FeaturedCarousel(
         modifier = modifier
             .testTag(HomeTestTags.FeaturedCarousel)
             .fillMaxWidth()
-            .height(344.dp)
+            .height(468.dp)
             .onFocusChanged { isFocused = it.hasFocus }
             .focusGroup()
             .onKeyEvent { keyEvent ->
@@ -645,7 +670,10 @@ private fun HeroItem(
         item.description ?: "Featured title from your library"
     }
 
-    Box(modifier = modifier.clip(RoundedCornerShape(20.dp))) {
+    Box(
+        modifier = modifier
+            .background(Color.Black),
+    ) {
         AsyncImage(
             model = heroImageRequest,
             contentDescription = item.title,
@@ -662,8 +690,8 @@ private fun HeroItem(
                             0.0f to Color.Black.copy(alpha = 0.88f),
                             0.15f to Color.Black.copy(alpha = 0.82f),
                             0.35f to Color.Black.copy(alpha = 0.55f),
-                            0.50f to Color.Black.copy(alpha = 0.25f),
-                            0.70f to Color.Transparent,
+                            0.56f to Color.Black.copy(alpha = 0.18f),
+                            0.78f to Color.Transparent,
                         ),
                     ),
                 ),
@@ -676,9 +704,9 @@ private fun HeroItem(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
                             0.0f to Color.Transparent,
-                            0.50f to Color.Black.copy(alpha = 0.15f),
-                            0.75f to Color.Black.copy(alpha = 0.65f),
-                            1.0f to Color.Black.copy(alpha = 0.92f),
+                            0.42f to Color.Black.copy(alpha = 0.10f),
+                            0.74f to Color.Black.copy(alpha = 0.72f),
+                            1.0f to Color.Black,
                         ),
                     ),
                 ),
@@ -686,9 +714,9 @@ private fun HeroItem(
         Column(
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .padding(start = 42.dp, end = 24.dp)
-                .widthIn(max = 620.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(start = 56.dp, end = 40.dp, top = 32.dp)
+                .widthIn(max = 660.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
@@ -701,8 +729,9 @@ private fun HeroItem(
             Text(
                 text = item.title,
                 style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = (-0.4).sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.sp,
+                    fontSize = 44.sp,
                 ),
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.testTag(HomeTestTags.FeaturedTitle),
@@ -735,7 +764,7 @@ private fun HeroItem(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row(
-                horizontalArrangement = Arrangement.spacedBy(spacing.elementGap)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Button(
                     onClick = onPlay,
@@ -752,9 +781,16 @@ private fun HeroItem(
                             right = detailsButtonRequester,
                         ))
                         .testTag(HomeTestTags.FeaturedPlayButton),
+                    shape = ButtonDefaults.shape(RoundedCornerShape(4.dp)),
                     scale = ButtonDefaults.scale(focusedScale = 1f),
+                    colors = ButtonDefaults.colors(
+                        containerColor = NetflixRed,
+                        focusedContainerColor = NetflixRed,
+                        contentColor = Color.White,
+                        focusedContentColor = Color.White,
+                    ),
                 ) {
-                    Text("Play", style = MaterialTheme.typography.titleMedium)
+                    Text("Play", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
                 }
                 OutlinedButton(
                     onClick = onMoreInfo,
@@ -771,7 +807,14 @@ private fun HeroItem(
                             left = primaryActionFocusRequester,
                         ))
                         .testTag(HomeTestTags.FeaturedDetailsButton),
+                    shape = ButtonDefaults.shape(RoundedCornerShape(4.dp)),
                     scale = ButtonDefaults.scale(focusedScale = 1f),
+                    colors = ButtonDefaults.colors(
+                        containerColor = Color.White.copy(alpha = 0.18f),
+                        focusedContainerColor = Color.White.copy(alpha = 0.28f),
+                        contentColor = Color.White,
+                        focusedContentColor = Color.White,
+                    ),
                 ) {
                     Text("Details", style = MaterialTheme.typography.titleMedium)
                 }
@@ -791,7 +834,7 @@ private fun HomeSection(
     restoredFocusedItemId: String?,
     onItemFocused: (String) -> Unit,
     onEpisodeMenuRequested: (HomeCardModel) -> Unit,
-    firstItemFocusRequester: FocusRequester,
+    itemFocusRequesters: List<FocusRequester>,
     upFocusRequester: FocusRequester?,
     onNavigateUp: (() -> Unit)?,
     onNavigateDown: (() -> Unit)?,
@@ -854,7 +897,7 @@ private fun HomeSection(
                                 Modifier
                             }
                         )
-                        .then(if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
+                        .then(itemFocusRequesters.getOrNull(index)?.let { Modifier.focusRequester(it) } ?: Modifier)
                         .then(focusModifier)
                         .onKeyEvent { keyEvent ->
                             val nativeEvent = keyEvent.nativeKeyEvent

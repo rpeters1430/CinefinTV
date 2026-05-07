@@ -25,8 +25,11 @@ class MediaUpdateBus @Inject constructor() {
     /**
      * Helper to broadcast a refresh event for a specific item ID.
      */
-    suspend fun refreshItem(itemId: String) {
-        post(MediaUpdateEvent.RefreshItem(itemId))
+    suspend fun refreshItem(
+        itemId: String,
+        relatedItemIds: Set<String> = emptySet(),
+    ) {
+        post(MediaUpdateEvent.RefreshItem(itemId, relatedItemIds))
     }
 
     /**
@@ -41,7 +44,13 @@ sealed class MediaUpdateEvent {
     /**
      * Request to refresh a specific item's data.
      */
-    data class RefreshItem(val itemId: String) : MediaUpdateEvent()
+    data class RefreshItem(
+        val itemId: String,
+        val relatedItemIds: Set<String> = emptySet(),
+    ) : MediaUpdateEvent() {
+        fun affects(itemId: String): Boolean =
+            this.itemId == itemId || itemId in relatedItemIds
+    }
 
     /**
      * Request to refresh all displayed media data.

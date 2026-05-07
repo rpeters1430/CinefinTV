@@ -48,12 +48,17 @@ sealed class PersonUiState {
 @HiltViewModel
 class PersonViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
+    private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
 ) : ViewModel() {
 
     private var personId: String = ""
 
     private val _uiState = MutableStateFlow<PersonUiState>(PersonUiState.Loading)
     val uiState: StateFlow<PersonUiState> = _uiState.asStateFlow()
+
+    init {
+        observeUpdateEvents()
+    }
 
     fun init(id: String) {
         if (personId == id) return
@@ -65,9 +70,12 @@ class PersonViewModel @Inject constructor(
         }
     }
 
-    fun load() {
+    fun load(silent: Boolean = false) {
         viewModelScope.launch {
-            _uiState.value = PersonUiState.Loading
+            val hasContent = _uiState.value is PersonUiState.Content
+            if (!silent || !hasContent) {
+                _uiState.value = PersonUiState.Loading
+            }
             
             val personResult = repositories.media.getPersonDetails(personId)
             val itemsResult = repositories.media.getItemsByPerson(personId)
@@ -86,6 +94,25 @@ class PersonViewModel @Inject constructor(
                 )
             } else if (personResult is ApiResult.Error) {
                 _uiState.value = PersonUiState.Error(personResult.message)
+            }
+        }
+    }
+
+    private fun observeUpdateEvents() {
+        viewModelScope.launch {
+            updateBus.events.collect { event ->
+                val state = _uiState.value as? PersonUiState.Content ?: return@collect
+
+                when (event) {
+                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshItem -> {
+                        if (state.media.any { event.affects(it.id) }) {
+                            load(silent = true)
+                        }
+                    }
+                    is com.rpeters.cinefintv.data.common.MediaUpdateEvent.RefreshAll -> {
+                        load(silent = true)
+                    }
+                }
             }
         }
     }
