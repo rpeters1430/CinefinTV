@@ -69,11 +69,15 @@ object NetworkModule {
         val builder = OkHttpClient.Builder()
             .withStrictModeTagger()
             .cache(cache)
+            // 1. Auth Interceptor: Attach credentials and handle 401 retries.
             .addInterceptor(authInterceptor)
             .authenticator(authInterceptor)
+            // 2. Cache Policy: Injects Cache-Control headers based on connectivity.
+            // This runs before the network interceptors, allowing cached reads to return
+            // early if the device is offline.
             .addInterceptor(CachePolicyInterceptor(connectivityChecker))
-            // Network interceptor runs after cache — so offline cache reads succeed before
-            // connectivity is checked. Only fires when OkHttp actually needs to hit the network.
+            // 3. Network State: Fails early if offline and no cache is available.
+            // Runs only when OkHttp actually needs to hit the network.
             .addNetworkInterceptor(NetworkStateInterceptor(connectivityChecker))
             // SECURITY: Add certificate pinning
             .sslSocketFactory(sslSocketFactory, pinningTrustManager)

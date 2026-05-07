@@ -74,6 +74,7 @@ import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.shouldOpenCardMenu
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 
 data class DetailMetaItem(
@@ -94,21 +95,22 @@ suspend fun focusDetailScreenAtTop(
     initialFocusRequester: FocusRequester,
     anchorFocusRequester: FocusRequester? = null,
 ) {
-    listState.scrollToItem(0)
+    if (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0) {
+        listState.scrollToItem(0)
+    }
 
+    // Wait for the first item to be visible in layout
     snapshotFlow {
         val layoutInfo = listState.layoutInfo
         layoutInfo.viewportEndOffset > layoutInfo.viewportStartOffset &&
             layoutInfo.visibleItemsInfo.any { it.index == 0 }
     }.first { it }
 
-    runCatching { initialFocusRequester.requestFocus() }
-
-    withFrameNanos { }
-    if (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0) {
-        listState.scrollToItem(0)
+    // Retry focus request over a few frames to handle layout settling
+    repeat(4) { attempt ->
         withFrameNanos { }
-        listState.scrollToItem(0)
+        if (runCatching { initialFocusRequester.requestFocus() }.isSuccess) return@focusDetailScreenAtTop
+        delay(if (attempt == 0) 64L else 32L)
     }
 }
 

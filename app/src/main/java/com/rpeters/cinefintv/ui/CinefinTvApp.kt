@@ -77,6 +77,8 @@ import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinDialogActions
 import com.rpeters.cinefintv.ui.components.CinefinDialogSurface
 import com.rpeters.cinefintv.ui.navigation.CinefinTvNavGraph
+import com.rpeters.cinefintv.ui.navigation.FocusNavigationCoordinator
+import com.rpeters.cinefintv.ui.navigation.LocalFocusNavigationCoordinator
 import com.rpeters.cinefintv.ui.navigation.NavDestination
 import com.rpeters.cinefintv.ui.navigation.ServerConnection
 import com.rpeters.cinefintv.ui.navigation.Home
@@ -113,6 +115,8 @@ fun CinefinTvApp(
 ) {
     val themePrefs by themeViewModel.themePreferences.collectAsState()
     val motionSpec by themeViewModel.motionSpec.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+    val focusCoordinator = remember { FocusNavigationCoordinator(coroutineScope) }
     
     CinefinTvTheme(
         seedColor = themeViewModel.currentSeedColor,
@@ -124,6 +128,7 @@ fun CinefinTvApp(
         CompositionLocalProvider(
             LocalCinefinThemeController provides themeViewModel,
             LocalCinefinMotion provides motionSpec,
+            LocalFocusNavigationCoordinator provides focusCoordinator,
         ) {
             val backStack: NavBackStack<NavKey> = key(isAuthenticated) {
                 rememberNavBackStack(
@@ -325,6 +330,7 @@ internal fun CinefinAppScaffold(
     }
 
     CompositionLocalProvider(LocalAppChromeFocusController provides chromeFocusController) {
+        val focusCoordinator = LocalFocusNavigationCoordinator.current
         // After a delete-and-back action the content area may be reloading, leaving focus stranded
         // in the nav rail. Watch for the flag and redirect focus to content once it is available.
         LaunchedEffect(
@@ -336,14 +342,7 @@ internal fun CinefinAppScaffold(
                 if (target != null) {
                     chromeFocusController.shouldRestoreFocusToContent = false
 
-                    // Focus often settles on the nav rail for a few frames after restoring
-                    // a top-level destination, so retry briefly instead of firing once.
-                    repeat(5) { attempt ->
-                        withFrameNanos { }
-                        withFrameNanos { }
-                        delay(if (attempt == 0) 120L else 60L)
-                        runCatching { target.requestFocus() }
-                    }
+                    focusCoordinator?.requestFocus(target, delayMs = 120L)
                 }
             }
         }

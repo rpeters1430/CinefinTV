@@ -1,6 +1,8 @@
 package com.rpeters.cinefintv.ui.screens.home
 
+import com.rpeters.cinefintv.ui.navigation.FocusNavigationCoordinator
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -9,46 +11,47 @@ import org.junit.Test
 class FocusNavigationCoordinatorTest {
 
     @Test
-    fun submit_throttlesRapidDispatches() = runTest {
-        var now = 1_000L
+    fun submit_debouncesRapidDispatches() = runTest {
         val coordinator = FocusNavigationCoordinator(
-            scope = backgroundScope,
-            throttleWindowMs = 120L,
-            nowMs = { now },
+            scope = backgroundScope
         )
         var runCount = 0
 
-        coordinator.submit { runCount += 1 }
+        coordinator.submit(debounceMs = 100L) { runCount += 1 }
         runCurrent()
-        assertEquals(1, runCount)
+        assertEquals(0, runCount) // Not run yet due to debounce
 
-        now += 80L
-        coordinator.submit { runCount += 1 }
+        advanceTimeBy(50)
+        coordinator.submit(debounceMs = 100L) { runCount += 1 }
         runCurrent()
+        assertEquals(0, runCount) // Debounce reset
 
-        assertEquals(1, runCount)
+        advanceTimeBy(101)
+        runCurrent()
+        assertEquals(1, runCount) // Finally run
     }
 
     @Test
     fun submit_cancelsPreviousJob() = runTest {
-        var now = 1_000L
         val coordinator = FocusNavigationCoordinator(
-            scope = backgroundScope,
-            throttleWindowMs = 0L,
-            nowMs = { now },
+            scope = backgroundScope
         )
         val events = mutableListOf<String>()
 
         coordinator.submit {
             events += "start-1"
-            awaitCancellation()
+            try {
+                awaitCancellation()
+            } catch (e: Exception) {
+                events += "cancelled-1"
+                throw e
+            }
         }
         runCurrent()
 
-        now += 1L
         coordinator.submit { events += "start-2" }
         runCurrent()
 
-        assertEquals(listOf("start-1", "start-2"), events)
+        assertEquals(listOf("start-1", "cancelled-1", "start-2"), events)
     }
 }

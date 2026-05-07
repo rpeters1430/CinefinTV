@@ -461,34 +461,16 @@ internal fun PlayerPlaybackContent(
 
     val introRange = uiState.introSkipRange
     val creditsRange = uiState.creditsSkipRange
-    val activeSkipLabel = when {
-        isInSkipRange(positionProvider(), introRange) -> "Skip Intro"
-        isInSkipRange(positionProvider(), creditsRange) -> "Skip Credits"
-        else -> null
-    }
-    val activeSkipTargetMs = when (activeSkipLabel) {
-        "Skip Intro" -> introRange?.endMs?.coerceAtMost(renderState.duration) ?: renderState.duration
-        "Skip Credits" -> creditsRange?.endMs?.coerceAtMost(renderState.duration) ?: renderState.duration
-        else -> 0L
-    }
 
-    LaunchedEffect(activeSkipLabel, controlsVisible) {
-        if (activeSkipLabel != null && !controlsVisible) {
+    LaunchedEffect(introRange, creditsRange, controlsVisible) {
+        // This is still needed for focus redirection, but we use a local check
+        val currentPos = positionProvider()
+        val isCurrentlyInSkip = isInSkipRange(currentPos, introRange) || isInSkipRange(currentPos, creditsRange)
+        if (isCurrentlyInSkip && !controlsVisible) {
             withFrameNanos { }
             runCatching { skipFocusRequester.requestFocus() }
         }
     }
-
-    val remaining = if (renderState.duration > 0L) {
-        (renderState.duration - positionProvider()).coerceAtLeast(0L)
-    } else {
-        -1L
-    }
-    val showNextUp = shouldShowNextEpisodeCard(
-        uiState = uiState,
-        positionMs = positionProvider(),
-        durationMs = renderState.duration,
-    )
 
     Box(
         modifier = modifier
@@ -616,9 +598,12 @@ internal fun PlayerPlaybackContent(
 
         // Skip actions localized
         PlayerSkipActions(
-            activeSkipLabel = activeSkipLabel,
-            onSkip = {
-                exoPlayer.seekTo(activeSkipTargetMs)
+            positionProvider = positionProvider,
+            introRange = introRange,
+            creditsRange = creditsRange,
+            duration = renderState.duration,
+            onSkip = { targetMs ->
+                exoPlayer.seekTo(targetMs)
                 onInteract()
             },
             focusRequester = skipFocusRequester,
@@ -630,13 +615,10 @@ internal fun PlayerPlaybackContent(
 
         // Next Episode Overlay
         NextEpisodeOverlay(
-            shouldShow = showNextUp,
-            seriesTitle = uiState.title,
-            nextEpisodeTitle = uiState.nextEpisodeTitle,
-            nextEpisodeThumbnailUrl = uiState.nextEpisodeThumbnailUrl,
-            remainingMs = remaining.coerceAtLeast(0L),
-            autoPlayEnabled = uiState.autoPlayNextEpisode,
-            autoFocusPlayNow = showNextUp && !controlsVisible,
+            uiState = uiState,
+            positionProvider = positionProvider,
+            durationMs = renderState.duration,
+            autoFocusPlayNow = !controlsVisible,
             onPlayNow = {
                 uiState.nextEpisodeId?.let { onOpenItem(it) }
             },
@@ -679,29 +661,37 @@ internal fun PlayerPlaybackContent(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun NextEpisodeOverlay(
-    shouldShow: Boolean,
-    seriesTitle: String?,
-    nextEpisodeTitle: String?,
-    nextEpisodeThumbnailUrl: String?,
-    remainingMs: Long,
-    autoPlayEnabled: Boolean,
+    uiState: PlayerUiState,
+    positionProvider: () -> Long,
+    durationMs: Long,
     autoFocusPlayNow: Boolean,
     onPlayNow: () -> Unit,
     onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val showNextUp = shouldShowNextEpisodeCard(
+        uiState = uiState,
+        positionMs = positionProvider(),
+        durationMs = durationMs,
+    )
+    val remainingMs = if (durationMs > 0L) {
+        (durationMs - positionProvider()).coerceAtLeast(0L)
+    } else {
+        0L
+    }
+
     AnimatedVisibility(
-        visible = shouldShow,
+        visible = showNextUp,
         enter = fadeIn() + slideInHorizontally { it },
         exit = fadeOut() + slideOutHorizontally { it },
         modifier = modifier,
     ) {
         NextEpisodeCard(
-            seriesTitle = seriesTitle,
-            title = nextEpisodeTitle ?: "Next Episode",
-            thumbnailUrl = nextEpisodeThumbnailUrl,
+            seriesTitle = uiState.title,
+            title = uiState.nextEpisodeTitle ?: "Next Episode",
+            thumbnailUrl = uiState.nextEpisodeThumbnailUrl,
             remainingMs = remainingMs,
-            autoPlayEnabled = autoPlayEnabled,
+            autoPlayEnabled = uiState.autoPlayNextEpisode,
             autoFocusPlayNow = autoFocusPlayNow,
             onActionFocusChanged = onFocusChanged,
             onPlayNow = onPlayNow,
@@ -759,11 +749,27 @@ private fun Badge(text: String) {
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun PlayerSkipActions(
-    activeSkipLabel: String?,
-    onSkip: () -> Unit,
+    positionProvider: () -> Long,
+    introRange: SkipRange?,
+    creditsRange: SkipRange?,
+    duration: Long,
+    onSkip: (Long) -> Unit,
     focusRequester: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
+    val pos = positionProvider()
+    val activeSkipLabel = when {
+        isInSkipRange(pos, introRange) -> "Skip Intro"
+        isInSkipRange(pos, creditsRange) -> "Skip Credits"
+        else -> null
+    }
+
+    val activeSkipTargetMs = when (activeSkipLabel) {
+        "Skip Intro" -> introRange?.endMs?.coerceAtMost(duration) ?: duration
+        "Skip Credits" -> creditsRange?.endMs?.coerceAtMost(duration) ?: duration
+        else -> 0L
+    }
+
     AnimatedVisibility(
         visible = activeSkipLabel != null,
         enter = fadeIn() + slideInHorizontally { it / 2 },
@@ -774,7 +780,7 @@ private fun PlayerSkipActions(
             SkipActionCard(
                 label = activeSkipLabel,
                 subtitle = "Press to skip",
-                onSkip = onSkip,
+                onSkip = { onSkip(activeSkipTargetMs) },
                 buttonFocusRequester = focusRequester,
                 modifier = Modifier.testTag(PlayerTestTags.SkipAction)
             )

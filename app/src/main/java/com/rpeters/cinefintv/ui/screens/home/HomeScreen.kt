@@ -77,6 +77,8 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
+import com.rpeters.cinefintv.ui.navigation.FocusNavigationCoordinator
+import com.rpeters.cinefintv.ui.navigation.LocalFocusNavigationCoordinator
 import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
@@ -277,7 +279,7 @@ private fun HomeLoadedContent(
     var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedEpisodeMenuItem by remember { mutableStateOf<HomeCardModel?>(null) }
     var shouldRestoreFocus by rememberSaveable { mutableStateOf(true) }
-    val focusNavigationCoordinator = remember(coroutineScope) {
+    val focusNavigationCoordinator = LocalFocusNavigationCoordinator.current ?: remember(coroutineScope) {
         FocusNavigationCoordinator(coroutineScope)
     }
     val chromeFocusController = LocalAppChromeFocusController.current

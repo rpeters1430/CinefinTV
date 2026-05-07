@@ -34,6 +34,7 @@ open class BaseJellyfinRepository @Inject constructor(
     protected val authRepository: JellyfinAuthRepository,
     protected val sessionManager: JellyfinSessionManager,
     protected val cache: JellyfinCache,
+    protected val healthChecker: LibraryHealthChecker? = null,
 ) {
     companion object {
         private const val CIRCUIT_BREAKER_FAILURE_THRESHOLD = 3
@@ -125,9 +126,19 @@ open class BaseJellyfinRepository @Inject constructor(
     /**
      * Converts an exception to an ApiResult.Error with appropriate error type and message.
      */
-    private fun <T> handleRepositoryException(e: Exception, operationName: String): ApiResult.Error<T> {
+    private fun <T> handleRepositoryException(
+        e: Exception, 
+        operationName: String,
+        libraryId: String? = null
+    ): ApiResult.Error<T> {
         val errorType = RepositoryUtils.getErrorType(e)
-        Logger.w(LogCategory.NETWORK, javaClass.simpleName, "$operationName failed: ${e.message}", e)
+        val message = e.message ?: "Operation failed"
+        Logger.w(LogCategory.NETWORK, javaClass.simpleName, "$operationName failed: $message", e)
+
+        // Report to health checker if it's a library-specific error
+        if (libraryId != null && healthChecker != null) {
+            healthChecker.reportFailure(libraryId, message)
+        }
 
         // Provide specific default message based on error type
         val defaultMessage = when {
@@ -145,15 +156,20 @@ open class BaseJellyfinRepository @Inject constructor(
      */
     protected suspend fun <T> execute(
         operationName: String,
+        libraryId: String? = null,
         block: suspend (ApiClient) -> T,
     ): ApiResult<T> =
         try {
             val result = executeWithClient(operationName, block)
+            // Report success to health checker if applicable
+            if (libraryId != null) {
+                healthChecker?.reportSuccess(libraryId)
+            }
             ApiResult.Success(result)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            handleRepositoryException(e, operationName)
+            handleRepositoryException(e, operationName, libraryId)
         }
 
     /**
@@ -173,8 +189,9 @@ open class BaseJellyfinRepository @Inject constructor(
      */
     protected suspend inline fun <T> withServerClient(
         operationName: String,
+        libraryId: String? = null,
         crossinline block: suspend (server: JellyfinServer, client: ApiClient) -> T,
-    ): ApiResult<T> = execute(operationName) { client ->
+    ): ApiResult<T> = execute(operationName, libraryId) { client ->
         val server = validateServer()
         block(server, client)
     }
