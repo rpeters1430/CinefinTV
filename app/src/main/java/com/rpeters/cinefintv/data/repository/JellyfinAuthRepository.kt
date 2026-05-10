@@ -239,10 +239,18 @@ class JellyfinAuthRepository @Inject constructor(
     suspend fun tryRestoreSession(): Boolean {
         _isSessionRestored.update { null } // Mark as in-progress
         return try {
-            val savedServer = withTimeout(RESTORE_STATE_TIMEOUT_MS) {
-                withContext(Dispatchers.IO) {
-                    secureCredentialManager.loadServerState()
+            val savedServer = try {
+                withTimeout(RESTORE_STATE_TIMEOUT_MS) {
+                    withContext(Dispatchers.IO) {
+                        secureCredentialManager.loadServerState()
+                    }
                 }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                // DataStore read took too long (e.g. slow Android Keystore on TV hardware).
+                // Treat as no saved session so the app routes to login rather than hanging.
+                Log.w(TAG, "tryRestoreSession: timed out loading server state, treating as no saved session")
+                _isSessionRestored.update { false }
+                return false
             }
             if (savedServer == null || savedServer.accessToken.isNullOrBlank() || savedServer.url.isBlank()) {
                 _isSessionRestored.update { false }

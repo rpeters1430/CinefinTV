@@ -76,10 +76,11 @@ executeWithCache("operationName", cacheKey = "key", cacheTtlMs = 30 * 60 * 1000L
 
 ### Auth & Session Persistence
 - `JellyfinAuthRepository` owns `_currentServer: StateFlow<JellyfinServer?>` and implements `TokenProvider`
-- On login, `JellyfinServer` (serializable) is encrypted and persisted via `SecureCredentialManager` → Android Keystore + DataStore
-- On cold start, `AuthViewModel.checkSavedSession()` calls `tryRestoreSession()` which seeds `_currentServer` without a network call
+- On login, `JellyfinServer` (serializable) is encrypted and persisted via `SecureCredentialManager` → Android Keystore + DataStore. Encryption uses AES/GCM/NoPadding with a 12-byte IV under the `"JellyfinCredentialKey"` alias.
+- On cold start, `AuthViewModel.checkSavedSession()` calls `tryRestoreSession()` which seeds `_currentServer` without a network call. `CinefinTvApplication.onCreate()` also calls `tryRestoreSession()` eagerly to warm the session before the first screen renders.
 - `NavGraph` uses `LaunchedEffect(isSessionChecked)` to skip auth screens if session is active
 - Logout clears both in-memory state and DataStore under `NonCancellable` to guarantee persistence
+- `data/security/` contains `CertificatePinner`, `PinningHostnameVerifier`, and `PinningTrustManager` for certificate pinning on Jellyfin API calls
 
 ### Navigation
 - `CinefinTvApp` — root composable; wraps content in `CinefinTvTheme` and delegates layout to `CinefinAppScaffold`
@@ -131,6 +132,8 @@ class XxxViewModel @Inject constructor(
 
 Preference repositories (`PlaybackPreferencesRepository`, `ThemePreferencesRepository`, `SubtitleAppearancePreferencesRepository`, `LibraryActionsPreferencesRepository`) are also injected independently and backed by DataStore.
 
+`RemoteConfigRepository` wraps Firebase Remote Config for feature flags. `CinefinTvApplication.onCreate()` eagerly fetches and activates remote config at startup; inject `RemoteConfigRepository` (not the Firebase SDK directly) to read flags.
+
 ### Cross-Screen State Updates
 `MediaUpdateBus` (`data/common/MediaUpdateBus.kt`) is a `SharedFlow`-based event bus for propagating media state changes (e.g. watched status) across screens without reloading. ViewModels subscribe in `init {}`:
 
@@ -151,6 +154,16 @@ mediaUpdateBus.events.collect { event ->
 
 ### Library Paging
 `LibraryItemPagingSource` implements Paging 3 for library browsing with server-side filtering. Use this (not manual pagination) for any screen that lists large library collections.
+
+### Centralized Constants
+`core/constants/Constants.kt` is the single source of truth for all magic numbers. Key groups:
+- **Network:** 30s connect / 60s read / 30s write timeouts; token validity 45 min, refresh threshold 5 min
+- **Pagination:** DEFAULT=20, LARGE=50, SEARCH=30, PREFETCH=3
+- **Image:** 50 MB cache, max 800×1200, quality tiers 85/75/60
+- **Animation:** 300ms default / 150ms fast / 500ms slow; search debounce 300ms
+- **Player:** 3s control auto-hide, 30s seek/rewind increments; resume threshold <5% watched, mark-watched threshold >90%
+
+Import from here instead of hardcoding values.
 
 ### Logging
 Use `SecureLogger` (`utils/SecureLogger.kt`) instead of `Log.*` — it redacts tokens/passwords via regex and handles chunking for long messages. Never log credentials directly.
@@ -191,15 +204,19 @@ Static fallback colors in `ui/theme/Color.kt`:
 
 ## Key Dependency Versions
 
+Canonical versions live in `gradle/libs.versions.toml`.
+
 | Dependency | Version |
 |---|---|
-| Kotlin | 2.3.10 |
-| Compose BOM | 2026.02.01 |
-| androidx.tv:tv-material | 1.0.0 |
+| Kotlin | 2.3.21 |
+| Compose BOM | 2026.05.00 |
+| androidx.tv:tv-material | 1.1.0-beta01 |
 | Hilt | 2.59.2 (KSP) |
-| Media3 | 1.10.0-beta01 |
-| Jellyfin SDK | 1.8.6 |
+| Media3 | 1.10.0 |
+| Jellyfin SDK | 1.8.8 |
 | jellyfin-media3-ffmpeg | 1.9.0+1 |
 | Coil | 3.4.0 |
 | OkHttp | 5.3.2 |
-| Gradle / AGP | 9.1.0 / 9.0.1 |
+| Firebase BOM | 34.13.0 |
+| Gradle / AGP | 9.1.0 / 9.2.1 |
+| compileSdk / targetSdk / minSdk | 37 / 35 / 26 |

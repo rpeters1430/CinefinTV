@@ -96,6 +96,20 @@ class HomeViewModel @Inject constructor(
         loadCachedData()
         observeServerAvailability()
         observeUpdateEvents()
+        startLoadingTimeout()
+    }
+
+    private fun startLoadingTimeout() {
+        viewModelScope.launch {
+            // Safety net: if the state hasn't moved out of Loading after 20 s, the session
+            // restore flow silently failed to deliver a server or an error. Show a recoverable
+            // error instead of an infinite spinner.
+            kotlinx.coroutines.delay(20_000L)
+            if (_uiState.value is HomeUiState.Loading) {
+                android.util.Log.w("HomeViewModel", "Home still loading after 20s — surfacing error")
+                _uiState.value = HomeUiState.Error("Unable to connect to your server. Please check your connection and try again.")
+            }
+        }
     }
 
     private fun observeServerAvailability() {
@@ -114,6 +128,21 @@ class HomeViewModel @Inject constructor(
                         _uiState.value = HomeUiState.Error("No server connection available. Please log in.")
                     }
                 }
+        }
+
+        // Reactive gap fix: the currentServer collector only checks isSessionRestored at the
+        // moment a null-server emission fires. If the session is later invalidated while
+        // currentServer stays null (e.g. background validateRestoredSession finds a 401),
+        // we need a second watcher to catch that transition and surface the error.
+        viewModelScope.launch {
+            repositories.auth.isSessionRestored.collect { isRestored ->
+                if (isRestored == false &&
+                    repositories.auth.currentServer.value == null &&
+                    _uiState.value !is HomeUiState.Content
+                ) {
+                    _uiState.value = HomeUiState.Error("No server connection available. Please log in.")
+                }
+            }
         }
     }
 
