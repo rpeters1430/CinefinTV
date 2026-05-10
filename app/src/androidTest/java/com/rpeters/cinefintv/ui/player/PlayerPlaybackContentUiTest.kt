@@ -21,13 +21,12 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.common.Player
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.ThemeColorController
-import io.mockk.mockk
-import io.mockk.verify
+import com.rpeters.cinefintv.testutil.FakePlayer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -60,7 +59,7 @@ class PlayerPlaybackContentUiTest {
 
     @Test
     fun centerPress_whenControlsHidden_revealsOverlay_withoutTogglingPlayback() {
-        val player = mockk<ExoPlayer>(relaxed = true)
+        val player = FakePlayer()
 
         composeRule.setContent {
             PlayerPlaybackTestHost {
@@ -76,13 +75,13 @@ class PlayerPlaybackContentUiTest {
             .performKeyInput { pressKey(Key.Enter) }
 
         composeRule.onNodeWithTag(PlayerTestTags.ControlsOverlay).assertIsDisplayed()
-        verify(exactly = 0) { player.pause() }
-        verify(exactly = 0) { player.play() }
+        assertEquals(false, player.pauseCalled)
+        assertEquals(false, player.playCalled)
     }
 
     @Test
     fun skipIntroAction_clickSeeksToSkipTarget() {
-        val player = mockk<ExoPlayer>(relaxed = true)
+        val player = FakePlayer()
 
         composeRule.setContent {
             PlayerPlaybackTestHost {
@@ -107,7 +106,7 @@ class PlayerPlaybackContentUiTest {
         composeRule.onNodeWithTag(PlayerTestTags.SkipActionButton)
             .performSemanticsAction(SemanticsActions.OnClick)
 
-        verify { player.seekTo(18_000L) }
+        assertEquals(18_000L, player.lastSeekPosition)
     }
 
     @Test
@@ -208,7 +207,7 @@ class PlayerPlaybackContentUiTest {
 
 @Composable
 private fun PlaybackShellHarness(
-    player: ExoPlayer = mockk(relaxed = true),
+    player: Player = remember { FakePlayer() },
     uiState: PlayerUiState = PlayerUiState(
         title = "Playback Harness",
         isLoading = false,

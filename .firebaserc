@@ -1,5 +1,7 @@
 {
-  "projects": {},
+  "projects": {
+    "default": "cinefintv-android"
+  },
   "targets": {},
   "etags": {}
 }

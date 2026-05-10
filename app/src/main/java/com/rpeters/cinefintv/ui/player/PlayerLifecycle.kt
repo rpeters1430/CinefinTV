@@ -18,7 +18,7 @@ import kotlinx.coroutines.delay
 @UnstableApi
 @Composable
 internal fun PlayerLifecycleManager(
-    player: ExoPlayer,
+    player: Player,
     viewModel: PlayerViewModel,
     uiState: PlayerUiState,
     isPlaying: Boolean,

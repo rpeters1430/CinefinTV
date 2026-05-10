@@ -104,11 +104,9 @@ kotlin {
 
 dependencies {
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.analytics)
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.perf)
     implementation(libs.firebase.config)
-    implementation(libs.firebase.auth)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
@@ -171,4 +169,5 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.mockk.android)
+    androidTestImplementation(libs.media3.test.utils)
 }

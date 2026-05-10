@@ -15,12 +15,12 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.common.Player
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.ThemeColorController
-import io.mockk.mockk
+import com.rpeters.cinefintv.testutil.FakePlayer
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -118,7 +118,7 @@ class PlayerControlsFocusUiTest {
 
 @Composable
 private fun PlayerControlsVisibilityHarness() {
-    val player = remember { mockk<ExoPlayer>(relaxed = true) }
+    val player = remember { FakePlayer() }
     val playPauseFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     val seekBarFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
 

@@ -135,7 +135,7 @@ private fun typefaceFor(font: SubtitleFont): Typeface? = when (font) {
 
 @Composable
 private fun PlayerVideoSurface(
-    exoPlayer: ExoPlayer,
+    exoPlayer: Player,
     subtitleAppearance: SubtitleAppearancePreferences,
     modifier: Modifier = Modifier,
 ) {
@@ -381,7 +381,7 @@ fun PlayerScreen(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 internal fun PlayerPlaybackContent(
-    exoPlayer: ExoPlayer,
+    exoPlayer: Player,
     uiState: PlayerUiState,
     renderState: PlayerRenderState,
     positionProvider: () -> Long,

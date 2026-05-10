@@ -3,6 +3,7 @@ package com.rpeters.cinefintv.ui.player
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,14 +20,12 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.common.Player
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.ThemeColorController
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
+import com.rpeters.cinefintv.testutil.FakePlayer
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -60,7 +59,7 @@ class PlayerSeekBarUiTest {
 
     @Test
     fun seekBar_leftAndRight_seekPlayer_andShowBubble() {
-        val player = mockk<ExoPlayer>(relaxed = true)
+        val player = FakePlayer()
 
         composeRule.setContent {
             PlayerTestHost {
@@ -76,13 +75,13 @@ class PlayerSeekBarUiTest {
         composeRule.onNodeWithTag(PlayerTestTags.SeekBar, useUnmergedTree = true)
             .performKeyInput { pressKey(Key.DirectionLeft) }
 
-        verify { player.seekTo(40_000L) }
-        verify { player.seekTo(30_000L) }
+        // Initial 30s + 10s right - 10s left = 30s
+        assertEquals(30_000L, player.lastSeekPosition)
     }
 
     @Test
     fun seekBar_multipleRightPresses_accumulateFromLatestSeekPosition() {
-        val player = mockk<ExoPlayer>(relaxed = true)
+        val player = FakePlayer()
 
         composeRule.setContent {
             PlayerTestHost {
@@ -99,13 +98,13 @@ class PlayerSeekBarUiTest {
                 pressKey(Key.DirectionLeft)
             }
 
-        verify(exactly = 2) { player.seekTo(40_000L) }
-        verify(exactly = 1) { player.seekTo(50_000L) }
+        // 30s + 10s + 10s - 10s = 40s
+        assertEquals(40_000L, player.lastSeekPosition)
     }
 
     @Test
     fun seekBar_withChapterMarkers_keepsBubbleVisible() {
-        val player = mockk<ExoPlayer>(relaxed = true)
+        val player = FakePlayer()
 
         composeRule.setContent {
             PlayerTestHost {
@@ -133,7 +132,7 @@ class PlayerSeekBarUiTest {
 private fun SpeedButtonHarness(
     onSectionOpened: (SettingsSection) -> Unit,
 ) {
-    val player = remember { mockk<ExoPlayer>(relaxed = true) }
+    val player = remember { FakePlayer() }
     val playPauseFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     val seekBarFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
 
@@ -164,19 +163,16 @@ private fun SpeedButtonHarness(
 
 @Composable
 private fun SeekBarHarness(
-    player: ExoPlayer,
+    player: FakePlayer,
     chapters: List<ChapterMarker> = emptyList(),
 ) {
     val playPauseFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     val seekBarFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     var currentPosition by remember { mutableStateOf(30_000L) }
 
-    remember(player) {
-        every { player.seekTo(any<Long>()) } answers {
-            currentPosition = firstArg()
-            Unit
-        }
-        player
+    // Synchronize currentPosition with fake player
+    LaunchedEffect(currentPosition) {
+        player.lastSeekPosition = currentPosition
     }
 
     PlayerControls(

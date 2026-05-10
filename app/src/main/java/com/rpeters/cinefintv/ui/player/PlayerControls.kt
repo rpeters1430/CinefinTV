@@ -86,6 +86,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
@@ -119,7 +120,7 @@ internal fun PlayerControls(
     duration: Long,
     bufferedFraction: Float,
     uiState: PlayerUiState,
-    player: ExoPlayer,
+    player: Player,
     playPauseFocusRequester: FocusRequester,
     seekBarFocusRequester: FocusRequester,
     isContentShelfVisible: Boolean,
@@ -1219,13 +1220,13 @@ private fun SeekBarControl(
                         .align(Alignment.CenterStart)
                         .offset(x = maxWidth * animatedProgressFraction - thumbDp / 2)
                         .size(thumbDp)
-                        .shadow(
+                        /* .shadow(
                             elevation = 8.dp,
                             shape = CircleShape,
                             clip = false,
                             ambientColor = MaterialTheme.colorScheme.primary,
                             spotColor = MaterialTheme.colorScheme.primary,
-                        )
+                        ) */
                         .background(MaterialTheme.colorScheme.primary, CircleShape)
                         .border(width = 3.dp, color = expressiveColors.playerContentPrimary, shape = CircleShape)
                 )

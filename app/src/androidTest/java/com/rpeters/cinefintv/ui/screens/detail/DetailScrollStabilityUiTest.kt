@@ -1,18 +1,23 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailTestTags
@@ -142,34 +147,42 @@ class DetailScrollStabilityUiTest {
 
         composeRule.setContent {
             DetailTestHost {
-                androidx.compose.foundation.lazy.LazyColumn(state = rememberLazyListState()) {
-                    item {
-                        FlatDetailHero(
-                            backdropUrl = null,
-                            posterUrl = null,
-                            title = "Season 1",
-                            metadataItems = listOf("3 episodes"),
-                            qualityBadges = emptyList(),
-                            genres = emptyList(),
-                            summary = "Season overview",
-                            primaryActionLabel = "Resume",
-                            onPrimaryAction = {},
-                            secondaryActions = listOf(HeroSecondaryAction(label = "···", onClick = {})),
-                            primaryActionFocusRequester = remember { FocusRequester() },
-                        )
-                    }
-                    items(episodes, key = { it.id }) { episode ->
-                        EpisodeListRow(
-                            episode = episode,
-                            isNext = episode.id == "e1",
-                            onClick = {},
-                        )
+                Box(modifier = Modifier.size(1920.dp, 2000.dp)) {
+                    androidx.compose.foundation.lazy.LazyColumn(state = rememberLazyListState()) {
+                        item {
+                            FlatDetailHero(
+                                backdropUrl = null,
+                                posterUrl = null,
+                                title = "Season 1",
+                                metadataItems = listOf("3 episodes"),
+                                qualityBadges = emptyList(),
+                                genres = emptyList(),
+                                summary = "Season overview",
+                                primaryActionLabel = "Resume",
+                                onPrimaryAction = {},
+                                secondaryActions = listOf(HeroSecondaryAction(label = "···", onClick = {})),
+                                primaryActionFocusRequester = remember { FocusRequester() },
+                            )
+                        }
+                        items(episodes, key = { it.id }) { episode ->
+                            EpisodeListRow(
+                                episode = episode,
+                                isNext = episode.id == "e1",
+                                onClick = {},
+                            )
+                        }
                     }
                 }
             }
         }
 
-        assertTrue(composeRule.onAllNodesWithText("Episode 1").fetchSemanticsNodes().isNotEmpty())
+        composeRule.onNodeWithText("Episode 1", useUnmergedTree = true).assertIsDisplayed()
+        
+        // Scroll to the last episode to ensure all are composed
+        composeRule.onNodeWithText("Episode 3", useUnmergedTree = true)
+            .performScrollTo()
+            .assertIsDisplayed()
+
         val nodes = composeRule.onAllNodesWithTag(DetailTestTags.EpisodeItem).fetchSemanticsNodes()
         assertTrue(nodes.size >= 3)
     }

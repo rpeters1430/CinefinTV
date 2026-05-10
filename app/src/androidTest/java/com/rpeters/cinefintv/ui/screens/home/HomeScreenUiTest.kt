@@ -511,9 +511,15 @@ class HomeScreenUiTest {
         composeRule.waitForIdle()
 
         composeRule.onNodeWithTag("top_nav").requestFocus()
+        composeRule.mainClock.advanceTimeBy(100)
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("top_nav").assertIsFocused()
+        
         composeRule.onNodeWithTag("top_nav")
             .performKeyInput { pressKey(Key.DirectionDown) }
-
+        
+        composeRule.mainClock.advanceTimeBy(500)
+        composeRule.waitForIdle()
         composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 1))
             .assertIsFocused()
     }
