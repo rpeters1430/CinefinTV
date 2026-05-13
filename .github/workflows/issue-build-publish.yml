@@ -1,0 +1,151 @@
+name: Issue Build and Publish Commands
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: issue-command-${{ github.repository }}-${{ github.event.comment.body }}
+  cancel-in-progress: false
+
+jobs:
+  issue-command:
+    name: Run issue command
+    if: >-
+      ${{
+        github.event.issue.pull_request == null &&
+        (github.event.comment.body == '/build' || github.event.comment.body == '/publish') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+      }}
+    runs-on: ubuntu-latest
+    env:
+      COMMAND: ${{ github.event.comment.body }}
+      GH_TOKEN: ${{ github.token }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      REPOSITORY: ${{ github.repository }}
+
+    steps:
+      - name: React to command
+        run: gh api "repos/$REPOSITORY/issues/comments/${{ github.event.comment.id }}/reactions" -f content=rocket >/dev/null
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Prepare Android config
+        env:
+          CINEFIN_GOOGLE_SERVICES_JSON_B64: ${{ secrets.CINEFIN_GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          if [ -n "${CINEFIN_GOOGLE_SERVICES_JSON_B64:-}" ]; then
+            echo "$CINEFIN_GOOGLE_SERVICES_JSON_B64" | base64 --decode > app/google-services.json
+          fi
+
+      - name: Build debug APK
+        if: env.COMMAND == '/build'
+        run: ./gradlew :app:assembleDebug
+
+      - name: Upload debug APK
+        if: env.COMMAND == '/build'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Comment on successful build
+        if: env.COMMAND == '/build'
+        run: |
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body "Build succeeded for \`${GITHUB_SHA}\`. Download the \`app-debug\` artifact from ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}."
+
+      - name: Publish next patch version
+        if: env.COMMAND == '/publish'
+        env:
+          CINEFIN_RELEASE_KEYSTORE_B64: ${{ secrets.CINEFIN_RELEASE_KEYSTORE_B64 }}
+          CINEFIN_RELEASE_STORE_FILE: ${{ runner.temp }}/cinefintv-release.keystore
+          CINEFIN_RELEASE_STORE_PASSWORD: ${{ secrets.CINEFIN_RELEASE_STORE_PASSWORD }}
+          CINEFIN_RELEASE_KEY_ALIAS: ${{ secrets.CINEFIN_RELEASE_KEY_ALIAS }}
+          CINEFIN_RELEASE_KEY_PASSWORD: ${{ secrets.CINEFIN_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CINEFIN_RELEASE_KEYSTORE_B64:-}" ] ||
+             [ -z "${CINEFIN_RELEASE_STORE_PASSWORD:-}" ] ||
+             [ -z "${CINEFIN_RELEASE_KEY_ALIAS:-}" ] ||
+             [ -z "${CINEFIN_RELEASE_KEY_PASSWORD:-}" ]; then
+            echo "Release signing secrets are required for /publish." >&2
+            exit 1
+          fi
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin main --tags
+          git checkout main
+          git reset --hard origin/main
+
+          old_version_code="$(grep "versionCode =" app/build.gradle.kts | awk '{print $3}')"
+          old_version_name="$(grep "versionName =" app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')"
+          new_version_code="$((old_version_code + 1))"
+          if [[ "$old_version_name" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            patch="${old_version_name##*.}"
+            prefix="${old_version_name%.*}"
+            new_version_name="$prefix.$((patch + 1))"
+          else
+            echo "Cannot auto-increment non-semver versionName: $old_version_name" >&2
+            exit 1
+          fi
+          tag="v$new_version_name"
+
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "Tag $tag already exists." >&2
+            exit 1
+          fi
+
+          perl -0pi -e "s/versionCode = \Q$old_version_code\E/versionCode = $new_version_code/" app/build.gradle.kts
+          perl -0pi -e "s/versionName = \"\Q$old_version_name\E\"/versionName = \"$new_version_name\"/" app/build.gradle.kts
+
+          echo "$CINEFIN_RELEASE_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/cinefintv-release.keystore"
+          ./gradlew :app:assembleRelease
+
+          git add app/build.gradle.kts
+          git commit -m "chore: bump version to $new_version_name"
+          git tag "$tag"
+          git push origin main
+          git push origin "$tag"
+
+          {
+            echo "tag=$tag"
+            echo "version_name=$new_version_name"
+            echo "version_code=$new_version_code"
+          } >> "$GITHUB_ENV"
+
+      - name: Comment on successful publish
+        if: env.COMMAND == '/publish'
+        run: |
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body "Published \`${tag}\` by bumping to version \`${version_name}\` (code \`${version_code}\`). The tag push started the release workflow, which will build \`app-release.apk\` and update \`updates/version.json\`."
+
+      - name: Comment on failure
+        if: failure()
+        run: |
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body "Command \`${COMMAND}\` failed. See the workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"

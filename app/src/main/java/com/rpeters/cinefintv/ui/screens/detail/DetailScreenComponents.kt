@@ -114,6 +114,16 @@ suspend fun focusDetailScreenAtTop(
     }
 }
 
+suspend fun LazyListState.scrollToItemAndAwaitLayout(index: Int) {
+    if (!isIndexVisible(index)) {
+        scrollToItem(index)
+        snapshotFlow { isIndexVisible(index) }.first { it }
+    }
+}
+
+private fun LazyListState.isIndexVisible(index: Int): Boolean =
+    layoutInfo.visibleItemsInfo.any { it.index == index }
+
 @Composable
 fun MetaFactItem(
     icon: ImageVector,

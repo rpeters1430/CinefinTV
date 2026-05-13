@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -249,7 +250,7 @@ private fun SeasonContent(
                     {
                         if (listState.isScrollInProgress) return@FlatDetailHero
                         coroutineScope.launch {
-                            listState.scrollToItem(2)
+                            listState.scrollToItemAndAwaitLayout(2)
                             runCatching { firstEpisodeFocusRequester.requestFocus() }
                         }
                     }
@@ -276,6 +277,21 @@ private fun SeasonContent(
                     Modifier
                         .focusRequester(firstEpisodeFocusRequester)
                         .focusProperties { up = primaryActionFocusRequester }
+                        .onPreviewKeyEvent { keyEvent ->
+                            val nativeEvent = keyEvent.nativeKeyEvent
+                            if (
+                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
+                            ) {
+                                coroutineScope.launch {
+                                    listState.scrollToItemAndAwaitLayout(0)
+                                    runCatching { primaryActionFocusRequester.requestFocus() }
+                                }
+                                true
+                            } else {
+                                false
+                            }
+                        }
                 } else {
                     Modifier
                 },
