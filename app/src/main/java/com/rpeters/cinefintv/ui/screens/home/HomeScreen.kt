@@ -34,6 +34,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -43,7 +44,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -379,7 +385,7 @@ private fun HomeLoadedContent(
                 topBufferPx = focusVisibilityTopBufferPx,
                 bottomBufferPx = focusVisibilityBottomBufferPx,
             )
-            requester.requestFocus()
+            requestFocusAfterLayoutSettles(requester)
         }
     }
 
@@ -474,6 +480,7 @@ private fun HomeLoadedContent(
                     onEpisodeMenuRequested = { selectedEpisodeMenuItem = it },
                     itemFocusRequesters = sectionItemFocusRequesters[index],
                     upFocusRequester = upFocusRequester,
+                    downFocusRequester = sectionItemFocusRequesters.getOrNull(index + 1)?.firstOrNull(),
                     onNavigateUp = when {
                         index == 0 && state.featuredItems.isNotEmpty() -> {
                             requestFocusAtListIndex(
@@ -584,18 +591,12 @@ private fun FeaturedCarousel(
             .height(468.dp)
             .onFocusChanged { isFocused = it.hasFocus }
             .focusGroup()
-            .onKeyEvent { keyEvent ->
-                val nativeEvent = keyEvent.nativeKeyEvent
-                if (
-                    onNavigateDown != null &&
-                    nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
-                ) {
-                    onNavigateDown()
-                    true
-                } else {
-                    false
-                }
+            .onPreviewKeyEvent { keyEvent ->
+                consumeDirectionalPress(
+                    keyEvent = keyEvent,
+                    direction = Key.DirectionDown,
+                    onNavigate = onNavigateDown,
+                )
             },
     ) { index ->
         val item = items[index]
@@ -836,6 +837,7 @@ private fun HomeSection(
     onEpisodeMenuRequested: (HomeCardModel) -> Unit,
     itemFocusRequesters: List<FocusRequester>,
     upFocusRequester: FocusRequester?,
+    downFocusRequester: FocusRequester?,
     onNavigateUp: (() -> Unit)?,
     onNavigateDown: (() -> Unit)?,
     destinationFocus: com.rpeters.cinefintv.ui.TopLevelDestinationFocus,
@@ -863,14 +865,11 @@ private fun HomeSection(
                 key = { _, item -> item.id },
                 contentType = { _, item -> item.itemType ?: "media" },
             ) { index, item ->
-                val focusModifier = if (upFocusRequester != null) {
-                    destinationFocus.drawerEscapeModifier(
-                        isLeftEdge = index == 0,
-                        up = upFocusRequester,
-                    )
-                } else {
-                    destinationFocus.drawerEscapeModifier(isLeftEdge = index == 0)
-                }
+                val focusModifier = destinationFocus.drawerEscapeModifier(
+                    isLeftEdge = index == 0,
+                    up = upFocusRequester,
+                    down = downFocusRequester,
+                )
 
                 TvMediaCard(
                     title = item.title,
@@ -899,23 +898,16 @@ private fun HomeSection(
                         )
                         .then(itemFocusRequesters.getOrNull(index)?.let { Modifier.focusRequester(it) } ?: Modifier)
                         .then(focusModifier)
-                        .onKeyEvent { keyEvent ->
-                            val nativeEvent = keyEvent.nativeKeyEvent
-                            when {
-                                onNavigateDown != null &&
-                                    nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                    onNavigateDown()
-                                    true
-                                }
-                                onNavigateUp != null &&
-                                    nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                                    onNavigateUp()
-                                    true
-                                }
-                                else -> false
-                            }
+                        .onPreviewKeyEvent { keyEvent ->
+                            consumeDirectionalPress(
+                                keyEvent = keyEvent,
+                                direction = Key.DirectionDown,
+                                onNavigate = onNavigateDown,
+                            ) || consumeDirectionalPress(
+                                keyEvent = keyEvent,
+                                direction = Key.DirectionUp,
+                                onNavigate = onNavigateUp,
+                            )
                         }
                 )
             }
@@ -923,6 +915,31 @@ private fun HomeSection(
     }
 }
 
+
+private fun consumeDirectionalPress(
+    keyEvent: KeyEvent,
+    direction: Key,
+    onNavigate: (() -> Unit)?,
+): Boolean {
+    if (onNavigate == null || keyEvent.type != KeyEventType.KeyDown || keyEvent.key != direction) {
+        return false
+    }
+
+    onNavigate()
+    return true
+}
+
+private suspend fun requestFocusAfterLayoutSettles(focusRequester: FocusRequester) {
+    repeat(2) { withFrameNanos { } }
+    repeat(3) { attempt ->
+        if (runCatching { focusRequester.requestFocus() }.isSuccess) {
+            return
+        }
+        if (attempt < 2) {
+            withFrameNanos { }
+        }
+    }
+}
 
 private fun LazyListState.isIndexVisible(index: Int): Boolean =
     layoutInfo.visibleItemsInfo.any { it.index == index }
