@@ -154,6 +154,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines)
     implementation(libs.core.ktx)
 
+    implementation(libs.profileinstaller)
+
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
 

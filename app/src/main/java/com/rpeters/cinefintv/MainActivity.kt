@@ -1,5 +1,7 @@
 package com.rpeters.cinefintv
 
+import android.app.SearchManager
+import android.content.Intent
 import android.os.Bundle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,17 +30,17 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     
-    @Inject
-    lateinit var updateManager: UpdateManager
-
-    @Inject
-    lateinit var authRepository: JellyfinAuthRepository
+    @Inject lateinit var updateManager: UpdateManager
+    @Inject lateinit var authRepository: JellyfinAuthRepository
+    @Inject lateinit var voiceSearchCoordinator: VoiceSearchCoordinator
     
     @OptIn(ExperimentalTvMaterial3Api::class)
     @UnstableApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleSearchIntent(intent)
         setContent {
+
             val isSessionRestored by authRepository.isSessionRestored.collectAsStateWithLifecycle()
             val isConnected by authRepository.isConnected.collectAsStateWithLifecycle()
             
@@ -72,6 +74,18 @@ class MainActivity : ComponentActivity() {
                     updateManager = updateManager
                 )
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleSearchIntent(intent)
+    }
+
+    private fun handleSearchIntent(intent: Intent) {
+        if (intent.action == Intent.ACTION_SEARCH) {
+            val query = intent.getStringExtra(SearchManager.QUERY) ?: return
+            voiceSearchCoordinator.submit(query)
         }
     }
 }

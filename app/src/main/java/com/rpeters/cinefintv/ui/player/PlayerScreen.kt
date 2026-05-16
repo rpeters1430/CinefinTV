@@ -247,6 +247,9 @@ fun PlayerScreen(
                 val exoPlayer = player ?: return
                 var isClosing by remember(uiState.itemId) { mutableStateOf(false) }
                 var controlsVisible by remember { mutableStateOf(true) }
+                var showSyncPlayDialog by remember { mutableStateOf(false) }
+                val syncPlayState by viewModel.syncPlayState.collectAsStateWithLifecycle()
+                val availableSyncGroups by viewModel.availableSyncGroups.collectAsStateWithLifecycle()
                 var renderState by remember(exoPlayer) {
                     mutableStateOf(
                         PlayerRenderState(
@@ -343,6 +346,27 @@ fun PlayerScreen(
                     }
                 )
 
+                if (showSyncPlayDialog) {
+                    com.rpeters.cinefintv.ui.player.syncplay.SyncPlayGroupDialog(
+                        sessionState = syncPlayState,
+                        availableGroups = availableSyncGroups,
+                        isLoading = false,
+                        onCreateGroup = { name ->
+                            viewModel.createSyncPlayGroup(name)
+                            showSyncPlayDialog = false
+                        },
+                        onJoinGroup = { groupId ->
+                            viewModel.joinSyncPlayGroup(groupId)
+                            showSyncPlayDialog = false
+                        },
+                        onLeaveGroup = {
+                            viewModel.leaveSyncPlayGroup()
+                            showSyncPlayDialog = false
+                        },
+                        onDismiss = { showSyncPlayDialog = false },
+                    )
+                }
+
                 Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
                     AnimatedVisibility(
                         visible = !isClosing,
@@ -370,6 +394,10 @@ fun PlayerScreen(
                             },
                             onPlaybackSpeedSelected = { viewModel.setPlaybackSpeed(it) },
                             onAutoPlayChange = { viewModel.setAutoPlayNextEpisode(it) },
+                            onWatchTogetherClick = {
+                                viewModel.loadAvailableSyncGroups()
+                                showSyncPlayDialog = true
+                            },
                         )
                     }
                 }
@@ -395,6 +423,7 @@ internal fun PlayerPlaybackContent(
     onQualitySelected: (com.rpeters.cinefintv.data.preferences.TranscodingQuality) -> Unit,
     onPlaybackSpeedSelected: (Float) -> Unit,
     onAutoPlayChange: (Boolean) -> Unit,
+    onWatchTogetherClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     showVideoSurface: Boolean = true,
     controlsHideDelayMs: Long = CONTROLS_HIDE_DELAY_MS,
@@ -573,6 +602,7 @@ internal fun PlayerPlaybackContent(
             },
             onBack = onBack,
             onOpenItem = onOpenItem,
+            onWatchTogetherClick = onWatchTogetherClick,
         )
 
         if (renderState.isBuffering) {

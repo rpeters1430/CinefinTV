@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "CinefinTV"
 include(":app")
+include(":macrobenchmark")

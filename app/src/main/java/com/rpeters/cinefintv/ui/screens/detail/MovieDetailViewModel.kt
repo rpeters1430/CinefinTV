@@ -52,6 +52,7 @@ sealed class MovieDetailUiState {
         val movie: MovieDetailModel,
         val cast: List<CastModel>,
         val similarMovies: List<SimilarMovieModel>,
+        val trailers: List<TrailerModel> = emptyList(),
     ) : MovieDetailUiState()
 }
 
@@ -126,6 +127,9 @@ class MovieDetailViewModel @Inject constructor(
                 } else {
                     emptyList()
                 }
+                val trailers = movieDto.remoteTrailers
+                    ?.mapNotNull { it.toTrailerModel() }
+                    ?: emptyList()
 
                 val cast = movieDto.people?.map { person ->
                     CastModel(
@@ -142,7 +146,8 @@ class MovieDetailViewModel @Inject constructor(
                 _uiState.value = MovieDetailUiState.Content(
                     movie = movieDto.toDetailModel(),
                     cast = cast,
-                    similarMovies = similarMovies
+                    similarMovies = similarMovies,
+                    trailers = trailers,
                 )
             } else if (movieResult is ApiResult.Error) {
                 _uiState.value = MovieDetailUiState.Error(movieResult.message)
@@ -226,6 +231,22 @@ class MovieDetailViewModel @Inject constructor(
                 onDeleted()
             }
         }
+    }
+
+    private fun org.jellyfin.sdk.model.api.MediaUrl.toTrailerModel(): TrailerModel? {
+        val trailerUrl = url?.takeIf { it.isNotBlank() } ?: return null
+        val videoId = extractYouTubeId(trailerUrl)
+        return TrailerModel(
+            id = trailerUrl,
+            title = name?.takeIf { it.isNotBlank() } ?: "Trailer",
+            thumbnailUrl = videoId?.let { "https://img.youtube.com/vi/$it/hqdefault.jpg" },
+            durationMs = null,
+        )
+    }
+
+    private fun extractYouTubeId(url: String): String? {
+        val pattern = Regex("""(?:youtube\.com/(?:watch\?v=|embed/)|youtu\.be/)([A-Za-z0-9_-]{11})""")
+        return pattern.find(url)?.groupValues?.get(1)
     }
 
     private fun BaseItemDto.toSimilarModel(): SimilarMovieModel {

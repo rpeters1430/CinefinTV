@@ -29,6 +29,10 @@ import com.rpeters.cinefintv.data.preferences.ResumePlaybackMode
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferencesRepository
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
+import com.rpeters.cinefintv.data.syncplay.SyncPlayCommand
+import com.rpeters.cinefintv.data.syncplay.SyncPlayGroup
+import com.rpeters.cinefintv.data.syncplay.SyncPlayRepository
+import com.rpeters.cinefintv.data.syncplay.SyncPlaySessionState
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.utils.NetworkOptimizer
 import com.rpeters.cinefintv.utils.SecureLogger
@@ -67,6 +71,7 @@ class PlayerViewModel @Inject constructor(
     @param:ApplicationContext private val appContext: Context,
     private val okHttpClient: OkHttpClient,
     private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
+    private val syncPlayRepository: SyncPlayRepository,
 ) : ViewModel() {
     private val playbackSessionId: String = UUID.randomUUID().toString()
     var itemId: String = ""
@@ -83,6 +88,11 @@ class PlayerViewModel @Inject constructor(
     private var isInitialized = false
     private var retryJob: Job? = null
 
+    // SyncPlay
+    val syncPlayState: StateFlow<SyncPlaySessionState> = syncPlayRepository.sessionState
+    private val _availableSyncGroups = MutableStateFlow<List<SyncPlayGroup>>(emptyList())
+    val availableSyncGroups: StateFlow<List<SyncPlayGroup>> = _availableSyncGroups.asStateFlow()
+
     fun init(id: String, start: Long) {
         if (isInitialized && itemId == id) return
         isInitialized = true
@@ -90,6 +100,8 @@ class PlayerViewModel @Inject constructor(
         requestedStartPositionMs = start
         resolvedItemId = id
         _uiState.value = _uiState.value.copy(itemId = id)
+
+        observeSyncPlayCommands()
 
         viewModelScope.launch {
             playbackPreferencesRepository.preferences.collectLatest { prefs ->
@@ -234,9 +246,10 @@ class PlayerViewModel @Inject constructor(
             preferredLanguageCode = playbackPrefs.audioLanguage.code,
             defaultStreamIndex = mediaSource?.defaultAudioStreamIndex,
         )
-        val selectedSubtitleTrack = subtitleTracks.firstOrNull {
-            it.streamIndex == mediaSource?.defaultSubtitleStreamIndex
-        }
+        val selectedSubtitleTrack = subtitleTracks.resolvePreferredSubtitleTrack(
+            preference = playbackPrefs.subtitleLanguage,
+            defaultStreamIndex = mediaSource?.defaultSubtitleStreamIndex,
+        )
         activeMediaSourceId = mediaSource?.id
         activePlaySessionId = playbackInfo?.playSessionId
 
@@ -642,6 +655,17 @@ class PlayerViewModel @Inject constructor(
         return firstOrNull()
     }
 
+    private fun List<TrackOption>.resolvePreferredSubtitleTrack(
+        preference: com.rpeters.cinefintv.data.preferences.SubtitleLanguagePreference,
+        defaultStreamIndex: Int?,
+    ): TrackOption? {
+        return when {
+            preference == com.rpeters.cinefintv.data.preferences.SubtitleLanguagePreference.NONE -> null
+            preference.code != null -> findByLanguage(preference.code)
+            else -> firstOrNull { it.streamIndex == defaultStreamIndex }
+        }
+    }
+
     private fun List<TrackOption>.findByLanguage(languageCode: String?): TrackOption? {
         val normalizedPreferred = languageCode.normalizeLanguageCode() ?: return null
         return firstOrNull { track ->
@@ -670,6 +694,77 @@ class PlayerViewModel @Inject constructor(
                 else -> code
             }
         }
+
+    // ── SyncPlay ──────────────────────────────────────────────────────────────
+
+    private fun observeSyncPlayCommands() {
+        viewModelScope.launch {
+            syncPlayRepository.incomingCommands.collect { cmd ->
+                val player = _player ?: return@collect
+                when (cmd) {
+                    is SyncPlayCommand.Play -> {
+                        if (cmd.positionMs > 0) player.seekTo(cmd.positionMs)
+                        player.play()
+                    }
+                    is SyncPlayCommand.Pause -> player.pause()
+                    is SyncPlayCommand.Seek -> player.seekTo(cmd.positionMs)
+                }
+            }
+        }
+    }
+
+    fun loadAvailableSyncGroups() {
+        viewModelScope.launch {
+            when (val result = syncPlayRepository.getAvailableGroups()) {
+                is ApiResult.Success -> _availableSyncGroups.value = result.data
+                else -> _availableSyncGroups.value = emptyList()
+            }
+        }
+    }
+
+    fun createSyncPlayGroup(groupName: String) {
+        viewModelScope.launch {
+            syncPlayRepository.createGroup(
+                groupName = groupName,
+                itemId = itemId,
+                startPositionMs = _player?.currentPosition ?: 0L,
+            )
+        }
+    }
+
+    fun joinSyncPlayGroup(groupId: String) {
+        viewModelScope.launch {
+            syncPlayRepository.joinGroup(groupId)
+        }
+    }
+
+    fun leaveSyncPlayGroup() {
+        viewModelScope.launch {
+            syncPlayRepository.leaveGroup()
+        }
+    }
+
+    // Forward play/pause to SyncPlay group if active
+    fun syncPlay() {
+        val pos = _player?.currentPosition ?: 0L
+        if (syncPlayState.value is SyncPlaySessionState.InGroup) {
+            viewModelScope.launch { syncPlayRepository.sendUnpause(pos) }
+        }
+    }
+
+    fun syncPause() {
+        if (syncPlayState.value is SyncPlaySessionState.InGroup) {
+            viewModelScope.launch { syncPlayRepository.sendPause() }
+        }
+    }
+
+    fun syncSeek(positionMs: Long) {
+        if (syncPlayState.value is SyncPlaySessionState.InGroup) {
+            viewModelScope.launch { syncPlayRepository.sendSeek(positionMs) }
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
 
     override fun onCleared() {
         super.onCleared()

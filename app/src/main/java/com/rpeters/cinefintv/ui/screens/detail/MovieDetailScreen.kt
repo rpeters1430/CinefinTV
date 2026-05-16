@@ -2,6 +2,8 @@
 
 package com.rpeters.cinefintv.ui.screens.detail
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -43,6 +46,7 @@ fun MovieDetailScreen(
     }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showMoreDialog by remember { mutableStateOf(false) }
     val chromeFocusController = LocalAppChromeFocusController.current
@@ -196,8 +200,14 @@ fun MovieDetailScreen(
                     description = movie.overview ?: "",
                     heroSecondaryActions = heroSecondaryActions,
                     castItems = state.cast,
+                    trailers = state.trailers,
                     similarItems = state.similarMovies,
                     onCastClick = { personId -> onOpenPerson(personId) },
+                    onTrailerClick = { url ->
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        }
+                    },
                     onSimilarClick = { onOpenMovie(it) },
                     listState = listState,
                     drawerFocusRequester = destinationFocus.drawerFocusRequester,

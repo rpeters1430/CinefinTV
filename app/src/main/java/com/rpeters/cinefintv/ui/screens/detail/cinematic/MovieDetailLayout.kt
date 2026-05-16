@@ -26,6 +26,7 @@ import com.rpeters.cinefintv.ui.screens.detail.CastModel
 import com.rpeters.cinefintv.ui.screens.detail.DetailAnchor
 import com.rpeters.cinefintv.ui.screens.detail.DetailShelfPanel
 import com.rpeters.cinefintv.ui.screens.detail.SimilarMovieModel
+import com.rpeters.cinefintv.ui.screens.detail.TrailerModel
 import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.screens.detail.scrollToItemAndAwaitLayout
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
@@ -45,8 +46,10 @@ fun MovieDetailLayout(
     description: String,
     heroSecondaryActions: List<HeroSecondaryAction>,
     castItems: List<CastModel>,
+    trailers: List<TrailerModel>,
     similarItems: List<SimilarMovieModel>,
     onCastClick: (String) -> Unit,
+    onTrailerClick: (String) -> Unit,
     onSimilarClick: (String) -> Unit,
     listState: LazyListState,
     modifier: Modifier = Modifier,
@@ -56,12 +59,22 @@ fun MovieDetailLayout(
     val spacing = LocalCinefinSpacing.current
     val coroutineScope = rememberCoroutineScope()
     val firstCastFocusRequester = remember { FocusRequester() }
+    val firstTrailerFocusRequester = remember { FocusRequester() }
     val firstSimilarFocusRequester = remember { FocusRequester() }
+
+    var indexCursor = 1
+    val castSectionIndex = if (castItems.isNotEmpty()) indexCursor++ else -1
+    val trailerSectionIndex = if (trailers.isNotEmpty()) indexCursor++ else -1
+    val similarSectionIndex = if (similarItems.isNotEmpty()) indexCursor else -1
+
     val firstContentFocusRequester = when {
         castItems.isNotEmpty() -> firstCastFocusRequester
+        trailers.isNotEmpty() -> firstTrailerFocusRequester
         similarItems.isNotEmpty() -> firstSimilarFocusRequester
         else -> null
     }
+    val firstContentIndex = listOf(castSectionIndex, trailerSectionIndex, similarSectionIndex)
+        .firstOrNull { it >= 0 } ?: -1
 
     LazyColumn(
         state = listState,
@@ -88,11 +101,11 @@ fun MovieDetailLayout(
                 primaryActionFocusRequester = primaryActionFocusRequester,
                 primaryActionDownFocusRequester = firstContentFocusRequester,
                 drawerFocusRequester = drawerFocusRequester,
-                onDownNavigation = if (firstContentFocusRequester != null) {
+                onDownNavigation = if (firstContentFocusRequester != null && firstContentIndex >= 0) {
                     {
                         if (listState.isScrollInProgress) return@FlatDetailHero
                         coroutineScope.launch {
-                            listState.scrollToItemAndAwaitLayout(1)
+                            listState.scrollToItemAndAwaitLayout(firstContentIndex)
                             runCatching { firstContentFocusRequester.requestFocus() }
                         }
                     }
@@ -127,7 +140,11 @@ fun MovieDetailLayout(
                                     .focusProperties {
                                         up = primaryActionFocusRequester
                                         if (isFirstCastItem) {
-                                            down = if (similarItems.isNotEmpty()) firstSimilarFocusRequester else firstCastFocusRequester
+                                            down = when {
+                                                trailers.isNotEmpty() -> firstTrailerFocusRequester
+                                                similarItems.isNotEmpty() -> firstSimilarFocusRequester
+                                                else -> firstCastFocusRequester
+                                            }
                                         }
                                     }
                                     .onPreviewKeyEvent { keyEvent ->
@@ -142,12 +159,17 @@ fun MovieDetailLayout(
                                                 true
                                             }
                                             isFirstCastItem &&
-                                                similarItems.isNotEmpty() &&
+                                                (trailers.isNotEmpty() || similarItems.isNotEmpty()) &&
                                                 nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
                                                 nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
                                                 coroutineScope.launch {
-                                                    listState.scrollToItemAndAwaitLayout(2)
-                                                    runCatching { firstSimilarFocusRequester.requestFocus() }
+                                                    if (trailers.isNotEmpty()) {
+                                                        listState.scrollToItemAndAwaitLayout(trailerSectionIndex)
+                                                        runCatching { firstTrailerFocusRequester.requestFocus() }
+                                                    } else {
+                                                        listState.scrollToItemAndAwaitLayout(similarSectionIndex)
+                                                        runCatching { firstSimilarFocusRequester.requestFocus() }
+                                                    }
                                                 }
                                                 true
                                             }
@@ -156,6 +178,70 @@ fun MovieDetailLayout(
                                     }
                                     .then(if (isFirstCastItem) Modifier.testTag(DetailTestTags.FirstCastItem) else Modifier),
                                 onClick = { onCastClick(person.id) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (trailers.isNotEmpty()) {
+            item {
+                DetailShelfPanel(
+                    modifier = Modifier.padding(top = spacing.rowGap.div(1.5f)),
+                    title = "Trailers & Extras",
+                    subtitle = "",
+                ) {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
+                    ) {
+                        items(trailers, key = { it.id }) { trailer ->
+                            val isFirst = trailer.id == trailers.firstOrNull()?.id
+                            TvMediaCard(
+                                title = trailer.title,
+                                imageUrl = trailer.thumbnailUrl,
+                                aspectRatio = 16f / 9f,
+                                cardWidth = 200.dp,
+                                modifier = Modifier
+                                    .blockBringIntoView()
+                                    .then(if (isFirst) Modifier.focusRequester(firstTrailerFocusRequester) else Modifier)
+                                    .focusProperties {
+                                        up = if (castItems.isNotEmpty()) firstCastFocusRequester else primaryActionFocusRequester
+                                        if (isFirst) {
+                                            down = if (similarItems.isNotEmpty()) firstSimilarFocusRequester else firstTrailerFocusRequester
+                                        }
+                                    }
+                                    .onPreviewKeyEvent { keyEvent ->
+                                        val nativeEvent = keyEvent.nativeKeyEvent
+                                        when {
+                                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                                                coroutineScope.launch {
+                                                    if (castItems.isNotEmpty()) {
+                                                        listState.scrollToItemAndAwaitLayout(castSectionIndex)
+                                                        runCatching { firstCastFocusRequester.requestFocus() }
+                                                    } else {
+                                                        listState.scrollToItemAndAwaitLayout(0)
+                                                        runCatching { primaryActionFocusRequester.requestFocus() }
+                                                    }
+                                                }
+                                                true
+                                            }
+                                            isFirst &&
+                                                similarItems.isNotEmpty() &&
+                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                                coroutineScope.launch {
+                                                    listState.scrollToItemAndAwaitLayout(similarSectionIndex)
+                                                    runCatching { firstSimilarFocusRequester.requestFocus() }
+                                                }
+                                                true
+                                            }
+                                            else -> false
+                                        }
+                                    },
+                                onClick = { onTrailerClick(trailer.id) },
                             )
                         }
                     }
@@ -187,7 +273,11 @@ fun MovieDetailLayout(
                                     .blockBringIntoView()
                                     .then(if (isFirstSimilarItem) Modifier.focusRequester(firstSimilarFocusRequester) else Modifier)
                                     .focusProperties {
-                                        up = if (castItems.isNotEmpty()) firstCastFocusRequester else primaryActionFocusRequester
+                                        up = when {
+                                            trailers.isNotEmpty() -> firstTrailerFocusRequester
+                                            castItems.isNotEmpty() -> firstCastFocusRequester
+                                            else -> primaryActionFocusRequester
+                                        }
                                     }
                                     .onPreviewKeyEvent { keyEvent ->
                                         val nativeEvent = keyEvent.nativeKeyEvent
@@ -196,12 +286,19 @@ fun MovieDetailLayout(
                                             nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
                                         ) {
                                             coroutineScope.launch {
-                                                if (castItems.isNotEmpty()) {
-                                                    listState.scrollToItemAndAwaitLayout(1)
-                                                    runCatching { firstCastFocusRequester.requestFocus() }
-                                                } else {
-                                                    listState.scrollToItemAndAwaitLayout(0)
-                                                    runCatching { primaryActionFocusRequester.requestFocus() }
+                                                when {
+                                                    trailers.isNotEmpty() -> {
+                                                        listState.scrollToItemAndAwaitLayout(trailerSectionIndex)
+                                                        runCatching { firstTrailerFocusRequester.requestFocus() }
+                                                    }
+                                                    castItems.isNotEmpty() -> {
+                                                        listState.scrollToItemAndAwaitLayout(castSectionIndex)
+                                                        runCatching { firstCastFocusRequester.requestFocus() }
+                                                    }
+                                                    else -> {
+                                                        listState.scrollToItemAndAwaitLayout(0)
+                                                        runCatching { primaryActionFocusRequester.requestFocus() }
+                                                    }
                                                 }
                                             }
                                             true

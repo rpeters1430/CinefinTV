@@ -45,6 +45,7 @@ import com.rpeters.cinefintv.ui.screens.detail.DetailAnchor
 import com.rpeters.cinefintv.ui.screens.detail.DetailShelfPanel
 import com.rpeters.cinefintv.ui.screens.detail.SeasonModel
 import com.rpeters.cinefintv.ui.screens.detail.SimilarMovieModel
+import com.rpeters.cinefintv.ui.screens.detail.TrailerModel
 import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.screens.detail.scrollToItemAndAwaitLayout
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
@@ -67,8 +68,10 @@ fun TvShowDetailLayout(
     seasons: List<SeasonModel>,
     onSeasonClick: (SeasonModel) -> Unit,
     castItems: List<CastModel>,
+    trailers: List<TrailerModel>,
     similarItems: List<SimilarMovieModel>,
     onCastClick: (String) -> Unit,
+    onTrailerClick: (String) -> Unit,
     onSimilarClick: (String) -> Unit,
     description: String,
     heroSecondaryActions: List<HeroSecondaryAction>,
@@ -82,6 +85,7 @@ fun TvShowDetailLayout(
     val seasonFocusRequester = remember { FocusRequester() }
     val nextUpFocusRequester = remember { FocusRequester() }
     val firstCastFocusRequester = remember { FocusRequester() }
+    val firstTrailerFocusRequester = remember { FocusRequester() }
     val firstSimilarFocusRequester = remember { FocusRequester() }
     val hasNextUp = !nextUpTitle.isNullOrBlank() && onNextUpClick != null
 
@@ -89,16 +93,18 @@ fun TvShowDetailLayout(
     val seasonIndex = if (seasons.isNotEmpty()) indexCursor++ else -1
     val nextUpIndex = if (hasNextUp) indexCursor++ else -1
     val castIndex = if (castItems.isNotEmpty()) indexCursor++ else -1
+    val trailerIndex = if (trailers.isNotEmpty()) indexCursor++ else -1
     val similarIndex = if (similarItems.isNotEmpty()) indexCursor else -1
 
     val firstContentFocusRequester = when {
         seasons.isNotEmpty() -> seasonFocusRequester
         hasNextUp -> nextUpFocusRequester
         castItems.isNotEmpty() -> firstCastFocusRequester
+        trailers.isNotEmpty() -> firstTrailerFocusRequester
         similarItems.isNotEmpty() -> firstSimilarFocusRequester
         else -> null
     }
-    val firstContentIndex = listOf(seasonIndex, nextUpIndex, castIndex, similarIndex).firstOrNull { it >= 0 } ?: -1
+    val firstContentIndex = listOf(seasonIndex, nextUpIndex, castIndex, trailerIndex, similarIndex).firstOrNull { it >= 0 } ?: -1
 
     LazyColumn(
         state = listState,
@@ -256,7 +262,11 @@ fun TvShowDetailLayout(
                                             else -> primaryActionFocusRequester
                                         }
                                         if (isFirstCastItem) {
-                                            down = if (similarItems.isNotEmpty()) firstSimilarFocusRequester else firstCastFocusRequester
+                                            down = when {
+                                                trailers.isNotEmpty() -> firstTrailerFocusRequester
+                                                similarItems.isNotEmpty() -> firstSimilarFocusRequester
+                                                else -> firstCastFocusRequester
+                                            }
                                         }
                                     }
                                     .onPreviewKeyEvent { keyEvent ->
@@ -295,6 +305,86 @@ fun TvShowDetailLayout(
             }
         }
 
+        if (trailers.isNotEmpty()) {
+            item {
+                DetailShelfPanel(
+                    modifier = Modifier.padding(top = spacing.rowGap.div(1.5f)),
+                    title = "Trailers & Extras",
+                    subtitle = "",
+                ) {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
+                    ) {
+                        items(trailers, key = { it.id }) { trailer ->
+                            val isFirst = trailer.id == trailers.firstOrNull()?.id
+                            TvMediaCard(
+                                title = trailer.title,
+                                imageUrl = trailer.thumbnailUrl,
+                                aspectRatio = 16f / 9f,
+                                cardWidth = 200.dp,
+                                modifier = Modifier
+                                    .blockBringIntoView()
+                                    .then(if (isFirst) Modifier.focusRequester(firstTrailerFocusRequester) else Modifier)
+                                    .focusProperties {
+                                        up = when {
+                                            castItems.isNotEmpty() -> firstCastFocusRequester
+                                            hasNextUp -> nextUpFocusRequester
+                                            seasons.isNotEmpty() -> seasonFocusRequester
+                                            else -> primaryActionFocusRequester
+                                        }
+                                        if (isFirst) {
+                                            down = if (similarItems.isNotEmpty()) firstSimilarFocusRequester else firstTrailerFocusRequester
+                                        }
+                                    }
+                                    .onPreviewKeyEvent { keyEvent ->
+                                        val nativeEvent = keyEvent.nativeKeyEvent
+                                        when {
+                                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                                                coroutineScope.launch {
+                                                    when {
+                                                        castItems.isNotEmpty() -> {
+                                                            listState.scrollToItemAndAwaitLayout(castIndex)
+                                                            runCatching { firstCastFocusRequester.requestFocus() }
+                                                        }
+                                                        hasNextUp -> {
+                                                            listState.scrollToItemAndAwaitLayout(nextUpIndex)
+                                                            runCatching { nextUpFocusRequester.requestFocus() }
+                                                        }
+                                                        seasons.isNotEmpty() -> {
+                                                            listState.scrollToItemAndAwaitLayout(seasonIndex)
+                                                            runCatching { seasonFocusRequester.requestFocus() }
+                                                        }
+                                                        else -> {
+                                                            listState.scrollToItemAndAwaitLayout(0)
+                                                            runCatching { primaryActionFocusRequester.requestFocus() }
+                                                        }
+                                                    }
+                                                }
+                                                true
+                                            }
+                                            isFirst &&
+                                                similarItems.isNotEmpty() &&
+                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                                coroutineScope.launch {
+                                                    listState.scrollToItemAndAwaitLayout(similarIndex)
+                                                    runCatching { firstSimilarFocusRequester.requestFocus() }
+                                                }
+                                                true
+                                            }
+                                            else -> false
+                                        }
+                                    },
+                                onClick = { onTrailerClick(trailer.id) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         if (similarItems.isNotEmpty()) {
             item {
                 DetailShelfPanel(
@@ -322,6 +412,7 @@ fun TvShowDetailLayout(
                                     .then(if (isFirstSimilarItem) Modifier.focusRequester(firstSimilarFocusRequester) else Modifier)
                                     .focusProperties {
                                         up = when {
+                                            trailers.isNotEmpty() -> firstTrailerFocusRequester
                                             castItems.isNotEmpty() -> firstCastFocusRequester
                                             hasNextUp -> nextUpFocusRequester
                                             seasons.isNotEmpty() -> seasonFocusRequester
@@ -336,6 +427,10 @@ fun TvShowDetailLayout(
                                         ) {
                                             coroutineScope.launch {
                                                 when {
+                                                    trailers.isNotEmpty() -> {
+                                                        listState.scrollToItemAndAwaitLayout(trailerIndex)
+                                                        runCatching { firstTrailerFocusRequester.requestFocus() }
+                                                    }
                                                     castItems.isNotEmpty() -> {
                                                         listState.scrollToItemAndAwaitLayout(castIndex)
                                                         runCatching { firstCastFocusRequester.requestFocus() }

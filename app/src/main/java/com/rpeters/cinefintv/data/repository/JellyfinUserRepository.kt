@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.data.repository
 
 import com.rpeters.cinefintv.data.cache.JellyfinCache
+import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.model.CurrentUserDetails
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.data.repository.common.BaseJellyfinRepository
@@ -31,6 +32,7 @@ class JellyfinUserRepository @Inject constructor(
     authRepository: JellyfinAuthRepository,
     sessionManager: com.rpeters.cinefintv.data.session.JellyfinSessionManager,
     cache: JellyfinCache,
+    private val updateBus: MediaUpdateBus,
 ) : BaseJellyfinRepository(authRepository, sessionManager, cache) {
 
     suspend fun logout() {
@@ -67,6 +69,8 @@ class JellyfinUserRepository @Inject constructor(
             val userUuid = parseUuid(server.userId ?: "", "user")
             val itemUuid = parseUuid(itemId, "item")
             client.playStateApi.markPlayedItem(itemId = itemUuid, userId = userUuid)
+            cache.invalidateWatchStateCaches()
+            updateBus.refreshItem(itemId)
             true
         }
     }
@@ -78,6 +82,8 @@ class JellyfinUserRepository @Inject constructor(
             val userUuid = parseUuid(server.userId ?: "", "user")
             val itemUuid = parseUuid(itemId, "item")
             client.playStateApi.markUnplayedItem(itemId = itemUuid, userId = userUuid)
+            cache.invalidateWatchStateCaches()
+            updateBus.refreshItem(itemId)
             true
         }
     }

@@ -53,6 +53,24 @@ enum class AudioLanguagePreference(val label: String, val code: String?) {
 }
 
 /**
+ * Preferred default subtitle language for playback.
+ * NONE forces subtitles off; AUTO defers to the server's default stream.
+ */
+enum class SubtitleLanguagePreference(val label: String, val code: String?) {
+    AUTO("Server Default", null),
+    NONE("None (Off)", code = "none"),
+    ENGLISH("English", "en"),
+    SPANISH("Spanish", "es"),
+    FRENCH("French", "fr"),
+    GERMAN("German", "de"),
+    ITALIAN("Italian", "it"),
+    PORTUGUESE("Portuguese", "pt"),
+    JAPANESE("Japanese", "ja"),
+    KOREAN("Korean", "ko"),
+    CHINESE("Chinese", "zh"),
+}
+
+/**
  * Resume playback mode preferences.
  */
 enum class ResumePlaybackMode(val label: String) {
@@ -76,6 +94,7 @@ data class PlaybackPreferences(
     val transcodingQuality: TranscodingQuality,
     val audioChannels: AudioChannelPreference,
     val audioLanguage: AudioLanguagePreference,
+    val subtitleLanguage: SubtitleLanguagePreference,
     val autoPlayNextEpisode: Boolean,
     val resumePlaybackMode: ResumePlaybackMode,
     val videoSeekIncrement: VideoSeekIncrement,
@@ -85,6 +104,7 @@ data class PlaybackPreferences(
             transcodingQuality = TranscodingQuality.AUTO,
             audioChannels = AudioChannelPreference.AUTO,
             audioLanguage = AudioLanguagePreference.ENGLISH,
+            subtitleLanguage = SubtitleLanguagePreference.AUTO,
             autoPlayNextEpisode = true, // enabled by default
             resumePlaybackMode = ResumePlaybackMode.ALWAYS, // always resume by default
             videoSeekIncrement = VideoSeekIncrement.TEN_SECONDS,
@@ -121,6 +141,9 @@ class PlaybackPreferencesRepository @Inject constructor(
                 audioLanguage = runCatching {
                     AudioLanguagePreference.valueOf(prefs[PreferencesKeys.AUDIO_LANGUAGE] ?: "")
                 }.getOrDefault(PlaybackPreferences.DEFAULT.audioLanguage),
+                subtitleLanguage = runCatching {
+                    SubtitleLanguagePreference.valueOf(prefs[PreferencesKeys.SUBTITLE_LANGUAGE] ?: "")
+                }.getOrDefault(PlaybackPreferences.DEFAULT.subtitleLanguage),
                 autoPlayNextEpisode = prefs[PreferencesKeys.AUTO_PLAY_NEXT_EPISODE] ?: PlaybackPreferences.DEFAULT.autoPlayNextEpisode,
                 resumePlaybackMode = runCatching {
                     ResumePlaybackMode.valueOf(prefs[PreferencesKeys.RESUME_PLAYBACK_MODE] ?: "")
@@ -143,6 +166,10 @@ class PlaybackPreferencesRepository @Inject constructor(
         dataStore.edit { it[PreferencesKeys.AUDIO_LANGUAGE] = preference.name }
     }
 
+    suspend fun setSubtitleLanguage(preference: SubtitleLanguagePreference) {
+        dataStore.edit { it[PreferencesKeys.SUBTITLE_LANGUAGE] = preference.name }
+    }
+
     suspend fun setAutoPlayNextEpisode(enabled: Boolean) {
         dataStore.edit { it[PreferencesKeys.AUTO_PLAY_NEXT_EPISODE] = enabled }
     }
@@ -159,6 +186,7 @@ class PlaybackPreferencesRepository @Inject constructor(
         val TRANSCODING_QUALITY = stringPreferencesKey("transcoding_quality")
         val AUDIO_CHANNELS = stringPreferencesKey("audio_channels")
         val AUDIO_LANGUAGE = stringPreferencesKey("audio_language")
+        val SUBTITLE_LANGUAGE = stringPreferencesKey("subtitle_language")
         val AUTO_PLAY_NEXT_EPISODE = booleanPreferencesKey("auto_play_next_episode")
         val RESUME_PLAYBACK_MODE = stringPreferencesKey("resume_playback_mode")
         val VIDEO_SEEK_INCREMENT = stringPreferencesKey("video_seek_increment")

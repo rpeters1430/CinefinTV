@@ -2,6 +2,7 @@ package com.rpeters.cinefintv.core
 
 import android.content.Context
 import android.util.Log
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.rpeters.cinefintv.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -251,16 +252,14 @@ object Logger {
     }
 
     /**
-     * Report to crash reporting service (placeholder).
+     * Reports non-fatal errors to Firebase Crashlytics.
+     * Silently degrades if Crashlytics is unavailable (e.g. missing google-services.json).
      */
     private fun reportToCrashService(entry: LogEntry) {
-        // In a real implementation, this would integrate with services like:
-        // - Firebase Crashlytics
-        // - Bugsnag
-        // - Sentry
-
-        if (BuildConfig.DEBUG) {
-            println("CRASH_REPORT: ${entry.level.tag} - ${entry.message}")
+        runCatching {
+            val instance = FirebaseCrashlytics.getInstance()
+            instance.log("[${entry.category.tag}] ${entry.tag}: ${entry.message}")
+            entry.throwable?.let { instance.recordException(it) }
         }
     }
 

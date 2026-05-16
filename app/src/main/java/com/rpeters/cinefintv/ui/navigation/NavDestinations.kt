@@ -75,3 +75,7 @@ data class Player(val itemId: String, val startPositionMs: Long = -1L) : NavDest
 @Serializable
 @Parcelize
 data class AudioPlayer(val itemId: String, val queueIds: List<String>? = null) : NavDestination
+
+@Serializable
+@Parcelize
+data object ProfilePicker : NavDestination

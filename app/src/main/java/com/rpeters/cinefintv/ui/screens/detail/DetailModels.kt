@@ -39,3 +39,10 @@ data class SeasonModel(
     val playbackProgress: Float?,
     val unwatchedCount: Int,
 )
+
+data class TrailerModel(
+    val id: String,
+    val title: String,
+    val thumbnailUrl: String?,
+    val durationMs: Long?,
+)

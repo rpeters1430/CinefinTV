@@ -54,6 +54,7 @@ class SecureCredentialManager @Inject constructor(
         private const val DATASTORE_NAME = "secure_credentials"
         private const val USER_AUTH_VALIDITY_WINDOW_SECONDS = 300
         private const val SERVER_STATE_KEY = "last_server_state"
+        private const val PROFILES_KEY = "saved_profiles"
     }
 
     // CRITICAL FIX: DataStore needs a CoroutineScope to properly persist data
@@ -428,6 +429,49 @@ class SecureCredentialManager @Inject constructor(
         } catch (e: Exception) {
             Log.w(TAG, "loadServerState: failed to load server state", e)
             null
+        }
+    }
+
+    suspend fun saveProfile(server: JellyfinServer) {
+        val profiles = loadProfiles().toMutableList()
+        val idx = profiles.indexOfFirst { it.userId == server.userId && it.url == server.url }
+        if (idx >= 0) profiles[idx] = server else profiles.add(server)
+        saveProfileList(profiles)
+    }
+
+    suspend fun loadProfiles(): List<JellyfinServer> {
+        return try {
+            val prefs = secureCredentialsDataStore.data.first()
+            val savedValue = prefs[stringPreferencesKey(PROFILES_KEY)] ?: return emptyList()
+            val decrypted = decrypt(savedValue) ?: return emptyList()
+            jsonSerializer.decodeFromString<List<JellyfinServer>>(decrypted)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "loadProfiles: failed", e)
+            emptyList()
+        }
+    }
+
+    suspend fun removeProfile(userId: String, serverUrl: String) {
+        val profiles = loadProfiles().toMutableList()
+        profiles.removeAll { it.userId == userId && it.url == serverUrl }
+        saveProfileList(profiles)
+    }
+
+    private suspend fun saveProfileList(profiles: List<JellyfinServer>) {
+        try {
+            val json = kotlinx.serialization.json.Json.encodeToString<List<JellyfinServer>>(profiles)
+            val encrypted = encrypt(json)
+            withContext(NonCancellable + Dispatchers.IO) {
+                secureCredentialsDataStore.edit { prefs ->
+                    prefs[stringPreferencesKey(PROFILES_KEY)] = encrypted
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "saveProfileList: failed", e)
         }
     }
 

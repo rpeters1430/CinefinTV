@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.utils
 
 import android.util.Log
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.rpeters.cinefintv.BuildConfig
 import java.util.regex.Pattern
 
@@ -19,6 +20,12 @@ object SecureLogger {
 
     // Control log verbosity - set to false to reduce excessive logging
     var enableVerboseLogging: Boolean = BuildConfig.DEBUG
+
+    // Lazily initialized; null in debug builds or if Firebase is unavailable.
+    private val crashlytics: FirebaseCrashlytics? by lazy {
+        if (BuildConfig.DEBUG) return@lazy null
+        runCatching { FirebaseCrashlytics.getInstance() }.getOrNull()
+    }
 
     // Patterns to identify and sanitize sensitive data
     private val SENSITIVE_PATTERNS = listOf(
@@ -80,6 +87,7 @@ object SecureLogger {
 
     /**
      * Log warning message with automatic sanitization.
+     * Adds a breadcrumb to Crashlytics in release builds for context in crash reports.
      */
     fun w(tag: String, message: String, throwable: Throwable? = null) {
         val sanitizedMessage = sanitizeForLogging(message)
@@ -88,17 +96,24 @@ object SecureLogger {
         } else {
             logChunked(Log.WARN, tag, sanitizedMessage)
         }
+        crashlytics?.log("WARN [$tag]: $sanitizedMessage")
     }
 
     /**
      * Log error message with automatic sanitization.
+     * Records non-fatal exceptions to Crashlytics in release builds.
      */
     fun e(tag: String, message: String, throwable: Throwable? = null) {
         val sanitizedMessage = sanitizeForLogging(message)
         if (throwable != null) {
             Log.e(tag, sanitizedMessage, throwable)
+            crashlytics?.run {
+                log("ERROR [$tag]: $sanitizedMessage")
+                recordException(throwable)
+            }
         } else {
             logChunked(Log.ERROR, tag, sanitizedMessage)
+            crashlytics?.log("ERROR [$tag]: $sanitizedMessage")
         }
     }
 

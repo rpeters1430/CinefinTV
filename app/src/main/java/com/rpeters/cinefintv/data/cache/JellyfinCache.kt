@@ -471,6 +471,16 @@ class JellyfinCache @Inject constructor(
     suspend fun getCachedFavorites(): List<BaseItemDto>? {
         return getCachedItems(FAVORITES_KEY)
     }
+
+    /**
+     * Invalidates all caches whose content is invalidated by a watch-state change.
+     * Call this after marking an item watched or unwatched to prevent stale data
+     * from being served to the home screen and Next Up rows.
+     */
+    suspend fun invalidateWatchStateCaches() {
+        invalidateCache(CONTINUE_WATCHING_KEY)
+        invalidateCache(NEXT_UP_KEY)
+    }
 }
 
 /**

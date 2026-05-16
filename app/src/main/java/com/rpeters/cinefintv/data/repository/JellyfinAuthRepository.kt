@@ -465,6 +465,33 @@ class JellyfinAuthRepository @Inject constructor(
         } catch (e: Exception) {
             Log.w(TAG, "persistAuthenticationState: failed to persist server state", e)
         }
+        try {
+            secureCredentialManager.saveProfile(server)
+        } catch (e: Exception) {
+            Log.w(TAG, "persistAuthenticationState: failed to save profile entry", e)
+        }
+    }
+
+    suspend fun getSavedProfiles(): List<JellyfinServer> = withContext(Dispatchers.IO) {
+        secureCredentialManager.loadProfiles()
+    }
+
+    suspend fun switchToProfile(server: JellyfinServer): Boolean {
+        if (server.accessToken.isNullOrBlank()) return false
+        return authMutex.withLock {
+            seedCurrentServer(server)
+            try {
+                secureCredentialManager.saveServerState(server)
+            } catch (e: Exception) {
+                Log.w(TAG, "switchToProfile: failed to persist state", e)
+            }
+            true
+        }
+    }
+
+    suspend fun removeProfile(server: JellyfinServer) = withContext(Dispatchers.IO) {
+        val userId = server.userId ?: return@withContext
+        secureCredentialManager.removeProfile(userId, server.url)
     }
 
     suspend fun initiateQuickConnect(serverUrl: String): ApiResult<QuickConnectResult> {

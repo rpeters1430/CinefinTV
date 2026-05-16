@@ -2,6 +2,7 @@ package com.rpeters.cinefintv.ui.screens.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rpeters.cinefintv.VoiceSearchCoordinator
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.ui.screens.home.HomeCardModel
@@ -31,6 +32,7 @@ data class SearchUiState(
 class SearchViewModel @Inject constructor(
     private val repositories: JellyfinRepositoryCoordinator,
     private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
+    private val voiceSearchCoordinator: VoiceSearchCoordinator,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
@@ -38,6 +40,7 @@ class SearchViewModel @Inject constructor(
     init {
         observeQuery()
         observeUpdateEvents()
+        observeVoiceSearch()
     }
 
     fun updateQuery(value: String) {
@@ -96,6 +99,14 @@ class SearchViewModel @Inject constructor(
                 }
             }
             is ApiResult.Loading -> Unit
+        }
+    }
+
+    private fun observeVoiceSearch() {
+        viewModelScope.launch {
+            voiceSearchCoordinator.pendingQuery.collect { query ->
+                updateQuery(query)
+            }
         }
     }
 

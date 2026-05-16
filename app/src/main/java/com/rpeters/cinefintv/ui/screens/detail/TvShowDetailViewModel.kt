@@ -44,6 +44,7 @@ sealed class TvShowDetailUiState {
         val seasons: List<SeasonModel>,
         val cast: List<CastModel>,
         val similarShows: List<SimilarMovieModel>,
+        val trailers: List<TrailerModel> = emptyList(),
     ) : TvShowDetailUiState()
 }
 
@@ -126,7 +127,7 @@ class TvShowDetailViewModel @Inject constructor(
             if (showResult is ApiResult.Success) {
                 val showDto = showResult.data
                 val nextUpDto = (nextUpResult as? ApiResult.Success)?.data
-                
+
                 val seasons = if (seasonsResult is ApiResult.Success) {
                     seasonsResult.data.map { it.toSeasonModel() }
                 } else {
@@ -138,6 +139,10 @@ class TvShowDetailViewModel @Inject constructor(
                 } else {
                     emptyList()
                 }
+
+                val trailers = showDto.remoteTrailers
+                    ?.mapNotNull { it.toTrailerModel() }
+                    ?: emptyList()
 
                 val cast = showDto.people?.map { person ->
                     CastModel(
@@ -155,7 +160,8 @@ class TvShowDetailViewModel @Inject constructor(
                     show = showDto.toDetailModel(nextUpDto),
                     seasons = seasons,
                     cast = cast,
-                    similarShows = similar
+                    similarShows = similar,
+                    trailers = trailers,
                 )
             } else if (showResult is ApiResult.Error) {
                 _uiState.value = TvShowDetailUiState.Error(showResult.message)
@@ -235,6 +241,22 @@ class TvShowDetailViewModel @Inject constructor(
             playbackProgress = if (canResume()) watchedPercentage.toFloat() / 100f else null,
             unwatchedCount = userData?.unplayedItemCount ?: 0,
         )
+    }
+
+    private fun org.jellyfin.sdk.model.api.MediaUrl.toTrailerModel(): TrailerModel? {
+        val trailerUrl = url?.takeIf { it.isNotBlank() } ?: return null
+        val videoId = extractYouTubeId(trailerUrl)
+        return TrailerModel(
+            id = trailerUrl,
+            title = name?.takeIf { it.isNotBlank() } ?: "Trailer",
+            thumbnailUrl = videoId?.let { "https://img.youtube.com/vi/$it/hqdefault.jpg" },
+            durationMs = null,
+        )
+    }
+
+    private fun extractYouTubeId(url: String): String? {
+        val pattern = Regex("""(?:youtube\.com/(?:watch\?v=|embed/)|youtu\.be/)([A-Za-z0-9_-]{11})""")
+        return pattern.find(url)?.groupValues?.get(1)
     }
 
     private fun BaseItemDto.toSimilarModel(): SimilarMovieModel {

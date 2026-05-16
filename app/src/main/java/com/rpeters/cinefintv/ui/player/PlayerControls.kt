@@ -37,6 +37,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ClosedCaption
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.HighQuality
@@ -129,6 +130,7 @@ internal fun PlayerControls(
     onSettingsClick: (SettingsSection, Rect?) -> Unit,
     onBack: () -> Unit,
     onOpenItem: (String) -> Unit,
+    onWatchTogetherClick: () -> Unit = {},
 ) {
     val spacing = LocalCinefinSpacing.current
     val expressiveColors = LocalCinefinExpressiveColors.current
@@ -447,9 +449,19 @@ internal fun PlayerControls(
                                     up = seekBarFocusRequester
                                     if (hasContentRow) down = contentRowFocusRequester
                                     left = speedFocusRequester
-                                    right = settingsFocusRequester
                                 }
                                 .onGloballyPositioned { setSettingsButtonBounds(it.boundsInRoot()) }
+                        )
+
+                        ActionIconButton(
+                            icon = Icons.Default.Group,
+                            onClick = { onInteract(); onWatchTogetherClick() },
+                            modifier = Modifier.focusProperties {
+                                up = seekBarFocusRequester
+                                if (hasContentRow) down = contentRowFocusRequester
+                                left = settingsFocusRequester
+                                right = settingsFocusRequester
+                            },
                         )
                     }
                 }

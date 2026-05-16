@@ -45,6 +45,7 @@ import com.rpeters.cinefintv.ui.screens.library.TvShowLibraryScreen
 import com.rpeters.cinefintv.ui.screens.music.MusicScreen
 import com.rpeters.cinefintv.ui.screens.person.PersonScreen
 import com.rpeters.cinefintv.ui.screens.search.SearchScreen
+import com.rpeters.cinefintv.ui.screens.profile.ProfilePickerScreen
 import com.rpeters.cinefintv.ui.screens.settings.SettingsScreen
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -55,6 +56,16 @@ fun CinefinTvNavGraph(
 ) {
     val authViewModel: AuthViewModel = hiltViewModel()
     val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
+
+    val voiceSearchNavVM: VoiceSearchNavViewModel = hiltViewModel()
+    LaunchedEffect(Unit) {
+        voiceSearchNavVM.pendingQuery.collect {
+            val current = backStack.lastOrNull() as? NavDestination
+            if (current !is Search) {
+                backStack.navigateToTopLevelDestination(Search)
+            }
+        }
+    }
     val saveableStateHolder = rememberSaveableStateHolder()
     val viewModelStoreOwner = requireNotNull(LocalViewModelStoreOwner.current)
     val entryDecorators = listOf(
@@ -205,7 +216,19 @@ fun CinefinTvNavGraph(
                     )
                 }
                 is Settings -> {
-                    SettingsScreen()
+                    SettingsScreen(
+                        onNavigateToProfilePicker = { backStack.add(ProfilePicker) },
+                    )
+                }
+                is ProfilePicker -> {
+                    ProfilePickerScreen(
+                        onProfileSwitched = { backStack.pop() },
+                        onAddProfile = {
+                            backStack.clear()
+                            backStack.add(ServerConnection)
+                        },
+                        onBack = { backStack.pop() },
+                    )
                 }
                 is MovieDetail -> {
                     MovieDetailScreen(

@@ -41,7 +41,16 @@
       "Bash(Select-Object Name, FullName)",
       "Bash(Format-Table)",
       "Bash(Get-Content \"C:\\\\Users\\\\rpete\\\\CinefinTV\\\\.github\\\\commands\\\\gemini-invoke.toml\")",
-      "Bash(Find C:\\\\Users\\\\rpete\\\\CinefinTV *)"
+      "Bash(Find C:\\\\Users\\\\rpete\\\\CinefinTV *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\rpete\\\\CinefinTV\\\\app\\\\src\\\\main\\\\java\\\\com\\\\rpeters\\\\cinefintv\\\\ui\\\\screens\\\\detail\\\\cinematic\" -File -Filter \"*.kt\")",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(xargs wc -l)",
+      "Bash(./gradlew :macrobenchmark:tasks)",
+      "Bash(./gradlew dependencies *)",
+      "Bash(xargs -I{} sh -c 'jar tf \"{}\" 2>/dev/null | grep -l \"MediaUrl\"')",
+      "Bash(xargs -I{} sh -c 'jar tf \"{}\" 2>/dev/null | grep -i syncplay | head -5')",
+      "Bash(xargs cat)",
+      "Bash(./gradlew :app:kspDebugKotlin :app:compileDebugKotlin)"
     ]
   }
 }

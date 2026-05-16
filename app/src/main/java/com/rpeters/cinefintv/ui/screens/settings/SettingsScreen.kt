@@ -54,6 +54,7 @@ import androidx.tv.material3.Text
 import com.rpeters.cinefintv.data.preferences.AccentColor
 import com.rpeters.cinefintv.data.preferences.AudioChannelPreference
 import com.rpeters.cinefintv.data.preferences.AudioLanguagePreference
+import com.rpeters.cinefintv.data.preferences.SubtitleLanguagePreference
 import com.rpeters.cinefintv.data.preferences.ContrastLevel
 import com.rpeters.cinefintv.data.preferences.ResumePlaybackMode
 import com.rpeters.cinefintv.data.preferences.SubtitleBackground
@@ -76,6 +77,7 @@ private enum class SettingsChoiceDialog {
     STREAMING_QUALITY,
     AUDIO_CHANNELS,
     AUDIO_LANGUAGE,
+    SUBTITLE_LANGUAGE,
     SUBTITLE_TEXT_SIZE,
     SUBTITLE_FONT,
     SUBTITLE_BACKGROUND,
@@ -111,6 +113,7 @@ private enum class SettingsCategory(
 
 @Composable
 fun SettingsScreen(
+    onNavigateToProfilePicker: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
@@ -206,6 +209,15 @@ fun SettingsScreen(
             labelFor = { it.label },
             onDismissRequest = { activeDialog = null },
             onOptionSelected = viewModel::setAudioLanguage,
+        )
+        SettingsChoiceDialog.SUBTITLE_LANGUAGE -> CinefinOptionDialog(
+            title = "Default subtitle language",
+            supportingText = "Choose which subtitle track to load automatically. \"None\" disables subtitles unless you switch them on manually.",
+            options = SubtitleLanguagePreference.entries,
+            selected = uiState.playback.subtitleLanguage,
+            labelFor = { it.label },
+            onDismissRequest = { activeDialog = null },
+            onOptionSelected = viewModel::setSubtitleLanguage,
         )
         SettingsChoiceDialog.SUBTITLE_TEXT_SIZE -> CinefinOptionDialog(
             title = "Subtitle text size",
@@ -379,16 +391,23 @@ fun SettingsScreen(
                         }
                         SettingsCategory.SUBTITLES -> SettingsSectionCard(
                             title = "Subtitles",
-                            description = "Player subtitle styling that applies during video playback.",
+                            description = "Default language and player styling for subtitles.",
                             icon = Icons.Default.Subtitles,
                         ) {
+                            SettingsChoiceRow(
+                                icon = Icons.Default.Subtitles,
+                                title = "Default subtitle language",
+                                description = "Subtitle track to load automatically at the start of playback.",
+                                selectedLabel = uiState.playback.subtitleLanguage.label,
+                                onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_LANGUAGE },
+                                modifier = firstSectionItemModifier,
+                            )
                             SettingsChoiceRow(
                                 icon = Icons.Default.Subtitles,
                                 title = "Text size",
                                 description = "Preferred subtitle text size.",
                                 selectedLabel = uiState.subtitles.textSize.name.replace('_', ' '),
                                 onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_TEXT_SIZE },
-                                modifier = firstSectionItemModifier,
                             )
                             SettingsChoiceRow(
                                 icon = Icons.Default.ClosedCaption,
@@ -419,11 +438,18 @@ fun SettingsScreen(
                         ) {
                             SettingsChoiceRow(
                                 icon = Icons.Default.Tune,
+                                title = "Switch Profile",
+                                description = "Switch between saved Jellyfin accounts or add a new one.",
+                                selectedLabel = "Profiles",
+                                onClick = onNavigateToProfilePicker,
+                                modifier = firstSectionItemModifier,
+                            )
+                            SettingsChoiceRow(
+                                icon = Icons.Default.Tune,
                                 title = "Sign out",
                                 description = uiState.signOutError ?: "Remove this device session and return to server sign-in.",
                                 selectedLabel = if (uiState.isSigningOut) "Signing out..." else "Sign out",
                                 onClick = viewModel::logout,
-                                modifier = firstSectionItemModifier,
                             )
                         }
                     }

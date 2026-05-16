@@ -2,6 +2,8 @@
 
 package com.rpeters.cinefintv.ui.screens.detail
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.focus.FocusRequester
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -44,6 +47,7 @@ fun TvShowDetailScreen(
     }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showMoreDialog by remember { mutableStateOf(false) }
     val chromeFocusController = LocalAppChromeFocusController.current
@@ -206,8 +210,14 @@ fun TvShowDetailScreen(
                     seasons = state.seasons,
                     onSeasonClick = { season -> onOpenSeason(season.id) },
                     castItems = state.cast,
+                    trailers = state.trailers,
                     similarItems = state.similarShows,
                     onCastClick = { personId -> onOpenPerson(personId) },
+                    onTrailerClick = { url ->
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        }
+                    },
                     onSimilarClick = { showId -> onOpenShow(showId) },
                     description = show.overview ?: "",
                     heroSecondaryActions = heroSecondaryActions,

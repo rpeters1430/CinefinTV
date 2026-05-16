@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.rpeters.cinefintv.data.preferences.AccentColor
 import com.rpeters.cinefintv.data.preferences.AudioChannelPreference
 import com.rpeters.cinefintv.data.preferences.AudioLanguagePreference
+import com.rpeters.cinefintv.data.preferences.SubtitleLanguagePreference
 import com.rpeters.cinefintv.data.preferences.ContrastLevel
 import com.rpeters.cinefintv.data.preferences.LibraryActionsPreferences
 import com.rpeters.cinefintv.data.preferences.LibraryActionsPreferencesRepository
@@ -145,6 +146,11 @@ class SettingsViewModel @Inject constructor(
     fun setAudioLanguage(preference: AudioLanguagePreference) {
         updatePreference { playbackPreferencesRepository.setAudioLanguage(preference) }
         _uiState.update { it.copy(playback = it.playback.copy(audioLanguage = preference)) }
+    }
+
+    fun setSubtitleLanguage(preference: SubtitleLanguagePreference) {
+        updatePreference { playbackPreferencesRepository.setSubtitleLanguage(preference) }
+        _uiState.update { it.copy(playback = it.playback.copy(subtitleLanguage = preference)) }
     }
 
     fun setVideoSeekIncrement(increment: VideoSeekIncrement) {
