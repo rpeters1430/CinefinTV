@@ -101,12 +101,11 @@ class HomeViewModel @Inject constructor(
 
     private fun startLoadingTimeout() {
         viewModelScope.launch {
-            // Safety net: if the state hasn't moved out of Loading after 20 s, the session
-            // restore flow silently failed to deliver a server or an error. Show a recoverable
-            // error instead of an infinite spinner.
-            kotlinx.coroutines.delay(20_000L)
+            // Safety net: if the state hasn't moved out of Loading after 8 s, surface a
+            // recoverable error rather than spinning indefinitely.
+            kotlinx.coroutines.delay(8_000L)
             if (_uiState.value is HomeUiState.Loading) {
-                android.util.Log.w("HomeViewModel", "Home still loading after 20s — surfacing error")
+                android.util.Log.w("HomeViewModel", "Home still loading after 8s — surfacing error")
                 _uiState.value = HomeUiState.Error("Unable to connect to your server. Please check your connection and try again.")
             }
         }
@@ -311,7 +310,12 @@ class HomeViewModel @Inject constructor(
                         fetch: suspend () -> ApiResult<List<BaseItemDto>>,
                         update: (RefreshResults, ApiResult<List<BaseItemDto>>) -> Unit,
                     ) {
-                        val res = fetch()
+                        val res = try {
+                            withTimeout(12_000L) { fetch() }
+                        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                            android.util.Log.w("HomeViewModel", "$source timed out after 12s")
+                            ApiResult.Error("Request timed out")
+                        }
                         updateResultsAndUi(source) {
                             update(it, res)
                         }

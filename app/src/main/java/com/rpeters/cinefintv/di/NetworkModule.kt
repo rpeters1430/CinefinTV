@@ -138,6 +138,18 @@ object NetworkModule {
         @ApplicationContext context: Context,
         deviceIdentityProvider: DeviceIdentityProvider,
     ): Jellyfin {
+        // The Jellyfin SDK uses OkHttp (via OkHttpFactory) as its HTTP backend.
+        // Provide an explicit client with timeouts so API calls don't hang on slow
+        // or unreachable servers — the SDK's default OkHttpClient has no timeouts.
+        val sdkOkHttpClient = OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .connectionPool(okhttp3.ConnectionPool(5, 5, TimeUnit.MINUTES))
+            .retryOnConnectionFailure(true)
+            .protocols(listOf(Protocol.HTTP_2, Protocol.HTTP_1_1))
+            .build()
+
         return createJellyfin {
             clientInfo = ClientInfo(
                 name = deviceIdentityProvider.clientName(),
@@ -148,6 +160,7 @@ object NetworkModule {
                 name = deviceIdentityProvider.deviceName(),
             )
             this.context = context
+            apiClientFactory = org.jellyfin.sdk.api.okhttp.OkHttpFactory(sdkOkHttpClient)
         }
     }
 
