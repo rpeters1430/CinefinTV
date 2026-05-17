@@ -46,10 +46,16 @@ import com.rpeters.cinefintv.ui.screens.detail.DetailShelfPanel
 import com.rpeters.cinefintv.ui.screens.detail.SeasonModel
 import com.rpeters.cinefintv.ui.screens.detail.SimilarMovieModel
 import com.rpeters.cinefintv.ui.screens.detail.TrailerModel
+import coil3.compose.AsyncImage
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.screens.detail.scrollToItemAndAwaitLayout
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -184,7 +190,10 @@ fun TvShowDetailLayout(
                                         ) {
                                             coroutineScope.launch {
                                                 listState.scrollToItemAndAwaitLayout(0)
-                                                runCatching { primaryActionFocusRequester.requestFocus() }
+                                                for (attempt in 0..2) {
+                                                    if (runCatching { primaryActionFocusRequester.requestFocus() }.isSuccess) break
+                                                    delay(if (attempt == 0) 64L else 32L)
+                                                }
                                             }
                                             true
                                         } else {
@@ -545,10 +554,12 @@ private fun SeasonShowcaseCard(
     modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    val expressiveColors = LocalCinefinExpressiveColors.current
 
     androidx.tv.material3.Card(
         onClick = onClick,
         modifier = modifier
+            .width(140.dp)
             .onFocusChanged { state -> isFocused = state.isFocused || state.hasFocus },
         colors = androidx.tv.material3.CardDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
@@ -565,22 +576,53 @@ private fun SeasonShowcaseCard(
             ),
         ),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            horizontalAlignment = Alignment.Start,
-        ) {
-            Text(
-                text = season.title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = if (season.unwatchedCount > 0) "${season.unwatchedCount} unwatched" else "Open season",
-                style = MaterialTheme.typography.labelLarge,
-                color = if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(2f / 3f),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (season.imageUrl != null) {
+                    AsyncImage(
+                        model = season.imageUrl,
+                        contentDescription = season.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(expressiveColors.accentSurface.copy(alpha = 0.9f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = season.title.take(2).uppercase(),
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                }
+            }
+            Column(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Text(
+                    text = season.title,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = if (season.unwatchedCount > 0) "${season.unwatchedCount} unwatched" else "Open season",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

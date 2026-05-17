@@ -441,6 +441,7 @@ internal fun CinefinAppScaffold(
                                                 .testTag(AppTestTags.tab(item.label)),
                                             shape = ButtonDefaults.shape(RoundedCornerShape(18.dp)),
                                             scale = ButtonDefaults.scale(focusedScale = 1.04f),
+                                            contentPadding = PaddingValues(0.dp),
                                             colors = ButtonDefaults.colors(
                                                 containerColor = if (index == selectedTabIndex || isFocused) {
                                                     expressiveColors.detailPanelFocused.copy(alpha = if (navHasFocus) 0.82f else 0.72f)
