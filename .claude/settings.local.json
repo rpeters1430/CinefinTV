@@ -50,7 +50,10 @@
       "Bash(xargs -I{} sh -c 'jar tf \"{}\" 2>/dev/null | grep -l \"MediaUrl\"')",
       "Bash(xargs -I{} sh -c 'jar tf \"{}\" 2>/dev/null | grep -i syncplay | head -5')",
       "Bash(xargs cat)",
-      "Bash(./gradlew :app:kspDebugKotlin :app:compileDebugKotlin)"
+      "Bash(./gradlew :app:kspDebugKotlin :app:compileDebugKotlin)",
+      "Bash(gh issue *)",
+      "Bash(gh api *)",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }
