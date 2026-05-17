@@ -13,6 +13,9 @@ import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferencesRepository
 import com.rpeters.cinefintv.data.repository.JellyfinUserRepository
+import com.rpeters.cinefintv.data.syncplay.SyncPlayRepository
+import com.rpeters.cinefintv.data.syncplay.SyncPlaySessionState
+import com.rpeters.cinefintv.data.syncplay.SyncPlayCommand
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.testutil.FakePlayerRepositories
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
@@ -29,6 +32,9 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceTimeBy
@@ -74,8 +80,17 @@ class PlayerViewModelTest {
     private val enhancedPlaybackManager: com.rpeters.cinefintv.data.playback.EnhancedPlaybackManager = mockk {
         coEvery { getOptimalPlaybackUrl(any(), any(), any(), any()) } returns com.rpeters.cinefintv.data.playback.PlaybackResult.Error("mock error")
     }
-    private val adaptiveBitrateMonitor: com.rpeters.cinefintv.data.playback.AdaptiveBitrateMonitor = mockk(relaxed = true)
+    private val adaptiveBitrateMonitor: com.rpeters.cinefintv.data.playback.AdaptiveBitrateMonitor = mockk {
+        every { qualityRecommendation } returns MutableStateFlow<com.rpeters.cinefintv.data.playback.QualityRecommendation?>(null).asStateFlow()
+        every { clearRecommendation() } just Runs
+        every { resetBufferingTracking() } just Runs
+        every { updatePlaybackContext(any(), any()) } just Runs
+    }
     private val updateBus = MediaUpdateBus()
+    private val syncPlayRepository: SyncPlayRepository = mockk {
+        every { sessionState } returns MutableStateFlow<SyncPlaySessionState>(SyncPlaySessionState.Idle).asStateFlow()
+        every { incomingCommands } returns kotlinx.coroutines.flow.MutableSharedFlow<SyncPlayCommand>().asSharedFlow()
+    }
 
     init {
         mockkObject(PlaybackPositionStore)
@@ -92,6 +107,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("", -1L) }
         runCurrent()
 
@@ -118,6 +134,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -144,6 +161,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -190,6 +208,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("ep-1", -1L) }
         runCurrent()
 
@@ -262,6 +281,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("series-1", -1L) }
         runCurrent()
 
@@ -308,6 +328,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("movie-1", -1L) }
         runCurrent()
 
@@ -338,6 +359,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -368,6 +390,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -398,6 +421,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -424,6 +448,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -461,6 +486,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         )
         viewModel.init("item-1", -1L)
         runCurrent()
@@ -502,6 +528,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -539,6 +566,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -608,6 +636,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("movie-1", -1L) }
         runCurrent()
 
@@ -671,6 +700,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("movie-301", -1L) }
         runCurrent()
 
@@ -771,6 +801,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("movie-401", -1L) }
         runCurrent()
 
@@ -812,6 +843,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
         ).apply { init("movie-501", -1L) } // -1L = no explicit start, falls back to server position
         runCurrent()
 

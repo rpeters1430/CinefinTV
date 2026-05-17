@@ -8,6 +8,9 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
+import com.rpeters.cinefintv.VoiceSearchCoordinator
+import kotlinx.coroutines.flow.emptyFlow
 import java.util.UUID
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -21,18 +24,25 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import org.junit.Rule
 import org.junit.Test
 
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModelTest {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    private val voiceSearchCoordinator: VoiceSearchCoordinator = mockk {
+        every { pendingQuery } returns MutableSharedFlow<String>().asSharedFlow()
+    }
+
     @Test
     fun updateQuery_whenBlank_clearsResultsWithoutCallingRepository() = runTest {
         val fakeRepo = FakeHomeRepositories()
         coEvery { fakeRepo.coordinator.search.searchItems(any(), any(), any()) } returns ApiResult.Success(emptyList())
 
-        val viewModel = SearchViewModel(fakeRepo.coordinator, MediaUpdateBus())
+        val viewModel = SearchViewModel(fakeRepo.coordinator, MediaUpdateBus(), voiceSearchCoordinator)
         advanceUntilIdle()
 
         viewModel.updateQuery("    ")
@@ -66,7 +76,7 @@ class SearchViewModelTest {
             }
         }
 
-        val viewModel = SearchViewModel(fakeRepo.coordinator, MediaUpdateBus())
+        val viewModel = SearchViewModel(fakeRepo.coordinator, MediaUpdateBus(), voiceSearchCoordinator)
         advanceUntilIdle()
 
         viewModel.updateQuery("bat")
