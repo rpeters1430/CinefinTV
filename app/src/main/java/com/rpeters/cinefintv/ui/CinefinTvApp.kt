@@ -13,6 +13,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -378,6 +380,7 @@ internal fun CinefinAppScaffold(
                         Column(
                             modifier = Modifier
                                 .fillMaxHeight()
+                                .verticalScroll(rememberScrollState())
                                 .focusProperties {
                                     onEnter = {
                                         selectedTabFocusRequester.requestFocus()
@@ -386,7 +389,7 @@ internal fun CinefinAppScaffold(
                                 .focusGroup()
                                 .testTag(AppTestTags.NavBar),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Box(modifier = Modifier.padding(vertical = 16.dp, horizontal = 10.dp)) {
                                 Column(
