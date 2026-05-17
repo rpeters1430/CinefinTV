@@ -100,6 +100,10 @@ import com.rpeters.cinefintv.update.shouldCheckForUpdate
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+private val COLLAPSED_RAIL_WIDTH = 80.dp
+private val EXPANDED_RAIL_WIDTH = 200.dp
+private val RAIL_START_PADDING = 12.dp
+
 val LocalCinefinThemeController = compositionLocalOf<ThemeColorController> {
     error("No ThemeColorController provided")
 }
@@ -304,18 +308,17 @@ internal fun CinefinAppScaffold(
     val selectedTabFocusRequester = tabFocusRequesters.getOrElse(selectedTabIndex) { fallbackTabFocusRequester }
     var focusedTabIndex by remember { mutableStateOf<Int?>(null) }
     val navHasFocus = focusedTabIndex != null
-    val railWidth = 196.dp
-    val railSlotStartPadding = 12.dp
-    val railSlotWidth = railWidth + railSlotStartPadding
     val railProgress by animateFloatAsState(
         targetValue = if (navHasFocus) 1f else 0f,
         animationSpec = tween(durationMillis = 280),
         label = "railProgress",
     )
-    val logoSize = lerp(50.dp, 46.dp, railProgress)
-    val iconSize = lerp(28.dp, 22.dp, railProgress)
-    val buttonPaddingVertical = lerp(14.dp, 10.dp, railProgress)
+    val railWidth = lerp(COLLAPSED_RAIL_WIDTH, EXPANDED_RAIL_WIDTH, railProgress)
+    val logoSize = lerp(50.dp, 44.dp, railProgress)
+    val iconSize = lerp(28.dp, 24.dp, railProgress)
+    val buttonPaddingVertical = 12.dp // Constant padding
     val buttonPaddingHorizontal = 12.dp
+    val railSlotWidth = railWidth + RAIL_START_PADDING
 
     SideEffect {
         chromeFocusController.topNavFocusRequester = if (showNav) selectedTabFocusRequester else null
@@ -353,7 +356,7 @@ internal fun CinefinAppScaffold(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(railSlotWidth)
-                        .padding(start = railSlotStartPadding, top = 12.dp, bottom = 12.dp)
+                        .padding(start = RAIL_START_PADDING, top = 12.dp, bottom = 12.dp)
                         .zIndex(1f),
                 ) {
                     Surface(
