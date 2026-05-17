@@ -34,6 +34,8 @@ import com.rpeters.cinefintv.ui.player.audio.AudioPlayerScreen
 import com.rpeters.cinefintv.ui.screens.auth.AuthViewModel
 import com.rpeters.cinefintv.ui.screens.auth.LoginScreen
 import com.rpeters.cinefintv.ui.screens.auth.ServerConnectionScreen
+import com.rpeters.cinefintv.ui.screens.auth.ServerDiscoveryScreen
+import com.rpeters.cinefintv.ui.screens.auth.ServerDiscoveryViewModel
 import com.rpeters.cinefintv.ui.screens.detail.MovieDetailScreen
 import com.rpeters.cinefintv.ui.screens.detail.SeasonScreen
 import com.rpeters.cinefintv.ui.screens.detail.StuffDetailScreen
@@ -80,7 +82,9 @@ fun CinefinTvNavGraph(
 
     LaunchedEffect(authUiState.connectedServerUrl) {
         val current = backStack.lastOrNull() as? NavDestination
-        if (authUiState.connectedServerUrl != null && current == ServerConnection) {
+        if (authUiState.connectedServerUrl != null &&
+            (current == ServerConnection || current == ServerDiscovery)
+        ) {
             backStack.add(Login)
         }
     }
@@ -119,6 +123,18 @@ fun CinefinTvNavGraph(
                         errorMessage = authUiState.connectionError,
                         onServerUrlChange = { authViewModel.updateServerUrlInput(it) },
                         onContinue = { authViewModel.testServerConnection() },
+                        onDiscoverServers = { backStack.add(ServerDiscovery) },
+                    )
+                }
+                is ServerDiscovery -> {
+                    val discoveryViewModel: ServerDiscoveryViewModel = hiltViewModel()
+                    val discoveryUiState by discoveryViewModel.uiState.collectAsStateWithLifecycle()
+                    ServerDiscoveryScreen(
+                        uiState = discoveryUiState,
+                        onServerSelected = { url ->
+                            authViewModel.connectDiscoveredServer(url)
+                        },
+                        onEnterManually = { backStack.pop() },
                     )
                 }
                 is Login -> {

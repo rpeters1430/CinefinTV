@@ -399,6 +399,18 @@ class AuthViewModel @Inject constructor(
         _uiState.update { it.copy(loginError = null) }
     }
 
+    fun connectDiscoveredServer(url: String) {
+        _uiState.update {
+            it.copy(
+                serverUrlInput = url,
+                connectedServerUrl = url,
+                connectionError = null,
+                loginError = null,
+            )
+        }
+        checkQuickConnectAvailability(url)
+    }
+
     fun returnToServerEntry() {
         stopQuickConnect()
         _uiState.update {
