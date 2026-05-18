@@ -287,6 +287,7 @@ private fun HomeLoadedContent(
     var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedEpisodeMenuItem by remember { mutableStateOf<HomeCardModel?>(null) }
     var shouldRestoreFocus by rememberSaveable { mutableStateOf(true) }
+    var positionedInitialFeatured by rememberSaveable { mutableStateOf(false) }
     val focusNavigationCoordinator = LocalFocusNavigationCoordinator.current ?: remember(coroutineScope) {
         FocusNavigationCoordinator(coroutineScope)
     }
@@ -298,8 +299,8 @@ private fun HomeLoadedContent(
         (spacing.cardGap - 8.dp).coerceAtLeast(10.dp)
     }
     val cardWidth = remember(availableWidth, spacing.gutter, rowSpacing) {
-        ((availableWidth - (spacing.gutter * 2) - (rowSpacing * 4)) / 5f)
-            .coerceIn(170.dp, 260.dp)
+        ((availableWidth - (spacing.gutter * 2) - (rowSpacing * 3)) / 4f)
+            .coerceIn(220.dp, 320.dp)
     }
 
     val preferredFocusRequester = when {
@@ -342,6 +343,18 @@ private fun HomeLoadedContent(
         onDispose {
             focusNavigationCoordinator.cancelActiveJob()
         }
+    }
+
+    LaunchedEffect(state.featuredItems.firstOrNull()?.id) {
+        if (positionedInitialFeatured || state.featuredItems.isEmpty()) return@LaunchedEffect
+
+        positionedInitialFeatured = true
+        lastFocusedSectionId = null
+        lastFocusedItemId = null
+        shouldRestoreFocus = false
+        focusNavigationCoordinator.cancelActiveJob()
+        listState.scrollToItemAndAwaitLayout(0)
+        requestFocusAfterLayoutSettles(featuredPrimaryActionRequester)
     }
 
     LaunchedEffect(shouldRestoreFocus, preferredFocusRequester) {

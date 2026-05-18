@@ -112,6 +112,14 @@ fun TvShowDetailLayout(
     }
     val firstContentIndex = listOf(seasonIndex, nextUpIndex, castIndex, trailerIndex, similarIndex).firstOrNull { it >= 0 } ?: -1
 
+    fun navigateToDetailRow(index: Int, requester: FocusRequester) {
+        if (index < 0) return
+        coroutineScope.launch {
+            listState.scrollToItemAndAwaitLayout(index)
+            runCatching { requester.requestFocus() }
+        }
+    }
+
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
@@ -177,6 +185,7 @@ fun TvShowDetailLayout(
                                             down = when {
                                                 hasNextUp -> nextUpFocusRequester
                                                 castItems.isNotEmpty() -> firstCastFocusRequester
+                                                trailers.isNotEmpty() -> firstTrailerFocusRequester
                                                 similarItems.isNotEmpty() -> firstSimilarFocusRequester
                                                 else -> seasonFocusRequester
                                             }
@@ -194,6 +203,18 @@ fun TvShowDetailLayout(
                                                     if (runCatching { primaryActionFocusRequester.requestFocus() }.isSuccess) break
                                                     delay(if (attempt == 0) 64L else 32L)
                                                 }
+                                            }
+                                            true
+                                        } else if (
+                                            isFirstSeasonItem &&
+                                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                            nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                                        ) {
+                                            when {
+                                                hasNextUp -> navigateToDetailRow(nextUpIndex, nextUpFocusRequester)
+                                                castItems.isNotEmpty() -> navigateToDetailRow(castIndex, firstCastFocusRequester)
+                                                trailers.isNotEmpty() -> navigateToDetailRow(trailerIndex, firstTrailerFocusRequester)
+                                                similarItems.isNotEmpty() -> navigateToDetailRow(similarIndex, firstSimilarFocusRequester)
                                             }
                                             true
                                         } else {
@@ -218,20 +239,20 @@ fun TvShowDetailLayout(
                     upFocusRequester = if (seasons.isNotEmpty()) seasonFocusRequester else primaryActionFocusRequester,
                     downFocusRequester = when {
                         castItems.isNotEmpty() -> firstCastFocusRequester
+                        trailers.isNotEmpty() -> firstTrailerFocusRequester
                         similarItems.isNotEmpty() -> firstSimilarFocusRequester
                         else -> nextUpFocusRequester
                     },
                     onNavigateUp = {
-                        coroutineScope.launch {
-                            val targetIndex = if (seasons.isNotEmpty()) seasonIndex else 0
-                            listState.scrollToItemAndAwaitLayout(targetIndex)
-                            runCatching {
-                                if (seasons.isNotEmpty()) {
-                                    seasonFocusRequester.requestFocus()
-                                } else {
-                                    primaryActionFocusRequester.requestFocus()
-                                }
-                            }
+                        val targetIndex = if (seasons.isNotEmpty()) seasonIndex else 0
+                        val targetRequester = if (seasons.isNotEmpty()) seasonFocusRequester else primaryActionFocusRequester
+                        navigateToDetailRow(targetIndex, targetRequester)
+                    },
+                    onNavigateDown = {
+                        when {
+                            castItems.isNotEmpty() -> navigateToDetailRow(castIndex, firstCastFocusRequester)
+                            trailers.isNotEmpty() -> navigateToDetailRow(trailerIndex, firstTrailerFocusRequester)
+                            similarItems.isNotEmpty() -> navigateToDetailRow(similarIndex, firstSimilarFocusRequester)
                         }
                     },
                     modifier = Modifier
@@ -299,6 +320,16 @@ fun TvShowDetailLayout(
                                                         runCatching { primaryActionFocusRequester.requestFocus() }
                                                     }
                                                 }
+                                            }
+                                            true
+                                        } else if (
+                                            isFirstCastItem &&
+                                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                            nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                                        ) {
+                                            when {
+                                                trailers.isNotEmpty() -> navigateToDetailRow(trailerIndex, firstTrailerFocusRequester)
+                                                similarItems.isNotEmpty() -> navigateToDetailRow(similarIndex, firstSimilarFocusRequester)
                                             }
                                             true
                                         } else {
@@ -482,6 +513,7 @@ private fun NextUpPanel(
     upFocusRequester: FocusRequester,
     downFocusRequester: FocusRequester,
     onNavigateUp: () -> Unit,
+    onNavigateDown: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
@@ -526,6 +558,12 @@ private fun NextUpPanel(
                             nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
                         ) {
                             onNavigateUp()
+                            true
+                        } else if (
+                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                            nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                        ) {
+                            onNavigateDown()
                             true
                         } else {
                             false

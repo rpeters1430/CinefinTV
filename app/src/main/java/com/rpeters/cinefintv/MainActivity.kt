@@ -3,6 +3,7 @@ package com.rpeters.cinefintv
 import android.app.SearchManager
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.media3.common.util.UnstableApi
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rpeters.cinefintv.data.repository.JellyfinAuthRepository
 import com.rpeters.cinefintv.ui.CinefinTvApp
@@ -29,6 +31,10 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private companion object {
+        const val TAG = "AppStartup"
+    }
+
     
     @Inject lateinit var updateManager: UpdateManager
     @Inject lateinit var authRepository: JellyfinAuthRepository
@@ -38,11 +44,19 @@ class MainActivity : ComponentActivity() {
     @UnstableApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d(TAG, "MainActivity onCreate: savedInstanceState=${savedInstanceState != null}")
         handleSearchIntent(intent)
         setContent {
 
             val isSessionRestored by authRepository.isSessionRestored.collectAsStateWithLifecycle()
             val isConnected by authRepository.isConnected.collectAsStateWithLifecycle()
+
+            LaunchedEffect(isSessionRestored, isConnected) {
+                Log.d(
+                    TAG,
+                    "MainActivity auth state: restored=$isSessionRestored connected=$isConnected currentServerPresent=${authRepository.currentServer.value != null}",
+                )
+            }
             
             if (isSessionRestored == null) {
                 // Show a simple restoration screen while the session is being checked

@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv
 
 import android.app.Application
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -13,6 +14,7 @@ import javax.inject.Inject
 class CinefinTvApplication : Application() {
 
     private companion object {
+        const val TAG = "AppStartup"
         // Mirrors Android trim levels without referencing deprecated framework constants.
         const val TRIM_MEMORY_RUNNING_LOW_LEVEL = 10
         const val TRIM_MEMORY_UI_HIDDEN_LEVEL = 20
@@ -26,17 +28,34 @@ class CinefinTvApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        Log.d(TAG, "Application onCreate")
 
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         // Initialize Remote Config
         scope.launch {
-            remoteConfigRepository.fetchAndActivate()
+            Log.d(TAG, "Remote config fetch start")
+            runCatching {
+                remoteConfigRepository.fetchAndActivate()
+            }.onSuccess {
+                Log.d(TAG, "Remote config fetch complete")
+            }.onFailure { error ->
+                Log.w(TAG, "Remote config fetch failed", error)
+            }
         }
 
         // Eagerly restore session to speed up startup
         scope.launch {
-            authRepository.tryRestoreSession()
+            Log.d(TAG, "Session restore start")
+            val restored = runCatching {
+                authRepository.tryRestoreSession()
+            }.onFailure { error ->
+                Log.w(TAG, "Session restore failed", error)
+            }.getOrDefault(false)
+            Log.d(
+                TAG,
+                "Session restore complete: restored=$restored currentServerPresent=${authRepository.currentServer.value != null} isConnected=${authRepository.isConnected.value}",
+            )
         }
     }
 

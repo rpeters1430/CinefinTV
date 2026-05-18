@@ -2,6 +2,7 @@ package com.rpeters.cinefintv.data.repository
 
 import android.util.Log
 import com.rpeters.cinefintv.BuildConfig
+import android.os.SystemClock
 import com.rpeters.cinefintv.core.constants.Constants
 import com.rpeters.cinefintv.data.cache.JellyfinCache
 import com.rpeters.cinefintv.data.repository.common.ApiParameterValidator
@@ -39,6 +40,9 @@ class JellyfinMediaRepository @Inject constructor(
     healthChecker: LibraryHealthChecker,
     private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
 ) : BaseJellyfinRepository(authRepository, sessionManager, cache, healthChecker) {
+    private companion object {
+        const val HOME_TAG = "HomeRepository"
+    }
 
     // Helper function to get default item types for a collection
     private fun getDefaultTypesForCollection(collectionType: String?): List<BaseItemKind>? = when (collectionType?.lowercase()) {
@@ -52,20 +56,32 @@ class JellyfinMediaRepository @Inject constructor(
     }
 
     suspend fun getUserLibraries(forceRefresh: Boolean = false): ApiResult<List<BaseItemDto>> {
+        val startedAt = SystemClock.elapsedRealtime()
+        Log.d(HOME_TAG, "getUserLibraries start: forceRefresh=$forceRefresh")
         if (!forceRefresh) {
             val cached = cache.getCachedLibraries()
-            if (cached != null) return ApiResult.Success(cached)
+            if (cached != null) {
+                Log.d(HOME_TAG, "getUserLibraries cache hit: count=${cached.size} in ${SystemClock.elapsedRealtime() - startedAt}ms")
+                return ApiResult.Success(cached)
+            }
         }
 
         // ✅ FIX: include both COLLECTION_FOLDER and USER_VIEW for complete library detection
         return withServerClient("getUserLibraries") { server, client ->
+            val requestStartedAt = SystemClock.elapsedRealtime()
+            Log.d(HOME_TAG, "getUserLibraries sdk request start")
             val userUuid = parseUuid(server.userId ?: "", "user")
             val response = client.itemsApi.getItems(
                 userId = userUuid,
                 includeItemTypes = listOf(BaseItemKind.COLLECTION_FOLDER, BaseItemKind.USER_VIEW),
             )
             val items = response.content.items
+            Log.d(HOME_TAG, "getUserLibraries sdk response: count=${items.size} in ${SystemClock.elapsedRealtime() - requestStartedAt}ms")
+            val cacheStartedAt = SystemClock.elapsedRealtime()
+            Log.d(HOME_TAG, "getUserLibraries cache write start: count=${items.size}")
             cache.cacheLibraries(items)
+            Log.d(HOME_TAG, "getUserLibraries cache write complete in ${SystemClock.elapsedRealtime() - cacheStartedAt}ms")
+            Log.d(HOME_TAG, "getUserLibraries complete in ${SystemClock.elapsedRealtime() - startedAt}ms")
             items
         }
     }
@@ -201,16 +217,23 @@ class JellyfinMediaRepository @Inject constructor(
     }
 
     suspend fun getRecentlyAddedByType(itemType: BaseItemKind, limit: Int = 20, forceRefresh: Boolean = false): ApiResult<List<BaseItemDto>> {
+        val startedAt = SystemClock.elapsedRealtime()
+        Log.d(HOME_TAG, "getRecentlyAddedByType start: type=$itemType limit=$limit forceRefresh=$forceRefresh")
         if (!forceRefresh) {
             val cached = when (itemType) {
                 BaseItemKind.MOVIE -> cache.getCachedRecentlyAddedMovies()
                 BaseItemKind.EPISODE -> cache.getCachedRecentlyAddedEpisodes()
                 else -> null
             }
-            if (cached != null) return ApiResult.Success(cached)
+            if (cached != null) {
+                Log.d(HOME_TAG, "getRecentlyAddedByType cache hit: type=$itemType count=${cached.size} in ${SystemClock.elapsedRealtime() - startedAt}ms")
+                return ApiResult.Success(cached)
+            }
         }
 
         return withServerClient("getRecentlyAddedByType") { server, client ->
+            val requestStartedAt = SystemClock.elapsedRealtime()
+            Log.d(HOME_TAG, "getRecentlyAddedByType sdk request start: type=$itemType")
             val userUuid = parseUuid(server.userId ?: "", "user")
             val response = client.itemsApi.getItems(
                 userId = userUuid,
@@ -221,11 +244,25 @@ class JellyfinMediaRepository @Inject constructor(
                 limit = limit,
             )
             val items = response.content.items
+            Log.d(HOME_TAG, "getRecentlyAddedByType sdk response: type=$itemType count=${items.size} in ${SystemClock.elapsedRealtime() - requestStartedAt}ms")
             when (itemType) {
-                BaseItemKind.MOVIE -> cache.cacheRecentlyAddedMovies(items)
-                BaseItemKind.EPISODE -> cache.cacheRecentlyAddedEpisodes(items)
-                else -> { /* No dedicated cache for other types */ }
+                BaseItemKind.MOVIE -> {
+                    val cacheStartedAt = SystemClock.elapsedRealtime()
+                    Log.d(HOME_TAG, "getRecentlyAddedByType cache write start: type=$itemType count=${items.size}")
+                    cache.cacheRecentlyAddedMovies(items)
+                    Log.d(HOME_TAG, "getRecentlyAddedByType cache write complete: type=$itemType in ${SystemClock.elapsedRealtime() - cacheStartedAt}ms")
+                }
+                BaseItemKind.EPISODE -> {
+                    val cacheStartedAt = SystemClock.elapsedRealtime()
+                    Log.d(HOME_TAG, "getRecentlyAddedByType cache write start: type=$itemType count=${items.size}")
+                    cache.cacheRecentlyAddedEpisodes(items)
+                    Log.d(HOME_TAG, "getRecentlyAddedByType cache write complete: type=$itemType in ${SystemClock.elapsedRealtime() - cacheStartedAt}ms")
+                }
+                else -> {
+                    Log.d(HOME_TAG, "getRecentlyAddedByType no cache configured: type=$itemType")
+                }
             }
+            Log.d(HOME_TAG, "getRecentlyAddedByType complete: type=$itemType in ${SystemClock.elapsedRealtime() - startedAt}ms")
             items
         }
     }
@@ -298,12 +335,19 @@ class JellyfinMediaRepository @Inject constructor(
     }
 
     suspend fun getContinueWatching(limit: Int = 20, forceRefresh: Boolean = false): ApiResult<List<BaseItemDto>> {
+        val startedAt = SystemClock.elapsedRealtime()
+        Log.d(HOME_TAG, "getContinueWatching start: limit=$limit forceRefresh=$forceRefresh")
         if (!forceRefresh) {
             val cached = cache.getCachedContinueWatching()
-            if (cached != null) return ApiResult.Success(cached)
+            if (cached != null) {
+                Log.d(HOME_TAG, "getContinueWatching cache hit: count=${cached.size} in ${SystemClock.elapsedRealtime() - startedAt}ms")
+                return ApiResult.Success(cached)
+            }
         }
 
         return withServerClient("getContinueWatching") { server, client ->
+            val requestStartedAt = SystemClock.elapsedRealtime()
+            Log.d(HOME_TAG, "getContinueWatching sdk request start")
             val userUuid = parseUuid(server.userId ?: "", "user")
             val response = client.itemsApi.getItems(
                 userId = userUuid,
@@ -319,7 +363,12 @@ class JellyfinMediaRepository @Inject constructor(
                 limit = limit,
             )
             val items = response.content.items
+            Log.d(HOME_TAG, "getContinueWatching sdk response: count=${items.size} in ${SystemClock.elapsedRealtime() - requestStartedAt}ms")
+            val cacheStartedAt = SystemClock.elapsedRealtime()
+            Log.d(HOME_TAG, "getContinueWatching cache write start: count=${items.size}")
             cache.cacheContinueWatching(items)
+            Log.d(HOME_TAG, "getContinueWatching cache write complete in ${SystemClock.elapsedRealtime() - cacheStartedAt}ms")
+            Log.d(HOME_TAG, "getContinueWatching complete in ${SystemClock.elapsedRealtime() - startedAt}ms")
             items
         }
     }
@@ -562,12 +611,19 @@ class JellyfinMediaRepository @Inject constructor(
         }
 
     suspend fun getNextUp(limit: Int = 12, forceRefresh: Boolean = false): ApiResult<List<BaseItemDto>> {
+        val startedAt = SystemClock.elapsedRealtime()
+        Log.d(HOME_TAG, "getNextUp start: limit=$limit forceRefresh=$forceRefresh")
         if (!forceRefresh) {
             val cached = cache.getCachedNextUp()
-            if (cached != null) return ApiResult.Success(cached)
+            if (cached != null) {
+                Log.d(HOME_TAG, "getNextUp cache hit: count=${cached.size} in ${SystemClock.elapsedRealtime() - startedAt}ms")
+                return ApiResult.Success(cached)
+            }
         }
 
         return withServerClient("getNextUp") { server, client ->
+            val requestStartedAt = SystemClock.elapsedRealtime()
+            Log.d(HOME_TAG, "getNextUp sdk request start")
             val userUuid = parseUuid(server.userId ?: "", "user")
 
             val response = client.tvShowsApi.getNextUp(
@@ -578,7 +634,12 @@ class JellyfinMediaRepository @Inject constructor(
             )
 
             val items = response.content.items
+            Log.d(HOME_TAG, "getNextUp sdk response: count=${items.size} in ${SystemClock.elapsedRealtime() - requestStartedAt}ms")
+            val cacheStartedAt = SystemClock.elapsedRealtime()
+            Log.d(HOME_TAG, "getNextUp cache write start: count=${items.size}")
             cache.cacheNextUp(items)
+            Log.d(HOME_TAG, "getNextUp cache write complete in ${SystemClock.elapsedRealtime() - cacheStartedAt}ms")
+            Log.d(HOME_TAG, "getNextUp complete in ${SystemClock.elapsedRealtime() - startedAt}ms")
             items
         }
     }
