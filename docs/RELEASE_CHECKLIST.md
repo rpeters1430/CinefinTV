@@ -1,5 +1,7 @@
 # CinefinTV Release Checklist
 
+> Bug and improvement workflow: see `docs/BUG_AND_IMPROVEMENT_SYSTEM.md` and current backlog in `docs/triage/CURRENT_BUG_BACKLOG_2026-05-18.md`.
+
 This checklist must be completed before tagging any formal release (e.g., `v0.2.0-beta`).
 
 ## 1. Automated Checks
