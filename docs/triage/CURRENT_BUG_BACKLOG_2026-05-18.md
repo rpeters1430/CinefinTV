@@ -3,7 +3,7 @@
 **Generated:** 2026-05-18  
 **Source:** Uploaded `CinefinTV-main(5).zip`, current docs, project structure, and `new_logcat.txt.txt`.
 
-This is not a complete code audit. It is the first structured backlog for the new issue system. Convert each item into a GitHub issue using the templates in `.github/ISSUE_TEMPLATE/`.
+This is not a complete code audit. It is the first structured backlog for the new issue system. Convert each item into a GitHub issue using the labeling and acceptance-criteria guidance in `docs/BUG_AND_IMPROVEMENT_SYSTEM.md`.
 
 ---
 

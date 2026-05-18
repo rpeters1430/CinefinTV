@@ -9,9 +9,9 @@ This system is designed around the way the app actually fails on Android TV: pla
 
 ## 1. Issue intake
 
-Use GitHub Issues as the source of truth. The repo now has issue forms for:
+Use GitHub Issues as the source of truth. Use (or add) issue forms for:
 
-| Template | Use for | Auto-labels |
+| Template | Use for | Suggested labels |
 |---|---|---|
 | Bug report | General reproducible app bugs | `type: bug`, `needs: triage` |
 | Playback bug | Video/audio/subtitle/direct-play/transcode/resume issues | `type: bug`, `area: playback`, `needs: triage` |
@@ -213,5 +213,5 @@ A bug or improvement is done only when:
 - Historical review: `docs/2026-03-16-review-bugs-and-improvements.md`
 - Latest project status: `docs/2026-05-06-project-status-report.md`
 - Label sync script: `scripts/sync-github-labels.sh`
-- Issue templates: `.github/ISSUE_TEMPLATE/`
-- PR template: `.github/PULL_REQUEST_TEMPLATE.md`
+- Issue templates (optional future add): `.github/ISSUE_TEMPLATE/`
+- PR template (optional future add): `.github/PULL_REQUEST_TEMPLATE.md`
