@@ -52,6 +52,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import com.rpeters.cinefintv.ui.components.CinefinChip
 
 data class HeroSecondaryAction(
     val label: String,
@@ -99,45 +100,22 @@ fun FlatDetailHero(
             .fillMaxWidth()
             .aspectRatio(16f / 9f),
     ) {
-        if (backdropUrl != null) {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(backdropUrl)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFF101318)),
-            )
-        }
-
+        // Scrims are now handled by ImmersiveBackground or local overlays if needed.
+        // We'll keep a local horizontal scrim for text readability on this specific layout.
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.horizontalGradient(
-                        0.0f to Color(0xF20A0D14),
-                        0.6f to Color.Transparent,
+                        colorStops = arrayOf(
+                            0.0f to Color.Black.copy(alpha = 0.72f),
+                            0.35f to Color.Black.copy(alpha = 0.32f),
+                            0.65f to Color.Transparent,
+                        )
                     )
                 ),
         )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        0.0f to Color.Transparent,
-                        0.45f to Color.Transparent,
-                        1.0f to Color(0xFA0A0D14),
-                    )
-                ),
-        )
+
 
         posterUrl?.let {
             AsyncImage(
@@ -192,17 +170,8 @@ fun FlatDetailHero(
             HeroMetadataLine(
                 metadataItems = metadataItems,
                 qualityBadges = qualityBadges,
+                genres = genres,
             )
-
-            if (genres.isNotEmpty()) {
-                Text(
-                    text = genres.joinToString(" · "),
-                    color = Color(0xFF888888),
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 18.sp),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
 
             if (!summary.isNullOrBlank()) {
                 Text(
@@ -231,39 +200,29 @@ fun FlatDetailHero(
 private fun HeroMetadataLine(
     metadataItems: List<String>,
     qualityBadges: List<String>,
+    genres: List<String>,
 ) {
     val filteredMetadata = metadataItems.filter { it.isNotBlank() }
     val filteredBadges = qualityBadges.filter { it.isNotBlank() }
-    if (filteredMetadata.isEmpty() && filteredBadges.isEmpty()) return
-
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+    
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        filteredMetadata.forEachIndexed { index, value ->
-            Text(
-                text = value,
-                color = Color(0xFFBBBBBB),
-                style = MaterialTheme.typography.labelLarge.copy(fontSize = 18.sp),
-                maxLines = 1,
-            )
-            if (index != filteredMetadata.lastIndex || filteredBadges.isNotEmpty()) {
-                Text(
-                    text = "•",
-                    color = Color(0xFF555555),
-                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 18.sp),
-                )
-            }
+        filteredMetadata.forEach { value ->
+            CinefinChip(label = value)
         }
-        filteredBadges.forEachIndexed { index, badge ->
+        filteredBadges.forEach { badge ->
             HeroQualityBadge(label = badge)
-            if (index != filteredBadges.lastIndex) {
-                Text(
-                    text = "•",
-                    color = Color(0xFF555555),
-                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 18.sp),
-                )
-            }
+        }
+        if (genres.isNotEmpty()) {
+            Text(
+                text = genres.joinToString(" · "),
+                color = Color.White.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -350,14 +309,14 @@ private fun HeroActionStrip(
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
             scale = ButtonDefaults.scale(focusedScale = 1.03f),
             colors = ButtonDefaults.colors(
-                containerColor = Color(0xFFE50914),
-                focusedContainerColor = Color(0xFFE50914),
+                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                focusedContainerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Color.White,
                 focusedContentColor = Color.White,
             ),
             border = ButtonDefaults.border(
                 focusedBorder = Border(
-                    border = androidx.compose.foundation.BorderStroke(2.dp, expressiveColors.focusRing),
+                    border = androidx.compose.foundation.BorderStroke(2.dp, Color.White.copy(alpha = 0.5f)),
                 ),
             ),
         ) {

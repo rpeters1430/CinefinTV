@@ -3,7 +3,7 @@ package com.rpeters.cinefintv
 import android.app.SearchManager
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
     @UnstableApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d(TAG, "MainActivity onCreate: savedInstanceState=${savedInstanceState != null}")
+        SecureLogger.d(TAG, "MainActivity onCreate: savedInstanceState=${savedInstanceState != null}")
         handleSearchIntent(intent)
         setContent {
 
@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
             val isConnected by authRepository.isConnected.collectAsStateWithLifecycle()
 
             LaunchedEffect(isSessionRestored, isConnected) {
-                Log.d(
+                SecureLogger.d(
                     TAG,
                     "MainActivity auth state: restored=$isSessionRestored connected=$isConnected currentServerPresent=${authRepository.currentServer.value != null}",
                 )

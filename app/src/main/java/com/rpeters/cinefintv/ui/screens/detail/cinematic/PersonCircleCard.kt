@@ -12,13 +12,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -40,11 +41,12 @@ fun PersonCircleCard(
     role: String?,
     imageUrl: String?,
     modifier: Modifier = Modifier,
+    onFocus: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.onFocusChanged { if (it.isFocused) onFocus?.invoke() },
         scale = CardDefaults.scale(focusedScale = 1.05f),
         border = CardDefaults.border(
             focusedBorder = Border(

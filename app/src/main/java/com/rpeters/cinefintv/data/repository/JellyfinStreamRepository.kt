@@ -9,6 +9,7 @@ import com.rpeters.cinefintv.data.repository.common.BaseJellyfinRepository
 import com.rpeters.cinefintv.data.session.JellyfinSessionManager
 import com.rpeters.cinefintv.data.cache.JellyfinCache
 import com.rpeters.cinefintv.data.DeviceCapabilities
+import com.rpeters.cinefintv.data.common.DispatcherProvider
 import com.rpeters.cinefintv.data.model.JellyfinDeviceProfile
 import com.rpeters.cinefintv.utils.SecureLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -29,6 +30,8 @@ import javax.inject.Singleton
 
 import com.rpeters.cinefintv.ui.player.TrickplayManifest
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
 
 /**
  * Repository component responsible for streaming URLs, image URLs, and media playback.
@@ -40,9 +43,10 @@ class JellyfinStreamRepository @Inject constructor(
     authRepository: JellyfinAuthRepository,
     sessionManager: JellyfinSessionManager,
     cache: JellyfinCache,
+    dispatchers: DispatcherProvider,
     private val deviceCapabilities: DeviceCapabilities,
     private val okHttpClient: OkHttpClient,
-) : BaseJellyfinRepository(authRepository, sessionManager, cache) {
+) : BaseJellyfinRepository(authRepository, sessionManager, cache, dispatchers) {
     companion object {
         // Stream quality constants
         private const val DEFAULT_MAX_BITRATE = 140_000_000
@@ -290,18 +294,18 @@ class JellyfinStreamRepository @Inject constructor(
     /**
      * Get Trickplay manifest for smooth seeking thumbnails
      */
-    suspend fun getTrickplayManifest(itemId: String, width: Int = 320): TrickplayManifest? = executeWithClient("getTrickplayManifest") { client ->
+    suspend fun getTrickplayManifest(itemId: String, width: Int = 320): TrickplayManifest? = executeWithClient<TrickplayManifest?>("getTrickplayManifest") { client ->
         val server = validateServer()
         val url = "${server.url}/Videos/$itemId/Trickplay/$width/manifest.json"
         
-        val request = okhttp3.Request.Builder()
+        val request = Request.Builder()
             .url(url)
             .header("X-Emby-Token", server.accessToken ?: "")
             .build()
             
-        okHttpClient.newCall(request).execute().use { response ->
+        okHttpClient.newCall(request).execute().use { response: Response ->
             if (!response.isSuccessful) return@executeWithClient null
-            val body = response.body.string()
+            val body = response.body?.string() ?: return@executeWithClient null
             trickplayJson.decodeFromString<TrickplayManifest>(body)
         }
     }

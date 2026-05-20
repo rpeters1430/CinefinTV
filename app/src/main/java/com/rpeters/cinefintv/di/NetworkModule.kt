@@ -178,9 +178,10 @@ object NetworkModule {
     @Singleton
     fun provideJellyfinCache(
         @ApplicationContext context: Context,
+        dispatchers: com.rpeters.cinefintv.data.common.DispatcherProvider,
         @ApplicationScope applicationScope: kotlinx.coroutines.CoroutineScope,
     ): JellyfinCache {
-        return JellyfinCache(context, applicationScope)
+        return JellyfinCache(context, dispatchers, applicationScope)
     }
 
     @Provides

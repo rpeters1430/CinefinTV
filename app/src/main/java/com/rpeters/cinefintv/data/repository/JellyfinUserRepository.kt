@@ -23,6 +23,8 @@ import org.jellyfin.sdk.model.api.UserItemDataDto
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.rpeters.cinefintv.data.common.DispatcherProvider
+
 /**
  * Repository that contains operations specific to the user or session.
  * Functions here were previously scattered across [JellyfinRepository].
@@ -32,8 +34,9 @@ class JellyfinUserRepository @Inject constructor(
     authRepository: JellyfinAuthRepository,
     sessionManager: com.rpeters.cinefintv.data.session.JellyfinSessionManager,
     cache: JellyfinCache,
+    dispatchers: DispatcherProvider,
     private val updateBus: MediaUpdateBus,
-) : BaseJellyfinRepository(authRepository, sessionManager, cache) {
+) : BaseJellyfinRepository(authRepository, sessionManager, cache, dispatchers) {
 
     suspend fun logout() {
         authRepository.logout()

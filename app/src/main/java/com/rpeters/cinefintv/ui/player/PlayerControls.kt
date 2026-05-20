@@ -1,6 +1,10 @@
 package com.rpeters.cinefintv.ui.player
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.layout.PaddingValues
@@ -158,8 +162,8 @@ internal fun PlayerControls(
 
     AnimatedVisibility(
         visible = isVisible,
-        enter = fadeIn(),
-        exit = fadeOut(),
+        enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
+        exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 }),
     ) {
         Box(
             modifier = Modifier
@@ -183,10 +187,10 @@ internal fun PlayerControls(
                 }
                 .background(
                     Brush.verticalGradient(
-                        0.0f to expressiveColors.playerOverlayStart,
-                        0.25f to Color.Transparent,
-                        0.55f to Color.Transparent,
-                        1.0f to expressiveColors.playerOverlayEnd
+                        0.0f to Color.Black.copy(alpha = 0.45f),
+                        0.2f to Color.Transparent,
+                        0.7f to Color.Transparent,
+                        1.0f to Color.Black.copy(alpha = 0.75f)
                     )
                 )
         ) {
@@ -270,221 +274,221 @@ internal fun PlayerControls(
                         }
                     }
                 }
-            }
-
-            // Bottom controls — transparent, sits directly on gradient
-            Column(
+            }            // Bottom controls - Glassy Floating Bar
+            Surface(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = spacing.gutter, vertical = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(horizontal = spacing.gutter * 2, vertical = 32.dp)
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = SurfaceDefaults.colors(
+                    containerColor = expressiveColors.surfaceContainerHigh.copy(alpha = 0.55f),
+                ),
+                border = Border(
+                    border = BorderStroke(1.dp, expressiveColors.playerContentPrimary.copy(alpha = 0.12f))
+                ),
+                tonalElevation = 6.dp
             ) {
-                // Seek row: [current time] [seekbar] [duration]
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                Column(
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Text(
-                        text = formatMs(positionProvider()),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontSize = 18.sp,
-                        color = expressiveColors.playerContentPrimary.copy(alpha = 0.9f),
-                    )
-                    SeekBarControl(
-                        positionProvider = positionProvider,
-                        duration = duration,
-                        bufferedFraction = bufferedFraction,
-                        chapters = uiState.chapters,
-                        trickplayManifest = trickplayManifest,
-                        trickplayBaseUrl = trickplayBaseUrl,
-                        seekIncrementMs = seekIncrement.millis,
-                        onSeekCommitted = { player.seekTo(it) },
-                        onInteract = onInteract,
-                        focusRequester = seekBarFocusRequester,
-                        up = backFocusRequester,
-                        down = playPauseFocusRequester,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        text = formatMs(duration),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontSize = 18.sp,
-                        color = expressiveColors.playerContentPrimary.copy(alpha = 0.5f),
-                    )
-                }
-
-                // Button row: left skip, center play/pause, right utility cluster.
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    ActionIconButton(
-                        icon = Icons.Default.FastRewind,
-                        label = seekIncrement.shortLabel,
-                        onClick = { onInteract(); player.seekTo((player.currentPosition - seekIncrement.millis).coerceAtLeast(0L)) },
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .focusRequester(skipBackFocusRequester)
-                            .focusProperties {
-                                up = seekBarFocusRequester
-                                if (hasContentRow) down = contentRowFocusRequester
-                                left = skipBackFocusRequester
-                                right = playPauseFocusRequester
-                            }
-                    )
-
-                    PlayPauseButton(
-                        isPlaying = isPlaying,
-                        onClick = {
-                            onInteract()
-                            if (isPlaying) player.pause() else player.play()
-                        },
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(56.dp)
-                            .focusRequester(playPauseFocusRequester)
-                            .focusProperties {
-                                up = seekBarFocusRequester
-                                if (hasContentRow) down = contentRowFocusRequester
-                                left = skipBackFocusRequester
-                                right = skipForwardFocusRequester
-                            }
-                    )
-
+                    // Seek row: [current time] [seekbar] [duration]
                     Row(
-                        modifier = Modifier.align(Alignment.CenterEnd),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        ActionIconButton(
-                            icon = Icons.Default.FastForward,
-                            label = seekIncrement.shortLabel,
-                            onClick = { onInteract(); player.seekTo((player.currentPosition + seekIncrement.millis).coerceIn(0L, duration)) },
-                            modifier = Modifier
-                                .focusRequester(skipForwardFocusRequester)
-                                .focusProperties {
-                                    up = seekBarFocusRequester
-                                    if (hasContentRow) down = contentRowFocusRequester
-                                    left = playPauseFocusRequester
-                                    right = audioFocusRequester
-                                }
+                        Text(
+                            text = formatMs(positionProvider()),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontSize = 18.sp,
+                            color = expressiveColors.playerContentPrimary.copy(alpha = 0.9f),
                         )
-
-                        Box(
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .width(1.dp)
-                                .height(24.dp)
-                                .background(expressiveColors.playerContentPrimary.copy(alpha = 0.4f))
+                        SeekBarControl(
+                            positionProvider = positionProvider,
+                            duration = duration,
+                            bufferedFraction = bufferedFraction,
+                            chapters = uiState.chapters,
+                            trickplayManifest = trickplayManifest,
+                            trickplayBaseUrl = trickplayBaseUrl,
+                            seekIncrementMs = seekIncrement.millis,
+                            onSeekCommitted = { player.seekTo(it) },
+                            onInteract = onInteract,
+                            focusRequester = seekBarFocusRequester,
+                            up = backFocusRequester,
+                            down = playPauseFocusRequester,
+                            modifier = Modifier.weight(1f),
                         )
-
-                        ActionIconButton(
-                            icon = Icons.Default.MusicNote,
-                            onClick = { onInteract(); onSettingsClick(SettingsSection.AUDIO, audioButtonBounds) },
-                            modifier = Modifier
-                                .focusRequester(audioFocusRequester)
-                                .testTag(PlayerTestTags.AudioButton)
-                                .focusProperties {
-                                    up = seekBarFocusRequester
-                                    if (hasContentRow) down = contentRowFocusRequester
-                                    left = skipForwardFocusRequester
-                                    right = subtitleFocusRequester
-                                }
-                                .onGloballyPositioned { setAudioButtonBounds(it.boundsInRoot()) }
-                        )
-
-                        ActionIconButton(
-                            icon = Icons.Default.ClosedCaption,
-                            onClick = { onInteract(); onSettingsClick(SettingsSection.SUBTITLES, subtitleButtonBounds) },
-                            modifier = Modifier
-                                .focusRequester(subtitleFocusRequester)
-                                .testTag(PlayerTestTags.SubtitleButton)
-                                .focusProperties {
-                                    up = seekBarFocusRequester
-                                    if (hasContentRow) down = contentRowFocusRequester
-                                    left = audioFocusRequester
-                                    right = qualityFocusRequester
-                                }
-                                .onGloballyPositioned { setSubtitleButtonBounds(it.boundsInRoot()) }
-                        )
-
-                        ActionIconButton(
-                            icon = Icons.Default.HighQuality,
-                            onClick = { onInteract(); onSettingsClick(SettingsSection.QUALITY, qualityButtonBounds) },
-                            modifier = Modifier
-                                .focusRequester(qualityFocusRequester)
-                                .testTag(PlayerTestTags.QualityButton)
-                                .focusProperties {
-                                    up = seekBarFocusRequester
-                                    if (hasContentRow) down = contentRowFocusRequester
-                                    left = subtitleFocusRequester
-                                    right = speedFocusRequester
-                                }
-                                .onGloballyPositioned { setQualityButtonBounds(it.boundsInRoot()) }
-                        )
-
-                        ActionIconButton(
-                            icon = Icons.Default.PlayArrow,
-                            label = if (uiState.playbackSpeed == 1.0f) "1x" else "${uiState.playbackSpeed}x",
-                            onClick = { onInteract(); onSettingsClick(SettingsSection.SPEED, speedButtonBounds) },
-                            modifier = Modifier
-                                .focusRequester(speedFocusRequester)
-                                .testTag(PlayerTestTags.SpeedButton)
-                                .focusProperties {
-                                    up = seekBarFocusRequester
-                                    if (hasContentRow) down = contentRowFocusRequester
-                                    left = qualityFocusRequester
-                                    right = settingsFocusRequester
-                                }
-                                .onGloballyPositioned { setSpeedButtonBounds(it.boundsInRoot()) }
-                        )
-
-                        ActionIconButton(
-                            icon = Icons.Default.Settings,
-                            onClick = { onInteract(); onSettingsClick(SettingsSection.ALL, settingsButtonBounds) },
-                            modifier = Modifier
-                                .focusRequester(settingsFocusRequester)
-                                .testTag(PlayerTestTags.SettingsButton)
-                                .focusProperties {
-                                    up = seekBarFocusRequester
-                                    if (hasContentRow) down = contentRowFocusRequester
-                                    left = speedFocusRequester
-                                }
-                                .onGloballyPositioned { setSettingsButtonBounds(it.boundsInRoot()) }
-                        )
-
-                        ActionIconButton(
-                            icon = Icons.Default.Group,
-                            onClick = { onInteract(); onWatchTogetherClick() },
-                            modifier = Modifier.focusProperties {
-                                up = seekBarFocusRequester
-                                if (hasContentRow) down = contentRowFocusRequester
-                                left = settingsFocusRequester
-                                right = settingsFocusRequester
-                            },
+                        Text(
+                            text = formatMs(duration),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontSize = 18.sp,
+                            color = expressiveColors.playerContentPrimary.copy(alpha = 0.5f),
                         )
                     }
-                }
 
-                val contentRow = uiState.contentRow
-                AnimatedVisibility(
-                    visible = contentRow != null && isContentShelfVisible,
-                    enter = fadeIn() + slideInVertically { it / 2 },
-                    exit = fadeOut() + slideOutVertically { it / 2 },
-                ) {
-                    if (contentRow != null) {
-                        PlayerContentShelf(
-                            contentRow = contentRow,
-                            positionProvider = positionProvider,
-                            trickplayManifest = uiState.trickplayManifest,
-                            trickplayBaseUrl = uiState.trickplayBaseUrl,
-                            firstItemFocusRequester = contentRowFocusRequester,
-                            upRequester = playPauseFocusRequester,
-                            onInteract = onInteract,
-                            onSeekToChapter = { player.seekTo(it) },
-                            onOpenItem = onOpenItem,
-                            onHideShelf = onHideShelf
+                    // Button row: left skip, center play/pause, right utility cluster.
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        ActionIconButton(
+                            icon = Icons.Default.FastRewind,
+                            label = seekIncrement.shortLabel,
+                            onClick = { onInteract(); player.seekTo((player.currentPosition - seekIncrement.millis).coerceAtLeast(0L)) },
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .focusRequester(skipBackFocusRequester)
+                                .focusProperties {
+                                    up = seekBarFocusRequester
+                                    if (hasContentRow) down = contentRowFocusRequester
+                                    left = skipBackFocusRequester
+                                    right = playPauseFocusRequester
+                                }
                         )
+
+                        PlayPauseButton(
+                            isPlaying = isPlaying,
+                            onClick = {
+                                onInteract()
+                                if (isPlaying) player.pause() else player.play()
+                            },
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .size(64.dp) // Slightly larger
+                                .focusRequester(playPauseFocusRequester)
+                                .focusProperties {
+                                    up = seekBarFocusRequester
+                                    if (hasContentRow) down = contentRowFocusRequester
+                                    left = skipBackFocusRequester
+                                    right = skipForwardFocusRequester
+                                }
+                        )
+
+                        Row(
+                            modifier = Modifier.align(Alignment.CenterEnd),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            ActionIconButton(
+                                icon = Icons.Default.FastForward,
+                                label = seekIncrement.shortLabel,
+                                onClick = { onInteract(); player.seekTo((player.currentPosition + seekIncrement.millis).coerceIn(0L, duration)) },
+                                modifier = Modifier
+                                    .focusRequester(skipForwardFocusRequester)
+                                    .focusProperties {
+                                        up = seekBarFocusRequester
+                                        if (hasContentRow) down = contentRowFocusRequester
+                                        left = playPauseFocusRequester
+                                        right = audioFocusRequester
+                                    }
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .width(1.dp)
+                                    .height(24.dp)
+                                    .background(expressiveColors.playerContentPrimary.copy(alpha = 0.2f))
+                            )
+
+                            ActionIconButton(
+                                icon = Icons.Default.MusicNote,
+                                onClick = { onInteract(); onSettingsClick(SettingsSection.AUDIO, audioButtonBounds) },
+                                modifier = Modifier
+                                    .focusRequester(audioFocusRequester)
+                                    .testTag(PlayerTestTags.AudioButton)
+                                    .focusProperties {
+                                        up = seekBarFocusRequester
+                                        if (hasContentRow) down = contentRowFocusRequester
+                                        left = skipForwardFocusRequester
+                                        right = subtitleFocusRequester
+                                    }
+                                    .onGloballyPositioned { setAudioButtonBounds(it.boundsInRoot()) }
+                            )
+
+                            ActionIconButton(
+                                icon = Icons.Default.ClosedCaption,
+                                onClick = { onInteract(); onSettingsClick(SettingsSection.SUBTITLES, subtitleButtonBounds) },
+                                modifier = Modifier
+                                    .focusRequester(subtitleFocusRequester)
+                                    .testTag(PlayerTestTags.SubtitleButton)
+                                    .focusProperties {
+                                        up = seekBarFocusRequester
+                                        if (hasContentRow) down = contentRowFocusRequester
+                                        left = audioFocusRequester
+                                        right = qualityFocusRequester
+                                    }
+                                    .onGloballyPositioned { setSubtitleButtonBounds(it.boundsInRoot()) }
+                            )
+
+                            ActionIconButton(
+                                icon = Icons.Default.HighQuality,
+                                onClick = { onInteract(); onSettingsClick(SettingsSection.QUALITY, qualityButtonBounds) },
+                                modifier = Modifier
+                                    .focusRequester(qualityFocusRequester)
+                                    .testTag(PlayerTestTags.QualityButton)
+                                    .focusProperties {
+                                        up = seekBarFocusRequester
+                                        if (hasContentRow) down = contentRowFocusRequester
+                                        left = subtitleFocusRequester
+                                        right = speedFocusRequester
+                                    }
+                                    .onGloballyPositioned { setQualityButtonBounds(it.boundsInRoot()) }
+                            )
+
+                            ActionIconButton(
+                                icon = Icons.Default.PlayArrow,
+                                label = if (uiState.playbackSpeed == 1.0f) "1x" else "${uiState.playbackSpeed}x",
+                                onClick = { onInteract(); onSettingsClick(SettingsSection.SPEED, speedButtonBounds) },
+                                modifier = Modifier
+                                    .focusRequester(speedFocusRequester)
+                                    .testTag(PlayerTestTags.SpeedButton)
+                                    .focusProperties {
+                                        up = seekBarFocusRequester
+                                        if (hasContentRow) down = contentRowFocusRequester
+                                        left = qualityFocusRequester
+                                        right = settingsFocusRequester
+                                    }
+                                    .onGloballyPositioned { setSpeedButtonBounds(it.boundsInRoot()) }
+                            )
+
+                            ActionIconButton(
+                                icon = Icons.Default.Settings,
+                                onClick = { onInteract(); onSettingsClick(SettingsSection.ALL, settingsButtonBounds) },
+                                modifier = Modifier
+                                    .focusRequester(settingsFocusRequester)
+                                    .testTag(PlayerTestTags.SettingsButton)
+                                    .focusProperties {
+                                        up = seekBarFocusRequester
+                                        if (hasContentRow) down = contentRowFocusRequester
+                                        left = speedFocusRequester
+                                        right = settingsFocusRequester
+                                    }
+                                    .onGloballyPositioned { setSettingsButtonBounds(it.boundsInRoot()) }
+                            )
+                        }
+                    }
+
+                    val contentRow = uiState.contentRow
+                    AnimatedVisibility(
+                        visible = contentRow != null && isContentShelfVisible,
+                        enter = fadeIn() + slideInVertically { it / 2 },
+                        exit = fadeOut() + slideOutVertically { it / 2 },
+                    ) {
+                        if (contentRow != null) {
+                            PlayerContentShelf(
+                                contentRow = contentRow,
+                                positionProvider = positionProvider,
+                                trickplayManifest = uiState.trickplayManifest,
+                                trickplayBaseUrl = uiState.trickplayBaseUrl,
+                                firstItemFocusRequester = contentRowFocusRequester,
+                                upRequester = playPauseFocusRequester,
+                                onInteract = onInteract,
+                                onSeekToChapter = { player.seekTo(it) },
+                                onOpenItem = onOpenItem,
+                                onHideShelf = onHideShelf
+                            )
+                        }
                     }
                 }
             }
@@ -744,11 +748,15 @@ internal fun SkipActionCard(
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     Surface(
-        modifier = modifier.width(180.dp),
-        shape = RoundedCornerShape(8.dp),
+        modifier = modifier.width(200.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = SurfaceDefaults.colors(
-            containerColor = SurfaceDark,
+            containerColor = expressiveColors.surfaceContainerHigh.copy(alpha = 0.85f),
         ),
+        border = Border(
+            border = BorderStroke(1.dp, expressiveColors.playerContentPrimary.copy(alpha = 0.15f))
+        ),
+        tonalElevation = 4.dp
     ) {
         Column(
             modifier = Modifier.padding(10.dp),
@@ -823,11 +831,15 @@ internal fun NextEpisodeCard(
     }
 
     Surface(
-        modifier = modifier.width(180.dp),
-        shape = RoundedCornerShape(8.dp),
+        modifier = modifier.width(220.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = SurfaceDefaults.colors(
-            containerColor = SurfaceDark,
+            containerColor = expressiveColors.surfaceContainerHigh.copy(alpha = 0.92f),
         ),
+        border = Border(
+            border = BorderStroke(1.dp, expressiveColors.playerContentPrimary.copy(alpha = 0.15f))
+        ),
+        tonalElevation = 8.dp
     ) {
         Column {
             AsyncImage(
@@ -941,11 +953,20 @@ private fun PlayPauseButton(
             focusedContentColor = expressiveColors.playerContentPrimary
         )
     ) {
-        Icon(
-            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-            contentDescription = if (isPlaying) "Pause" else "Play",
-            modifier = Modifier.size(40.dp)
-        )
+        AnimatedContent(
+            targetState = isPlaying,
+            transitionSpec = {
+                (scaleIn(animationSpec = tween(220, delayMillis = 90)) + fadeIn(animationSpec = tween(220, delayMillis = 90)))
+                    .togetherWith(scaleOut(animationSpec = tween(90)) + fadeOut(animationSpec = tween(90)))
+            },
+            label = "PlayPauseAnimation"
+        ) { playing ->
+            Icon(
+                if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = if (playing) "Pause" else "Play",
+                modifier = Modifier.size(40.dp)
+            )
+        }
     }
 }
 
@@ -1178,8 +1199,7 @@ private fun SeekBarControl(
                         (keyEvent.key == Key.DirectionLeft || keyEvent.key == Key.DirectionRight) -> true
                     else -> false
                 }
-            }
-            .focusable(),
+            },
         contentAlignment = Alignment.BottomCenter,
     ) {
         BoxWithConstraints(
@@ -1187,7 +1207,7 @@ private fun SeekBarControl(
                 .fillMaxWidth()
                 .height(barHeight)
                 .clip(CircleShape)
-                .background(expressiveColors.playerContentPrimary.copy(alpha = 0.2f))
+                .background(expressiveColors.playerContentPrimary.copy(alpha = 0.15f))
         ) {
             val bufferedClamped = bufferedFraction.coerceIn(0f, 1f)
 
@@ -1197,7 +1217,7 @@ private fun SeekBarControl(
                     modifier = Modifier
                         .fillMaxHeight()
                         .fillMaxWidth(bufferedClamped)
-                        .background(expressiveColors.playerContentPrimary.copy(alpha = 0.35f))
+                        .background(expressiveColors.playerContentPrimary.copy(alpha = 0.25f))
                 )
             }
 
@@ -1206,7 +1226,14 @@ private fun SeekBarControl(
                 modifier = Modifier
                     .fillMaxHeight()
                     .fillMaxWidth(animatedProgressFraction)
-                    .background(MaterialTheme.colorScheme.primary)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                            )
+                        )
+                    )
             )
 
             // Chapter marker ticks
@@ -1220,27 +1247,27 @@ private fun SeekBarControl(
                         .offset(x = maxWidth * chapterFraction - 1.dp)
                         .width(2.dp)
                         .height(barHeight)
-                        .background(expressiveColors.playerContentPrimary.copy(alpha = 0.6f))
+                        .background(Color.Black.copy(alpha = 0.4f))
                 )
             }
 
             // Thumb
             if (thumbScale > 0f) {
-                val thumbDp = 20.dp * thumbScale
+                val thumbDp = 22.dp * thumbScale
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
                         .offset(x = maxWidth * animatedProgressFraction - thumbDp / 2)
                         .size(thumbDp)
-                        /* .shadow(
-                            elevation = 8.dp,
+                        .shadow(
+                            elevation = 12.dp,
                             shape = CircleShape,
                             clip = false,
                             ambientColor = MaterialTheme.colorScheme.primary,
                             spotColor = MaterialTheme.colorScheme.primary,
-                        ) */
+                        )
                         .background(MaterialTheme.colorScheme.primary, CircleShape)
-                        .border(width = 3.dp, color = expressiveColors.playerContentPrimary, shape = CircleShape)
+                        .border(width = 3.dp, color = Color.White, shape = CircleShape)
                 )
             }
         }

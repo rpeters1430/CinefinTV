@@ -3,6 +3,7 @@ package com.rpeters.cinefintv.data.repository
 import android.content.Context
 import com.rpeters.cinefintv.data.JellyfinServer
 import com.rpeters.cinefintv.data.SecureCredentialManager
+import com.rpeters.cinefintv.testutil.DeterministicDispatcherProvider
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -11,7 +12,7 @@ import io.mockk.mockk
 import io.mockk.runs
 import java.util.UUID
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -42,14 +43,16 @@ import org.junit.Test
 class JellyfinAuthRepositoryTest {
 
     @get:Rule
-    val mainDispatcherRule = MainDispatcherRule()
+    val mainDispatcherRule = MainDispatcherRule(UnconfinedTestDispatcher())
 
     private val json = Json {
         encodeDefaults = true
     }
 
+    private val dispatchers = DeterministicDispatcherProvider(mainDispatcherRule.dispatcher)
+
     @Test
-    fun tryRestoreSession_whenTokenStillValid_restoresExistingSession() = runBlocking {
+    fun tryRestoreSession_whenTokenStillValid_restoresExistingSession() = runTest {
         val secureCredentialManager = mockk<SecureCredentialManager>(relaxed = true)
         val savedServer = savedServer(accessToken = "valid-token")
         val validationClient = fakeApiClient { method, path, _, _, _ ->
@@ -61,11 +64,11 @@ class JellyfinAuthRepositoryTest {
 
         coEvery { secureCredentialManager.loadServerState() } returns savedServer
 
-        val repository = JellyfinAuthRepository(jellyfin, secureCredentialManager)
+        val repository = JellyfinAuthRepository(jellyfin, secureCredentialManager, dispatchers)
 
         val restored = repository.tryRestoreSession()
 
-        assertTrue(restored)
+        assertTrue(restored == true)
         assertEquals(true, repository.isSessionRestored.value)
         assertEquals("valid-token", repository.currentServer.value?.accessToken)
         assertTrue(repository.isConnected.value)
@@ -91,7 +94,7 @@ class JellyfinAuthRepositoryTest {
         coEvery { secureCredentialManager.getPassword(savedServer.url, savedServer.username!!) } returns "password123"
         coEvery { secureCredentialManager.saveServerState(any()) } just runs
 
-        val repository = JellyfinAuthRepository(jellyfin, secureCredentialManager)
+        val repository = JellyfinAuthRepository(jellyfin, secureCredentialManager, dispatchers)
         repository.seedCurrentServer(savedServer)
 
         val success = repository.forceReAuthenticate()
@@ -132,7 +135,7 @@ class JellyfinAuthRepositoryTest {
         coEvery { secureCredentialManager.getPassword(savedServer.url, savedServer.username!!) } returns "password123"
         coEvery { secureCredentialManager.saveServerState(any()) } just runs
 
-        val repository = JellyfinAuthRepository(jellyfin, secureCredentialManager)
+        val repository = JellyfinAuthRepository(jellyfin, secureCredentialManager, dispatchers)
         repository.seedCurrentServer(savedServer)
 
         val ready = repository.ensureSessionReady()
@@ -143,7 +146,7 @@ class JellyfinAuthRepositoryTest {
     }
 
     @Test
-    fun tryRestoreSession_whenTokenRejectedAndReauthFails_clearsSession() = runBlocking {
+    fun tryRestoreSession_whenTokenRejectedAndReauthFails_clearsSession() = runTest {
         val secureCredentialManager = mockk<SecureCredentialManager>(relaxed = true)
         val savedServer = savedServer(accessToken = "stale-token")
         val validationClient = fakeApiClient { method, path, _, _, _ ->
@@ -158,7 +161,7 @@ class JellyfinAuthRepositoryTest {
         coEvery { secureCredentialManager.clearPassword(savedServer.url, savedServer.username!!) } just runs
         coEvery { secureCredentialManager.clearServerState() } just runs
 
-        val repository = JellyfinAuthRepository(jellyfin, secureCredentialManager)
+        val repository = JellyfinAuthRepository(jellyfin, secureCredentialManager, dispatchers)
 
         val restored = repository.tryRestoreSession()
 

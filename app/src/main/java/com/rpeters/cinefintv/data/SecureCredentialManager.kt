@@ -17,6 +17,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.core.constants.Constants
+import com.rpeters.cinefintv.data.common.DispatcherProvider
 import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.utils.normalizeServerUrl
 import com.rpeters.cinefintv.utils.normalizeServerUrlLegacy
@@ -42,6 +43,7 @@ import javax.inject.Singleton
 @Singleton
 class SecureCredentialManager @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    private val dispatchers: DispatcherProvider,
 ) {
     private val jsonSerializer = kotlinx.serialization.json.Json {
         ignoreUnknownKeys = true
@@ -59,7 +61,7 @@ class SecureCredentialManager @Inject constructor(
 
     // CRITICAL FIX: DataStore needs a CoroutineScope to properly persist data
     // Without a scope, edit operations may not commit changes to disk
-    private val dataStoreScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val dataStoreScope = CoroutineScope(SupervisorJob() + dispatchers.io)
 
     // ✅ FIX: Create DataStore directly as a property instead of using Context extension
     // This avoids potential issues with Context extension properties in Singleton classes
@@ -102,7 +104,7 @@ class SecureCredentialManager @Inject constructor(
      * Prioritizes stable alias, but falls back to legacy timestamped aliases to preserve existing logins.
      * Performs keystore operations on background thread.
      */
-    private suspend fun getOrCreateSecretKey(forceNew: Boolean = false): SecretKey = withContext(Dispatchers.IO) {
+    private suspend fun getOrCreateSecretKey(forceNew: Boolean = false): SecretKey = withContext(dispatchers.io) {
         val stableAlias = getKeyAlias()
 
         // Find any existing legacy keys (timestamped or buggy)
@@ -133,7 +135,7 @@ class SecureCredentialManager @Inject constructor(
                 val alias = cleanupAliases.nextElement()
                 if (alias.startsWith(Constants.Security.KEY_ALIAS)) {
                     try { keyStore.deleteEntry(alias) } catch (e: Exception) {
-                        Log.w(TAG, "Failed to delete old key: $alias", e)
+                        SecureLogger.w(TAG, "Failed to delete old key: $alias", e)
                     }
                 }
             }
@@ -184,7 +186,7 @@ class SecureCredentialManager @Inject constructor(
      * Encrypts data using AES/GCM/NoPadding with a new IV for each encryption.
      * Performs keystore operations on background thread.
      */
-    private suspend fun encrypt(data: String): String = withContext(Dispatchers.IO) {
+    private suspend fun encrypt(data: String): String = withContext(dispatchers.io) {
         try {
             val cipher = Cipher.getInstance(Constants.Security.ENCRYPTION_TRANSFORMATION)
             cipher.init(Cipher.ENCRYPT_MODE, getOrCreateSecretKey())
@@ -207,7 +209,7 @@ class SecureCredentialManager @Inject constructor(
      * Decrypts data using AES/GCM/NoPadding.
      * Performs keystore operations on background thread.
      */
-    private suspend fun decrypt(encryptedData: String): String? = withContext(Dispatchers.IO) {
+    private suspend fun decrypt(encryptedData: String): String? = withContext(dispatchers.io) {
         try {
             val combined = Base64.decode(encryptedData, Base64.NO_WRAP)
             val iv = combined.sliceArray(0 until Constants.Security.IV_LENGTH)
@@ -250,7 +252,7 @@ class SecureCredentialManager @Inject constructor(
         try {
             val encryptedPassword = encrypt(password)
             // CRITICAL FIX: Use NonCancellable to ensure password save completes
-            withContext(NonCancellable + Dispatchers.IO) {
+            withContext(NonCancellable + dispatchers.io) {
                 secureCredentialsDataStore.edit { prefs ->
                     val passwordKey = stringPreferencesKey(keys.newKey)
                     val timestampKey = longPreferencesKey("${keys.newKey}_timestamp")
@@ -389,7 +391,7 @@ class SecureCredentialManager @Inject constructor(
         try {
             val json = kotlinx.serialization.json.Json.encodeToString(server)
             val encryptedJson = encrypt(json)
-            withContext(NonCancellable + Dispatchers.IO) {
+            withContext(NonCancellable + dispatchers.io) {
                 secureCredentialsDataStore.edit { prefs ->
                     prefs[stringPreferencesKey(SERVER_STATE_KEY)] = encryptedJson
                 }
@@ -397,7 +399,7 @@ class SecureCredentialManager @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "saveServerState: failed to save server state", e)
+            SecureLogger.w(TAG, "saveServerState: failed to save server state", e)
         }
     }
 
@@ -427,7 +429,7 @@ class SecureCredentialManager @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "loadServerState: failed to load server state", e)
+            SecureLogger.w(TAG, "loadServerState: failed to load server state", e)
             null
         }
     }
@@ -448,7 +450,7 @@ class SecureCredentialManager @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "loadProfiles: failed", e)
+            SecureLogger.w(TAG, "loadProfiles: failed", e)
             emptyList()
         }
     }
@@ -463,7 +465,7 @@ class SecureCredentialManager @Inject constructor(
         try {
             val json = kotlinx.serialization.json.Json.encodeToString<List<JellyfinServer>>(profiles)
             val encrypted = encrypt(json)
-            withContext(NonCancellable + Dispatchers.IO) {
+            withContext(NonCancellable + dispatchers.io) {
                 secureCredentialsDataStore.edit { prefs ->
                     prefs[stringPreferencesKey(PROFILES_KEY)] = encrypted
                 }
@@ -471,19 +473,19 @@ class SecureCredentialManager @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "saveProfileList: failed", e)
+            SecureLogger.w(TAG, "saveProfileList: failed", e)
         }
     }
 
     suspend fun clearServerState() {
-        withContext(NonCancellable + Dispatchers.IO) {
+        withContext(NonCancellable + dispatchers.io) {
             secureCredentialsDataStore.edit { prefs ->
                 prefs.remove(stringPreferencesKey(SERVER_STATE_KEY))
             }
         }
     }
 
-    private suspend fun exportPlaintextCredentials(): List<StoredCredential> = withContext(Dispatchers.IO) {
+    private suspend fun exportPlaintextCredentials(): List<StoredCredential> = withContext(dispatchers.io) {
         val preferences = secureCredentialsDataStore.data.first()
         val credentials = mutableListOf<StoredCredential>()
 
@@ -492,7 +494,7 @@ class SecureCredentialManager @Inject constructor(
                 val encryptedPassword = value as? String ?: return@forEach
                 val decryptedPassword = decrypt(encryptedPassword)
                 if (decryptedPassword == null) {
-                    Log.w(TAG, "Failed to decrypt credential for key: ${key.name}")
+                    SecureLogger.w(TAG, "Failed to decrypt credential for key: ${key.name}")
                     throw SecurityException("Failed to decrypt credential for key: ${key.name}")
                 }
                 val timestamp = preferences[longPreferencesKey("${key.name}_timestamp")]
@@ -512,7 +514,7 @@ class SecureCredentialManager @Inject constructor(
     private suspend fun restoreCredentials(credentials: List<StoredCredential>) {
         if (credentials.isEmpty()) return
 
-        withContext(NonCancellable + Dispatchers.IO) {
+        withContext(NonCancellable + dispatchers.io) {
             secureCredentialsDataStore.edit { prefs ->
                 credentials.forEach { credential ->
                     val encrypted = encrypt(credential.plaintext)

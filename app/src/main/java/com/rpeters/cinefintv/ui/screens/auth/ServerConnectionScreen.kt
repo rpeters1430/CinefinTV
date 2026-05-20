@@ -53,30 +53,30 @@ fun ServerConnectionScreen(
     val expressiveColors = LocalCinefinExpressiveColors.current
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        expressiveColors.backgroundTop,
-                        expressiveColors.backgroundBottom,
-                    ),
-                ),
-            )
-            .padding(horizontal = 64.dp, vertical = 48.dp),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
-            modifier = Modifier
-                .widthIn(max = 820.dp)
-                .fillMaxWidth()
-                .defaultMinSize(minWidth = 420.dp),
-            shape = RoundedCornerShape(32.dp),
-            colors = SurfaceDefaults.colors(
-                containerColor = expressiveColors.chromeSurface.copy(alpha = 0.84f),
-            ),
-            tonalElevation = 8.dp,
-        ) {
+        com.rpeters.cinefintv.ui.components.ImmersiveBackground(
+            backdropUrl = null,
+            baseColor = expressiveColors.backgroundTop,
+            scrimColor = expressiveColors.backgroundBottom,
+        )
+        
+        Box(modifier = Modifier.padding(horizontal = 64.dp, vertical = 48.dp)) {
+            Surface(
+                modifier = Modifier
+                    .widthIn(max = 820.dp)
+                    .fillMaxWidth()
+                    .defaultMinSize(minWidth = 420.dp),
+                shape = RoundedCornerShape(32.dp),
+                colors = SurfaceDefaults.colors(
+                    containerColor = expressiveColors.chromeSurface.copy(alpha = 0.55f),
+                ),
+                border = Border(
+                    border = androidx.compose.foundation.BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.3f))
+                ),
+                tonalElevation = 8.dp,
+            ) {
             val scrollState = rememberScrollState()
             val coroutineScope = rememberCoroutineScope()
             Column(
@@ -142,6 +142,7 @@ fun ServerConnectionScreen(
                     Text(if (isLoading) "Connecting..." else "Continue")
                 }
             }
+            }
         }
     }
 }
@@ -187,12 +188,12 @@ internal fun AuthHero(
         Surface(
             shape = RoundedCornerShape(28.dp),
             colors = SurfaceDefaults.colors(
-                containerColor = expressiveColors.chromeSurface.copy(alpha = 0.74f),
+                containerColor = expressiveColors.chromeSurface.copy(alpha = 0.45f),
             ),
             border = Border(
                 border = androidx.compose.foundation.BorderStroke(
                     1.dp,
-                    expressiveColors.borderSubtle.copy(alpha = 0.6f),
+                    expressiveColors.borderSubtle.copy(alpha = 0.4f),
                 ),
             ),
             tonalElevation = 2.dp,

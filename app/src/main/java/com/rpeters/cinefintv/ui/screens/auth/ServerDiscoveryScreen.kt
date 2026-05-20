@@ -46,26 +46,29 @@ fun ServerDiscoveryScreen(
     val hasServers = uiState.servers.isNotEmpty()
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(expressiveColors.backgroundTop, expressiveColors.backgroundBottom),
-                )
-            )
-            .padding(horizontal = 64.dp, vertical = 48.dp),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
-            modifier = Modifier
-                .widthIn(max = 820.dp)
-                .fillMaxWidth(),
-            shape = RoundedCornerShape(32.dp),
-            colors = SurfaceDefaults.colors(
-                containerColor = expressiveColors.chromeSurface.copy(alpha = 0.84f),
-            ),
-            tonalElevation = 8.dp,
-        ) {
+        com.rpeters.cinefintv.ui.components.ImmersiveBackground(
+            backdropUrl = null,
+            baseColor = expressiveColors.backgroundTop,
+            scrimColor = expressiveColors.backgroundBottom,
+        )
+        
+        Box(modifier = Modifier.padding(horizontal = 64.dp, vertical = 48.dp)) {
+            Surface(
+                modifier = Modifier
+                    .widthIn(max = 820.dp)
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(32.dp),
+                colors = SurfaceDefaults.colors(
+                    containerColor = expressiveColors.chromeSurface.copy(alpha = 0.55f),
+                ),
+                border = androidx.tv.material3.Border(
+                    border = androidx.compose.foundation.BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.3f))
+                ),
+                tonalElevation = 8.dp,
+            ) {
             Column(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
@@ -110,6 +113,7 @@ fun ServerDiscoveryScreen(
                     Spacer(Modifier.size(12.dp))
                     Text("Enter server address manually")
                 }
+            }
             }
         }
     }

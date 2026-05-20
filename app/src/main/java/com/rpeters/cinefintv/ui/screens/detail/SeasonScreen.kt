@@ -3,6 +3,7 @@
 package com.rpeters.cinefintv.ui.screens.detail
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -30,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
+import com.rpeters.cinefintv.ui.components.ImmersiveBackground
 import com.rpeters.cinefintv.ui.components.MediaActionDialog
 import com.rpeters.cinefintv.ui.components.MediaActionDialogItem
 import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
@@ -73,7 +76,7 @@ fun SeasonScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         when (val state = uiState) {
             is SeasonUiState.Loading -> DetailLoadingState()
             is SeasonUiState.Error -> DetailErrorState(
@@ -114,6 +117,8 @@ private fun SeasonContent(
     var selectedEpisode by remember { mutableStateOf<EpisodeModel?>(null) }
     var pendingDeleteEpisode by remember { mutableStateOf<EpisodeModel?>(null) }
     var showSeasonMenu by remember { mutableStateOf(false) }
+
+    var focusedBackdropUrl by remember(season.backdropUrl) { mutableStateOf(season.backdropUrl) }
 
     val resumeEpisode = remember(episodes) {
         episodes.firstOrNull { (it.playbackProgress ?: 0f) > 0f && !it.isWatched }
@@ -218,86 +223,91 @@ private fun SeasonContent(
         )
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = spacing.gutter),
-    ) {
-        item {
-            DetailAnchor(
-                focusRequester = topFocusRequester,
-                downFocusRequester = primaryActionFocusRequester,
-                onFocused = {},
-            )
-            FlatDetailHero(
-                backdropUrl = season.backdropUrl,
-                posterUrl = season.posterUrl,
-                title = season.title,
-                metadataItems = listOf("${episodes.size} episodes"),
-                qualityBadges = emptyList(),
-                genres = emptyList(),
-                summary = season.overview,
-                primaryActionLabel = if (resumeEpisode != null) "Resume" else "Play",
-                onPrimaryAction = {
-                    val target = resumeEpisode ?: episodes.firstOrNull()
-                    if (target != null) onOpenEpisode(target.id)
-                },
-                secondaryActions = listOf(HeroSecondaryAction(label = "···", onClick = { showSeasonMenu = true })),
-                primaryActionFocusRequester = primaryActionFocusRequester,
-                primaryActionDownFocusRequester = if (episodes.isNotEmpty()) firstEpisodeFocusRequester else null,
-                drawerFocusRequester = destinationFocus.drawerFocusRequester,
-                onDownNavigation = if (episodes.isNotEmpty()) {
-                    {
-                        if (listState.isScrollInProgress) return@FlatDetailHero
-                        coroutineScope.launch {
-                            listState.scrollToItemAndAwaitLayout(2)
-                            runCatching { firstEpisodeFocusRequester.requestFocus() }
-                        }
-                    }
-                } else {
-                    null
-                },
-            )
-        }
+    Box(modifier = Modifier.fillMaxSize()) {
+        ImmersiveBackground(backdropUrl = focusedBackdropUrl)
 
-        item {
-            DetailStripTitle(
-                title = "Episodes",
-                modifier = Modifier
-                    .padding(top = spacing.rowGap.div(1.5f))
-                    .padding(horizontal = spacing.gutter),
-            )
-        }
-
-        items(episodes, key = { it.id }) { episode ->
-            EpisodeListRow(
-                episode = episode,
-                isNext = episode.id == resumeEpisode?.id,
-                modifier = if (episode.id == episodes.firstOrNull()?.id) {
-                    Modifier
-                        .focusRequester(firstEpisodeFocusRequester)
-                        .focusProperties { up = primaryActionFocusRequester }
-                        .onPreviewKeyEvent { keyEvent ->
-                            val nativeEvent = keyEvent.nativeKeyEvent
-                            if (
-                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
-                            ) {
-                                coroutineScope.launch {
-                                    listState.scrollToItemAndAwaitLayout(0)
-                                    runCatching { primaryActionFocusRequester.requestFocus() }
-                                }
-                                true
-                            } else {
-                                false
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = spacing.gutter),
+        ) {
+            item {
+                DetailAnchor(
+                    focusRequester = topFocusRequester,
+                    downFocusRequester = primaryActionFocusRequester,
+                    onFocused = { focusedBackdropUrl = season.backdropUrl },
+                )
+                FlatDetailHero(
+                    backdropUrl = season.backdropUrl,
+                    posterUrl = season.posterUrl,
+                    title = season.title,
+                    metadataItems = listOf("${episodes.size} episodes"),
+                    qualityBadges = emptyList(),
+                    genres = emptyList(),
+                    summary = season.overview,
+                    primaryActionLabel = if (resumeEpisode != null) "Resume" else "Play",
+                    onPrimaryAction = {
+                        val target = resumeEpisode ?: episodes.firstOrNull()
+                        if (target != null) onOpenEpisode(target.id)
+                    },
+                    secondaryActions = listOf(HeroSecondaryAction(label = "···", onClick = { showSeasonMenu = true })),
+                    primaryActionFocusRequester = primaryActionFocusRequester,
+                    primaryActionDownFocusRequester = if (episodes.isNotEmpty()) firstEpisodeFocusRequester else null,
+                    drawerFocusRequester = destinationFocus.drawerFocusRequester,
+                    onDownNavigation = if (episodes.isNotEmpty()) {
+                        {
+                            if (listState.isScrollInProgress) return@FlatDetailHero
+                            coroutineScope.launch {
+                                listState.scrollToItemAndAwaitLayout(2)
+                                runCatching { firstEpisodeFocusRequester.requestFocus() }
                             }
                         }
-                } else {
-                    Modifier
-                },
-                onMenuAction = { selectedEpisode = episode },
-                onClick = { onOpenEpisode(episode.id) },
-            )
+                    } else {
+                        null
+                    },
+                )
+            }
+
+            item {
+                DetailStripTitle(
+                    title = "Episodes",
+                    modifier = Modifier
+                        .padding(top = spacing.rowGap.div(1.5f))
+                        .padding(horizontal = spacing.gutter),
+                )
+            }
+
+            items(episodes, key = { it.id }) { episode ->
+                EpisodeListRow(
+                    episode = episode,
+                    isNext = episode.id == resumeEpisode?.id,
+                    modifier = if (episode.id == episodes.firstOrNull()?.id) {
+                        Modifier
+                            .focusRequester(firstEpisodeFocusRequester)
+                            .focusProperties { up = primaryActionFocusRequester }
+                            .onPreviewKeyEvent { keyEvent ->
+                                val nativeEvent = keyEvent.nativeKeyEvent
+                                if (
+                                    nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
+                                ) {
+                                    coroutineScope.launch {
+                                        listState.scrollToItemAndAwaitLayout(0)
+                                        runCatching { primaryActionFocusRequester.requestFocus() }
+                                    }
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                    } else {
+                        Modifier
+                    },
+                    onMenuAction = { selectedEpisode = episode },
+                    onClick = { onOpenEpisode(episode.id) },
+                    onFocus = { focusedBackdropUrl = episode.imageUrl ?: season.backdropUrl },
+                )
+            }
         }
     }
 }

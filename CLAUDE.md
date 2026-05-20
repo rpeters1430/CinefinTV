@@ -86,7 +86,7 @@ executeWithCache("operationName", cacheKey = "key", cacheTtlMs = 30 * 60 * 1000L
 - `CinefinTvApp` — root composable; wraps content in `CinefinTvTheme` and delegates layout to `CinefinAppScaffold`
 - `CinefinAppScaffold` — contains a vertical animated rail nav sidebar (a `Column` of `Button`s inside a rounded `Surface`). The rail collapses to icon-only when unfocused and expands with labels when focused via D-pad. Hidden for `auth/*`, `player/*`, and `audio-player/*` routes.
 - `CinefinTvNavGraph` — `NavHost` with all route definitions; holds the single `AuthViewModel`
-- Routes defined in `NavRoutes` / `AuthRoutes` objects. Key routes: `detail/{itemId}`, `detail/person/{personId}`, `stuff/detail/{itemId}`, `player/{itemId}`, `audio-player/{itemId}?queue={queue}`, `library/{movies|tvshows|stuff|music}`
+- Routes defined in `NavRoutes` / `AuthRoutes` objects. Key routes: `detail/{itemId}`, `detail/person/{personId}`, `collections/detail/{itemId}`, `player/{itemId}`, `audio-player/{itemId}?queue={queue}`, `library/{movies|tvshows|collections|music}`
 
 #### Nav chrome focus wiring
 Each top-level screen must register with the nav chrome focus system so D-pad left/up from content reaches the sidebar:

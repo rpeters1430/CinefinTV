@@ -1,6 +1,6 @@
 package com.rpeters.cinefintv.data.repository
 
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import androidx.annotation.VisibleForTesting
 import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.data.JellyfinServer
@@ -10,7 +10,6 @@ import com.rpeters.cinefintv.data.model.QuickConnectState
 import com.rpeters.cinefintv.data.network.TokenProvider
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.data.utils.RepositoryUtils
-import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.utils.normalizeServerUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,16 +37,19 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import org.jellyfin.sdk.model.api.QuickConnectResult as SdkQuickConnectResult
 
+import com.rpeters.cinefintv.data.common.DispatcherProvider
+
 @Singleton
 class JellyfinAuthRepository @Inject constructor(
     private val jellyfin: Jellyfin,
     private val secureCredentialManager: SecureCredentialManager,
+    private val dispatchers: DispatcherProvider,
     private val timeProvider: () -> Long = System::currentTimeMillis,
 ) : TokenProvider {
     private val authMutex = Mutex()
 
     // Background scope for fire-and-forget tasks (e.g. session validation after restore)
-    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val repositoryScope = CoroutineScope(SupervisorJob() + dispatchers.io)
 
     // Token state for TokenProvider implementation
     private val _tokenState = MutableStateFlow<String?>(null)
@@ -98,7 +100,7 @@ class JellyfinAuthRepository @Inject constructor(
         // SECURITY: Never log actual token values, even partially
         // Tokens should only be logged in extreme debugging scenarios using secure logging
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Saving new token: ${if (token != null) "[PRESENT]" else "[NULL]"}")
+            SecureLogger.d(TAG, "Saving new token: ${if (token != null) "[PRESENT]" else "[NULL]"}")
         }
         _tokenState.update { token }
         // Server state is also updated in authenticateUser method
@@ -107,7 +109,7 @@ class JellyfinAuthRepository @Inject constructor(
     suspend fun testServerConnection(serverUrl: String): ApiResult<PublicSystemInfo> {
         return try {
             SecureLogger.d(TAG, "testServerConnection: Attempting to connect to server")
-            val response = withContext(Dispatchers.IO) {
+            val response = withContext(dispatchers.io) {
                 val client = createApiClient(serverUrl)
                 client.systemApi.getPublicSystemInfo()
             }
@@ -115,7 +117,7 @@ class JellyfinAuthRepository @Inject constructor(
             ApiResult.Success(response.content)
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            Log.e(TAG, "testServerConnection: Error connecting to server", e)
+            SecureLogger.e(TAG, "testServerConnection: Error connecting to server", e)
             val errorType = RepositoryUtils.getErrorType(e)
             ApiResult.Error(throwableMessageOrFallback("Connection error", e), e, errorType)
         }
@@ -141,7 +143,7 @@ class JellyfinAuthRepository @Inject constructor(
             SecureLogger.d(TAG, "authenticateUser: Attempting authentication")
             val normalizedServerUrl = normalizeServerUrl(serverUrl)
 
-            val response = withContext(Dispatchers.IO) {
+            val response = withContext(dispatchers.io) {
                 val client = createApiClient(serverUrl)
                 client.userApi.authenticateUserByName(
                     AuthenticateUserByName(
@@ -164,7 +166,7 @@ class JellyfinAuthRepository @Inject constructor(
             return ApiResult.Success(authResult)
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            Log.e(TAG, "authenticateUser: Error authenticating", e)
+            SecureLogger.e(TAG, "authenticateUser: Error authenticating", e)
             val errorType = RepositoryUtils.getErrorType(e)
             return ApiResult.Error(throwableMessageOrFallback("Authentication failed", e), e, errorType)
         } finally {
@@ -180,7 +182,7 @@ class JellyfinAuthRepository @Inject constructor(
 
     suspend fun forceReAuthenticate(): Boolean {
         return authMutex.withLock {
-            Log.d(TAG, "forceReAuthenticate: Forcing re-authentication with persisted credentials")
+            SecureLogger.d(TAG, "forceReAuthenticate: Forcing re-authentication with persisted credentials")
             reAuthenticateInternal()
         }
     }
@@ -193,22 +195,22 @@ class JellyfinAuthRepository @Inject constructor(
         try {
             val password = secureCredentialManager.getPassword(serverUrl, username)
             if (password == null) {
-                Log.w(TAG, "reAuthenticate: No saved password found for user $username")
+                SecureLogger.w(TAG, "reAuthenticate: No saved password found for user $username")
                 return false
             }
 
-            Log.d(TAG, "reAuthenticate: Found saved credentials for $serverUrl, attempting authentication")
+            SecureLogger.d(TAG, "reAuthenticate: Found saved credentials for $serverUrl, attempting authentication")
 
             val result = authenticateUserInternal(serverUrl, username, password)
             return if (result is ApiResult.Success) {
-                Log.d(TAG, "reAuthenticate: Successfully re-authenticated user $username")
+                SecureLogger.d(TAG, "reAuthenticate: Successfully re-authenticated user $username")
                 true
             } else {
-                Log.w(TAG, "reAuthenticate: Failed to re-authenticate user $username")
+                SecureLogger.w(TAG, "reAuthenticate: Failed to re-authenticate user $username")
                 false
             }
         } catch (e: IOException) {
-            Log.e(TAG, "reAuthenticate: I/O error during re-authentication", e)
+            SecureLogger.e(TAG, "reAuthenticate: I/O error during re-authentication", e)
             return false
         }
     }
@@ -217,7 +219,7 @@ class JellyfinAuthRepository @Inject constructor(
 
     fun isUserAuthenticated(): Boolean = _currentServer.value?.accessToken != null
 
-    fun isTokenExpired(): Boolean {
+    fun isTokenMissing(): Boolean {
         return _currentServer.value?.accessToken.isNullOrBlank()
     }
 
@@ -226,7 +228,7 @@ class JellyfinAuthRepository @Inject constructor(
      * Until that exists, only treat missing tokens as refreshable via the proactive path.
      */
     fun shouldRefreshToken(): Boolean {
-        return isTokenExpired()
+        return isTokenMissing()
     }
 
     @VisibleForTesting
@@ -241,14 +243,14 @@ class JellyfinAuthRepository @Inject constructor(
         return try {
             val savedServer = try {
                 withTimeout(RESTORE_STATE_TIMEOUT_MS) {
-                    withContext(Dispatchers.IO) {
+                    withContext(dispatchers.io) {
                         secureCredentialManager.loadServerState()
                     }
                 }
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
                 // DataStore read took too long (e.g. slow Android Keystore on TV hardware).
                 // Treat as no saved session so the app routes to login rather than hanging.
-                Log.w(TAG, "tryRestoreSession: timed out loading server state, treating as no saved session")
+                SecureLogger.w(TAG, "tryRestoreSession: timed out loading server state, treating as no saved session")
                 _isSessionRestored.update { false }
                 return false
             }
@@ -263,7 +265,7 @@ class JellyfinAuthRepository @Inject constructor(
                     validateOrRecoverRestoredSession(savedServer)
                 }
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                Log.w(TAG, "tryRestoreSession: validation timed out, proceeding optimistically")
+                SecureLogger.w(TAG, "tryRestoreSession: validation timed out, proceeding optimistically")
                 RestoreValidationResult.UNREACHABLE
             }
 
@@ -274,12 +276,12 @@ class JellyfinAuthRepository @Inject constructor(
                     false
                 }
                 RestoreValidationResult.VALID -> {
-                    Log.d(TAG, "tryRestoreSession: Restored validated session for ${savedServer.url}")
+                    SecureLogger.d(TAG, "tryRestoreSession: Restored validated session for ${savedServer.url}")
                     _isSessionRestored.update { true }
                     true
                 }
                 RestoreValidationResult.UNREACHABLE -> {
-                    Log.d(TAG, "tryRestoreSession: Restored session for ${savedServer.url} without live validation")
+                    SecureLogger.d(TAG, "tryRestoreSession: Restored session for ${savedServer.url} without live validation")
                     _isSessionRestored.update { true }
                     repositoryScope.launch { validateRestoredSession(savedServer) }
                     true
@@ -288,7 +290,7 @@ class JellyfinAuthRepository @Inject constructor(
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "tryRestoreSession: failed to restore session", e)
+            SecureLogger.w(TAG, "tryRestoreSession: failed to restore session", e)
             _isSessionRestored.update { false }
             false
         }
@@ -296,33 +298,33 @@ class JellyfinAuthRepository @Inject constructor(
 
     private suspend fun validateOrRecoverRestoredSession(server: JellyfinServer): RestoreValidationResult {
         return try {
-            withContext(Dispatchers.IO) {
+            withContext(dispatchers.io) {
                 val client = createApiClient(server.url, server.accessToken)
                 client.systemApi.getPublicSystemInfo()
             }
-            Log.d(TAG, "validateOrRecoverRestoredSession: token still valid")
+            SecureLogger.d(TAG, "validateOrRecoverRestoredSession: token still valid")
             RestoreValidationResult.VALID
         } catch (e: InvalidStatusException) {
             if (!isTokenRejectedStatus(e.status)) {
-                Log.w(TAG, "validateOrRecoverRestoredSession: non-auth status ${e.status}, proceeding optimistically")
+                SecureLogger.w(TAG, "validateOrRecoverRestoredSession: non-auth status ${e.status}, proceeding optimistically")
                 return RestoreValidationResult.UNREACHABLE
             }
 
-            Log.w(TAG, "validateOrRecoverRestoredSession: token rejected (${e.status}), attempting re-authentication")
+            SecureLogger.w(TAG, "validateOrRecoverRestoredSession: token rejected (${e.status}), attempting re-authentication")
             if (forceReAuthenticate()) {
-                Log.d(TAG, "validateOrRecoverRestoredSession: re-authentication succeeded")
+                SecureLogger.d(TAG, "validateOrRecoverRestoredSession: re-authentication succeeded")
                 RestoreValidationResult.VALID
             } else {
-                Log.w(TAG, "validateOrRecoverRestoredSession: re-authentication failed")
+                SecureLogger.w(TAG, "validateOrRecoverRestoredSession: re-authentication failed")
                 RestoreValidationResult.INVALID
             }
         } catch (e: IOException) {
-            Log.d(TAG, "validateOrRecoverRestoredSession: network unavailable, proceeding optimistically")
+            SecureLogger.d(TAG, "validateOrRecoverRestoredSession: network unavailable, proceeding optimistically")
             RestoreValidationResult.UNREACHABLE
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "validateOrRecoverRestoredSession: validation failed unexpectedly", e)
+            SecureLogger.w(TAG, "validateOrRecoverRestoredSession: validation failed unexpectedly", e)
             RestoreValidationResult.UNREACHABLE
         }
     }
@@ -336,14 +338,14 @@ class JellyfinAuthRepository @Inject constructor(
      */
     private suspend fun validateRestoredSession(server: JellyfinServer) {
         try {
-            withContext(Dispatchers.IO) {
+            withContext(dispatchers.io) {
                 val client = createApiClient(server.url, server.accessToken)
                 client.systemApi.getPublicSystemInfo()
             }
-            Log.d(TAG, "validateRestoredSession: token still valid")
+            SecureLogger.d(TAG, "validateRestoredSession: token still valid")
         } catch (e: InvalidStatusException) {
             if (isTokenRejectedStatus(e.status)) {
-                Log.w(TAG, "validateRestoredSession: token rejected (${e.status}), logging out")
+                SecureLogger.w(TAG, "validateRestoredSession: token rejected (${e.status}), logging out")
                 logout()
                 // logout() clears connection/server state but does not update _isSessionRestored;
                 // explicitly reset it so downstream observers (e.g. MainActivity) redirect to login.
@@ -352,7 +354,7 @@ class JellyfinAuthRepository @Inject constructor(
             // Other HTTP errors (500, 503) — server is up but broken; leave session intact
         } catch (e: IOException) {
             // Network unreachable — leave session intact; Home will show connection errors
-            Log.d(TAG, "validateRestoredSession: network unavailable, proceeding optimistically")
+            SecureLogger.d(TAG, "validateRestoredSession: network unavailable, proceeding optimistically")
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         }
@@ -372,9 +374,9 @@ class JellyfinAuthRepository @Inject constructor(
             if (server != null && server.username != null) {
                 try {
                     secureCredentialManager.clearPassword(server.url, server.username)
-                    Log.d(TAG, "logout: Cleared saved credentials for user ${server.username}")
+                    SecureLogger.d(TAG, "logout: Cleared saved credentials for user ${server.username}")
                 } catch (e: IOException) {
-                    Log.w(TAG, "logout: I/O error clearing credentials", e)
+                    SecureLogger.w(TAG, "logout: I/O error clearing credentials", e)
                 }
             }
 
@@ -385,9 +387,9 @@ class JellyfinAuthRepository @Inject constructor(
             try {
                 secureCredentialManager.clearServerState()
             } catch (e: Exception) {
-                Log.w(TAG, "logout: failed to clear server state", e)
+                SecureLogger.w(TAG, "logout: failed to clear server state", e)
             }
-            Log.d(TAG, "logout: User logged out successfully")
+            SecureLogger.d(TAG, "logout: User logged out successfully")
         }
     }
 
@@ -415,25 +417,28 @@ class JellyfinAuthRepository @Inject constructor(
         val server = _currentServer.value ?: return false
 
         return try {
-            withContext(Dispatchers.IO) {
+            withContext(dispatchers.io) {
                 createApiClient(server.url, server.accessToken).systemApi.getPublicSystemInfo()
             }
             true
         } catch (e: InvalidStatusException) {
             if (isTokenRejectedStatus(e.status)) {
-                Log.w(TAG, "ensureSessionReady: token rejected (${e.status}), attempting re-authentication")
+                SecureLogger.w(TAG, "ensureSessionReady: token rejected (${e.status}), attempting re-authentication")
                 forceReAuthenticate()
+            } else if (e.status >= 500) {
+                SecureLogger.e(TAG, "ensureSessionReady: server error ${e.status}, session not ready")
+                false
             } else {
-                Log.w(TAG, "ensureSessionReady: non-auth status ${e.status}, proceeding")
+                SecureLogger.w(TAG, "ensureSessionReady: non-auth status ${e.status}, proceeding")
                 true
             }
         } catch (e: IOException) {
-            Log.d(TAG, "ensureSessionReady: network unavailable, proceeding")
+            SecureLogger.d(TAG, "ensureSessionReady: network unavailable, proceeding")
             true
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "ensureSessionReady: unexpected validation failure, proceeding", e)
+            SecureLogger.w(TAG, "ensureSessionReady: unexpected validation failure, proceeding", e)
             true
         }
     }
@@ -463,16 +468,16 @@ class JellyfinAuthRepository @Inject constructor(
         try {
             secureCredentialManager.saveServerState(server)
         } catch (e: Exception) {
-            Log.w(TAG, "persistAuthenticationState: failed to persist server state", e)
+            SecureLogger.w(TAG, "persistAuthenticationState: failed to persist server state", e)
         }
         try {
             secureCredentialManager.saveProfile(server)
         } catch (e: Exception) {
-            Log.w(TAG, "persistAuthenticationState: failed to save profile entry", e)
+            SecureLogger.w(TAG, "persistAuthenticationState: failed to save profile entry", e)
         }
     }
 
-    suspend fun getSavedProfiles(): List<JellyfinServer> = withContext(Dispatchers.IO) {
+    suspend fun getSavedProfiles(): List<JellyfinServer> = withContext(dispatchers.io) {
         secureCredentialManager.loadProfiles()
     }
 
@@ -483,27 +488,27 @@ class JellyfinAuthRepository @Inject constructor(
             try {
                 secureCredentialManager.saveServerState(server)
             } catch (e: Exception) {
-                Log.w(TAG, "switchToProfile: failed to persist state", e)
+                SecureLogger.w(TAG, "switchToProfile: failed to persist state", e)
             }
             true
         }
     }
 
-    suspend fun removeProfile(server: JellyfinServer) = withContext(Dispatchers.IO) {
+    suspend fun removeProfile(server: JellyfinServer) = withContext(dispatchers.io) {
         val userId = server.userId ?: return@withContext
         secureCredentialManager.removeProfile(userId, server.url)
     }
 
     suspend fun initiateQuickConnect(serverUrl: String): ApiResult<QuickConnectResult> {
         return try {
-            val response = withContext(Dispatchers.IO) {
+            val response = withContext(dispatchers.io) {
                 val client = createApiClient(serverUrl)
                 client.quickConnectApi.initiateQuickConnect()
             }
             ApiResult.Success(response.content.toDomainQuickConnectResult())
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            Log.e(TAG, "initiateQuickConnect: Error", e)
+            SecureLogger.e(TAG, "initiateQuickConnect: Error", e)
             val errorType = RepositoryUtils.getErrorType(e)
             ApiResult.Error(throwableMessageOrFallback("Quick Connect error", e), e, errorType)
         }
@@ -511,7 +516,7 @@ class JellyfinAuthRepository @Inject constructor(
 
     suspend fun isQuickConnectEnabled(serverUrl: String): ApiResult<Boolean> {
         return try {
-            val response = withContext(Dispatchers.IO) {
+            val response = withContext(dispatchers.io) {
                 val client = createApiClient(serverUrl)
                 client.quickConnectApi.getQuickConnectEnabled()
             }
@@ -522,13 +527,13 @@ class JellyfinAuthRepository @Inject constructor(
             if (e.status == 401 || e.status == 403 || e.status == 404) {
                 ApiResult.Success(false)
             } else {
-                Log.e(TAG, "isQuickConnectEnabled: Failed with status ${e.status}", e)
+                SecureLogger.e(TAG, "isQuickConnectEnabled: Failed with status ${e.status}", e)
                 val errorType = RepositoryUtils.getErrorType(e)
                 ApiResult.Error(throwableMessageOrFallback("Failed to check Quick Connect availability", e), e, errorType)
             }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            Log.e(TAG, "isQuickConnectEnabled: Error", e)
+            SecureLogger.e(TAG, "isQuickConnectEnabled: Error", e)
             val errorType = RepositoryUtils.getErrorType(e)
             ApiResult.Error(throwableMessageOrFallback("Failed to check Quick Connect availability", e), e, errorType)
         }
@@ -536,7 +541,7 @@ class JellyfinAuthRepository @Inject constructor(
 
     suspend fun getQuickConnectState(serverUrl: String, secret: String): ApiResult<QuickConnectState> {
         return try {
-            val response = withContext(Dispatchers.IO) {
+            val response = withContext(dispatchers.io) {
                 val client = createApiClient(serverUrl)
                 client.quickConnectApi.getQuickConnectState(secret)
             }
@@ -551,14 +556,14 @@ class JellyfinAuthRepository @Inject constructor(
                 401, 403 -> ApiResult.Success(QuickConnectState(state = "Denied"))
                 404 -> ApiResult.Success(QuickConnectState(state = "Expired"))
                 else -> {
-                    Log.e(TAG, "getQuickConnectState: Failed with unexpected status", e)
+                    SecureLogger.e(TAG, "getQuickConnectState: Failed with unexpected status", e)
                     val errorType = RepositoryUtils.getErrorType(e)
                     ApiResult.Error(throwableMessageOrFallback("Failed to check Quick Connect state", e), e, errorType)
                 }
             }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            Log.e(TAG, "getQuickConnectState: Error", e)
+            SecureLogger.e(TAG, "getQuickConnectState: Error", e)
             val errorType = RepositoryUtils.getErrorType(e)
             ApiResult.Error(throwableMessageOrFallback("Failed to check Quick Connect state", e), e, errorType)
         }
@@ -570,7 +575,7 @@ class JellyfinAuthRepository @Inject constructor(
         return authMutex.withLock {
             _isAuthenticating.update { true }
             try {
-                val response = withContext(Dispatchers.IO) {
+                val response = withContext(dispatchers.io) {
                     val client = createApiClient(serverUrl)
                     client.userApi.authenticateWithQuickConnect(
                         org.jellyfin.sdk.model.api.QuickConnectDto(secret = secret),
@@ -585,7 +590,7 @@ class JellyfinAuthRepository @Inject constructor(
 
                 ApiResult.Success(authResult)
             } catch (e: InvalidStatusException) {
-                Log.e(TAG, "authenticateWithQuickConnect: Server returned error status", e)
+                SecureLogger.e(TAG, "authenticateWithQuickConnect: Server returned error status", e)
                 val errorType = RepositoryUtils.getErrorType(e)
                 ApiResult.Error(throwableMessageOrFallback("Quick Connect authentication failed", e), e, errorType)
             } finally {

@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -43,18 +45,19 @@ import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
 import com.rpeters.cinefintv.ui.TopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.components.ConfirmDeleteDialog
+import com.rpeters.cinefintv.ui.components.ImmersiveBackground
 import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.CinematicHero
 import com.rpeters.cinefintv.ui.screens.detail.cinematic.DetailOverviewSection
 
 @Composable
-fun StuffDetailScreen(
+fun CollectionDetailScreen(
     itemId: String,
     onOpenItem: (String, String?) -> Unit,
     onPlayItem: (String) -> Unit,
     onBack: () -> Unit,
-    viewModel: StuffDetailViewModel = hiltViewModel(),
+    viewModel: CollectionDetailViewModel = hiltViewModel(),
 ) {
     LaunchedEffect(itemId) {
         viewModel.init(itemId)
@@ -83,17 +86,17 @@ fun StuffDetailScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         when (val state = uiState) {
-            is StuffDetailUiState.Loading -> DetailLoadingState()
-            is StuffDetailUiState.Error -> DetailErrorState(
+            is CollectionDetailUiState.Loading -> DetailLoadingState()
+            is CollectionDetailUiState.Error -> DetailErrorState(
                 message = state.message,
                 onRetry = { viewModel.load() },
             )
-            is StuffDetailUiState.Content -> {
-                if (state.stuff.isCollection) {
-                    StuffFolderContent(
-                        stuff = state.stuff,
+            is CollectionDetailUiState.Content -> {
+                if (state.collection.isCollection) {
+                    CollectionFolderContent(
+                        collection = state.collection,
                         items = state.items,
                         onOpenItem = onOpenItem,
                         onBack = onBack,
@@ -102,8 +105,8 @@ fun StuffDetailScreen(
                         destinationFocus = destinationFocus,
                     )
                 } else {
-                    StuffVideoContent(
-                        stuff = state.stuff,
+                    CollectionVideoContent(
+                        collection = state.collection,
                         onPlayItem = onPlayItem,
                         onBack = onBack,
                         viewModel = viewModel,
@@ -117,62 +120,64 @@ fun StuffDetailScreen(
 }
 
 @Composable
-private fun StuffVideoContent(
-    stuff: StuffDetailModel,
+private fun CollectionVideoContent(
+    collection: CollectionDetailModel,
     onPlayItem: (String) -> Unit,
     onBack: () -> Unit,
-    viewModel: StuffDetailViewModel,
+    viewModel: CollectionDetailViewModel,
     primaryActionFocusRequester: FocusRequester,
     destinationFocus: TopLevelDestinationFocus,
 ) {
     val overviewFocusRequester = remember { FocusRequester() }
-    var showDeleteDialog by remember(stuff.id) { mutableStateOf(false) }
+    var showDeleteDialog by remember(collection.id) { mutableStateOf(false) }
     var didInitialFocus by remember { mutableStateOf(false) }
     val chromeFocusController = LocalAppChromeFocusController.current
 
-    val factItems = remember(stuff) {
+    var focusedBackdropUrl by remember(collection.backdropUrl) { mutableStateOf(collection.backdropUrl) }
+
+    val factItems = remember(collection) {
         buildList {
-            stuff.type?.let {
+            collection.type?.let {
                 add(DetailLabeledMetaItem(Icons.Default.Category, "Type", it))
             }
-            stuff.runtime?.let {
+            collection.runtime?.let {
                 add(DetailLabeledMetaItem(Icons.Default.Schedule, "Runtime", it))
             }
-            stuff.addedDate?.let {
+            collection.addedDate?.let {
                 add(DetailLabeledMetaItem(Icons.Default.CalendarToday, "Added", it))
             }
-            stuff.mediaQuality?.let {
+            collection.mediaQuality?.let {
                 add(DetailLabeledMetaItem(Icons.Default.HighQuality, "Quality", it))
             }
-            stuff.playbackProgress?.let {
+            collection.playbackProgress?.let {
                 add(DetailLabeledMetaItem(Icons.Default.VideoLibrary, "Progress", "${(it * 100).toInt()}% watched"))
             }
         }
     }
-    val eyebrow = remember(stuff) {
+    val eyebrow = remember(collection) {
         listOfNotNull(
-            stuff.type,
-            stuff.year?.toString(),
-            stuff.runtime,
+            collection.type,
+            collection.year?.toString(),
+            collection.runtime,
         ).joinToString(" · ").ifBlank { "Video" }
     }
-    val ratingText = remember(stuff) {
-        stuff.playbackProgress?.let { "${(it * 100).toInt()}% watched" }
+    val ratingText = remember(collection) {
+        collection.playbackProgress?.let { "${(it * 100).toInt()}% watched" }
     }
-    val chips = remember(stuff) {
+    val chips = remember(collection) {
         buildList {
-            add(stuff.type ?: "Video")
-            if (stuff.playbackProgress != null) {
+            add(collection.type ?: "Video")
+            if (collection.playbackProgress != null) {
                 add("Resume available")
             }
-            if (stuff.isWatched) {
+            if (collection.isWatched) {
                 add("Watched")
             }
-            stuff.mediaQuality?.let(::add)
+            collection.mediaQuality?.let(::add)
         }.distinct()
     }
 
-    LaunchedEffect(stuff.id) {
+    LaunchedEffect(collection.id) {
         if (!didInitialFocus) {
             primaryActionFocusRequester.requestFocus()
             didInitialFocus = true
@@ -181,7 +186,7 @@ private fun StuffVideoContent(
 
     if (showDeleteDialog) {
         ConfirmDeleteDialog(
-            title = "Delete ${stuff.title}?",
+            title = "Delete ${collection.title}?",
             message = "This will remove the item from your Jellyfin library.",
             onDismissRequest = { showDeleteDialog = false },
             onConfirmDelete = {
@@ -192,80 +197,86 @@ private fun StuffVideoContent(
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        CinematicHero(
-            backdropUrl = stuff.backdropUrl,
-            logoUrl = null,
-            title = stuff.title,
-            eyebrow = eyebrow,
-            ratingText = ratingText,
-            genres = chips,
-            primaryActionLabel = if (stuff.playbackProgress != null) "▶ Resume" else "▶ Play",
-            onPrimaryAction = { onPlayItem(stuff.id) },
-            secondaryActions = buildList {
-                add("Delete" to { showDeleteDialog = true })
-                add(
-                    if (stuff.isWatched) {
-                        "Mark Unwatched" to { viewModel.markUnwatched() }
-                    } else {
-                        "Mark Watched" to { viewModel.markWatched() }
-                    }
-                )
-            },
-            primaryActionFocusRequester = primaryActionFocusRequester,
-            primaryActionDownFocusRequester = overviewFocusRequester,
-            drawerFocusRequester = destinationFocus.drawerFocusRequester,
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        ImmersiveBackground(backdropUrl = focusedBackdropUrl)
 
-        DetailOverviewSection(
-            title = stuff.title,
-            posterUrl = stuff.posterUrl,
-            description = stuff.overview ?: "No description available for this item yet.",
-            factItems = factItems,
-            chips = chips,
-            focusRequester = overviewFocusRequester,
-            upFocusRequester = primaryActionFocusRequester,
-            modifier = Modifier.padding(top = 16.dp),
-        )
+        Column(modifier = Modifier.fillMaxSize()) {
+            CinematicHero(
+                backdropUrl = collection.backdropUrl,
+                logoUrl = null,
+                title = collection.title,
+                eyebrow = eyebrow,
+                ratingText = ratingText,
+                genres = chips,
+                primaryActionLabel = if (collection.playbackProgress != null) "▶ Resume" else "▶ Play",
+                onPrimaryAction = { onPlayItem(collection.id) },
+                secondaryActions = buildList {
+                    add("Delete" to { showDeleteDialog = true })
+                    add(
+                        if (collection.isWatched) {
+                            "Mark Unwatched" to { viewModel.markUnwatched() }
+                        } else {
+                            "Mark Watched" to { viewModel.markWatched() }
+                        }
+                    )
+                },
+                primaryActionFocusRequester = primaryActionFocusRequester,
+                primaryActionDownFocusRequester = overviewFocusRequester,
+                drawerFocusRequester = destinationFocus.drawerFocusRequester,
+            )
+
+            DetailOverviewSection(
+                title = collection.title,
+                posterUrl = collection.posterUrl,
+                description = collection.overview ?: "No description available for this item yet.",
+                factItems = factItems,
+                chips = chips,
+                focusRequester = overviewFocusRequester,
+                upFocusRequester = primaryActionFocusRequester,
+                modifier = Modifier.padding(top = 16.dp),
+            )
+        }
     }
 }
 
 @Composable
-private fun StuffFolderContent(
-    stuff: StuffDetailModel,
-    items: List<StuffItemModel>,
+private fun CollectionFolderContent(
+    collection: CollectionDetailModel,
+    items: List<CollectionItemModel>,
     onOpenItem: (String, String?) -> Unit,
     onBack: () -> Unit,
-    viewModel: StuffDetailViewModel,
+    viewModel: CollectionDetailViewModel,
     primaryActionFocusRequester: FocusRequester,
     destinationFocus: TopLevelDestinationFocus,
 ) {
     val overviewFocusRequester = remember { FocusRequester() }
     val gridEntryFocusRequester = remember { FocusRequester() }
     var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(items.firstOrNull()?.id) }
-    var showDeleteDialog by remember(stuff.id) { mutableStateOf(false) }
+    var showDeleteDialog by remember(collection.id) { mutableStateOf(false) }
     var didInitialFocus by remember { mutableStateOf(false) }
     val chromeFocusController = LocalAppChromeFocusController.current
 
-    val factItems = remember(stuff, items) {
+    var focusedBackdropUrl by remember(collection.backdropUrl) { mutableStateOf(collection.backdropUrl) }
+
+    val factItems = remember(collection, items) {
         buildList {
-            stuff.type?.let {
+            collection.type?.let {
                 add(DetailLabeledMetaItem(Icons.Default.Category, "Type", it))
             }
             add(DetailLabeledMetaItem(Icons.Default.VideoLibrary, "Items", items.size.toString()))
-            stuff.addedDate?.let {
+            collection.addedDate?.let {
                 add(DetailLabeledMetaItem(Icons.Default.CalendarToday, "Added", it))
             }
         }
     }
-    val chips = remember(stuff, items) {
+    val chips = remember(collection, items) {
         buildList {
-            add(stuff.type ?: "Collection")
+            add(collection.type ?: "Collection")
             add("${items.size} items")
         }
     }
 
-    LaunchedEffect(stuff.id) {
+    LaunchedEffect(collection.id) {
         if (!didInitialFocus) {
             primaryActionFocusRequester.requestFocus()
             didInitialFocus = true
@@ -274,7 +285,7 @@ private fun StuffFolderContent(
 
     if (showDeleteDialog) {
         ConfirmDeleteDialog(
-            title = "Delete ${stuff.title}?",
+            title = "Delete ${collection.title}?",
             message = "This will remove the item from your Jellyfin library.",
             onDismissRequest = { showDeleteDialog = false },
             onConfirmDelete = {
@@ -285,90 +296,97 @@ private fun StuffFolderContent(
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        CinematicHero(
-            backdropUrl = stuff.backdropUrl,
-            logoUrl = null,
-            title = stuff.title,
-            eyebrow = listOfNotNull(stuff.type ?: "Collection", "${items.size} items").joinToString(" · "),
-            ratingText = null,
-            genres = chips,
-            primaryActionLabel = if (items.isEmpty()) "Collection" else "Browse Items",
-            onPrimaryAction = {
-                if (items.isNotEmpty()) {
-                    gridEntryFocusRequester.requestFocus()
-                }
-            },
-            secondaryActions = listOf("Delete" to { showDeleteDialog = true }),
-            primaryActionFocusRequester = primaryActionFocusRequester,
-            primaryActionDownFocusRequester = overviewFocusRequester,
-            drawerFocusRequester = destinationFocus.drawerFocusRequester,
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        ImmersiveBackground(backdropUrl = focusedBackdropUrl)
 
-        DetailOverviewSection(
-            title = stuff.title,
-            posterUrl = stuff.posterUrl,
-            description = stuff.overview ?: "Browse everything included in this collection below.",
-            factItems = factItems,
-            chips = chips,
-            focusRequester = overviewFocusRequester,
-            upFocusRequester = primaryActionFocusRequester,
-            modifier = Modifier.padding(top = 16.dp),
-        )
+        Column(modifier = Modifier.fillMaxSize()) {
+            CinematicHero(
+                backdropUrl = collection.backdropUrl,
+                logoUrl = null,
+                title = collection.title,
+                eyebrow = listOfNotNull(collection.type ?: "Collection", "${items.size} items").joinToString(" · "),
+                ratingText = null,
+                genres = chips,
+                primaryActionLabel = if (items.isEmpty()) "Collection" else "Browse Items",
+                onPrimaryAction = {
+                    if (items.isNotEmpty()) {
+                        gridEntryFocusRequester.requestFocus()
+                    }
+                },
+                secondaryActions = listOf("Delete" to { showDeleteDialog = true }),
+                primaryActionFocusRequester = primaryActionFocusRequester,
+                primaryActionDownFocusRequester = overviewFocusRequester,
+                drawerFocusRequester = destinationFocus.drawerFocusRequester,
+            )
 
-        DetailContentSection(
-            title = "Items",
-            eyebrow = "${items.size} in collection",
-            icon = Icons.Default.VideoLibrary,
-            modifier = Modifier.padding(top = 0.dp),
-        ) {}
+            DetailOverviewSection(
+                title = collection.title,
+                posterUrl = collection.posterUrl,
+                description = collection.overview ?: "Browse everything included in this collection below.",
+                factItems = factItems,
+                chips = chips,
+                focusRequester = overviewFocusRequester,
+                upFocusRequester = primaryActionFocusRequester,
+                modifier = Modifier.padding(top = 16.dp),
+            )
 
-        if (items.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "No items found in this collection",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentPadding = PaddingValues(start = 48.dp, end = 48.dp, bottom = 32.dp),
-                horizontalArrangement = Arrangement.spacedBy(18.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
-            ) {
-                items(items, key = { it.id }) { item ->
-                    TvMediaCard(
-                        title = item.title,
-                        subtitle = item.subtitle,
-                        imageUrl = item.imageUrl,
-                        aspectRatio = 16f / 9f,
-                        modifier = Modifier
-                            .then(
-                                if (item.id == lastFocusedItemId) Modifier.focusRequester(gridEntryFocusRequester) else Modifier
-                            )
-                            .then(
-                                if (item.id == items.firstOrNull()?.id) {
-                                    Modifier.focusProperties { up = overviewFocusRequester }
-                                } else {
-                                    Modifier
-                                }
-                            ),
-                        watchStatus = item.watchStatus,
-                        playbackProgress = item.playbackProgress,
-                        unwatchedCount = item.unwatchedCount,
-                        onFocus = { lastFocusedItemId = item.id },
-                        onClick = { onOpenItem(item.id, item.itemType) },
+            DetailContentSection(
+                title = "Items",
+                eyebrow = "${items.size} in collection",
+                icon = Icons.Default.VideoLibrary,
+                modifier = Modifier.padding(top = 0.dp),
+            ) {}
+
+            if (items.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "No items found in this collection",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentPadding = PaddingValues(start = 48.dp, end = 48.dp, bottom = 32.dp),
+                    horizontalArrangement = Arrangement.spacedBy(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                ) {
+                    items(items, key = { it.id }) { item ->
+                        TvMediaCard(
+                            title = item.title,
+                            subtitle = item.subtitle,
+                            imageUrl = item.imageUrl,
+                            aspectRatio = 16f / 9f,
+                            modifier = Modifier
+                                .then(
+                                    if (item.id == lastFocusedItemId) Modifier.focusRequester(gridEntryFocusRequester) else Modifier
+                                )
+                                .then(
+                                    if (item.id == items.firstOrNull()?.id) {
+                                        Modifier.focusProperties { up = overviewFocusRequester }
+                                    } else {
+                                        Modifier
+                                    }
+                                ),
+                            watchStatus = item.watchStatus,
+                            playbackProgress = item.playbackProgress,
+                            unwatchedCount = item.unwatchedCount,
+                            onFocus = { 
+                                lastFocusedItemId = item.id
+                                focusedBackdropUrl = item.imageUrl ?: collection.backdropUrl
+                            },
+                            onClick = { onOpenItem(item.id, item.itemType) },
+                        )
+                    }
                 }
             }
         }

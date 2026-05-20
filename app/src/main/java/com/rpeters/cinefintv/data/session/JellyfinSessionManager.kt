@@ -57,9 +57,9 @@ class JellyfinSessionManager @Inject constructor(
         block: suspend (server: JellyfinServer, client: ApiClient) -> T,
     ): T {
         // Proactive refresh if expired
-        if (authRepository.isTokenExpired()) {
+        if (authRepository.isTokenMissing()) {
             reauthMutex.withLock {
-                if (authRepository.isTokenExpired()) {
+                if (authRepository.isTokenMissing()) {
                     Logger.d(LogCategory.NETWORK, "SessionManager", "Token expired for $operationName, forcing re-authentication")
                     try {
                         val success = withTimeout(10_000L) { authRepository.forceReAuthenticate() }

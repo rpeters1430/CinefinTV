@@ -491,12 +491,12 @@ class PlayerViewModel @Inject constructor(
         
         newPlayer.addAnalyticsListener(object : AnalyticsListener {
             override fun onPlayerError(eventTime: AnalyticsListener.EventTime, error: PlaybackException) {
-                Log.e("PlayerViewModel", "Analytics: Playback Error [Code: ${error.errorCode}]", error)
+                SecureLogger.e("PlayerViewModel", "Analytics: Playback Error [Code: ${error.errorCode}]", error)
             }
 
             override fun onDroppedVideoFrames(eventTime: AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) {
                 if (droppedFrames > 10) {
-                    Log.w("PlayerViewModel", "Analytics: Dropped $droppedFrames frames in ${elapsedMs}ms")
+                    SecureLogger.w("PlayerViewModel", "Analytics: Dropped $droppedFrames frames in ${elapsedMs}ms")
                 }
             }
         })
@@ -571,7 +571,7 @@ class PlayerViewModel @Inject constructor(
 
             val override: TrackSelectionOverride? = when {
                 textGroups.isEmpty() -> {
-                    Log.w("PlayerViewModel", "applyTrackSelection: no text groups in currentTracks, falling back to language preference")
+                    SecureLogger.w("PlayerViewModel", "applyTrackSelection: no text groups in currentTracks, falling back to language preference")
                     null
                 }
                 subtitleIndex >= 0 && subtitleIndex < textGroups.size -> {
@@ -801,7 +801,7 @@ class PlayerViewModel @Inject constructor(
 
     fun onPlayerError(error: PlaybackException) {
         if (uiState.value.isRetrying) {
-            Log.w("PlayerViewModel", "Ignoring playback error while retry is already in progress.")
+            SecureLogger.w("PlayerViewModel", "Ignoring playback error while retry is already in progress.")
             return
         }
 
@@ -835,12 +835,12 @@ class PlayerViewModel @Inject constructor(
 
     private fun attemptRetry(error: PlaybackException) {
         if (retryJob?.isActive == true) {
-            Log.w("PlayerViewModel", "Retry already active; skipping duplicate retry request.")
+            SecureLogger.w("PlayerViewModel", "Retry already active; skipping duplicate retry request.")
             return
         }
 
         val nextRetryCount = uiState.value.retryCount + 1
-        Log.w("PlayerViewModel", "Playback error (code ${error.errorCode}). Attempting retry $nextRetryCount/$MAX_RETRIES...")
+        SecureLogger.w("PlayerViewModel", "Playback error (code ${error.errorCode}). Attempting retry $nextRetryCount/$MAX_RETRIES...")
         
         _uiState.value = _uiState.value.copy(
             isRetrying = true,
@@ -912,7 +912,7 @@ class PlayerViewModel @Inject constructor(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    Log.w(
+                    SecureLogger.w(
                         "PlayerViewModel",
                         "Failed to sync playback position for item $resolvedItemId: ${e.message}",
                         e,

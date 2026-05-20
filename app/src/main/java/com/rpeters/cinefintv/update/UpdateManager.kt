@@ -7,13 +7,14 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import androidx.core.content.FileProvider
+import com.rpeters.cinefintv.data.common.DispatcherProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.ResponseBody
 import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
@@ -72,21 +73,22 @@ private const val UPDATE_JSON_URL = "https://raw.githubusercontent.com/rpeters14
 
 @Singleton
 class UpdateManager @Inject constructor(
-    @param:ApplicationContext private val context: Context,
-    private val okHttpClient: OkHttpClient
+    @ApplicationContext private val context: Context,
+    private val httpClient: OkHttpClient,
+    private val dispatchers: DispatcherProvider,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun checkForUpdate(): UpdateStatus = withContext(Dispatchers.IO) {
+    suspend fun checkForUpdate(): UpdateStatus = withContext(dispatchers.io) {
         try {
             val request = Request.Builder()
                 .url(UPDATE_JSON_URL)
                 .build()
 
-            val response = okHttpClient.newCall(request).execute()
+            val response = httpClient.newCall(request).execute()
             if (!response.isSuccessful) return@withContext UpdateStatus.Error("Failed to check for updates: ${response.code}")
 
-            val body = response.body.string()
+            val body = response.body?.string() ?: return@withContext UpdateStatus.Error("Empty response body")
             Log.d("UpdateManager", "Received version JSON: $body")
             val updateInfo = json.decodeFromString<UpdateInfo>(body)
 
@@ -115,18 +117,18 @@ class UpdateManager @Inject constructor(
     suspend fun downloadAndInstallApk(
         updateInfo: UpdateInfo,
         onProgress: (Float) -> Unit,
-    ): Result<UpdateInstallResult> = withContext(Dispatchers.IO) {
+    ): Result<UpdateInstallResult> = withContext(dispatchers.io) {
         try {
             val request = Request.Builder()
                 .url(updateInfo.updateUrl)
                 .build()
 
-            val response = okHttpClient.newCall(request).execute()
+            val response = httpClient.newCall(request).execute()
             if (!response.isSuccessful) {
                 return@withContext Result.failure(Exception("Failed to download APK: ${response.code}"))
             }
 
-            val body = requireNotNull(response.body) { "Empty response body" }
+            val body: ResponseBody = response.body ?: throw Exception("Empty response body")
             val totalBytes = body.contentLength()
             
             val apkFile = File(context.cacheDir, "update.apk")
@@ -164,11 +166,11 @@ class UpdateManager @Inject constructor(
             )
         ) {
             InstallAction.RequestUnknownSourcesPermission -> {
-            val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                data = Uri.parse("package:${context.packageName}")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
+                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
                 UpdateInstallResult.PermissionRequired
             }
 
@@ -179,9 +181,8 @@ class UpdateManager @Inject constructor(
                     file
                 )
 
-                @Suppress("DEPRECATION")
-                val intent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
-                    setData(uri)
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "application/vnd.android.package-archive")
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }

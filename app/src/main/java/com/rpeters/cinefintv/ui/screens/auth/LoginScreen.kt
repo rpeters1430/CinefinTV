@@ -71,33 +71,36 @@ fun LoginScreen(
         if (serverUrl.isBlank()) "Connect to a server first." else "Signing in to $serverUrl"
     }
 
-    if (showQuickConnectPanel) {
-        QuickConnectPanel(
-            isLoading = isQuickConnectLoading,
-            code = quickConnectCode,
-            pollStatus = quickConnectPollStatus,
-            error = quickConnectError,
-            onNewCode = onGenerateNewCode,
-            onCancel = {
-                onLeaveScreen()
-                showQuickConnectPanel = false
-            },
+    Box(modifier = Modifier.fillMaxSize()) {
+        com.rpeters.cinefintv.ui.components.ImmersiveBackground(
+            backdropUrl = null,
+            baseColor = expressiveColors.backgroundTop,
+            scrimColor = expressiveColors.backgroundBottom,
         )
-    } else {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            expressiveColors.backgroundTop,
-                            expressiveColors.backgroundBottom,
-                        ),
-                    ),
+
+        androidx.compose.animation.AnimatedContent(
+            targetState = showQuickConnectPanel,
+            label = "LoginScreenPanelTransition"
+        ) { isQuickConnect ->
+            if (isQuickConnect) {
+                QuickConnectPanel(
+                    isLoading = isQuickConnectLoading,
+                    code = quickConnectCode,
+                    pollStatus = quickConnectPollStatus,
+                    error = quickConnectError,
+                    onNewCode = onGenerateNewCode,
+                    onCancel = {
+                        onLeaveScreen()
+                        showQuickConnectPanel = false
+                    },
                 )
-                .padding(horizontal = 64.dp, vertical = 48.dp),
-            contentAlignment = Alignment.Center,
-        ) {
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 64.dp, vertical = 48.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
             Surface(
                 modifier = Modifier
                     .widthIn(max = 860.dp)
@@ -105,7 +108,10 @@ fun LoginScreen(
                     .defaultMinSize(minWidth = 460.dp),
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(32.dp),
                 colors = SurfaceDefaults.colors(
-                    containerColor = expressiveColors.chromeSurface.copy(alpha = 0.84f),
+                    containerColor = expressiveColors.chromeSurface.copy(alpha = 0.55f),
+                ),
+                border = androidx.tv.material3.Border(
+                    border = androidx.compose.foundation.BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.3f))
                 ),
                 tonalElevation = 8.dp,
             ) {
@@ -189,6 +195,8 @@ fun LoginScreen(
             }
         }
     }
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose { onLeaveScreen() }
@@ -212,14 +220,6 @@ private fun QuickConnectPanel(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        expressiveColors.backgroundTop,
-                        expressiveColors.backgroundBottom,
-                    ),
-                ),
-            )
             .padding(horizontal = 64.dp, vertical = 48.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -230,7 +230,10 @@ private fun QuickConnectPanel(
                 .defaultMinSize(minWidth = 460.dp),
             shape = androidx.compose.foundation.shape.RoundedCornerShape(32.dp),
             colors = SurfaceDefaults.colors(
-                containerColor = expressiveColors.chromeSurface.copy(alpha = 0.84f),
+                containerColor = expressiveColors.chromeSurface.copy(alpha = 0.55f),
+            ),
+            border = androidx.tv.material3.Border(
+                border = androidx.compose.foundation.BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.3f))
             ),
             tonalElevation = 8.dp,
         ) {

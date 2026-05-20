@@ -1,14 +1,14 @@
 package com.rpeters.cinefintv
 
 import android.app.Application
-import android.util.Log
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import com.rpeters.cinefintv.data.repository.RemoteConfigRepository
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+import com.rpeters.cinefintv.utils.SecureLogger
 
 @HiltAndroidApp
 class CinefinTvApplication : Application() {
@@ -28,31 +28,31 @@ class CinefinTvApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "Application onCreate")
+        SecureLogger.d(TAG, "Application onCreate")
 
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         // Initialize Remote Config
         scope.launch {
-            Log.d(TAG, "Remote config fetch start")
+            SecureLogger.d(TAG, "Remote config fetch start")
             runCatching {
                 remoteConfigRepository.fetchAndActivate()
             }.onSuccess {
-                Log.d(TAG, "Remote config fetch complete")
+                SecureLogger.d(TAG, "Remote config fetch complete")
             }.onFailure { error ->
-                Log.w(TAG, "Remote config fetch failed", error)
+                SecureLogger.w(TAG, "Remote config fetch failed", error)
             }
         }
 
         // Eagerly restore session to speed up startup
         scope.launch {
-            Log.d(TAG, "Session restore start")
+            SecureLogger.d(TAG, "Session restore start")
             val restored = runCatching {
                 authRepository.tryRestoreSession()
             }.onFailure { error ->
-                Log.w(TAG, "Session restore failed", error)
+                SecureLogger.w(TAG, "Session restore failed", error)
             }.getOrDefault(false)
-            Log.d(
+            SecureLogger.d(
                 TAG,
                 "Session restore complete: restored=$restored currentServerPresent=${authRepository.currentServer.value != null} isConnected=${authRepository.isConnected.value}",
             )

@@ -9,6 +9,8 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.rpeters.cinefintv.data.common.DispatcherProvider
+
 /**
  * Repository responsible for search functionality across Jellyfin content.
  * Provides intelligent search with caching and various filter options.
@@ -18,7 +20,8 @@ class JellyfinSearchRepository @Inject constructor(
     authRepository: JellyfinAuthRepository,
     sessionManager: com.rpeters.cinefintv.data.session.JellyfinSessionManager,
     cache: JellyfinCache,
-) : BaseJellyfinRepository(authRepository, sessionManager, cache) {
+    dispatchers: DispatcherProvider,
+) : BaseJellyfinRepository(authRepository, sessionManager, cache, dispatchers) {
 
     /**
      * Search for items across all content types with optional filtering.

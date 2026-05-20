@@ -55,6 +55,8 @@ import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
 import com.rpeters.cinefintv.ui.screens.detail.scrollToItemAndAwaitLayout
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import com.rpeters.cinefintv.ui.components.ImmersiveBackground
+import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -95,12 +97,13 @@ fun TvShowDetailLayout(
     val firstSimilarFocusRequester = remember { FocusRequester() }
     val hasNextUp = !nextUpTitle.isNullOrBlank() && onNextUpClick != null
 
-    var indexCursor = 1
-    val seasonIndex = if (seasons.isNotEmpty()) indexCursor++ else -1
-    val nextUpIndex = if (hasNextUp) indexCursor++ else -1
-    val castIndex = if (castItems.isNotEmpty()) indexCursor++ else -1
-    val trailerIndex = if (trailers.isNotEmpty()) indexCursor++ else -1
-    val similarIndex = if (similarItems.isNotEmpty()) indexCursor else -1
+    var focusedBackdropUrl by remember(backdropUrl) { mutableStateOf(backdropUrl) }
+
+    val seasonIndex = if (seasons.isNotEmpty()) 1 else -1
+    val nextUpIndex = if (hasNextUp) 1 + (if (seasons.isNotEmpty()) 1 else 0) else -1
+    val castIndex = if (castItems.isNotEmpty()) 1 + (if (seasons.isNotEmpty()) 1 else 0) + (if (hasNextUp) 1 else 0) else -1
+    val trailerIndex = if (trailers.isNotEmpty()) 1 + (if (seasons.isNotEmpty()) 1 else 0) + (if (hasNextUp) 1 else 0) + (if (castItems.isNotEmpty()) 1 else 0) else -1
+    val similarIndex = if (similarItems.isNotEmpty()) 1 + (if (seasons.isNotEmpty()) 1 else 0) + (if (hasNextUp) 1 else 0) + (if (castItems.isNotEmpty()) 1 else 0) + (if (trailers.isNotEmpty()) 1 else 0) else -1
 
     val firstContentFocusRequester = when {
         seasons.isNotEmpty() -> seasonFocusRequester
@@ -120,270 +123,364 @@ fun TvShowDetailLayout(
         }
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = spacing.gutter),
-    ) {
-        item {
-            DetailAnchor(
-                focusRequester = topFocusRequester,
-                downFocusRequester = primaryActionFocusRequester,
-                onFocused = {},
-            )
-            FlatDetailHero(
-                backdropUrl = backdropUrl,
-                posterUrl = posterUrl,
-                title = title,
-                metadataItems = metadataItems,
-                qualityBadges = qualityBadges,
-                genres = genres,
-                summary = description,
-                primaryActionLabel = primaryActionLabel,
-                onPrimaryAction = onPrimaryAction,
-                secondaryActions = heroSecondaryActions,
-                primaryActionFocusRequester = primaryActionFocusRequester,
-                primaryActionDownFocusRequester = firstContentFocusRequester,
-                drawerFocusRequester = drawerFocusRequester,
-                onDownNavigation = if (firstContentFocusRequester != null && firstContentIndex >= 0) {
-                    {
-                        if (listState.isScrollInProgress) return@FlatDetailHero
-                        coroutineScope.launch {
-                            listState.scrollToItemAndAwaitLayout(firstContentIndex)
-                            runCatching { firstContentFocusRequester.requestFocus() }
-                        }
-                    }
-                } else {
-                    null
-                },
-            )
-        }
+    Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
+        ImmersiveBackground(backdropUrl = focusedBackdropUrl)
 
-        if (seasons.isNotEmpty()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = spacing.gutter),
+        ) {
             item {
-                DetailShelfPanel(
-                    modifier = Modifier
-                        .padding(top = spacing.rowGap.div(1.5f))
-                        .testTag(DetailTestTags.TvEpisodesPanel),
-                    title = "Seasons",
-                    subtitle = "",
-                ) {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = spacing.gutter),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
-                    ) {
-                        items(seasons) { season ->
-                            val isFirstSeasonItem = season.id == seasons.firstOrNull()?.id
-                            SeasonShowcaseCard(
-                                season = season,
-                                modifier = Modifier
-                                    .blockBringIntoView()
-                                    .then(if (isFirstSeasonItem) Modifier.focusRequester(seasonFocusRequester) else Modifier)
-                                    .focusProperties {
-                                        up = primaryActionFocusRequester
-                                        if (isFirstSeasonItem) {
-                                            down = when {
-                                                hasNextUp -> nextUpFocusRequester
-                                                castItems.isNotEmpty() -> firstCastFocusRequester
-                                                trailers.isNotEmpty() -> firstTrailerFocusRequester
-                                                similarItems.isNotEmpty() -> firstSimilarFocusRequester
-                                                else -> seasonFocusRequester
-                                            }
-                                        }
-                                    }
-                                    .onPreviewKeyEvent { keyEvent ->
-                                        val nativeEvent = keyEvent.nativeKeyEvent
-                                        if (
-                                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                            nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
-                                        ) {
-                                            coroutineScope.launch {
-                                                listState.scrollToItemAndAwaitLayout(0)
-                                                for (attempt in 0..2) {
-                                                    if (runCatching { primaryActionFocusRequester.requestFocus() }.isSuccess) break
-                                                    delay(if (attempt == 0) 64L else 32L)
-                                                }
-                                            }
-                                            true
-                                        } else if (
-                                            isFirstSeasonItem &&
-                                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                            nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
-                                        ) {
-                                            when {
-                                                hasNextUp -> navigateToDetailRow(nextUpIndex, nextUpFocusRequester)
-                                                castItems.isNotEmpty() -> navigateToDetailRow(castIndex, firstCastFocusRequester)
-                                                trailers.isNotEmpty() -> navigateToDetailRow(trailerIndex, firstTrailerFocusRequester)
-                                                similarItems.isNotEmpty() -> navigateToDetailRow(similarIndex, firstSimilarFocusRequester)
-                                            }
-                                            true
-                                        } else {
-                                            false
-                                        }
-                                    }
-                                    .then(if (isFirstSeasonItem) Modifier.testTag(DetailTestTags.FirstSeasonItem) else Modifier),
-                                onClick = { onSeasonClick(season) },
-                            )
+                DetailAnchor(
+                    focusRequester = topFocusRequester,
+                    downFocusRequester = primaryActionFocusRequester,
+                    onFocused = { focusedBackdropUrl = backdropUrl },
+                )
+                FlatDetailHero(
+                    backdropUrl = backdropUrl,
+                    posterUrl = posterUrl,
+                    title = title,
+                    metadataItems = metadataItems,
+                    qualityBadges = qualityBadges,
+                    genres = genres,
+                    summary = description,
+                    primaryActionLabel = primaryActionLabel,
+                    onPrimaryAction = onPrimaryAction,
+                    secondaryActions = heroSecondaryActions,
+                    primaryActionFocusRequester = primaryActionFocusRequester,
+                    primaryActionDownFocusRequester = firstContentFocusRequester,
+                    drawerFocusRequester = drawerFocusRequester,
+                    onDownNavigation = if (firstContentFocusRequester != null && firstContentIndex >= 0) {
+                        {
+                            if (listState.isScrollInProgress) return@FlatDetailHero
+                            coroutineScope.launch {
+                                listState.scrollToItemAndAwaitLayout(firstContentIndex)
+                                runCatching { firstContentFocusRequester.requestFocus() }
+                            }
                         }
-                    }
-                }
-            }
-        }
-
-        if (hasNextUp) {
-            item {
-                NextUpPanel(
-                    title = nextUpTitle.orEmpty(),
-                    onPlay = onNextUpClick,
-                    focusRequester = nextUpFocusRequester,
-                    upFocusRequester = if (seasons.isNotEmpty()) seasonFocusRequester else primaryActionFocusRequester,
-                    downFocusRequester = when {
-                        castItems.isNotEmpty() -> firstCastFocusRequester
-                        trailers.isNotEmpty() -> firstTrailerFocusRequester
-                        similarItems.isNotEmpty() -> firstSimilarFocusRequester
-                        else -> nextUpFocusRequester
+                    } else {
+                        null
                     },
-                    onNavigateUp = {
-                        val targetIndex = if (seasons.isNotEmpty()) seasonIndex else 0
-                        val targetRequester = if (seasons.isNotEmpty()) seasonFocusRequester else primaryActionFocusRequester
-                        navigateToDetailRow(targetIndex, targetRequester)
-                    },
-                    onNavigateDown = {
-                        when {
-                            castItems.isNotEmpty() -> navigateToDetailRow(castIndex, firstCastFocusRequester)
-                            trailers.isNotEmpty() -> navigateToDetailRow(trailerIndex, firstTrailerFocusRequester)
-                            similarItems.isNotEmpty() -> navigateToDetailRow(similarIndex, firstSimilarFocusRequester)
-                        }
-                    },
-                    modifier = Modifier
-                        .padding(top = spacing.rowGap.div(1.5f))
-                        .padding(horizontal = spacing.gutter)
-                        .testTag(DetailTestTags.TvNextUpPanel),
                 )
             }
-        }
 
-        if (castItems.isNotEmpty()) {
-            item {
-                DetailShelfPanel(
-                    modifier = Modifier
-                        .padding(top = spacing.rowGap.div(1.5f))
-                        .testTag(DetailTestTags.TvCastPanel),
-                    title = "Cast",
-                    subtitle = "",
-                ) {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+            if (seasons.isNotEmpty()) {
+                item {
+                    DetailShelfPanel(
+                        modifier = Modifier
+                            .padding(top = spacing.rowGap.div(1.5f))
+                            .testTag(DetailTestTags.TvEpisodesPanel),
+                        title = "Seasons",
+                        subtitle = "",
                     ) {
-                        items(castItems) { person ->
-                            val isFirstCastItem = person.id == castItems.firstOrNull()?.id
-                            PersonCircleCard(
-                                name = person.name,
-                                role = person.role,
-                                imageUrl = person.imageUrl,
-                                modifier = Modifier
-                                    .blockBringIntoView()
-                                    .then(if (isFirstCastItem) Modifier.focusRequester(firstCastFocusRequester) else Modifier)
-                                    .focusProperties {
-                                        up = when {
-                                            hasNextUp -> nextUpFocusRequester
-                                            seasons.isNotEmpty() -> seasonFocusRequester
-                                            else -> primaryActionFocusRequester
-                                        }
-                                        if (isFirstCastItem) {
-                                            down = when {
-                                                trailers.isNotEmpty() -> firstTrailerFocusRequester
-                                                similarItems.isNotEmpty() -> firstSimilarFocusRequester
-                                                else -> firstCastFocusRequester
-                                            }
-                                        }
-                                    }
-                                    .onPreviewKeyEvent { keyEvent ->
-                                        val nativeEvent = keyEvent.nativeKeyEvent
-                                        if (
-                                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                            nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
-                                        ) {
-                                            coroutineScope.launch {
-                                                when {
-                                                    hasNextUp -> {
-                                                        listState.scrollToItemAndAwaitLayout(nextUpIndex)
-                                                        runCatching { nextUpFocusRequester.requestFocus() }
-                                                    }
-                                                    seasons.isNotEmpty() -> {
-                                                        listState.scrollToItemAndAwaitLayout(seasonIndex)
-                                                        runCatching { seasonFocusRequester.requestFocus() }
-                                                    }
-                                                    else -> {
-                                                        listState.scrollToItemAndAwaitLayout(0)
-                                                        runCatching { primaryActionFocusRequester.requestFocus() }
-                                                    }
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = spacing.gutter),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
+                        ) {
+                            items(seasons) { season ->
+                                val isFirstSeasonItem = season.id == seasons.firstOrNull()?.id
+                                SeasonShowcaseCard(
+                                    season = season,
+                                    modifier = Modifier
+                                        .blockBringIntoView()
+                                        .then(if (isFirstSeasonItem) Modifier.focusRequester(seasonFocusRequester) else Modifier)
+                                        .focusProperties {
+                                            up = primaryActionFocusRequester
+                                            if (isFirstSeasonItem) {
+                                                down = when {
+                                                    hasNextUp -> nextUpFocusRequester
+                                                    castItems.isNotEmpty() -> firstCastFocusRequester
+                                                    trailers.isNotEmpty() -> firstTrailerFocusRequester
+                                                    similarItems.isNotEmpty() -> firstSimilarFocusRequester
+                                                    else -> seasonFocusRequester
                                                 }
                                             }
-                                            true
-                                        } else if (
-                                            isFirstCastItem &&
-                                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                            nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
-                                        ) {
-                                            when {
-                                                trailers.isNotEmpty() -> navigateToDetailRow(trailerIndex, firstTrailerFocusRequester)
-                                                similarItems.isNotEmpty() -> navigateToDetailRow(similarIndex, firstSimilarFocusRequester)
-                                            }
-                                            true
-                                        } else {
-                                            false
                                         }
-                                    }
-                                    .then(if (isFirstCastItem) Modifier.testTag(DetailTestTags.FirstCastItem) else Modifier),
-                                onClick = { onCastClick(person.id) },
-                            )
+                                        .onPreviewKeyEvent { keyEvent ->
+                                            val nativeEvent = keyEvent.nativeKeyEvent
+                                            if (
+                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
+                                            ) {
+                                                coroutineScope.launch {
+                                                    listState.scrollToItemAndAwaitLayout(0)
+                                                    for (attempt in 0..2) {
+                                                        if (runCatching { primaryActionFocusRequester.requestFocus() }.isSuccess) break
+                                                        delay(if (attempt == 0) 64L else 32L)
+                                                    }
+                                                }
+                                                true
+                                            } else if (
+                                                isFirstSeasonItem &&
+                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                                            ) {
+                                                when {
+                                                    hasNextUp -> navigateToDetailRow(nextUpIndex, nextUpFocusRequester)
+                                                    castItems.isNotEmpty() -> navigateToDetailRow(castIndex, firstCastFocusRequester)
+                                                    trailers.isNotEmpty() -> navigateToDetailRow(trailerIndex, firstTrailerFocusRequester)
+                                                    similarItems.isNotEmpty() -> navigateToDetailRow(similarIndex, firstSimilarFocusRequester)
+                                                }
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        }
+                                        .then(if (isFirstSeasonItem) Modifier.testTag(DetailTestTags.FirstSeasonItem) else Modifier),
+                                    onClick = { onSeasonClick(season) },
+                                    onFocus = { focusedBackdropUrl = season.imageUrl },
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
 
-        if (trailers.isNotEmpty()) {
-            item {
-                DetailShelfPanel(
-                    modifier = Modifier.padding(top = spacing.rowGap.div(1.5f)),
-                    title = "Trailers & Extras",
-                    subtitle = "",
-                ) {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
+            if (hasNextUp) {
+                item {
+                    NextUpPanel(
+                        title = nextUpTitle.orEmpty(),
+                        onPlay = onNextUpClick,
+                        focusRequester = nextUpFocusRequester,
+                        upFocusRequester = if (seasons.isNotEmpty()) seasonFocusRequester else primaryActionFocusRequester,
+                        downFocusRequester = when {
+                            castItems.isNotEmpty() -> firstCastFocusRequester
+                            trailers.isNotEmpty() -> firstTrailerFocusRequester
+                            similarItems.isNotEmpty() -> firstSimilarFocusRequester
+                            else -> nextUpFocusRequester
+                        },
+                        onNavigateUp = {
+                            val targetIndex = if (seasons.isNotEmpty()) seasonIndex else 0
+                            val targetRequester = if (seasons.isNotEmpty()) seasonFocusRequester else primaryActionFocusRequester
+                            navigateToDetailRow(targetIndex, targetRequester)
+                        },
+                        onNavigateDown = {
+                            when {
+                                castItems.isNotEmpty() -> navigateToDetailRow(castIndex, firstCastFocusRequester)
+                                trailers.isNotEmpty() -> navigateToDetailRow(trailerIndex, firstTrailerFocusRequester)
+                                similarItems.isNotEmpty() -> navigateToDetailRow(similarIndex, firstSimilarFocusRequester)
+                            }
+                        },
+                        modifier = Modifier
+                            .padding(top = spacing.rowGap.div(1.5f))
+                            .padding(horizontal = spacing.gutter)
+                            .testTag(DetailTestTags.TvNextUpPanel),
+                        onFocus = { focusedBackdropUrl = backdropUrl },
+                    )
+                }
+            }
+
+            if (castItems.isNotEmpty()) {
+                item {
+                    DetailShelfPanel(
+                        modifier = Modifier
+                            .padding(top = spacing.rowGap.div(1.5f))
+                            .testTag(DetailTestTags.TvCastPanel),
+                        title = "Cast",
+                        subtitle = "",
                     ) {
-                        items(trailers, key = { it.id }) { trailer ->
-                            val isFirst = trailer.id == trailers.firstOrNull()?.id
-                            TvMediaCard(
-                                title = trailer.title,
-                                imageUrl = trailer.thumbnailUrl,
-                                aspectRatio = 16f / 9f,
-                                cardWidth = 200.dp,
-                                modifier = Modifier
-                                    .blockBringIntoView()
-                                    .then(if (isFirst) Modifier.focusRequester(firstTrailerFocusRequester) else Modifier)
-                                    .focusProperties {
-                                        up = when {
-                                            castItems.isNotEmpty() -> firstCastFocusRequester
-                                            hasNextUp -> nextUpFocusRequester
-                                            seasons.isNotEmpty() -> seasonFocusRequester
-                                            else -> primaryActionFocusRequester
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            items(castItems) { person ->
+                                val isFirstCastItem = person.id == castItems.firstOrNull()?.id
+                                PersonCircleCard(
+                                    name = person.name,
+                                    role = person.role,
+                                    imageUrl = person.imageUrl,
+                                    modifier = Modifier
+                                        .blockBringIntoView()
+                                        .then(if (isFirstCastItem) Modifier.focusRequester(firstCastFocusRequester) else Modifier)
+                                        .focusProperties {
+                                            up = when {
+                                                hasNextUp -> nextUpFocusRequester
+                                                seasons.isNotEmpty() -> seasonFocusRequester
+                                                else -> primaryActionFocusRequester
+                                            }
+                                            if (isFirstCastItem) {
+                                                down = when {
+                                                    trailers.isNotEmpty() -> firstTrailerFocusRequester
+                                                    similarItems.isNotEmpty() -> firstSimilarFocusRequester
+                                                    else -> firstCastFocusRequester
+                                                }
+                                            }
                                         }
-                                        if (isFirst) {
-                                            down = if (similarItems.isNotEmpty()) firstSimilarFocusRequester else firstTrailerFocusRequester
-                                        }
-                                    }
-                                    .onPreviewKeyEvent { keyEvent ->
-                                        val nativeEvent = keyEvent.nativeKeyEvent
-                                        when {
-                                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                                        .onPreviewKeyEvent { keyEvent ->
+                                            val nativeEvent = keyEvent.nativeKeyEvent
+                                            if (
+                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
+                                            ) {
                                                 coroutineScope.launch {
                                                     when {
+                                                        hasNextUp -> {
+                                                            listState.scrollToItemAndAwaitLayout(nextUpIndex)
+                                                            runCatching { nextUpFocusRequester.requestFocus() }
+                                                        }
+                                                        seasons.isNotEmpty() -> {
+                                                            listState.scrollToItemAndAwaitLayout(seasonIndex)
+                                                            runCatching { seasonFocusRequester.requestFocus() }
+                                                        }
+                                                        else -> {
+                                                            listState.scrollToItemAndAwaitLayout(0)
+                                                            runCatching { primaryActionFocusRequester.requestFocus() }
+                                                        }
+                                                    }
+                                                }
+                                                true
+                                            } else if (
+                                                isFirstCastItem &&
+                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                                            ) {
+                                                when {
+                                                    trailers.isNotEmpty() -> navigateToDetailRow(trailerIndex, firstTrailerFocusRequester)
+                                                    similarItems.isNotEmpty() -> navigateToDetailRow(similarIndex, firstSimilarFocusRequester)
+                                                }
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        }
+                                        .then(if (isFirstCastItem) Modifier.testTag(DetailTestTags.FirstCastItem) else Modifier),
+                                    onClick = { onCastClick(person.id) },
+                                    onFocus = { focusedBackdropUrl = backdropUrl },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (trailers.isNotEmpty()) {
+                item {
+                    DetailShelfPanel(
+                        modifier = Modifier.padding(top = spacing.rowGap.div(1.5f)),
+                        title = "Trailers & Extras",
+                        subtitle = "",
+                    ) {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
+                        ) {
+                            items(trailers, key = { it.id }) { trailer ->
+                                val isFirst = trailer.id == trailers.firstOrNull()?.id
+                                TvMediaCard(
+                                    title = trailer.title,
+                                    imageUrl = trailer.thumbnailUrl,
+                                    aspectRatio = 16f / 9f,
+                                    cardWidth = 200.dp,
+                                    modifier = Modifier
+                                        .blockBringIntoView()
+                                        .then(if (isFirst) Modifier.focusRequester(firstTrailerFocusRequester) else Modifier)
+                                        .focusProperties {
+                                            up = when {
+                                                castItems.isNotEmpty() -> firstCastFocusRequester
+                                                hasNextUp -> nextUpFocusRequester
+                                                seasons.isNotEmpty() -> seasonFocusRequester
+                                                else -> primaryActionFocusRequester
+                                            }
+                                            if (isFirst) {
+                                                down = if (similarItems.isNotEmpty()) firstSimilarFocusRequester else firstTrailerFocusRequester
+                                            }
+                                        }
+                                        .onPreviewKeyEvent { keyEvent ->
+                                            val nativeEvent = keyEvent.nativeKeyEvent
+                                            when {
+                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                                                    coroutineScope.launch {
+                                                        when {
+                                                            castItems.isNotEmpty() -> {
+                                                                listState.scrollToItemAndAwaitLayout(castIndex)
+                                                                runCatching { firstCastFocusRequester.requestFocus() }
+                                                            }
+                                                            hasNextUp -> {
+                                                                listState.scrollToItemAndAwaitLayout(nextUpIndex)
+                                                                runCatching { nextUpFocusRequester.requestFocus() }
+                                                            }
+                                                            seasons.isNotEmpty() -> {
+                                                                listState.scrollToItemAndAwaitLayout(seasonIndex)
+                                                                runCatching { seasonFocusRequester.requestFocus() }
+                                                            }
+                                                            else -> {
+                                                                listState.scrollToItemAndAwaitLayout(0)
+                                                                runCatching { primaryActionFocusRequester.requestFocus() }
+                                                            }
+                                                        }
+                                                    }
+                                                    true
+                                                }
+                                                isFirst &&
+                                                    similarItems.isNotEmpty() &&
+                                                    nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                                    nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                                    coroutineScope.launch {
+                                                        listState.scrollToItemAndAwaitLayout(similarIndex)
+                                                        runCatching { firstSimilarFocusRequester.requestFocus() }
+                                                    }
+                                                    true
+                                                }
+                                                else -> false
+                                            }
+                                        },
+                                    onClick = { onTrailerClick(trailer.id) },
+                                    onFocus = { focusedBackdropUrl = trailer.thumbnailUrl },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (similarItems.isNotEmpty()) {
+                item {
+                    DetailShelfPanel(
+                        modifier = Modifier
+                            .padding(top = spacing.rowGap.div(1.5f))
+                            .testTag(DetailTestTags.TvSimilarPanel),
+                        title = "More Like This",
+                        subtitle = "",
+                    ) {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
+                        ) {
+                            items(similarItems, key = { it.id }) { item ->
+                                val isFirstSimilarItem = item.id == similarItems.firstOrNull()?.id
+                                TvMediaCard(
+                                    title = item.title,
+                                    imageUrl = item.imageUrl,
+                                    watchStatus = item.watchStatus,
+                                    playbackProgress = item.playbackProgress,
+                                    aspectRatio = 16f / 9f,
+                                    cardWidth = 200.dp,
+                                    modifier = Modifier
+                                        .blockBringIntoView()
+                                        .then(if (isFirstSimilarItem) Modifier.focusRequester(firstSimilarFocusRequester) else Modifier)
+                                        .focusProperties {
+                                            up = when {
+                                                trailers.isNotEmpty() -> firstTrailerFocusRequester
+                                                castItems.isNotEmpty() -> firstCastFocusRequester
+                                                hasNextUp -> nextUpFocusRequester
+                                                seasons.isNotEmpty() -> seasonFocusRequester
+                                                else -> primaryActionFocusRequester
+                                            }
+                                        }
+                                        .onPreviewKeyEvent { keyEvent ->
+                                            val nativeEvent = keyEvent.nativeKeyEvent
+                                            if (
+                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
+                                            ) {
+                                                coroutineScope.launch {
+                                                    when {
+                                                        trailers.isNotEmpty() -> {
+                                                            listState.scrollToItemAndAwaitLayout(trailerIndex)
+                                                            runCatching { firstTrailerFocusRequester.requestFocus() }
+                                                        }
                                                         castItems.isNotEmpty() -> {
                                                             listState.scrollToItemAndAwaitLayout(castIndex)
                                                             runCatching { firstCastFocusRequester.requestFocus() }
@@ -403,100 +500,14 @@ fun TvShowDetailLayout(
                                                     }
                                                 }
                                                 true
+                                            } else {
+                                                false
                                             }
-                                            isFirst &&
-                                                similarItems.isNotEmpty() &&
-                                                nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                                nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                                coroutineScope.launch {
-                                                    listState.scrollToItemAndAwaitLayout(similarIndex)
-                                                    runCatching { firstSimilarFocusRequester.requestFocus() }
-                                                }
-                                                true
-                                            }
-                                            else -> false
-                                        }
-                                    },
-                                onClick = { onTrailerClick(trailer.id) },
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        if (similarItems.isNotEmpty()) {
-            item {
-                DetailShelfPanel(
-                    modifier = Modifier
-                        .padding(top = spacing.rowGap.div(1.5f))
-                        .testTag(DetailTestTags.TvSimilarPanel),
-                    title = "More Like This",
-                    subtitle = "",
-                ) {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
-                    ) {
-                        items(similarItems, key = { it.id }) { item ->
-                            val isFirstSimilarItem = item.id == similarItems.firstOrNull()?.id
-                            TvMediaCard(
-                                title = item.title,
-                                imageUrl = item.imageUrl,
-                                watchStatus = item.watchStatus,
-                                playbackProgress = item.playbackProgress,
-                                aspectRatio = 16f / 9f,
-                                cardWidth = 200.dp,
-                                modifier = Modifier
-                                    .blockBringIntoView()
-                                    .then(if (isFirstSimilarItem) Modifier.focusRequester(firstSimilarFocusRequester) else Modifier)
-                                    .focusProperties {
-                                        up = when {
-                                            trailers.isNotEmpty() -> firstTrailerFocusRequester
-                                            castItems.isNotEmpty() -> firstCastFocusRequester
-                                            hasNextUp -> nextUpFocusRequester
-                                            seasons.isNotEmpty() -> seasonFocusRequester
-                                            else -> primaryActionFocusRequester
-                                        }
-                                    }
-                                    .onPreviewKeyEvent { keyEvent ->
-                                        val nativeEvent = keyEvent.nativeKeyEvent
-                                        if (
-                                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                                            nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
-                                        ) {
-                                            coroutineScope.launch {
-                                                when {
-                                                    trailers.isNotEmpty() -> {
-                                                        listState.scrollToItemAndAwaitLayout(trailerIndex)
-                                                        runCatching { firstTrailerFocusRequester.requestFocus() }
-                                                    }
-                                                    castItems.isNotEmpty() -> {
-                                                        listState.scrollToItemAndAwaitLayout(castIndex)
-                                                        runCatching { firstCastFocusRequester.requestFocus() }
-                                                    }
-                                                    hasNextUp -> {
-                                                        listState.scrollToItemAndAwaitLayout(nextUpIndex)
-                                                        runCatching { nextUpFocusRequester.requestFocus() }
-                                                    }
-                                                    seasons.isNotEmpty() -> {
-                                                        listState.scrollToItemAndAwaitLayout(seasonIndex)
-                                                        runCatching { seasonFocusRequester.requestFocus() }
-                                                    }
-                                                    else -> {
-                                                        listState.scrollToItemAndAwaitLayout(0)
-                                                        runCatching { primaryActionFocusRequester.requestFocus() }
-                                                    }
-                                                }
-                                            }
-                                            true
-                                        } else {
-                                            false
-                                        }
-                                    }
-                                    .then(if (isFirstSimilarItem) Modifier.testTag(DetailTestTags.FirstSimilarItem) else Modifier),
-                                onClick = { onSimilarClick(item.id) },
-                            )
+                                        },
+                                    onClick = { onSimilarClick(item.id) },
+                                    onFocus = { focusedBackdropUrl = item.imageUrl },
+                                )
+                            }
                         }
                     }
                 }
@@ -514,6 +525,7 @@ private fun NextUpPanel(
     downFocusRequester: FocusRequester,
     onNavigateUp: () -> Unit,
     onNavigateDown: () -> Unit,
+    onFocus: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
@@ -547,6 +559,7 @@ private fun NextUpPanel(
                 onClick = onPlay,
                 modifier = Modifier
                     .focusRequester(focusRequester)
+                    .onFocusChanged { if (it.isFocused) onFocus() }
                     .focusProperties {
                         up = upFocusRequester
                         down = downFocusRequester
@@ -589,6 +602,7 @@ private fun NextUpPanel(
 private fun SeasonShowcaseCard(
     season: SeasonModel,
     onClick: () -> Unit,
+    onFocus: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -598,7 +612,10 @@ private fun SeasonShowcaseCard(
         onClick = onClick,
         modifier = modifier
             .width(140.dp)
-            .onFocusChanged { state -> isFocused = state.isFocused || state.hasFocus },
+            .onFocusChanged { state -> 
+                isFocused = state.isFocused || state.hasFocus
+                if (state.isFocused) onFocus()
+            },
         colors = androidx.tv.material3.CardDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f),

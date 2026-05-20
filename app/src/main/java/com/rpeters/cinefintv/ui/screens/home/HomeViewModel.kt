@@ -32,6 +32,8 @@ import kotlinx.coroutines.withTimeout
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
+import com.rpeters.cinefintv.utils.SecureLogger
+import com.rpeters.cinefintv.BuildConfig
 import android.os.SystemClock
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
@@ -92,13 +94,19 @@ class HomeViewModel @Inject constructor(
         const val TAG = "HomeStartup"
     }
 
+    private inline fun trace(message: () -> String) {
+        if (BuildConfig.DEBUG) {
+            SecureLogger.d(TAG, message())
+        }
+    }
+
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
     private val refreshMutex = Mutex()
     private val refreshSequence = AtomicInteger(0)
 
     init {
-        android.util.Log.d(TAG, "HomeViewModel init: state=${_uiState.value.debugSummary()}")
+        trace { "HomeViewModel init: state=${_uiState.value.debugSummary()}" }
         // Show cached content immediately — don't wait for the server before displaying it.
         loadCachedData()
         observeServerAvailability()
@@ -111,9 +119,9 @@ class HomeViewModel @Inject constructor(
             // Safety net: if the state hasn't moved out of Loading after 8 s, surface a
             // recoverable error rather than spinning indefinitely.
             kotlinx.coroutines.delay(8_000L)
-            android.util.Log.d(TAG, "8s loading watchdog fired: state=${_uiState.value.debugSummary()}")
+            trace { "8s loading watchdog fired: state=${_uiState.value.debugSummary()}" }
             if (_uiState.value is HomeUiState.Loading) {
-                android.util.Log.w(TAG, "Home still loading after 8s; surfacing error")
+                SecureLogger.w(TAG, "Home still loading after 8s; surfacing error")
                 _uiState.value = HomeUiState.Error("Unable to connect to your server. Please check your connection and try again.")
             }
         }
@@ -121,22 +129,21 @@ class HomeViewModel @Inject constructor(
 
     private fun observeServerAvailability() {
         viewModelScope.launch {
-            android.util.Log.d(TAG, "Subscribing to currentServer; restored=${repositories.auth.isSessionRestored.value}")
+            trace { "Subscribing to currentServer; restored=${repositories.auth.isSessionRestored.value}" }
             repositories.auth.currentServer
                 .distinctUntilChangedBy { server ->
                     (server?.normalizedUrl ?: server?.url) to server?.userId
                 }
                 .collect { server ->
-                    android.util.Log.d(
-                        TAG,
-                        "currentServer emission: server=${server.debugSummary()} restored=${repositories.auth.isSessionRestored.value} ui=${_uiState.value.debugSummary()}",
-                    )
+                    trace {
+                        "currentServer emission: server=${server.debugSummary()} restored=${repositories.auth.isSessionRestored.value} ui=${_uiState.value.debugSummary()}"
+                    }
                     if (server != null) {
-                        android.util.Log.d(TAG, "Server available; starting cold refresh")
+                        trace { "Server available; starting cold refresh" }
                         // Silent so cached content stays visible while the network refresh runs.
                         refresh(silent = true, forceRefresh = true)
                     } else if (repositories.auth.isSessionRestored.value == false && _uiState.value !is HomeUiState.Content) {
-                        android.util.Log.w(TAG, "No server and restore is false; showing login-required error")
+                        SecureLogger.w(TAG, "No server and restore is false; showing login-required error")
                         _uiState.value = HomeUiState.Error("No server connection available. Please log in.")
                     }
                 }
@@ -148,15 +155,14 @@ class HomeViewModel @Inject constructor(
         // we need a second watcher to catch that transition and surface the error.
         viewModelScope.launch {
             repositories.auth.isSessionRestored.collect { isRestored ->
-                android.util.Log.d(
-                    TAG,
-                    "isSessionRestored emission: restored=$isRestored server=${repositories.auth.currentServer.value.debugSummary()} ui=${_uiState.value.debugSummary()}",
-                )
+                trace {
+                    "isSessionRestored emission: restored=$isRestored server=${repositories.auth.currentServer.value.debugSummary()} ui=${_uiState.value.debugSummary()}"
+                }
                 if (isRestored == false &&
                     repositories.auth.currentServer.value == null &&
                     _uiState.value !is HomeUiState.Content
                 ) {
-                    android.util.Log.w(TAG, "Restore failed while server is null; showing login-required error")
+                    SecureLogger.w(TAG, "Restore failed while server is null; showing login-required error")
                     _uiState.value = HomeUiState.Error("No server connection available. Please log in.")
                 }
             }
@@ -166,7 +172,7 @@ class HomeViewModel @Inject constructor(
     private fun loadCachedData() {
         viewModelScope.launch(dispatchers.io) {
             val startedAt = SystemClock.elapsedRealtime()
-            android.util.Log.d(TAG, "Cache load start")
+            trace { "Cache load start" }
             val librariesDeferred = async { repositories.media.getCachedLibraries() }
             val continueDeferred = async { repositories.media.getCachedContinueWatching() }
             val nextUpDeferred = async { repositories.media.getCachedNextUp() }
@@ -174,16 +180,15 @@ class HomeViewModel @Inject constructor(
             val episodesDeferred = async { repositories.media.getCachedRecentlyAddedEpisodes() }
 
             val cachedLibraries = librariesDeferred.await()
-            android.util.Log.d(TAG, "Cache libraries returned: count=${cachedLibraries?.size ?: 0}")
+            trace { "Cache libraries returned: count=${cachedLibraries?.size ?: 0}" }
             publishCachedLibraries(cachedLibraries)
             val cachedContinueWatching = continueDeferred.await()
             val cachedNextUp = nextUpDeferred.await()
             val cachedMovies = moviesDeferred.await()
             val cachedEpisodes = episodesDeferred.await()
-            android.util.Log.d(
-                TAG,
-                "Cache load complete in ${SystemClock.elapsedRealtime() - startedAt}ms: libraries=${cachedLibraries?.size ?: 0} continue=${cachedContinueWatching?.size ?: 0} nextUp=${cachedNextUp?.size ?: 0} movies=${cachedMovies?.size ?: 0} episodes=${cachedEpisodes?.size ?: 0}",
-            )
+            trace {
+                "Cache load complete in ${SystemClock.elapsedRealtime() - startedAt}ms: libraries=${cachedLibraries?.size ?: 0} continue=${cachedContinueWatching?.size ?: 0} nextUp=${cachedNextUp?.size ?: 0} movies=${cachedMovies?.size ?: 0} episodes=${cachedEpisodes?.size ?: 0}"
+            }
 
             if (cachedLibraries != null || cachedContinueWatching != null || cachedNextUp != null || cachedMovies != null || cachedEpisodes != null) {
                 // Offload heavy mapping to background thread
@@ -262,7 +267,7 @@ class HomeViewModel @Inject constructor(
                 }
 
                 if (sections.isNotEmpty()) {
-                    android.util.Log.d(TAG, "Publishing cached home sections: ${sections.debugSummary()}")
+                    trace { "Publishing cached home sections: ${sections.debugSummary()}" }
                     val newState = HomeUiState.Content(
                         featuredItems = emptyList(), // Featured usually requires fresh context
                         sections = sections
@@ -270,10 +275,10 @@ class HomeViewModel @Inject constructor(
                     
                     if (_uiState.value != newState) {
                         _uiState.value = newState
-                        android.util.Log.d(TAG, "UI state updated from cache: ${newState.debugSummary()}")
+                        trace { "UI state updated from cache: ${newState.debugSummary()}" }
                     }
                 } else {
-                    android.util.Log.d(TAG, "Cache load produced no visible sections")
+                    trace { "Cache load produced no visible sections" }
                 }
             }
         }
@@ -306,22 +311,21 @@ class HomeViewModel @Inject constructor(
 
     fun refresh(silent: Boolean = false, forceRefresh: Boolean = false) {
         val refreshId = refreshSequence.incrementAndGet()
-        android.util.Log.d(
-            TAG,
-            "refresh#$refreshId requested: silent=$silent forceRefresh=$forceRefresh ui=${_uiState.value.debugSummary()} server=${repositories.auth.currentServer.value.debugSummary()}",
-        )
+        trace {
+            "refresh#$refreshId requested: silent=$silent forceRefresh=$forceRefresh ui=${_uiState.value.debugSummary()} server=${repositories.auth.currentServer.value.debugSummary()}"
+        }
         viewModelScope.launch {
             val waitingAt = SystemClock.elapsedRealtime()
             refreshMutex.withLock {
                 val lockedAt = SystemClock.elapsedRealtime()
-                android.util.Log.d(TAG, "refresh#$refreshId acquired mutex after ${lockedAt - waitingAt}ms")
+                trace { "refresh#$refreshId acquired mutex after ${lockedAt - waitingAt}ms" }
                 try {
                     val hasContent = _uiState.value is HomeUiState.Content
                     if (!silent || !hasContent) {
                         _uiState.value = HomeUiState.Loading
-                        android.util.Log.d(TAG, "refresh#$refreshId set Loading; silent=$silent hasContent=$hasContent")
+                        trace { "refresh#$refreshId set Loading; silent=$silent hasContent=$hasContent" }
                     } else {
-                        android.util.Log.d(TAG, "refresh#$refreshId keeping existing content while refreshing")
+                        trace { "refresh#$refreshId keeping existing content while refreshing" }
                     }
 
                     val results = RefreshResults()
@@ -356,7 +360,7 @@ class HomeViewModel @Inject constructor(
                             }
                         }.onFailure { error ->
                             if (error is kotlinx.coroutines.CancellationException) throw error
-                            android.util.Log.e(TAG, "refresh#$refreshId failed to publish $source home results", error)
+                            SecureLogger.e(TAG, "refresh#$refreshId failed to publish $source home results", error)
                         }
                     }
 
@@ -366,17 +370,16 @@ class HomeViewModel @Inject constructor(
                         update: (RefreshResults, ApiResult<List<BaseItemDto>>) -> Unit,
                     ) {
                         val sourceStartedAt = SystemClock.elapsedRealtime()
-                        android.util.Log.d(TAG, "refresh#$refreshId $source fetch start")
+                        trace { "refresh#$refreshId $source fetch start" }
                         val res = try {
                             withTimeout(12_000L) { fetch() }
                         } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                            android.util.Log.w(TAG, "refresh#$refreshId $source timed out after 12s")
+                            trace { "refresh#$refreshId $source timed out after 12s" }
                             ApiResult.Error("Request timed out")
                         }
-                        android.util.Log.d(
-                            TAG,
-                            "refresh#$refreshId $source fetch finished in ${SystemClock.elapsedRealtime() - sourceStartedAt}ms: ${res.debugSummary()}",
-                        )
+                        trace {
+                            "refresh#$refreshId $source fetch finished in ${SystemClock.elapsedRealtime() - sourceStartedAt}ms: ${res.debugSummary()}"
+                        }
                         updateResultsAndUi(source) {
                             update(it, res)
                         }
@@ -396,13 +399,13 @@ class HomeViewModel @Inject constructor(
                                 ?: "No content is available yet."
 
                             if (!(silent && hasContent)) {
-                                android.util.Log.w(TAG, "refresh#$refreshId finalized while still Loading; error=$errorMessage")
+                                trace { "refresh#$refreshId finalized while still Loading; error=$errorMessage" }
                                 _uiState.value = HomeUiState.Error(errorMessage)
                             } else {
-                                android.util.Log.d(TAG, "refresh#$refreshId finished with no new content, preserving previous content")
+                                trace { "refresh#$refreshId finished with no new content, preserving previous content" }
                             }
                         } else {
-                            android.util.Log.d(TAG, "refresh#$refreshId finalize saw ui=${_uiState.value.debugSummary()}")
+                            trace { "refresh#$refreshId finalize saw ui=${_uiState.value.debugSummary()}" }
                         }
                     }
 
@@ -448,19 +451,18 @@ class HomeViewModel @Inject constructor(
                     }
 
                     finalizeIfStillLoading()
-                    android.util.Log.d(
-                        TAG,
-                        "refresh#$refreshId complete in ${SystemClock.elapsedRealtime() - refreshStartedAt}ms with ui=${_uiState.value.debugSummary()}",
-                    )
+                    trace {
+                        "refresh#$refreshId complete in ${SystemClock.elapsedRealtime() - refreshStartedAt}ms with ui=${_uiState.value.debugSummary()}"
+                    }
                 } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                    android.util.Log.w(TAG, "refresh#$refreshId timed out after 30s")
+                    trace { "refresh#$refreshId timed out after 30s" }
                     if (_uiState.value is HomeUiState.Loading) {
                         _uiState.value = HomeUiState.Error("Server took too long to respond. Please check your connection and try again.")
                     }
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
                     val errorMessage = "Failed to load home content: ${e.message ?: "Unknown error"}"
-                    android.util.Log.e(TAG, "refresh#$refreshId $errorMessage", e)
+                    SecureLogger.e(TAG, "refresh#$refreshId $errorMessage", e)
                     if (_uiState.value is HomeUiState.Loading) {
                         _uiState.value = HomeUiState.Error(errorMessage)
                     }
@@ -474,10 +476,10 @@ class HomeViewModel @Inject constructor(
             ?.filter(::isVisibleLibrary)
             .orEmpty()
         if (filteredLibraries.isEmpty()) {
-            android.util.Log.d(TAG, "No cached libraries to publish")
+            trace { "No cached libraries to publish" }
             return
         }
-        android.util.Log.d(TAG, "Publishing cached libraries immediately: count=${filteredLibraries.size}")
+        trace { "Publishing cached libraries immediately: count=${filteredLibraries.size}" }
 
         val librariesSection = HomeSectionModel(
             id = HomeSectionId.LIBRARIES,
@@ -495,7 +497,7 @@ class HomeViewModel @Inject constructor(
 
         if (_uiState.value != newState) {
             _uiState.value = newState
-            android.util.Log.d(TAG, "UI state updated with cached libraries: ${newState.debugSummary()}")
+            trace { "UI state updated with cached libraries: ${newState.debugSummary()}" }
         }
     }
 
@@ -518,16 +520,14 @@ class HomeViewModel @Inject constructor(
 
         if (sections.isNotEmpty() || featuredItems.isNotEmpty()) {
             if (!shouldApply()) {
-                android.util.Log.d(
-                    TAG,
-                    "refresh#$refreshId snapshot#$snapshotVersion skipped because a newer snapshot already applied",
-                )
+                trace {
+                    "refresh#$refreshId snapshot#$snapshotVersion skipped because a newer snapshot already applied"
+                }
                 return
             }
-            android.util.Log.d(
-                TAG,
-                "refresh#$refreshId snapshot#$snapshotVersion publishing: featured=${featuredItems.size} sections=${sections.debugSummary()} previous=${currentContent.debugSummary()}",
-            )
+            trace {
+                "refresh#$refreshId snapshot#$snapshotVersion publishing: featured=${featuredItems.size} sections=${sections.debugSummary()} previous=${currentContent.debugSummary()}"
+            }
             val newState = HomeUiState.Content(
                 featuredItems = featuredItems,
                 sections = sections,
@@ -535,13 +535,12 @@ class HomeViewModel @Inject constructor(
 
             if (_uiState.value != newState) {
                 _uiState.value = newState
-                android.util.Log.d(TAG, "refresh#$refreshId snapshot#$snapshotVersion updated UI from network: ${newState.debugSummary()}")
+                trace { "refresh#$refreshId snapshot#$snapshotVersion updated UI from network: ${newState.debugSummary()}" }
             }
         } else {
-            android.util.Log.d(
-                TAG,
-                "refresh#$refreshId snapshot#$snapshotVersion had no publishable content: libraries=${results.libraries.debugSummary()} continue=${results.continueWatching.debugSummary()} nextUp=${results.nextUp.debugSummary()} movies=${results.movies.debugSummary()} episodes=${results.episodes.debugSummary()} videos=${results.videos.debugSummary()} music=${results.music.debugSummary()}",
-            )
+            trace {
+                "refresh#$refreshId snapshot#$snapshotVersion had no publishable content: libraries=${results.libraries.debugSummary()} continue=${results.continueWatching.debugSummary()} nextUp=${results.nextUp.debugSummary()} movies=${results.movies.debugSummary()} episodes=${results.episodes.debugSummary()} videos=${results.videos.debugSummary()} music=${results.music.debugSummary()}"
+            }
         }
     }
 
@@ -730,7 +729,7 @@ class HomeViewModel @Inject constructor(
         return runCatching {
             toCardModel(item)
         }.onFailure { error ->
-            android.util.Log.w("HomeViewModel", "Failed to map home item ${item.id}", error)
+            SecureLogger.w("HomeViewModel", "Failed to map home item ${item.id}", error)
         }.getOrNull()
     }
 
@@ -754,7 +753,7 @@ class HomeViewModel @Inject constructor(
                     tag = item.imageTags?.get(ImageType.PRIMARY),
                 )
         }.onFailure { error ->
-            android.util.Log.w("HomeViewModel", "Failed to build library image URL for ${item.id}", error)
+            SecureLogger.w("HomeViewModel", "Failed to build library image URL for ${item.id}", error)
         }.getOrNull()
     }
 

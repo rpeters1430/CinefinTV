@@ -2,6 +2,26 @@
 
 All notable changes to CinefinTV will be documented in this file.
 
+## [2.0.2] - 2026-05-18
+
+### Added
+- **Android 13+ Support**: Added `POST_NOTIFICATIONS` permission to ensure media controls appear on modern Android TV devices.
+- **Secure Logging System**: Implemented `SecureLogger` globally to protect user PII and improve performance on low-end hardware by omitting expensive trace logs in production.
+- **Collection Support**: Formalized support for Jellyfin "Collections" (BoxSets) and "User Libraries" with dedicated detail and library views.
+
+### Changed
+- **Architectural Cleanup**: Renamed all "Stuff" nomenclature to "Collections/Collection" throughout the codebase and navigation routes.
+- **Coroutine Standardization**: Standardized on injected `DispatcherProvider` across all repositories and managers for better testability and performance control.
+- **Optimized Library Refresh**: Added debouncing to library updates to prevent UI stutter during rapid background data changes.
+- **Modernized Installer**: Updated `UpdateManager` to use standard Android installation intents, removing deprecated API usage.
+- **Theme Alignment**: Replaced hardcoded "NetflixRed" constants with themed Material 3 primary tokens.
+
+### Fixed
+- **Focus Issues**: Resolved duplicate `.focusable()` issue in `SeekBarControl` that caused "sticky" focus during playback.
+- **Session Reliability**: Fixed `ensureSessionReady()` to correctly handle 5xx server errors, preventing the app from attempting to use broken server connections.
+- **State Efficiency**: Optimized timestamp state in `HomeScreen` to use primitive-backed `mutableLongStateOf` instead of boxed-primitive state.
+- **Build Integrity**: Aligned Kotlin and KSP versions to ensure stable symbol processing for Hilt.
+
 ## [0.2.0-beta] - 2026-03-14
 
 ### Added

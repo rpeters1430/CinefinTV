@@ -11,8 +11,13 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.tv.material3.Border
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
+import com.rpeters.cinefintv.ui.theme.CinefinGold
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -740,39 +745,64 @@ private fun PlayerTopBadges(
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     Row(
-        modifier = modifier.padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = modifier.padding(24.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        if (isHdr) {
-            Badge("HDR")
-        }
-        qualityLabel?.let {
-            Badge(it)
-        }
         if (playbackSpeed != 1.0f) {
-            Badge("${playbackSpeed}x")
+            BadgeSurface {
+                Text(
+                    text = "${playbackSpeed}x",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = expressiveColors.playerContentPrimary
+                )
+            }
+        }
+        if (isHdr) {
+            BadgeSurface(color = Color(0xFFFFD700).copy(alpha = 0.9f)) {
+                Text(
+                    text = "HDR",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color.Black
+                )
+            }
+        }
+        qualityLabel?.let { label ->
+            BadgeSurface {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = expressiveColors.playerContentPrimary
+                )
+            }
         }
     }
 }
 
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun Badge(text: String) {
+private fun BadgeSurface(
+    color: Color? = null,
+    content: @Composable () -> Unit
+) {
     val expressiveColors = LocalCinefinExpressiveColors.current
-    Box(
-        modifier = Modifier
-            .background(
-                expressiveColors.playerContentPrimary.copy(alpha = 0.15f),
-                RoundedCornerShape(4.dp)
-            )
-            .padding(horizontal = 6.dp, vertical = 2.dp)
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = expressiveColors.playerContentPrimary.copy(alpha = 0.9f),
-            fontWeight = FontWeight.Bold,
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        colors = SurfaceDefaults.colors(
+            containerColor = color ?: expressiveColors.surfaceContainerHigh.copy(alpha = 0.7f)
+        ),
+        border = Border(
+            border = BorderStroke(1.dp, expressiveColors.playerContentPrimary.copy(alpha = 0.1f))
         )
+    ) {
+        Box(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+            content()
+        }
     }
 }
 

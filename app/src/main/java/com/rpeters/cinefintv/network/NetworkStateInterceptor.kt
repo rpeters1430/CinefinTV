@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.network
 
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
+import com.rpeters.cinefintv.BuildConfig
 import okhttp3.Interceptor
 import okhttp3.Response
 import java.io.IOException
@@ -27,16 +28,19 @@ class NetworkStateInterceptor(
 
         // Check network connectivity before proceeding
         if (!connectivityChecker.isOnline()) {
-            Log.w(TAG, "No network connectivity available for ${request.url}")
+            SecureLogger.w(TAG, "No network connectivity available for ${request.url}")
             throw IOException("No internet connection available. Please check your network settings.")
         }
 
-        val networkType = connectivityChecker.getNetworkType()
-        Log.d(TAG, "Request to ${request.url.host} via $networkType")
+        if (BuildConfig.DEBUG) {
+            val networkType = connectivityChecker.getNetworkType()
+            SecureLogger.d(TAG, "Request to ${request.url.host} via $networkType")
+        }
 
         return try {
             chain.proceed(request)
         } catch (e: SocketException) {
+            val networkType = connectivityChecker.getNetworkType()
             // Enhance SocketException with network context
             val message = when {
                 e.message?.contains("Software caused connection abort", ignoreCase = true) == true -> {
@@ -49,7 +53,7 @@ class NetworkStateInterceptor(
                     "Network error: ${e.message} (Network: $networkType)"
                 }
             }
-            Log.e(TAG, message, e)
+            SecureLogger.e(TAG, message, e)
             throw IOException(message, e)
         }
     }

@@ -141,6 +141,7 @@ class SearchViewModel @Inject constructor(
             title = item.getDisplayTitle(),
             subtitle = presentation.subtitle,
             imageUrl = repositories.stream.getSearchCardImageUrl(item),
+            backdropUrl = repositories.stream.getBackdropUrl(item),
             watchStatus = presentation.watchStatus,
             playbackProgress = presentation.playbackProgress,
             unwatchedCount = presentation.unwatchedCount,

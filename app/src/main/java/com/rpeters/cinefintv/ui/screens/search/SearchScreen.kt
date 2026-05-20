@@ -35,7 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
@@ -51,6 +51,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.CinefinTextInputField
+import com.rpeters.cinefintv.ui.components.ImmersiveBackground
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
@@ -103,6 +104,8 @@ internal fun SearchScreenContent(
     val firstResultFocusRequester = remember { FocusRequester() }
     var lastFocusedResultId by rememberSaveable { mutableStateOf<String?>(null) }
     var shouldRestoreFocus by rememberSaveable { mutableStateOf(false) }
+    
+    var focusedBackdropUrl by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(hasBeenPaused) {
         if (hasBeenPaused) shouldRestoreFocus = true
@@ -116,28 +119,19 @@ internal fun SearchScreenContent(
         shouldRestoreFocus = false
     }
     val destinationFocus = rememberTopLevelDestinationFocus(primaryContentRequester)
-    // Derive actual column count from visible items so the left-edge escape works on any row.
+    
     val columnCount by remember {
         derivedStateOf {
             gridState.layoutInfo.visibleItemsInfo
-                .filter { it.row == 0 }
+                .filter { it.row >= 2 } // Search hero and field are rows 0 and 1
                 .maxOfOrNull { it.column + 1 }
                 ?: 1
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        expressiveColors.backgroundTop,
-                        expressiveColors.backgroundBottom,
-                    ),
-                ),
-            ),
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        ImmersiveBackground(backdropUrl = focusedBackdropUrl)
+
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 160.dp),
             state = gridState,
@@ -243,7 +237,10 @@ internal fun SearchScreenContent(
                             watchStatus = item.watchStatus,
                             playbackProgress = item.playbackProgress,
                             unwatchedCount = item.unwatchedCount,
-                            onFocus = { lastFocusedResultId = item.id },
+                            onFocus = { 
+                                lastFocusedResultId = item.id
+                                focusedBackdropUrl = item.backdropUrl ?: item.imageUrl
+                            },
                             modifier = Modifier
                                 .testTag(SearchTestTags.resultItem(index))
                                 .then(

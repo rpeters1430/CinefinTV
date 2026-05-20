@@ -1,8 +1,13 @@
 package com.rpeters.cinefintv.ui.screens.home
 
 import android.os.SystemClock
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -29,6 +34,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -69,6 +75,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Carousel
+import androidx.tv.material3.CarouselDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
@@ -78,6 +85,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.LocalAppChromeFocusController
+import com.rpeters.cinefintv.ui.components.ImmersiveBackground
 import com.rpeters.cinefintv.ui.navigation.FocusNavigationCoordinator
 import com.rpeters.cinefintv.ui.navigation.LocalFocusNavigationCoordinator
 import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
@@ -102,7 +110,6 @@ private const val HOME_FOCUS_RESTORE_SETTLE_MS = 1_000L
 private const val HOME_RESUME_REFRESH_THRESHOLD_MS = 30_000L
 
 private val NAV_RAIL_SLOT_WIDTH = 216.dp  // 196dp rail + 12dp start padding + 8dp content host start padding (matches CinefinAppScaffold)
-private val NetflixRed = Color(0xFFE50914)
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -117,7 +124,7 @@ fun HomeScreen(
 
     val lifecycleOwner = LocalLifecycleOwner.current
     var hasBeenPaused by remember { mutableStateOf(false) }
-    var lastPausedAtMs by remember { mutableStateOf(0L) }
+    var lastPausedAtMs by remember { mutableLongStateOf(0L) }
     var shouldRestoreFocusOnResume by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
@@ -286,6 +293,7 @@ private fun HomeLoadedContent(
     var lastFocusedSectionId by rememberSaveable { mutableStateOf<HomeSectionId?>(null) }
     var lastFocusedItemId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedEpisodeMenuItem by remember { mutableStateOf<HomeCardModel?>(null) }
+    var focusedItem by remember { mutableStateOf<HomeCardModel?>(null) }
     var shouldRestoreFocus by rememberSaveable { mutableStateOf(true) }
     var positionedInitialFeatured by rememberSaveable { mutableStateOf(false) }
     val focusNavigationCoordinator = LocalFocusNavigationCoordinator.current ?: remember(coroutineScope) {
@@ -424,16 +432,10 @@ private fun HomeLoadedContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colorStops = arrayOf(
-                        0.0f to Color.Black,
-                        0.42f to Color.Black,
-                        1.0f to MaterialTheme.colorScheme.background,
-                    ),
-                ),
-            ),
+            .background(Color.Black),
     ) {
+        ImmersiveBackground(backdropUrl = focusedItem?.backdropUrl ?: focusedItem?.imageUrl)
+
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
@@ -447,6 +449,7 @@ private fun HomeLoadedContent(
                         items = state.featuredItems,
                         onMoreInfo = onOpenItem,
                         onPlay = onPlayItem,
+                        onItemFocused = { focusedItem = it },
                         destinationFocus = destinationFocus,
                         primaryActionFocusRequester = featuredPrimaryActionRequester,
                         downRequester = firstSectionRequester,
@@ -485,9 +488,10 @@ private fun HomeLoadedContent(
                     } else {
                         null
                     },
-                    onItemFocused = { itemId ->
+                    onItemFocused = { item ->
                         lastFocusedSectionId = section.id
-                        lastFocusedItemId = itemId
+                        lastFocusedItemId = item.id
+                        focusedItem = item
                         ensureSectionVisible(index)
                     },
                     onEpisodeMenuRequested = { selectedEpisodeMenuItem = it },
@@ -581,6 +585,7 @@ private fun FeaturedCarousel(
     onPlay: (String) -> Unit,
     destinationFocus: com.rpeters.cinefintv.ui.TopLevelDestinationFocus,
     primaryActionFocusRequester: FocusRequester,
+    onItemFocused: (HomeCardModel) -> Unit,
     downRequester: FocusRequester?,
     onNavigateDown: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -588,6 +593,12 @@ private fun FeaturedCarousel(
     val carouselState = rememberCarouselState()
     val performanceProfile = LocalPerformanceProfile.current
     var isFocused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(carouselState.activeItemIndex, items) {
+        items.getOrNull(carouselState.activeItemIndex)?.let {
+            onItemFocused(it)
+        }
+    }
 
     Carousel(
         itemCount = items.size,
@@ -601,7 +612,7 @@ private fun FeaturedCarousel(
         modifier = modifier
             .testTag(HomeTestTags.FeaturedCarousel)
             .fillMaxWidth()
-            .height(468.dp)
+            .height(512.dp)
             .onFocusChanged { isFocused = it.hasFocus }
             .focusGroup()
             .onPreviewKeyEvent { keyEvent ->
@@ -611,6 +622,15 @@ private fun FeaturedCarousel(
                     onNavigate = onNavigateDown,
                 )
             },
+        carouselIndicator = {
+            CarouselDefaults.IndicatorRow(
+                itemCount = items.size,
+                activeItemIndex = carouselState.activeItemIndex,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 64.dp, bottom = 44.dp),
+            )
+        },
     ) { index ->
         val item = items[index]
         HeroItem(
@@ -685,32 +705,23 @@ private fun HeroItem(
     }
 
     Box(
-        modifier = modifier
-            .background(Color.Black),
+        modifier = modifier,
     ) {
-        AsyncImage(
-            model = heroImageRequest,
-            contentDescription = item.title,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-        )
-        // Multi-step horizontal scrim for content readability (left-to-right)
+        // Horizontal scrim for text readability
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.horizontalGradient(
                         colorStops = arrayOf(
-                            0.0f to Color.Black.copy(alpha = 0.88f),
-                            0.15f to Color.Black.copy(alpha = 0.82f),
-                            0.35f to Color.Black.copy(alpha = 0.55f),
-                            0.56f to Color.Black.copy(alpha = 0.18f),
-                            0.78f to Color.Transparent,
+                            0.0f to Color.Black.copy(alpha = 0.52f),
+                            0.3f to Color.Black.copy(alpha = 0.22f),
+                            0.6f to Color.Transparent,
                         ),
                     ),
                 ),
         )
-        // Multi-step vertical scrim for bottom-heavy text readability
+        // Vertical scrim
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -718,19 +729,19 @@ private fun HeroItem(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
                             0.0f to Color.Transparent,
-                            0.42f to Color.Black.copy(alpha = 0.10f),
-                            0.74f to Color.Black.copy(alpha = 0.72f),
-                            1.0f to Color.Black,
+                            0.7f to Color.Black.copy(alpha = 0.22f),
+                            1.0f to Color.Black.copy(alpha = 0.42f),
                         ),
                     ),
                 ),
         )
+
         Column(
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = 56.dp, end = 40.dp, top = 32.dp)
+                .align(Alignment.BottomStart)
+                .padding(start = 56.dp, end = 40.dp, bottom = 64.dp)
                 .widthIn(max = 660.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
@@ -798,11 +809,19 @@ private fun HeroItem(
                     shape = ButtonDefaults.shape(RoundedCornerShape(4.dp)),
                     scale = ButtonDefaults.scale(focusedScale = 1f),
                     colors = ButtonDefaults.colors(
-                        containerColor = NetflixRed,
-                        focusedContainerColor = NetflixRed,
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                        focusedContainerColor = MaterialTheme.colorScheme.primary,
                         contentColor = Color.White,
                         focusedContentColor = Color.White,
                     ),
+                    border = ButtonDefaults.border(
+                        focusedBorder = androidx.tv.material3.Border(
+                            border = androidx.compose.foundation.BorderStroke(
+                                2.dp,
+                                Color.White.copy(alpha = 0.5f)
+                            )
+                        )
+                    )
                 ) {
                     Text("Play", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
                 }
@@ -824,11 +843,25 @@ private fun HeroItem(
                     shape = ButtonDefaults.shape(RoundedCornerShape(4.dp)),
                     scale = ButtonDefaults.scale(focusedScale = 1f),
                     colors = ButtonDefaults.colors(
-                        containerColor = Color.White.copy(alpha = 0.18f),
-                        focusedContainerColor = Color.White.copy(alpha = 0.28f),
+                        containerColor = Color.White.copy(alpha = 0.12f),
+                        focusedContainerColor = Color.White.copy(alpha = 0.22f),
                         contentColor = Color.White,
                         focusedContentColor = Color.White,
                     ),
+                    border = ButtonDefaults.border(
+                        border = androidx.tv.material3.Border(
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                Color.White.copy(alpha = 0.15f)
+                            )
+                        ),
+                        focusedBorder = androidx.tv.material3.Border(
+                            border = androidx.compose.foundation.BorderStroke(
+                                2.dp,
+                                Color.White.copy(alpha = 0.8f)
+                            )
+                        )
+                    )
                 ) {
                     Text("Details", style = MaterialTheme.typography.titleMedium)
                 }
@@ -836,6 +869,8 @@ private fun HeroItem(
         }
     }
 }
+
+
 
 @Composable
 private fun HomeSection(
@@ -846,7 +881,7 @@ private fun HomeSection(
     rowSpacing: Dp,
     onOpenItem: (HomeCardModel) -> Unit,
     restoredFocusedItemId: String?,
-    onItemFocused: (String) -> Unit,
+    onItemFocused: (HomeCardModel) -> Unit,
     onEpisodeMenuRequested: (HomeCardModel) -> Unit,
     itemFocusRequesters: List<FocusRequester>,
     upFocusRequester: FocusRequester?,
@@ -897,7 +932,7 @@ private fun HomeSection(
                     watchStatus = item.watchStatus,
                     unwatchedCount = item.unwatchedCount,
                     playbackProgress = item.playbackProgress,
-                    onFocus = { onItemFocused(item.id) },
+                    onFocus = { onItemFocused(item) },
                     aspectRatio = 16f / 9f,
                     cardWidth = cardWidth,
                     modifier = Modifier

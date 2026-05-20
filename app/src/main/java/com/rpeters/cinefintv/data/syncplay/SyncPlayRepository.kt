@@ -1,6 +1,7 @@
 package com.rpeters.cinefintv.data.syncplay
 
 import com.rpeters.cinefintv.data.cache.JellyfinCache
+import com.rpeters.cinefintv.data.common.DispatcherProvider
 import com.rpeters.cinefintv.data.repository.JellyfinAuthRepository
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.data.repository.common.BaseJellyfinRepository
@@ -55,8 +56,9 @@ class SyncPlayRepository @Inject constructor(
     authRepository: JellyfinAuthRepository,
     sessionManager: JellyfinSessionManager,
     cache: JellyfinCache,
+    dispatchers: DispatcherProvider,
     @param:ApplicationScope private val appScope: CoroutineScope,
-) : BaseJellyfinRepository(authRepository, sessionManager, cache) {
+) : BaseJellyfinRepository(authRepository, sessionManager, cache, dispatchers) {
 
     private val _sessionState = MutableStateFlow<SyncPlaySessionState>(SyncPlaySessionState.Idle)
     val sessionState: StateFlow<SyncPlaySessionState> = _sessionState.asStateFlow()

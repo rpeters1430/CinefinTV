@@ -9,6 +9,7 @@ import com.rpeters.cinefintv.data.repository.JellyfinStreamRepository
 import com.rpeters.cinefintv.data.repository.JellyfinUserRepository
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.test.StandardTestDispatcher
 import org.jellyfin.sdk.Jellyfin
 
 class FakeAuthRepository {
@@ -19,9 +20,11 @@ class FakeHomeRepositories(
     val media: JellyfinMediaRepository = mockk(relaxed = true),
     val stream: JellyfinStreamRepository = mockk(relaxed = true),
 ) {
+    private val dispatchers = DeterministicDispatcherProvider(StandardTestDispatcher())
     val authRepository: JellyfinAuthRepository = JellyfinAuthRepository(
         jellyfin = mockk<Jellyfin>(relaxed = true),
         secureCredentialManager = mockk<SecureCredentialManager>(relaxed = true),
+        dispatchers = dispatchers,
     )
     val coordinator: JellyfinRepositoryCoordinator = mockk {
         every { this@mockk.media } returns this@FakeHomeRepositories.media
@@ -117,15 +120,15 @@ class FakeSeasonDetailRepositories(
     }
 }
 
-class FakeStuffDetailRepositories(
-    val media: JellyfinMediaRepository = mockk(relaxed = true),
-    val stream: JellyfinStreamRepository = mockk(relaxed = true),
-    val user: JellyfinUserRepository = mockk(relaxed = true),
+class FakeCollectionDetailRepositories(
+    val media: JellyfinMediaRepository = mockk(),
+    val stream: JellyfinStreamRepository = mockk(),
+    val user: JellyfinUserRepository = mockk(),
 ) {
     val coordinator: JellyfinRepositoryCoordinator = mockk {
-        every { this@mockk.media } returns this@FakeStuffDetailRepositories.media
-        every { this@mockk.stream } returns this@FakeStuffDetailRepositories.stream
-        every { this@mockk.user } returns this@FakeStuffDetailRepositories.user
+        every { this@mockk.media } returns this@FakeCollectionDetailRepositories.media
+        every { this@mockk.stream } returns this@FakeCollectionDetailRepositories.stream
+        every { this@mockk.user } returns this@FakeCollectionDetailRepositories.user
         every { this@mockk.search } returns mockk(relaxed = true)
         every { this@mockk.auth } returns mockk(relaxed = true)
     }

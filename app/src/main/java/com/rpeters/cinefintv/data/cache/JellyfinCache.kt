@@ -1,7 +1,7 @@
 package com.rpeters.cinefintv.data.cache
 
 import android.content.Context
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.di.ApplicationScope
 import kotlinx.coroutines.CancellationException
@@ -20,6 +20,8 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.rpeters.cinefintv.data.common.DispatcherProvider
+
 /**
  * Intelligent caching system for Jellyfin content to support offline functionality.
  * Part of Phase 2: Enhanced Error Handling & User Experience improvements.
@@ -27,6 +29,7 @@ import javax.inject.Singleton
 @Singleton
 class JellyfinCache @Inject constructor(
     private val context: Context,
+    private val dispatchers: DispatcherProvider,
     @param:ApplicationScope private val applicationScope: CoroutineScope,
 ) {
 
@@ -54,7 +57,7 @@ class JellyfinCache @Inject constructor(
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CacheEntry<*>>?): Boolean {
             val shouldRemove = size > MAX_MEMORY_CACHE_SIZE
             if (shouldRemove && BuildConfig.DEBUG) {
-                Log.d(TAG, "Evicting oldest memory cache entry: ${eldest?.key}")
+                SecureLogger.d(TAG, "Evicting oldest memory cache entry: ${eldest?.key}")
             }
             return shouldRemove
         }
@@ -78,7 +81,7 @@ class JellyfinCache @Inject constructor(
     init {
         // Clean up old cache entries on initialization
         // Using ApplicationScope for app-wide cache initialization that should complete independently
-        applicationScope.launch(Dispatchers.IO) {
+        applicationScope.launch(dispatchers.io) {
             try {
                 // Delay cleanup to avoid I/O contention during cold startup
                 kotlinx.coroutines.delay(10_000L)
@@ -88,7 +91,7 @@ class JellyfinCache @Inject constructor(
                 updateCacheStats()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e(TAG, "Failed to initialize cache", e)
+                SecureLogger.e(TAG, "Failed to initialize cache", e)
             }
         }
     }
@@ -102,7 +105,7 @@ class JellyfinCache @Inject constructor(
         items: List<BaseItemDto>,
         ttlMs: Long = MAX_CACHE_AGE_MS,
     ): Boolean {
-        return withContext(Dispatchers.IO) {
+        return withContext(dispatchers.io) {
             try {
                 val cacheData = CacheData(
                     items = items,
@@ -125,14 +128,14 @@ class JellyfinCache @Inject constructor(
                 file.writeText(json.encodeToString(CacheData.serializer(), cacheData))
 
                 if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "Cached ${items.size} items with key: $key")
+                    SecureLogger.d(TAG, "Cached ${items.size} items with key: $key")
                 }
 
                 scheduleCacheStatsUpdate()
                 true
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e(TAG, "Failed to cache items for key: $key", e)
+                SecureLogger.e(TAG, "Failed to cache items for key: $key", e)
                 false
             }
         }
@@ -143,7 +146,7 @@ class JellyfinCache @Inject constructor(
      * Performs I/O operations on background thread.
      */
     suspend fun getCachedItems(key: String): List<BaseItemDto>? {
-        return withContext(Dispatchers.IO) {
+        return withContext(dispatchers.io) {
             try {
                 // Check memory cache first (synchronized for thread safety)
                 synchronized(memoryCache) {
@@ -153,7 +156,7 @@ class JellyfinCache @Inject constructor(
                             val cacheData = entry.data as? CacheData
                             if (cacheData != null) {
                                 if (BuildConfig.DEBUG) {
-                                    Log.d(TAG, "Memory cache hit for key: $key")
+                                    SecureLogger.d(TAG, "Memory cache hit for key: $key")
                                 }
                                 return@withContext cacheData.items
                             }
@@ -184,14 +187,14 @@ class JellyfinCache @Inject constructor(
                         }
 
                         if (BuildConfig.DEBUG) {
-                            Log.d(TAG, "Disk cache hit for key: $key")
+                            SecureLogger.d(TAG, "Disk cache hit for key: $key")
                         }
                         return@withContext cacheData.items
                     } else {
                         // Delete expired file
                         file.delete()
                         if (BuildConfig.DEBUG) {
-                            Log.d(TAG, "Deleted expired cache file for key: $key")
+                            SecureLogger.d(TAG, "Deleted expired cache file for key: $key")
                         }
                     }
                 }
@@ -199,7 +202,7 @@ class JellyfinCache @Inject constructor(
                 null
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.w(TAG, "Failed to retrieve cached items for key: $key", e)
+                SecureLogger.w(TAG, "Failed to retrieve cached items for key: $key", e)
                 null
             }
         }
@@ -209,7 +212,7 @@ class JellyfinCache @Inject constructor(
      * Checks if cached data exists and is valid for a given key.
      * Performs I/O operations on background thread.
      */
-    suspend fun isCached(key: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun isCached(key: String): Boolean = withContext(dispatchers.io) {
         try {
             // Check memory cache (synchronized for thread safety)
             synchronized(memoryCache) {
@@ -234,7 +237,7 @@ class JellyfinCache @Inject constructor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w(TAG, "Failed to check cache status for key: $key", e)
+            SecureLogger.w(TAG, "Failed to check cache status for key: $key", e)
         }
 
         false
@@ -243,7 +246,7 @@ class JellyfinCache @Inject constructor(
     /**
      * Invalidates cache for a specific key.
      */
-    suspend fun invalidateCache(key: String) = withContext(Dispatchers.IO) {
+    suspend fun invalidateCache(key: String) = withContext(dispatchers.io) {
         synchronized(memoryCache) {
             memoryCache.remove(key)
         }
@@ -251,7 +254,7 @@ class JellyfinCache @Inject constructor(
         if (file.exists()) {
             file.delete()
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Invalidated cache for key: $key")
+                SecureLogger.d(TAG, "Invalidated cache for key: $key")
             }
         }
         scheduleCacheStatsUpdate()
@@ -260,7 +263,7 @@ class JellyfinCache @Inject constructor(
     /**
      * Clears all cached data.
      */
-    suspend fun clearAllCache() = withContext(Dispatchers.IO) {
+    suspend fun clearAllCache() = withContext(dispatchers.io) {
         synchronized(memoryCache) {
             memoryCache.clear()
         }
@@ -272,7 +275,7 @@ class JellyfinCache @Inject constructor(
         }
 
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Cleared all cache")
+            SecureLogger.d(TAG, "Cleared all cache")
         }
         scheduleCacheStatsUpdate()
     }
@@ -280,7 +283,7 @@ class JellyfinCache @Inject constructor(
     /**
      * Gets the size of cached data in bytes.
      */
-    suspend fun getCacheSizeBytes(): Long = withContext(Dispatchers.IO) {
+    suspend fun getCacheSizeBytes(): Long = withContext(dispatchers.io) {
         try {
             ensureCacheDir().listFiles()?.sumOf { it.length() } ?: 0L
         } catch (e: CancellationException) {
@@ -293,7 +296,7 @@ class JellyfinCache @Inject constructor(
      * Performs I/O operations on background thread.
      */
     private suspend fun cleanupOldEntries() {
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             try {
                 val currentTime = System.currentTimeMillis()
 
@@ -320,7 +323,7 @@ class JellyfinCache @Inject constructor(
                             if (isExpired) {
                                 file.delete()
                                 if (BuildConfig.DEBUG) {
-                                    Log.d(TAG, "Deleted expired cache file: ${file.name}")
+                                    SecureLogger.d(TAG, "Deleted expired cache file: ${file.name}")
                                 }
                             }
                         } catch (e: CancellationException) {
@@ -338,10 +341,10 @@ class JellyfinCache @Inject constructor(
                 }
 
                 if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "Cache cleanup completed. Removed ${expiredKeys.size} expired entries")
+                    SecureLogger.d(TAG, "Cache cleanup completed. Removed ${expiredKeys.size} expired entries")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error during cache cleanup", e)
+                SecureLogger.e(TAG, "Error during cache cleanup", e)
             }
         }
     }
@@ -374,7 +377,7 @@ class JellyfinCache @Inject constructor(
             }
 
             if (BuildConfig.DEBUG && deletedCount > 0) {
-                Log.d(TAG, "Evicted $deletedCount cache entries to stay within size limit")
+                SecureLogger.d(TAG, "Evicted $deletedCount cache entries to stay within size limit")
             }
         } catch (e: CancellationException) {
             throw e
@@ -409,13 +412,13 @@ class JellyfinCache @Inject constructor(
     }
 
     private fun scheduleCacheStatsUpdate() {
-        applicationScope.launch(Dispatchers.IO) {
+        applicationScope.launch(dispatchers.io) {
             try {
                 updateCacheStats()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to update cache stats", e)
+                SecureLogger.w(TAG, "Failed to update cache stats", e)
             }
         }
     }

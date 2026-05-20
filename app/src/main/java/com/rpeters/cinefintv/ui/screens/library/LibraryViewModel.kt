@@ -13,13 +13,17 @@ import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getItemTypeString
+import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.toMediaCardPresentation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -31,6 +35,10 @@ data class LibraryCardModel(
     val subtitle: String?,
     val imageUrl: String?,
     val itemType: String?,
+    val backdropUrl: String? = null,
+    val description: String? = null,
+    val year: Int? = null,
+    val rating: String? = null,
     val watchStatus: WatchStatus = WatchStatus.NONE,
     val playbackProgress: Float? = null,
     val unwatchedCount: Int? = null,
@@ -42,16 +50,23 @@ abstract class BaseLibraryViewModel(
     private val itemTypes: List<BaseItemKind>,
 ) : ViewModel() {
 
+    private companion object {
+        const val PAGE_SIZE = 30
+        const val INITIAL_LOAD_SIZE = 60
+        const val REFRESH_DEBOUNCE_MS = 300L
+    }
+
     private val refreshSignal = MutableStateFlow(0)
 
-    @OptIn(ExperimentalCoroutinesApi::class)
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     val pagedItems: Flow<PagingData<LibraryCardModel>> = refreshSignal
+        .debounce { signal -> if (signal == 0) 0L else REFRESH_DEBOUNCE_MS }
         .flatMapLatest {
             Pager(
                 config = PagingConfig(
-                    pageSize = 30,
+                    pageSize = PAGE_SIZE,
                     enablePlaceholders = false,
-                    initialLoadSize = 60
+                    initialLoadSize = INITIAL_LOAD_SIZE
                 ),
                 pagingSourceFactory = {
                     LibraryItemPagingSource(
@@ -69,9 +84,13 @@ abstract class BaseLibraryViewModel(
     init {
         viewModelScope.launch {
             updateBus.events.collect {
-                refreshSignal.value += 1
+                refreshSignal.update { it + 1 }
             }
         }
+    }
+
+    fun refresh() {
+        refreshSignal.update { it + 1 }
     }
 
     private fun toCardModel(item: BaseItemDto): LibraryCardModel {
@@ -83,6 +102,10 @@ abstract class BaseLibraryViewModel(
             title = item.getDisplayTitle(),
             subtitle = presentation.subtitle,
             imageUrl = repositories.stream.getPosterCardImageUrl(item),
+            backdropUrl = repositories.stream.getBackdropUrl(item),
+            description = item.overview?.take(200),
+            year = item.getYear(),
+            rating = item.communityRating?.let { String.format(java.util.Locale.US, "%.1f", it) },
             itemType = item.getItemTypeString(),
             watchStatus = presentation.watchStatus,
             playbackProgress = presentation.playbackProgress,
@@ -104,7 +127,7 @@ class TvShowLibraryViewModel @Inject constructor(
 ) : BaseLibraryViewModel(repositories, updateBus, listOf(BaseItemKind.SERIES))
 
 @HiltViewModel
-class StuffLibraryViewModel @Inject constructor(
+class CollectionLibraryViewModel @Inject constructor(
     repositories: JellyfinRepositoryCoordinator,
     private val updateBus: MediaUpdateBus,
 ) : BaseLibraryViewModel(repositories, updateBus, listOf(BaseItemKind.VIDEO, BaseItemKind.COLLECTION_FOLDER)) {

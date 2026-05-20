@@ -30,6 +30,26 @@ import androidx.tv.material3.Text
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
+import com.rpeters.cinefintv.ui.components.ImmersiveBackground
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
+import com.rpeters.cinefintv.ui.components.CinefinChip
+import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.animation.shrinkVertically
 
 sealed class LibraryGridUiState {
     data object Loading : LibraryGridUiState()
@@ -65,7 +85,16 @@ internal fun LibraryGridContent(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
-    Box(modifier = modifier.fillMaxSize()) {
+    var focusedItem by remember { androidx.compose.runtime.mutableStateOf<LibraryCardModel?>(null) }
+    
+    Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
+        ImmersiveBackground(backdropUrl = focusedItem?.backdropUrl)
+        
+        androidx.compose.foundation.layout.Column(modifier = Modifier.fillMaxSize()) {
+            LibraryMetadataHeader(item = focusedItem)
+            
+            Box(modifier = Modifier.weight(1f)) {
+
         when (uiState) {
             LibraryGridUiState.Loading -> {
                 Box(
@@ -176,7 +205,10 @@ internal fun LibraryGridContent(
                             onMenuAction = onItemMenuAction?.let { menuHandler ->
                                 { menuHandler(item) }
                             },
-                            onFocus = { lastFocusedItemId = item.id },
+                            onFocus = { 
+                                focusedItem = item
+                                lastFocusedItemId = item.id 
+                            },
                             compactMetadata = true,
                             modifier = if (index == restoredFocusIndex) {
                                 Modifier
@@ -228,5 +260,67 @@ internal fun LibraryGridContent(
                 }
             }
         }
+            }
+        }
     }
 }
+
+@Composable
+private fun LibraryMetadataHeader(
+    item: LibraryCardModel?,
+    modifier: Modifier = Modifier
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    val spacing = LocalCinefinSpacing.current
+
+    AnimatedVisibility(
+        visible = item != null,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically()
+    ) {
+        item?.let {
+            Column(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = spacing.gridContentPadding + 16.dp, vertical = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    it.itemType?.let { type -> CinefinChip(label = type, strong = true) }
+                    it.year?.let { year -> CinefinChip(label = year.toString()) }
+                    it.rating?.let { rating -> CinefinChip(label = "★ $rating") }
+                }
+                
+                Text(
+                    text = it.title,
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        fontWeight = FontWeight.Black,
+                        fontSize = 36.sp
+                    ),
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                it.description?.let { desc ->
+                    Text(
+                        text = desc,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White.copy(alpha = 0.8f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 800.dp)
+                    )
+                }
+            }
+        }
+    }
+    
+    if (item == null) {
+        Spacer(modifier = Modifier.height(140.dp))
+    }
+}
+

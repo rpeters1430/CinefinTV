@@ -27,6 +27,8 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.rpeters.cinefintv.data.common.DispatcherProvider
+
 /**
  * Repository containing media-related operations that were previously
  * part of the large [JellyfinRepository]. The implementations here are
@@ -37,9 +39,10 @@ class JellyfinMediaRepository @Inject constructor(
     authRepository: JellyfinAuthRepository,
     sessionManager: com.rpeters.cinefintv.data.session.JellyfinSessionManager,
     cache: JellyfinCache,
+    dispatchers: DispatcherProvider,
     healthChecker: LibraryHealthChecker,
     private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
-) : BaseJellyfinRepository(authRepository, sessionManager, cache, healthChecker) {
+) : BaseJellyfinRepository(authRepository, sessionManager, cache, dispatchers, healthChecker) {
     private companion object {
         const val HOME_TAG = "HomeRepository"
     }

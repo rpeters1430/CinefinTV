@@ -24,6 +24,8 @@ import java.net.UnknownHostException
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
+import com.rpeters.cinefintv.data.common.DispatcherProvider
+
 /**
  * Lightweight base class shared by repository implementations.
  * It centralizes common helpers like client creation and safe
@@ -34,6 +36,7 @@ open class BaseJellyfinRepository @Inject constructor(
     protected val authRepository: JellyfinAuthRepository,
     protected val sessionManager: JellyfinSessionManager,
     protected val cache: JellyfinCache,
+    protected val dispatchers: DispatcherProvider,
     protected val healthChecker: LibraryHealthChecker? = null,
 ) {
     companion object {
@@ -67,10 +70,10 @@ open class BaseJellyfinRepository @Inject constructor(
      * Checks if token needs refresh and proactively refreshes it
      */
     protected suspend fun validateTokenAndRefreshIfNeeded() {
-        if (authRepository.isTokenExpired()) {
+        if (authRepository.isTokenMissing()) {
             tokenRefreshMutex.withLock {
                 // Double-check after acquiring lock (another thread might have refreshed)
-                if (authRepository.isTokenExpired()) {
+                if (authRepository.isTokenMissing()) {
                     Logger.d(LogCategory.NETWORK, javaClass.simpleName, "Token expired, proactively refreshing with force")
                     try {
                         val refreshResult = withTimeout(10_000L) { authRepository.forceReAuthenticate() }
@@ -97,7 +100,7 @@ open class BaseJellyfinRepository @Inject constructor(
     protected suspend fun <T> executeWithClient(
         operationName: String,
         operation: suspend (ApiClient) -> T,
-    ): T = withContext(Dispatchers.IO) {
+    ): T = withContext(dispatchers.io) {
         return@withContext executeWithTokenRefresh {
             // Delegate to session manager for token/401 handling
             sessionManager.executeWithAuth(operationName) { _, client ->
@@ -205,7 +208,7 @@ open class BaseJellyfinRepository @Inject constructor(
     protected suspend fun <T> executeLegacy(
         operationName: String,
         block: suspend () -> T,
-    ): ApiResult<T> = withContext(Dispatchers.IO) {
+    ): ApiResult<T> = withContext(dispatchers.io) {
         try {
             // ensure proactive check + 401-aware retry
             val result = executeWithTokenRefresh { block() }
@@ -226,7 +229,7 @@ open class BaseJellyfinRepository @Inject constructor(
         operationName: String,
         maxAttempts: Int = 3,
         block: suspend () -> T,
-    ): ApiResult<T> = withContext(Dispatchers.IO) {
+    ): ApiResult<T> = withContext(dispatchers.io) {
         val safeMaxAttempts = maxAttempts.coerceAtLeast(1)
         var lastException: Exception? = null
 
@@ -270,7 +273,7 @@ open class BaseJellyfinRepository @Inject constructor(
         maxAttempts: Int = 3,
         circuitBreakerKey: String = operationName,
         block: suspend () -> T,
-    ): ApiResult<T> = withContext(Dispatchers.IO) {
+    ): ApiResult<T> = withContext(dispatchers.io) {
         if (isCircuitBreakerOpen(circuitBreakerKey)) {
             Logger.w(
                 LogCategory.NETWORK,
@@ -385,7 +388,7 @@ open class BaseJellyfinRepository @Inject constructor(
         maxAttempts: Int = 3,
         cacheTtlMs: Long = 30 * 60 * 1000L, // 30 minutes default
         block: suspend () -> List<BaseItemDto>,
-    ): ApiResult<List<BaseItemDto>> = withContext(Dispatchers.IO) {
+    ): ApiResult<List<BaseItemDto>> = withContext(dispatchers.io) {
         // Try cache first
         val cachedData = cache.getCachedItems(cacheKey)
         if (cachedData != null) {
@@ -411,7 +414,7 @@ open class BaseJellyfinRepository @Inject constructor(
         maxAttempts: Int = 3,
         cacheTtlMs: Long = 30 * 60 * 1000L,
         block: suspend () -> List<BaseItemDto>,
-    ): ApiResult<List<BaseItemDto>> = withContext(Dispatchers.IO) {
+    ): ApiResult<List<BaseItemDto>> = withContext(dispatchers.io) {
         // Invalidate existing cache
         cache.invalidateCache(cacheKey)
 

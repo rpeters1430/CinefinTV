@@ -34,7 +34,7 @@ data object LibraryTvShows : NavDestination
 
 @Serializable
 @Parcelize
-data object LibraryStuff : NavDestination
+data object LibraryCollections : NavDestination
 
 @Serializable
 @Parcelize
@@ -62,7 +62,7 @@ data class EpisodeDetail(val itemId: String) : NavDestination
 
 @Serializable
 @Parcelize
-data class StuffDetail(val itemId: String) : NavDestination
+data class CollectionDetail(val itemId: String) : NavDestination
 
 @Serializable
 @Parcelize

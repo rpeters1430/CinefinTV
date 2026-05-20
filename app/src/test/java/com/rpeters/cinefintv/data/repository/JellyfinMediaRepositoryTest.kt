@@ -1,5 +1,6 @@
 package com.rpeters.cinefintv.data.repository
 
+import android.content.Context
 import com.rpeters.cinefintv.data.JellyfinServer
 import com.rpeters.cinefintv.data.SecureCredentialManager
 import com.rpeters.cinefintv.data.cache.JellyfinCache
@@ -7,6 +8,7 @@ import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.data.repository.common.LibraryHealthChecker
 import com.rpeters.cinefintv.data.session.JellyfinSessionManager
+import com.rpeters.cinefintv.testutil.DeterministicDispatcherProvider
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.every
@@ -28,6 +30,7 @@ class JellyfinMediaRepositoryTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    private val dispatchers by lazy { DeterministicDispatcherProvider(mainDispatcherRule.dispatcher) }
     private lateinit var authRepository: JellyfinAuthRepository
     private lateinit var sessionManager: JellyfinSessionManager
     private lateinit var cache: JellyfinCache
@@ -39,6 +42,7 @@ class JellyfinMediaRepositoryTest {
         authRepository = JellyfinAuthRepository(
             jellyfin = mockk<Jellyfin>(relaxed = true),
             secureCredentialManager = mockk<SecureCredentialManager>(relaxed = true),
+            dispatchers = dispatchers,
         )
         sessionManager = mockk()
         cache = mockk(relaxed = true)
@@ -47,6 +51,7 @@ class JellyfinMediaRepositoryTest {
             authRepository = authRepository,
             sessionManager = sessionManager,
             cache = cache,
+            dispatchers = dispatchers,
             healthChecker = healthChecker,
             updateBus = MediaUpdateBus(),
         )
