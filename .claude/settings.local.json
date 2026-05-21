@@ -53,7 +53,8 @@
       "Bash(./gradlew :app:kspDebugKotlin :app:compileDebugKotlin)",
       "Bash(gh issue *)",
       "Bash(gh api *)",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "Skill(r8-analyzer)"
     ]
   }
 }

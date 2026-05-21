@@ -1,5 +1,3 @@
--keep class org.jellyfin.** { *; }
--keep class com.rpeters.cinefintv.data.model.** { *; }
 -dontwarn org.slf4j.**
 
 # Compose animation tooling is only used by Android Studio, not at runtime
