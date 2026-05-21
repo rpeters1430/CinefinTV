@@ -112,6 +112,7 @@ fun MovieDetailLayout(
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     primaryActionDownFocusRequester = firstContentFocusRequester,
                     drawerFocusRequester = drawerFocusRequester,
+                    onFocus = { focusedBackdropUrl = backdropUrl },
                     onDownNavigation = if (firstContentFocusRequester != null && firstContentIndex >= 0) {
                         {
                             if (listState.isScrollInProgress) return@FlatDetailHero

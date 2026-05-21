@@ -115,10 +115,8 @@ suspend fun focusDetailScreenAtTop(
 }
 
 suspend fun LazyListState.scrollToItemAndAwaitLayout(index: Int) {
-    if (!isIndexVisible(index)) {
-        scrollToItem(index)
-        snapshotFlow { isIndexVisible(index) }.first { it }
-    }
+    scrollToItem(index)
+    snapshotFlow { isIndexVisible(index) }.first { it }
 }
 
 private fun LazyListState.isIndexVisible(index: Int): Boolean =
@@ -747,20 +745,12 @@ fun DetailShelfPanel(
         onFocused: () -> Unit,
         ) {
         Spacer(
-        modifier = Modifier
-        .fillMaxWidth()
-        .height(1.dp)
-        .focusRequester(focusRequester)
-        .blockBringIntoView()
-        .focusable()
-        .onFocusChanged { if (it.isFocused) onFocused() }
-        .focusProperties {
-            canFocus = true
-            if (downFocusRequester != null) {
-                down = downFocusRequester
-            }
-        }
-        .background(Color.Transparent)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .focusRequester(focusRequester)
+                .focusProperties { canFocus = false }
+                .background(Color.Transparent)
         )
         }
 

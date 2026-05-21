@@ -294,19 +294,16 @@ fun PlayerScreen(
 
                 // Throttled polling for progress-dependent state
                 LaunchedEffect(exoPlayer, controlsVisible) {
-                    while (true) {
-                        renderState = PlayerRenderState(
-                            isPlaying = exoPlayer.isPlaying,
-                            isBuffering = exoPlayer.playbackState == Player.STATE_BUFFERING,
-                            duration = exoPlayer.duration.coerceAtLeast(0L),
-                            bufferedFraction = exoPlayer.bufferedPercentage / 100f,
-                        )
-                        val interval = if (controlsVisible) {
-                            PROGRESS_UPDATE_INTERVAL_ACTIVE_MS
-                        } else {
-                            PROGRESS_UPDATE_INTERVAL_IDLE_MS
+                    if (controlsVisible) {
+                        while (true) {
+                            renderState = PlayerRenderState(
+                                isPlaying = exoPlayer.isPlaying,
+                                isBuffering = exoPlayer.playbackState == Player.STATE_BUFFERING,
+                                duration = exoPlayer.duration.coerceAtLeast(0L),
+                                bufferedFraction = exoPlayer.bufferedPercentage / 100f,
+                            )
+                            delay(PROGRESS_UPDATE_INTERVAL_ACTIVE_MS)
                         }
-                        delay(interval)
                     }
                 }
 
@@ -381,7 +378,7 @@ fun PlayerScreen(
                         PlayerPlaybackContent(
                             exoPlayer = exoPlayer,
                             uiState = uiState,
-                            renderState = renderState,
+                            renderStateProvider = { renderState },
                             positionProvider = positionProvider,
                             controlsVisible = controlsVisible,
                             onControlsVisibleChange = { controlsVisible = it },
@@ -416,7 +413,7 @@ fun PlayerScreen(
 internal fun PlayerPlaybackContent(
     exoPlayer: Player,
     uiState: PlayerUiState,
-    renderState: PlayerRenderState,
+    renderStateProvider: () -> PlayerRenderState,
     positionProvider: () -> Long,
     controlsVisible: Boolean,
     onControlsVisibleChange: (Boolean) -> Unit,
@@ -446,14 +443,16 @@ internal fun PlayerPlaybackContent(
     var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val expressiveColors = LocalCinefinExpressiveColors.current
 
-    LaunchedEffect(renderState.isPlaying) {
-        if (!renderState.isPlaying) {
+    val isPlaying = renderStateProvider().isPlaying
+
+    LaunchedEffect(isPlaying) {
+        if (!isPlaying) {
             onControlsVisibleChange(true)
         }
     }
 
-    LaunchedEffect(lastInteraction, renderState.isPlaying, isTrackPanelVisible, controlsHideDelayMs) {
-        if (renderState.isPlaying && !isTrackPanelVisible) {
+    LaunchedEffect(lastInteraction, isPlaying, isTrackPanelVisible, controlsHideDelayMs) {
+        if (isPlaying && !isTrackPanelVisible) {
             delay(controlsHideDelayMs)
             onControlsVisibleChange(false)
             isContentShelfVisible = false
@@ -496,16 +495,6 @@ internal fun PlayerPlaybackContent(
     val introRange = uiState.introSkipRange
     val creditsRange = uiState.creditsSkipRange
 
-    LaunchedEffect(introRange, creditsRange, controlsVisible) {
-        // This is still needed for focus redirection, but we use a local check
-        val currentPos = positionProvider()
-        val isCurrentlyInSkip = isInSkipRange(currentPos, introRange) || isInSkipRange(currentPos, creditsRange)
-        if (isCurrentlyInSkip && !controlsVisible) {
-            withFrameNanos { }
-            runCatching { skipFocusRequester.requestFocus() }
-        }
-    }
-
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -527,7 +516,7 @@ internal fun PlayerPlaybackContent(
                             if (!wereControlsVisible) {
                                 onControlsVisibleChange(true)
                             } else {
-                                if (renderState.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                                if (renderStateProvider().isPlaying) exoPlayer.pause() else exoPlayer.play()
                             }
                             true
                         }
@@ -558,11 +547,12 @@ internal fun PlayerPlaybackContent(
                             if (!controlsVisible) {
                                 onInteract()
                                 // Seek immediately on first press rather than requiring a second press
-                                if (renderState.duration > 0L && !overlayActionFocused) {
+                                val duration = renderStateProvider().duration
+                                if (duration > 0L && !overlayActionFocused) {
                                     val seekMs = uiState.videoSeekIncrement.millis
                                     val delta = if (keyEvent.key == Key.DirectionLeft) -seekMs else seekMs
                                     val newPos = (exoPlayer.currentPosition + delta)
-                                        .coerceIn(0L, renderState.duration)
+                                        .coerceIn(0L, duration)
                                     exoPlayer.seekTo(newPos)
                                 }
                                 true
@@ -587,12 +577,10 @@ internal fun PlayerPlaybackContent(
             )
         }
 
-        PlayerControls(
+        PlayerControlsWrapper(
             isVisible = controlsVisible,
-            isPlaying = renderState.isPlaying,
+            renderStateProvider = renderStateProvider,
             positionProvider = positionProvider,
-            duration = renderState.duration,
-            bufferedFraction = renderState.bufferedFraction,
             uiState = uiState,
             player = exoPlayer,
             playPauseFocusRequester = playPauseFocusRequester,
@@ -610,18 +598,9 @@ internal fun PlayerPlaybackContent(
             onWatchTogetherClick = onWatchTogetherClick,
         )
 
-        if (renderState.isBuffering) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(64.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    strokeWidth = 4.dp,
-                )
-            }
-        }
+        BufferingIndicator(
+            isBufferingProvider = { renderStateProvider().isBuffering }
+        )
 
         // Top badges localized
         PlayerTopBadges(
@@ -633,10 +612,10 @@ internal fun PlayerPlaybackContent(
 
         // Skip actions localized
         PlayerSkipActions(
-            positionProvider = positionProvider,
+            player = exoPlayer,
             introRange = introRange,
             creditsRange = creditsRange,
-            duration = renderState.duration,
+            controlsVisible = controlsVisible,
             onSkip = { targetMs ->
                 exoPlayer.seekTo(targetMs)
                 onInteract()
@@ -650,9 +629,8 @@ internal fun PlayerPlaybackContent(
 
         // Next Episode Overlay
         NextEpisodeOverlay(
+            player = exoPlayer,
             uiState = uiState,
-            positionProvider = positionProvider,
-            durationMs = renderState.duration,
             autoFocusPlayNow = !controlsVisible,
             onPlayNow = {
                 uiState.nextEpisodeId?.let { onOpenItem(it) }
@@ -693,26 +671,95 @@ internal fun PlayerPlaybackContent(
     }
 }
 
+@Composable
+private fun PlayerControlsWrapper(
+    isVisible: Boolean,
+    renderStateProvider: () -> PlayerRenderState,
+    positionProvider: () -> Long,
+    uiState: PlayerUiState,
+    player: Player,
+    playPauseFocusRequester: FocusRequester,
+    seekBarFocusRequester: FocusRequester,
+    isContentShelfVisible: Boolean,
+    onHideShelf: () -> Unit,
+    onInteract: () -> Unit,
+    onSettingsClick: (SettingsSection, Rect?) -> Unit,
+    onBack: () -> Unit,
+    onOpenItem: (String) -> Unit,
+    onWatchTogetherClick: () -> Unit,
+) {
+    val renderState = renderStateProvider()
+    PlayerControls(
+        isVisible = isVisible,
+        isPlaying = renderState.isPlaying,
+        positionProvider = positionProvider,
+        duration = renderState.duration,
+        bufferedFraction = renderState.bufferedFraction,
+        uiState = uiState,
+        player = player,
+        playPauseFocusRequester = playPauseFocusRequester,
+        seekBarFocusRequester = seekBarFocusRequester,
+        isContentShelfVisible = isContentShelfVisible,
+        onHideShelf = onHideShelf,
+        onInteract = onInteract,
+        onSettingsClick = onSettingsClick,
+        onBack = onBack,
+        onOpenItem = onOpenItem,
+        onWatchTogetherClick = onWatchTogetherClick,
+    )
+}
+
+@Composable
+private fun BufferingIndicator(
+    isBufferingProvider: () -> Boolean,
+) {
+    if (isBufferingProvider()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(64.dp),
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 4.dp,
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun NextEpisodeOverlay(
+    player: Player,
     uiState: PlayerUiState,
-    positionProvider: () -> Long,
-    durationMs: Long,
     autoFocusPlayNow: Boolean,
     onPlayNow: () -> Unit,
     onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val showNextUp = shouldShowNextEpisodeCard(
-        uiState = uiState,
-        positionMs = positionProvider(),
-        durationMs = durationMs,
-    )
-    val remainingMs = if (durationMs > 0L) {
-        (durationMs - positionProvider()).coerceAtLeast(0L)
-    } else {
-        0L
+    var showNextUp by remember { mutableStateOf(false) }
+    var remainingMs by remember { mutableLongStateOf(0L) }
+
+    LaunchedEffect(player, uiState) {
+        while (true) {
+            val duration = player.duration.coerceAtLeast(0L)
+            val pos = player.currentPosition
+            val show = shouldShowNextEpisodeCard(
+                uiState = uiState,
+                positionMs = pos,
+                durationMs = duration,
+            )
+            val rem = if (duration > 0L) {
+                (duration - pos).coerceAtLeast(0L)
+            } else {
+                0L
+            }
+
+            showNextUp = show
+            remainingMs = rem
+
+            delay(1000L)
+        }
     }
 
     AnimatedVisibility(
@@ -809,38 +856,61 @@ private fun BadgeSurface(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun PlayerSkipActions(
-    positionProvider: () -> Long,
+    player: Player,
     introRange: SkipRange?,
     creditsRange: SkipRange?,
-    duration: Long,
+    controlsVisible: Boolean,
     onSkip: (Long) -> Unit,
     focusRequester: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
-    val pos = positionProvider()
-    val activeSkipLabel = when {
-        isInSkipRange(pos, introRange) -> "Skip Intro"
-        isInSkipRange(pos, creditsRange) -> "Skip Credits"
-        else -> null
+    var showSkip by remember { mutableStateOf(false) }
+    var skipLabel by remember { mutableStateOf<String?>(null) }
+    var skipTargetMs by remember { mutableLongStateOf(0L) }
+
+    LaunchedEffect(player, introRange, creditsRange) {
+        while (true) {
+            val pos = player.currentPosition
+            val duration = player.duration.coerceAtLeast(0L)
+            val activeSkipLabel = when {
+                isInSkipRange(pos, introRange) -> "Skip Intro"
+                isInSkipRange(pos, creditsRange) -> "Skip Credits"
+                else -> null
+            }
+
+            val activeSkipTargetMs = when (activeSkipLabel) {
+                "Skip Intro" -> introRange?.endMs?.coerceAtMost(duration) ?: duration
+                "Skip Credits" -> creditsRange?.endMs?.coerceAtMost(duration) ?: duration
+                else -> 0L
+            }
+
+            showSkip = activeSkipLabel != null
+            skipLabel = activeSkipLabel
+            skipTargetMs = activeSkipTargetMs
+
+            delay(500L)
+        }
     }
 
-    val activeSkipTargetMs = when (activeSkipLabel) {
-        "Skip Intro" -> introRange?.endMs?.coerceAtMost(duration) ?: duration
-        "Skip Credits" -> creditsRange?.endMs?.coerceAtMost(duration) ?: duration
-        else -> 0L
+    LaunchedEffect(showSkip, controlsVisible, player) {
+        if (showSkip && !controlsVisible) {
+            withFrameNanos { }
+            runCatching { focusRequester.requestFocus() }
+        }
     }
 
     AnimatedVisibility(
-        visible = activeSkipLabel != null,
+        visible = showSkip,
         enter = fadeIn() + slideInHorizontally { it / 2 },
         exit = fadeOut() + slideOutHorizontally { it / 2 },
         modifier = modifier
     ) {
-        if (activeSkipLabel != null) {
+        val currentLabel = skipLabel
+        if (currentLabel != null) {
             SkipActionCard(
-                label = activeSkipLabel,
+                label = currentLabel,
                 subtitle = "Press to skip",
-                onSkip = { onSkip(activeSkipTargetMs) },
+                onSkip = { onSkip(skipTargetMs) },
                 buttonFocusRequester = focusRequester,
                 modifier = Modifier.testTag(PlayerTestTags.SkipAction)
             )

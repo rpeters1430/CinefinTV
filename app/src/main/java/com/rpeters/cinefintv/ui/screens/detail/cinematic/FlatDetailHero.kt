@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
@@ -92,13 +93,19 @@ fun FlatDetailHero(
     onDownNavigation: (() -> Unit)? = null,
     drawerFocusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier,
+    onFocus: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(16f / 9f),
+            .aspectRatio(16f / 9f)
+            .onFocusChanged { state ->
+                if (state.hasFocus || state.isFocused) {
+                    onFocus?.invoke()
+                }
+            },
     ) {
         // Scrims are now handled by ImmersiveBackground or local overlays if needed.
         // We'll keep a local horizontal scrim for text readability on this specific layout.
@@ -350,6 +357,9 @@ private fun HeroActionStrip(
                         }
                         if (primaryDownFocusRequester != null && onDownNavigation == null) {
                             down = primaryDownFocusRequester
+                        }
+                        drawerFocusRequester?.let {
+                            up = it
                         }
                     }
                     .onPreviewKeyEvent { keyEvent ->

@@ -66,6 +66,7 @@ class SearchViewModelTest {
             every { item.userData } returns null
         }
         every { fakeRepo.coordinator.stream.getSearchCardImageUrl(any()) } returns "https://img/search.jpg"
+        every { fakeRepo.coordinator.stream.getBackdropUrl(any()) } returns "https://img/backdrop.jpg"
         coEvery { fakeRepo.coordinator.search.searchItems(any(), any(), any()) } coAnswers {
             val query = firstArg<String>()
             if (query == "bat") {

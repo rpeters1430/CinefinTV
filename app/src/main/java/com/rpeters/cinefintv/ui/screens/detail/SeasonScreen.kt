@@ -254,6 +254,7 @@ private fun SeasonContent(
                     primaryActionFocusRequester = primaryActionFocusRequester,
                     primaryActionDownFocusRequester = if (episodes.isNotEmpty()) firstEpisodeFocusRequester else null,
                     drawerFocusRequester = destinationFocus.drawerFocusRequester,
+                    onFocus = { focusedBackdropUrl = season.backdropUrl },
                     onDownNavigation = if (episodes.isNotEmpty()) {
                         {
                             if (listState.isScrollInProgress) return@FlatDetailHero

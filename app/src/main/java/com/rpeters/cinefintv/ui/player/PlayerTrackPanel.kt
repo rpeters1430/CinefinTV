@@ -37,14 +37,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.ListItem
+import androidx.tv.material3.ListItemDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
+import com.rpeters.cinefintv.ui.theme.CinefinGold
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
 internal enum class SettingsSection { AUDIO, SUBTITLES, QUALITY, SPEED, ALL }
@@ -95,7 +103,20 @@ internal fun PlayerTrackPanel(
             Surface(
                 modifier = Modifier
                     .width(popupWidth)
-                    .heightIn(max = popupMaxHeight),
+                    .heightIn(max = popupMaxHeight)
+                    .onKeyEvent { keyEvent ->
+                        if (keyEvent.type == KeyEventType.KeyDown) {
+                            if (keyEvent.key == Key.Back || keyEvent.key == Key.Escape || keyEvent.key == Key.DirectionLeft) {
+                                if (section != SettingsSection.ALL) {
+                                    onInteract()
+                                    onSectionSelected(SettingsSection.ALL)
+                                    true
+                                } else {
+                                    false
+                                }
+                            } else false
+                        } else false
+                    },
                 shape = RoundedCornerShape(24.dp),
                 colors = SurfaceDefaults.colors(
                     containerColor = expressiveColors.chromeSurface.copy(alpha = 0.98f),
@@ -108,7 +129,7 @@ internal fun PlayerTrackPanel(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     val panelTitle = when (section) {
                         SettingsSection.AUDIO -> "Audio"
@@ -123,7 +144,7 @@ internal fun PlayerTrackPanel(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 12.dp),
+                        modifier = Modifier.padding(bottom = 8.dp),
                     )
 
                     val listState = rememberLazyListState()
@@ -159,7 +180,7 @@ internal fun PlayerTrackPanel(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.weight(1f, fill = false),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         if (section == SettingsSection.ALL) {
                             item {
@@ -330,6 +351,7 @@ internal fun PlayerTrackPanel(
     }
 }
 
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun SettingsMenuItem(
     icon: ImageVector,
@@ -339,10 +361,21 @@ private fun SettingsMenuItem(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     ListItem(
         selected = false,
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
+        colors = ListItemDefaults.colors(
+            containerColor = Color.Transparent,
+            contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.8f),
+            focusedContainerColor = expressiveColors.playerContentPrimary.copy(alpha = 0.15f),
+            focusedContentColor = CinefinGold,
+            selectedContainerColor = CinefinGold.copy(alpha = 0.1f),
+            selectedContentColor = CinefinGold,
+            focusedSelectedContainerColor = CinefinGold.copy(alpha = 0.25f),
+            focusedSelectedContentColor = CinefinGold
+        ),
         leadingContent = {
             Icon(
                 imageVector = icon,
@@ -360,7 +393,7 @@ private fun SettingsMenuItem(
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = androidx.tv.material3.LocalContentColor.current.copy(alpha = 0.7f),
             )
         },
         trailingContent = {
@@ -368,13 +401,14 @@ private fun SettingsMenuItem(
                 Text(
                     text = selectedValue,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = androidx.tv.material3.LocalContentColor.current,
                 )
             }
         },
     )
 }
 
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun NavigationListItem(
     icon: ImageVector,
@@ -382,10 +416,21 @@ private fun NavigationListItem(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     ListItem(
         selected = false,
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
+        colors = ListItemDefaults.colors(
+            containerColor = Color.Transparent,
+            contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.8f),
+            focusedContainerColor = expressiveColors.playerContentPrimary.copy(alpha = 0.15f),
+            focusedContentColor = CinefinGold,
+            selectedContainerColor = CinefinGold.copy(alpha = 0.1f),
+            selectedContentColor = CinefinGold,
+            focusedSelectedContainerColor = CinefinGold.copy(alpha = 0.25f),
+            focusedSelectedContentColor = CinefinGold
+        ),
         leadingContent = {
             Icon(
                 imageVector = icon,
@@ -410,10 +455,21 @@ private fun PlaybackSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     ListItem(
         selected = checked,
         onClick = { onCheckedChange(!checked) },
         modifier = Modifier.fillMaxWidth(),
+        colors = ListItemDefaults.colors(
+            containerColor = Color.Transparent,
+            contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.8f),
+            focusedContainerColor = expressiveColors.playerContentPrimary.copy(alpha = 0.15f),
+            focusedContentColor = CinefinGold,
+            selectedContainerColor = CinefinGold.copy(alpha = 0.1f),
+            selectedContentColor = CinefinGold,
+            focusedSelectedContainerColor = CinefinGold.copy(alpha = 0.25f),
+            focusedSelectedContentColor = CinefinGold
+        ),
         headlineContent = {
             Text(
                 text = title,
@@ -424,7 +480,7 @@ private fun PlaybackSwitch(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = androidx.tv.material3.LocalContentColor.current.copy(alpha = 0.7f),
             )
         },
         trailingContent = {
@@ -444,10 +500,21 @@ private fun TrackButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     ListItem(
         selected = selected,
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
+        colors = ListItemDefaults.colors(
+            containerColor = Color.Transparent,
+            contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.8f),
+            focusedContainerColor = expressiveColors.playerContentPrimary.copy(alpha = 0.15f),
+            focusedContentColor = CinefinGold,
+            selectedContainerColor = CinefinGold.copy(alpha = 0.1f),
+            selectedContentColor = CinefinGold,
+            focusedSelectedContainerColor = CinefinGold.copy(alpha = 0.25f),
+            focusedSelectedContentColor = CinefinGold
+        ),
         headlineContent = {
             Text(
                 text = label,
