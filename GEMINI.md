@@ -67,3 +67,17 @@ CinefinTV is a native Android TV client for Jellyfin, built with modern Android 
 - `app/build.gradle.kts`: Application dependencies and configuration.
 - `gradle/libs.versions.toml`: Centralized version management.
 - `docs/plans/`: Historical and current implementation plans.
+
+## Android skills integration
+
+This repository now vendors the official Android skills from `https://github.com/android/skills` at:
+
+- `.gemini/skills/android/`
+
+To refresh them to the latest upstream snapshot, run:
+
+```bash
+./scripts/sync-android-skills.sh
+```
+
+This sync script performs a shallow clone/update and removes nested `.git` metadata so the skills stay tracked directly in this repository.

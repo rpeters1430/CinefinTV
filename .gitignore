@@ -36,5 +36,9 @@ google-services.json
 *.hprof
 
 .gemini/
+!.gemini/
+!.gemini/skills/
+!.gemini/skills/android/
+!.gemini/skills/android/**
 gha-creds-*.json
 .superpowers/
