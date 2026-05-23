@@ -32,6 +32,7 @@ data class AuthUiState(
     val quickConnectSecret: String? = null,
     val quickConnectPollStatus: String? = null,
     val quickConnectError: String? = null,
+    val showProfilePickerOnStart: Boolean = false,
 )
 
 @HiltViewModel
@@ -51,27 +52,31 @@ class AuthViewModel @Inject constructor(
         // on a restored session and the user sees only one loading screen.
         val sessionWasRestored = authRepository.isSessionRestored.value
         if (sessionWasRestored != null) {
-            _uiState.update {
-                it.copy(
-                    isSessionChecked = true,
-                    isSessionActive = sessionWasRestored,
-                )
-            }
+            checkProfilesAndRestoreState(sessionWasRestored)
         }
         observeSessionRestoration()
         observeConnectionState()
+    }
+
+    private fun checkProfilesAndRestoreState(isRestored: Boolean) {
+        viewModelScope.launch {
+            val profiles = authRepository.getSavedProfiles()
+            val hasMultipleProfiles = profiles.size > 1
+            _uiState.update {
+                it.copy(
+                    isSessionChecked = true,
+                    isSessionActive = if (hasMultipleProfiles) false else isRestored,
+                    showProfilePickerOnStart = hasMultipleProfiles && isRestored,
+                )
+            }
+        }
     }
 
     private fun observeSessionRestoration() {
         viewModelScope.launch {
             authRepository.isSessionRestored.collect { isRestored ->
                 if (isRestored != null) {
-                    _uiState.update {
-                        it.copy(
-                            isSessionChecked = true,
-                            isSessionActive = isRestored,
-                        )
-                    }
+                    checkProfilesAndRestoreState(isRestored)
                 }
             }
         }

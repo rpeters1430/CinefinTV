@@ -40,7 +40,7 @@ import org.jellyfin.sdk.model.api.QuickConnectResult as SdkQuickConnectResult
 import com.rpeters.cinefintv.data.common.DispatcherProvider
 
 @Singleton
-class JellyfinAuthRepository @Inject constructor(
+open class JellyfinAuthRepository @Inject constructor(
     private val jellyfin: Jellyfin,
     private val secureCredentialManager: SecureCredentialManager,
     private val dispatchers: DispatcherProvider,
@@ -215,7 +215,7 @@ class JellyfinAuthRepository @Inject constructor(
         }
     }
 
-    fun getCurrentServer(): JellyfinServer? = _currentServer.value
+    open fun getCurrentServer(): JellyfinServer? = _currentServer.value
 
     fun isUserAuthenticated(): Boolean = _currentServer.value?.accessToken != null
 

@@ -183,7 +183,7 @@ fun FlatDetailHero(
             if (!summary.isNullOrBlank()) {
                 Text(
                     text = summary,
-                    color = Color(0xFF999999),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 18.sp, lineHeight = 26.sp),
                     maxLines = 4,
                     overflow = TextOverflow.Ellipsis,
@@ -236,12 +236,13 @@ private fun HeroMetadataLine(
 
 @Composable
 private fun HeroQualityBadge(label: String) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
     val normalized = label.trim().uppercase()
     val tint = when {
-        normalized.contains("DV") || normalized.contains("DOLBY VISION") -> Color(0xFF8A5BFF)
-        normalized.contains("HDR") -> Color(0xFFFFB347)
-        normalized.contains("4K") -> Color(0xFFF2F2F2)
-        else -> Color(0xFFE0E0E0)
+        normalized.contains("DV") || normalized.contains("DOLBY VISION") -> expressiveColors.badgeDolbyVision
+        normalized.contains("HDR") -> expressiveColors.badgeHDR
+        normalized.contains("4K") -> expressiveColors.badge4K
+        else -> expressiveColors.badgeGeneric
     }
     Text(
         text = normalized,

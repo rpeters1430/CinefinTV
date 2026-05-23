@@ -29,6 +29,12 @@ data class CinefinExpressiveColors(
     // Semantic Status Tokens
     val watchedGreen: Color,
     
+    // Media Capability Badges
+    val badgeDolbyVision: Color = BadgeDolbyVision,
+    val badgeHDR: Color = BadgeHDR,
+    val badge4K: Color = Badge4K,
+    val badgeGeneric: Color = BadgeGeneric,
+    
     // M3 Expressive Tokens
     val surfaceContainerLowest: Color = SurfaceContainerLowest,
     val surfaceContainerLow: Color = SurfaceContainerLow,
@@ -67,5 +73,9 @@ val LocalCinefinExpressiveColors = staticCompositionLocalOf {
         detailPanelFocused = SurfaceContainerHighest.copy(alpha = 0.98f),
         detailBadge = SurfaceContainerHighest.copy(alpha = 0.96f),
         watchedGreen = WatchedIndicator,
+        badgeDolbyVision = BadgeDolbyVision,
+        badgeHDR = BadgeHDR,
+        badge4K = Badge4K,
+        badgeGeneric = BadgeGeneric,
     )
 }

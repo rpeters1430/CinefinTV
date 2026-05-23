@@ -80,6 +80,16 @@ fun CinefinTvNavGraph(
         return
     }
 
+    val current = backStack.lastOrNull() as? NavDestination
+    if (authUiState.showProfilePickerOnStart && current == Home) {
+        LaunchedEffect(Unit) {
+            backStack.clear()
+            backStack.add(ProfilePicker)
+        }
+        AuthBootstrapScreen()
+        return
+    }
+
     LaunchedEffect(authUiState.connectedServerUrl) {
         val current = backStack.lastOrNull() as? NavDestination
         if (authUiState.connectedServerUrl != null &&
@@ -238,12 +248,23 @@ fun CinefinTvNavGraph(
                 }
                 is ProfilePicker -> {
                     ProfilePickerScreen(
-                        onProfileSwitched = { backStack.pop() },
+                        onProfileSwitched = {
+                            if (backStack.size > 1) {
+                                backStack.pop()
+                            } else {
+                                backStack.clear()
+                                backStack.add(Home)
+                            }
+                        },
                         onAddProfile = {
                             backStack.clear()
                             backStack.add(ServerConnection)
                         },
-                        onBack = { backStack.pop() },
+                        onBack = {
+                            if (backStack.size > 1) {
+                                backStack.pop()
+                            }
+                        },
                     )
                 }
                 is MovieDetail -> {

@@ -39,3 +39,10 @@ val PlayerOverlayEnd = Color(0xB3000000)
 val PlayerSurface = Color(0xFF000000)
 val PlayerContentPrimary = Color(0xFFF0F6FC)
 val PlayerContentSecondary = Color(0xFF8B949E)
+
+// Media Capability Badges
+val BadgeDolbyVision = Color(0xFF8A5BFF)
+val BadgeHDR = Color(0xFFFFB347)
+val Badge4K = Color(0xFFF2F2F2)
+val BadgeGeneric = Color(0xFFE0E0E0)
+

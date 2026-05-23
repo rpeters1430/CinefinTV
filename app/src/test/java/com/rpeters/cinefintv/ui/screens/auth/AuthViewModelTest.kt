@@ -39,6 +39,7 @@ class AuthViewModelTest {
         every { authRepository.isSessionRestored } returns isSessionRestoredFlow
         every { authRepository.isConnected } returns isConnectedFlow
         coEvery { authRepository.tryRestoreSession() } returns true // Keep for backward compatibility if needed, but we use flow now
+        coEvery { authRepository.getSavedProfiles() } returns emptyList()
     }
 
     @Test
@@ -255,5 +256,63 @@ class AuthViewModelTest {
         assertNull(state.quickConnectPollStatus)
         assertNull(state.quickConnectError)
         assertFalse(state.isQuickConnectLoading)
+    }
+
+    @Test
+    fun init_whenMultipleProfilesExist_showsProfilePickerOnStartAndDeactivatesSession() = runTest {
+        setupMocks()
+        val testServer1 = com.rpeters.cinefintv.data.JellyfinServer(
+            id = "server1",
+            name = "Server 1",
+            url = "http://url1",
+            userId = "userId1",
+            username = "user1",
+            accessToken = "token1"
+        )
+        val testServer2 = com.rpeters.cinefintv.data.JellyfinServer(
+            id = "server2",
+            name = "Server 2",
+            url = "http://url2",
+            userId = "userId2",
+            username = "user2",
+            accessToken = "token2"
+        )
+        coEvery { authRepository.getSavedProfiles() } returns listOf(testServer1, testServer2)
+        
+        isSessionRestoredFlow.value = true
+        isConnectedFlow.value = true
+
+        val viewModel = AuthViewModel(authRepository, secureCredentialManager)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isSessionChecked)
+        assertFalse(state.isSessionActive)
+        assertTrue(state.showProfilePickerOnStart)
+    }
+
+    @Test
+    fun init_whenSingleProfileExists_bypassesProfilePicker() = runTest {
+        setupMocks()
+        val testServer1 = com.rpeters.cinefintv.data.JellyfinServer(
+            id = "server1",
+            name = "Server 1",
+            url = "http://url1",
+            userId = "userId1",
+            username = "user1",
+            accessToken = "token1"
+        )
+        coEvery { authRepository.getSavedProfiles() } returns listOf(testServer1)
+        
+        isSessionRestoredFlow.value = true
+        isConnectedFlow.value = true
+
+        val viewModel = AuthViewModel(authRepository, secureCredentialManager)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isSessionChecked)
+        assertTrue(state.isSessionActive)
+        assertFalse(state.showProfilePickerOnStart)
     }
 }

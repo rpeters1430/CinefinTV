@@ -808,7 +808,7 @@ fun EpisodeListRow(
             border = androidx.tv.material3.Border(
                 border = androidx.compose.foundation.BorderStroke(
                     width = 1.dp,
-                    color = if (isInProgress) Color(0x33E50914) else Color.Transparent,
+                    color = if (isInProgress) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent,
                 ),
             ),
             focusedBorder = androidx.tv.material3.Border(
@@ -818,12 +818,12 @@ fun EpisodeListRow(
         colors = androidx.tv.material3.CardDefaults.colors(
             containerColor = when {
                 episode.isWatched -> expressiveColors.detailPanelMuted.copy(alpha = 0.5f)
-                isInProgress -> Color(0x10E50914)
+                isInProgress -> MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
                 else -> expressiveColors.detailPanelMuted.copy(alpha = 0.88f)
             },
             focusedContainerColor = when {
                 episode.isWatched -> expressiveColors.detailPanelMuted.copy(alpha = 0.6f)
-                isInProgress -> Color(0x18E50914)
+                isInProgress -> MaterialTheme.colorScheme.primary.copy(alpha = 0.09f)
                 else -> expressiveColors.detailPanelFocused
             },
         ),
@@ -877,7 +877,7 @@ fun EpisodeListRow(
                             .align(Alignment.TopEnd)
                             .padding(6.dp)
                             .size(16.dp)
-                            .background(Color(0xFF2E7D32), CircleShape),
+                            .background(expressiveColors.watchedGreen, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -895,13 +895,13 @@ fun EpisodeListRow(
                             .padding(start = 4.dp, end = 4.dp, bottom = 4.dp)
                             .fillMaxWidth()
                             .height(3.dp)
-                            .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(2.dp)),
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f), RoundedCornerShape(2.dp)),
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .fillMaxWidth(progress)
-                                .background(Color(0xFFE50914), RoundedCornerShape(2.dp)),
+                                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp)),
                         )
                     }
                 }
@@ -916,20 +916,20 @@ fun EpisodeListRow(
                 Text(
                     text = episode.episodeCode ?: episode.number?.let { "E$it" } ?: "Episode",
                     style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
-                    color = Color(0xFF888888),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
                 Text(
                     text = episode.title,
                     style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
-                    color = if (episode.isWatched) Color(0xFFBBBBBB) else Color.White,
+                    color = if (episode.isWatched) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )
                 Text(
                     text = listOfNotNull(episode.duration, episode.audioLabel).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp),
-                    color = Color(0xFF666666),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )
@@ -937,7 +937,7 @@ fun EpisodeListRow(
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp),
-                        color = Color(0xFF999999),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         maxLines = 2,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     )
@@ -948,14 +948,14 @@ fun EpisodeListRow(
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterVertically)
-                        .background(Color(0x18E50914), RoundedCornerShape(999.dp))
-                        .border(1.dp, Color(0x66E50914), RoundedCornerShape(999.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.09f), RoundedCornerShape(999.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(999.dp))
                         .padding(horizontal = 10.dp, vertical = 4.dp),
                 ) {
                     Text(
                         text = "RESUME",
                         style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold),
-                        color = Color(0xFFE50914),
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }

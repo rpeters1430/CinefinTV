@@ -34,6 +34,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
 @Composable
 fun PersonCircleCard(
@@ -44,6 +45,8 @@ fun PersonCircleCard(
     onFocus: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+
     Card(
         onClick = onClick,
         modifier = modifier.onFocusChanged { if (it.isFocused) onFocus?.invoke() },
@@ -72,10 +75,10 @@ fun PersonCircleCard(
                 modifier = Modifier
                     .size(64.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF232323))
+                    .background(expressiveColors.surfaceContainerLowest)
                     .border(
                         width = 1.dp,
-                        color = Color.White.copy(alpha = 0.16f),
+                        color = expressiveColors.borderSubtle,
                         shape = CircleShape,
                     ),
                 contentAlignment = Alignment.Center,
@@ -93,7 +96,7 @@ fun PersonCircleCard(
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = null,
-                        tint = Color(0xFFBDBDBD),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(28.dp),
                     )
                 }
@@ -101,7 +104,7 @@ fun PersonCircleCard(
             Text(
                 text = name,
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
-                color = Color(0xFFDDDDDD),
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 minLines = 2,
@@ -111,7 +114,7 @@ fun PersonCircleCard(
             Text(
                 text = role.orEmpty(),
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
-                color = Color(0xFF666666),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
