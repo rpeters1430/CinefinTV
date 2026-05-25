@@ -23,6 +23,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 import com.rpeters.cinefintv.data.common.DispatcherProvider
+import com.rpeters.cinefintv.data.repository.RemoteConfigRepository
+import com.google.firebase.perf.FirebasePerformance
+import com.google.firebase.perf.metrics.Trace
 
 /**
  * Intelligent caching system for Jellyfin content to support offline functionality.
@@ -32,15 +35,24 @@ import com.rpeters.cinefintv.data.common.DispatcherProvider
 class JellyfinCache @Inject constructor(
     private val context: Context,
     private val dispatchers: DispatcherProvider,
+    private val remoteConfig: RemoteConfigRepository,
     @param:ApplicationScope private val applicationScope: CoroutineScope,
 ) {
 
     companion object {
         private const val TAG = "JellyfinCache"
         private const val CACHE_DIR = "jellyfin_cache"
-        private const val MAX_CACHE_SIZE_MB = 100L // 100 MB cache limit
-        private const val MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000L // 24 hours
-        private const val MAX_MEMORY_CACHE_SIZE = 50 // Maximum number of entries in memory cache
+        
+        // Remote Config Keys
+        private const val KEY_MAX_DISK_CACHE_SIZE_MB = "max_disk_cache_size_mb"
+        private const val KEY_MAX_MEMORY_CACHE_SIZE = "max_memory_cache_size"
+        private const val KEY_MAX_CACHE_AGE_HOURS = "max_cache_age_hours"
+
+        // Local Defaults (used if Remote Config is not yet fetched)
+        private const val DEFAULT_MAX_CACHE_SIZE_MB = 100L
+        private const val DEFAULT_MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000L
+        private const val DEFAULT_MAX_MEMORY_CACHE_SIZE = 50
+
         private const val LIBRARIES_KEY = "libraries"
         private const val CONTINUE_WATCHING_KEY = "continue_watching"
         private const val NEXT_UP_KEY = "next_up"
@@ -48,6 +60,15 @@ class JellyfinCache @Inject constructor(
         private const val RECENTLY_ADDED_EPISODES_KEY = "recently_added_episodes"
         private const val FAVORITES_KEY = "favorites"
     }
+
+    private val maxDiskCacheSizeMb: Long
+        get() = remoteConfig.getLong(KEY_MAX_DISK_CACHE_SIZE_MB).takeIf { it > 0 } ?: DEFAULT_MAX_CACHE_SIZE_MB
+
+    private val maxMemoryCacheSize: Int
+        get() = remoteConfig.getLong(KEY_MAX_MEMORY_CACHE_SIZE).toInt().takeIf { it > 0 } ?: DEFAULT_MAX_MEMORY_CACHE_SIZE
+
+    private val maxCacheAgeMs: Long
+        get() = remoteConfig.getLong(KEY_MAX_CACHE_AGE_HOURS).takeIf { it > 0 }?.let { it * 60 * 60 * 1000L } ?: DEFAULT_MAX_CACHE_AGE_MS
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -98,26 +119,31 @@ class JellyfinCache @Inject constructor(
     suspend fun cacheItems(
         key: String,
         items: List<BaseItemDto>,
-        ttlMs: Long = MAX_CACHE_AGE_MS,
+        ttlMs: Long? = null,
     ): Boolean {
+        val trace = FirebasePerformance.startTrace("cache_items_write")
+        trace.putAttribute("cache_key", key)
+        trace.putMetric("item_count", items.size.toLong())
+
         return withContext(dispatchers.io) {
             try {
+                val effectiveTtl = ttlMs ?: maxCacheAgeMs
                 val cacheData = CacheData(
                     items = items,
                     timestamp = System.currentTimeMillis(),
-                    ttlMs = ttlMs,
+                    ttlMs = effectiveTtl,
                 )
 
                 val cacheEntry = CacheEntry(
                     data = cacheData,
-                    expiresAt = System.currentTimeMillis() + ttlMs,
+                    expiresAt = System.currentTimeMillis() + effectiveTtl,
                 )
 
                 // Store in memory cache with concurrent LRU eviction
                 memoryCache[key] = cacheEntry
                 memoryKeys.remove(key)
                 memoryKeys.add(key)
-                while (memoryKeys.size > MAX_MEMORY_CACHE_SIZE) {
+                while (memoryKeys.size > maxMemoryCacheSize) {
                     val oldestKey = memoryKeys.poll()
                     if (oldestKey != null) {
                         memoryCache.remove(oldestKey)
@@ -136,8 +162,10 @@ class JellyfinCache @Inject constructor(
                 }
 
                 scheduleCacheStatsUpdate()
+                trace.stop()
                 true
             } catch (e: Exception) {
+                trace.stop()
                 if (e is CancellationException) throw e
                 SecureLogger.e(TAG, "Failed to cache items for key: $key", e)
                 false
@@ -150,6 +178,9 @@ class JellyfinCache @Inject constructor(
      * Performs I/O operations on background thread.
      */
     suspend fun getCachedItems(key: String): List<BaseItemDto>? {
+        val trace = FirebasePerformance.startTrace("cache_items_read")
+        trace.putAttribute("cache_key", key)
+
         return withContext(dispatchers.io) {
             try {
                 // Check memory cache first (thread-safe, lock-free)
@@ -164,6 +195,8 @@ class JellyfinCache @Inject constructor(
                             // Refresh key usage in LRU queue
                             memoryKeys.remove(key)
                             memoryKeys.add(key)
+                            trace.putAttribute("hit_type", "memory")
+                            trace.stop()
                             return@withContext cacheData.items
                         }
                     } else {
@@ -177,7 +210,11 @@ class JellyfinCache @Inject constructor(
                 val file = File(ensureCacheDir(), "$key.json")
                 if (file.exists()) {
                     val content = file.readText()
-                    if (content.isBlank()) return@withContext null
+                    if (content.isBlank()) {
+                        trace.putAttribute("hit_type", "miss")
+                        trace.stop()
+                        return@withContext null
+                    }
 
                     val cacheData = json.decodeFromString<CacheData>(content)
                     val isValid = (System.currentTimeMillis() - cacheData.timestamp) < cacheData.ttlMs
@@ -191,7 +228,7 @@ class JellyfinCache @Inject constructor(
                         memoryCache[key] = cacheEntry
                         memoryKeys.remove(key)
                         memoryKeys.add(key)
-                        while (memoryKeys.size > MAX_MEMORY_CACHE_SIZE) {
+                        while (memoryKeys.size > maxMemoryCacheSize) {
                             val oldestKey = memoryKeys.poll()
                             if (oldestKey != null) {
                                 memoryCache.remove(oldestKey)
@@ -204,6 +241,8 @@ class JellyfinCache @Inject constructor(
                         if (BuildConfig.DEBUG) {
                             SecureLogger.d(TAG, "Disk cache hit for key: $key")
                         }
+                        trace.putAttribute("hit_type", "disk")
+                        trace.stop()
                         return@withContext cacheData.items
                     } else {
                         // Delete expired file
@@ -214,8 +253,11 @@ class JellyfinCache @Inject constructor(
                     }
                 }
 
+                trace.putAttribute("hit_type", "miss")
+                trace.stop()
                 null
             } catch (e: Exception) {
+                trace.stop()
                 if (e is CancellationException) throw e
                 SecureLogger.w(TAG, "Failed to retrieve cached items for key: $key", e)
                 null
@@ -345,7 +387,7 @@ class JellyfinCache @Inject constructor(
 
                 // Check if we need to free up space
                 val cacheSize = getCacheSizeBytes()
-                val maxCacheSizeBytes = MAX_CACHE_SIZE_MB * 1024 * 1024
+                val maxCacheSizeBytes = maxDiskCacheSizeMb * 1024 * 1024
 
                 if (cacheSize > maxCacheSizeBytes) {
                     evictOldestEntries(maxCacheSizeBytes)

@@ -34,6 +34,8 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
 import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.BuildConfig
+import com.google.firebase.perf.FirebasePerformance
+import com.google.firebase.perf.metrics.Trace
 import android.os.SystemClock
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
@@ -171,6 +173,7 @@ class HomeViewModel @Inject constructor(
 
     private fun loadCachedData() {
         viewModelScope.launch(dispatchers.io) {
+            val trace = FirebasePerformance.startTrace("home_load_cache")
             val startedAt = SystemClock.elapsedRealtime()
             trace { "Cache load start" }
             val librariesDeferred = async { repositories.media.getCachedLibraries() }
@@ -281,6 +284,7 @@ class HomeViewModel @Inject constructor(
                     trace { "Cache load produced no visible sections" }
                 }
             }
+            trace.stop()
         }
     }
 
@@ -315,6 +319,10 @@ class HomeViewModel @Inject constructor(
             "refresh#$refreshId requested: silent=$silent forceRefresh=$forceRefresh ui=${_uiState.value.debugSummary()} server=${repositories.auth.currentServer.value.debugSummary()}"
         }
         viewModelScope.launch {
+            val trace = FirebasePerformance.startTrace("home_refresh_full")
+            trace.putAttribute("is_silent", silent.toString())
+            trace.putAttribute("is_forced", forceRefresh.toString())
+
             val waitingAt = SystemClock.elapsedRealtime()
             refreshMutex.withLock {
                 val lockedAt = SystemClock.elapsedRealtime()
@@ -454,12 +462,15 @@ class HomeViewModel @Inject constructor(
                     trace {
                         "refresh#$refreshId complete in ${SystemClock.elapsedRealtime() - refreshStartedAt}ms with ui=${_uiState.value.debugSummary()}"
                     }
+                    trace.stop()
                 } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                    trace.stop()
                     trace { "refresh#$refreshId timed out after 30s" }
                     if (_uiState.value is HomeUiState.Loading) {
                         _uiState.value = HomeUiState.Error("Server took too long to respond. Please check your connection and try again.")
                     }
                 } catch (e: Exception) {
+                    trace.stop()
                     if (e is kotlinx.coroutines.CancellationException) throw e
                     val errorMessage = "Failed to load home content: ${e.message ?: "Unknown error"}"
                     SecureLogger.e(TAG, "refresh#$refreshId $errorMessage", e)

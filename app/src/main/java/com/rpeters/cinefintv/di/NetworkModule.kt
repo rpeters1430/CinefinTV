@@ -10,6 +10,7 @@ import com.rpeters.cinefintv.data.playback.EnhancedPlaybackManager
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.repository.JellyfinAuthRepository
 import com.rpeters.cinefintv.data.repository.JellyfinStreamRepository
+import com.rpeters.cinefintv.data.repository.RemoteConfigRepository
 import com.rpeters.cinefintv.network.CachePolicyInterceptor
 import com.rpeters.cinefintv.network.ConnectivityChecker
 import com.rpeters.cinefintv.network.DeviceIdentityProvider
@@ -137,13 +138,17 @@ object NetworkModule {
     fun provideJellyfinSdk(
         @ApplicationContext context: Context,
         deviceIdentityProvider: DeviceIdentityProvider,
+        remoteConfig: RemoteConfigRepository,
     ): Jellyfin {
+        val connectTimeout = remoteConfig.getLong("sdk_connect_timeout_seconds").takeIf { it > 0 } ?: 15L
+        val readTimeout = remoteConfig.getLong("sdk_read_timeout_seconds").takeIf { it > 0 } ?: 30L
+
         // The Jellyfin SDK uses OkHttp (via OkHttpFactory) as its HTTP backend.
         // Provide an explicit client with timeouts so API calls don't hang on slow
         // or unreachable servers — the SDK's default OkHttpClient has no timeouts.
         val sdkOkHttpClient = OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(connectTimeout, TimeUnit.SECONDS)
+            .readTimeout(readTimeout, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
             .connectionPool(okhttp3.ConnectionPool(5, 5, TimeUnit.MINUTES))
             .retryOnConnectionFailure(true)
@@ -179,9 +184,10 @@ object NetworkModule {
     fun provideJellyfinCache(
         @ApplicationContext context: Context,
         dispatchers: com.rpeters.cinefintv.data.common.DispatcherProvider,
+        remoteConfig: RemoteConfigRepository,
         @ApplicationScope applicationScope: kotlinx.coroutines.CoroutineScope,
     ): JellyfinCache {
-        return JellyfinCache(context, dispatchers, applicationScope)
+        return JellyfinCache(context, dispatchers, remoteConfig, applicationScope)
     }
 
     @Provides

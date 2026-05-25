@@ -76,6 +76,7 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Carousel
 import androidx.tv.material3.CarouselDefaults
+import androidx.tv.material3.CarouselItem
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
@@ -614,7 +615,6 @@ private fun FeaturedCarousel(
             .fillMaxWidth()
             .height(512.dp)
             .onFocusChanged { isFocused = it.hasFocus }
-            .focusGroup()
             .onPreviewKeyEvent { keyEvent ->
                 consumeDirectionalPress(
                     keyEvent = keyEvent,
@@ -633,15 +633,25 @@ private fun FeaturedCarousel(
         },
     ) { index ->
         val item = items[index]
-        HeroItem(
-            item = item,
-            onMoreInfo = { onMoreInfo(item) },
-            onPlay = { onPlay(item.id) },
-            destinationFocus = destinationFocus,
-            primaryActionFocusRequester = primaryActionFocusRequester,
-            downRequester = downRequester,
-            modifier = Modifier.fillMaxSize()
-        )
+        CarouselItem(
+            background = {
+                // Background is handled by ImmersiveBackground at the root of HomeScreen
+            }
+        ) {
+            HeroItem(
+                item = item,
+                onMoreInfo = { onMoreInfo(item) },
+                onPlay = { onPlay(item.id) },
+                destinationFocus = destinationFocus,
+                primaryActionFocusRequester = if (index == carouselState.activeItemIndex) {
+                    primaryActionFocusRequester
+                } else {
+                    remember { FocusRequester() }
+                },
+                downRequester = downRequester,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
 }
 
@@ -707,6 +717,13 @@ private fun HeroItem(
     Box(
         modifier = modifier,
     ) {
+        AsyncImage(
+            model = heroImageRequest,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+
         // Horizontal scrim for text readability
         Box(
             modifier = Modifier
@@ -795,7 +812,6 @@ private fun HeroItem(
                     onClick = onPlay,
                     modifier = Modifier
                         .blockBringIntoView()
-                        .focusRequester(primaryActionFocusRequester)
                         .onFocusChanged { state: androidx.compose.ui.focus.FocusState -> playButtonFocused = state.isFocused }
                         .graphicsLayer {
                             scaleX = playButtonScale

@@ -1,0 +1,40 @@
+{
+  "parameters": {
+    "max_disk_cache_size_mb": {
+      "defaultValue": {
+        "value": "100"
+      },
+      "valueType": "NUMBER"
+    },
+    "max_memory_cache_size": {
+      "defaultValue": {
+        "value": "50"
+      },
+      "valueType": "NUMBER"
+    },
+    "max_cache_age_hours": {
+      "defaultValue": {
+        "value": "24"
+      },
+      "valueType": "NUMBER"
+    },
+    "sdk_connect_timeout_seconds": {
+      "defaultValue": {
+        "value": "15"
+      },
+      "valueType": "NUMBER"
+    },
+    "sdk_read_timeout_seconds": {
+      "defaultValue": {
+        "value": "30"
+      },
+      "valueType": "NUMBER"
+    },
+    "prefetch_count": {
+      "defaultValue": {
+        "value": "5"
+      },
+      "valueType": "NUMBER"
+    }
+  }
+}
