@@ -14,5 +14,6 @@ object PlayerTestTags {
     const val SkipActionButton = "player_skip_action_button"
     const val NextEpisodeCard = "player_next_episode_card"
     const val NextEpisodeButton = "player_next_episode_button"
+    const val PlayPauseButton = "player_play_pause_button"
     const val ResumeDialog = "player_resume_dialog"
 }

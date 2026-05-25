@@ -17,6 +17,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.jellyfin.sdk.model.api.BaseItemDto
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -52,16 +54,9 @@ class JellyfinCache @Inject constructor(
         encodeDefaults = true
     }
 
-    // In-memory cache for quick access with LRU eviction
-    private val memoryCache = object : LinkedHashMap<String, CacheEntry<*>>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CacheEntry<*>>?): Boolean {
-            val shouldRemove = size > MAX_MEMORY_CACHE_SIZE
-            if (shouldRemove && BuildConfig.DEBUG) {
-                SecureLogger.d(TAG, "Evicting oldest memory cache entry: ${eldest?.key}")
-            }
-            return shouldRemove
-        }
-    }
+    // Thread-safe in-memory cache for quick access with lock-free concurrent LRU eviction
+    private val memoryCache = ConcurrentHashMap<String, CacheEntry<*>>()
+    private val memoryKeys = ConcurrentLinkedQueue<String>()
 
     // Cache statistics
     private val _cacheStats = MutableStateFlow(CacheStats())
@@ -118,9 +113,18 @@ class JellyfinCache @Inject constructor(
                     expiresAt = System.currentTimeMillis() + ttlMs,
                 )
 
-                // Store in memory cache (synchronized for thread safety)
-                synchronized(memoryCache) {
-                    memoryCache[key] = cacheEntry
+                // Store in memory cache with concurrent LRU eviction
+                memoryCache[key] = cacheEntry
+                memoryKeys.remove(key)
+                memoryKeys.add(key)
+                while (memoryKeys.size > MAX_MEMORY_CACHE_SIZE) {
+                    val oldestKey = memoryKeys.poll()
+                    if (oldestKey != null) {
+                        memoryCache.remove(oldestKey)
+                        if (BuildConfig.DEBUG) {
+                            SecureLogger.d(TAG, "Evicting oldest memory cache entry: $oldestKey")
+                        }
+                    }
                 }
 
                 // Store on disk
@@ -148,22 +152,24 @@ class JellyfinCache @Inject constructor(
     suspend fun getCachedItems(key: String): List<BaseItemDto>? {
         return withContext(dispatchers.io) {
             try {
-                // Check memory cache first (synchronized for thread safety)
-                synchronized(memoryCache) {
-                    memoryCache[key]?.let { entry ->
-                        if (entry.isValid()) {
-                            @Suppress("UNCHECKED_CAST")
-                            val cacheData = entry.data as? CacheData
-                            if (cacheData != null) {
-                                if (BuildConfig.DEBUG) {
-                                    SecureLogger.d(TAG, "Memory cache hit for key: $key")
-                                }
-                                return@withContext cacheData.items
+                // Check memory cache first (thread-safe, lock-free)
+                memoryCache[key]?.let { entry ->
+                    if (entry.isValid()) {
+                        @Suppress("UNCHECKED_CAST")
+                        val cacheData = entry.data as? CacheData
+                        if (cacheData != null) {
+                            if (BuildConfig.DEBUG) {
+                                SecureLogger.d(TAG, "Memory cache hit for key: $key")
                             }
-                        } else {
-                            // Remove expired entry
-                            memoryCache.remove(key)
+                            // Refresh key usage in LRU queue
+                            memoryKeys.remove(key)
+                            memoryKeys.add(key)
+                            return@withContext cacheData.items
                         }
+                    } else {
+                        // Remove expired entry
+                        memoryCache.remove(key)
+                        memoryKeys.remove(key)
                     }
                 }
 
@@ -177,13 +183,22 @@ class JellyfinCache @Inject constructor(
                     val isValid = (System.currentTimeMillis() - cacheData.timestamp) < cacheData.ttlMs
 
                     if (isValid) {
-                        // Add back to memory cache (synchronized for thread safety)
+                        // Add back to memory cache with concurrent LRU eviction
                         val cacheEntry = CacheEntry(
                             data = cacheData,
                             expiresAt = cacheData.timestamp + cacheData.ttlMs,
                         )
-                        synchronized(memoryCache) {
-                            memoryCache[key] = cacheEntry
+                        memoryCache[key] = cacheEntry
+                        memoryKeys.remove(key)
+                        memoryKeys.add(key)
+                        while (memoryKeys.size > MAX_MEMORY_CACHE_SIZE) {
+                            val oldestKey = memoryKeys.poll()
+                            if (oldestKey != null) {
+                                memoryCache.remove(oldestKey)
+                                if (BuildConfig.DEBUG) {
+                                    SecureLogger.d(TAG, "Evicting oldest memory cache entry: $oldestKey")
+                                }
+                            }
                         }
 
                         if (BuildConfig.DEBUG) {
@@ -214,14 +229,15 @@ class JellyfinCache @Inject constructor(
      */
     suspend fun isCached(key: String): Boolean = withContext(dispatchers.io) {
         try {
-            // Check memory cache (synchronized for thread safety)
-            synchronized(memoryCache) {
-                memoryCache[key]?.let { entry ->
-                    if (entry.isValid()) {
-                        return@withContext true
-                    } else {
-                        memoryCache.remove(key)
-                    }
+            // Check memory cache (thread-safe, lock-free)
+            memoryCache[key]?.let { entry ->
+                if (entry.isValid()) {
+                    memoryKeys.remove(key)
+                    memoryKeys.add(key)
+                    return@withContext true
+                } else {
+                    memoryCache.remove(key)
+                    memoryKeys.remove(key)
                 }
             }
 
@@ -247,9 +263,8 @@ class JellyfinCache @Inject constructor(
      * Invalidates cache for a specific key.
      */
     suspend fun invalidateCache(key: String) = withContext(dispatchers.io) {
-        synchronized(memoryCache) {
-            memoryCache.remove(key)
-        }
+        memoryCache.remove(key)
+        memoryKeys.remove(key)
         val file = File(ensureCacheDir(), "$key.json")
         if (file.exists()) {
             file.delete()
@@ -264,9 +279,8 @@ class JellyfinCache @Inject constructor(
      * Clears all cached data.
      */
     suspend fun clearAllCache() = withContext(dispatchers.io) {
-        synchronized(memoryCache) {
-            memoryCache.clear()
-        }
+        memoryCache.clear()
+        memoryKeys.clear()
 
         ensureCacheDir().listFiles()?.forEach { file ->
             if (file.isFile && file.name.endsWith(".json")) {
@@ -300,17 +314,14 @@ class JellyfinCache @Inject constructor(
             try {
                 val currentTime = System.currentTimeMillis()
 
-                // Clean memory cache (synchronized for thread safety)
-                val expiredKeys = synchronized(memoryCache) {
-                    memoryCache.entries
-                        .filter { !it.value.isValid() }
-                        .map { it.key }
-                }
+                // Clean memory cache
+                val expiredKeys = memoryCache.entries
+                    .filter { !it.value.isValid() }
+                    .map { it.key }
 
-                synchronized(memoryCache) {
-                    expiredKeys.forEach { key ->
-                        memoryCache.remove(key)
-                    }
+                expiredKeys.forEach { key ->
+                    memoryCache.remove(key)
+                    memoryKeys.remove(key)
                 }
 
                 // Clean disk cache
@@ -369,11 +380,10 @@ class JellyfinCache @Inject constructor(
                 file.delete()
                 deletedCount++
 
-                // Remove from memory cache too (synchronized for thread safety)
+                // Remove from memory cache too
                 val key = file.nameWithoutExtension
-                synchronized(memoryCache) {
-                    memoryCache.remove(key)
-                }
+                memoryCache.remove(key)
+                memoryKeys.remove(key)
             }
 
             if (BuildConfig.DEBUG && deletedCount > 0) {
@@ -392,9 +402,7 @@ class JellyfinCache @Inject constructor(
             val diskEntries = ensureCacheDir().listFiles()
                 ?.count { it.isFile && it.name.endsWith(".json") } ?: 0
 
-            val memoryEntries = synchronized(memoryCache) {
-                memoryCache.size
-            }
+            val memoryEntries = memoryCache.size
             val totalSizeBytes = getCacheSizeBytes()
             val totalSizeMB = totalSizeBytes / (1024.0 * 1024.0)
 

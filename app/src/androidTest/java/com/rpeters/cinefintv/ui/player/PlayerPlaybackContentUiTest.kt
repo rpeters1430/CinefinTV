@@ -41,7 +41,7 @@ class PlayerPlaybackContentUiTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun directionPress_whenControlsHidden_showsOverlayAndFocusesSeekBar() {
+    fun directionPress_whenControlsHidden_showsOverlayAndFocusesPlayPauseButton() {
         composeRule.setContent {
             PlayerPlaybackTestHost {
                 PlaybackShellHarness(initialControlsVisible = false)
@@ -54,7 +54,7 @@ class PlayerPlaybackContentUiTest {
             .performKeyInput { pressKey(Key.DirectionDown) }
 
         composeRule.onNodeWithTag(PlayerTestTags.ControlsOverlay).assertIsDisplayed()
-        composeRule.onNodeWithTag(PlayerTestTags.SeekBar, useUnmergedTree = true).assertIsFocused()
+        composeRule.onNodeWithTag(PlayerTestTags.PlayPauseButton, useUnmergedTree = true).assertIsFocused()
     }
 
     @Test
@@ -145,7 +145,7 @@ class PlayerPlaybackContentUiTest {
     }
 
     @Test
-    fun directionPress_whenNextEpisodeVisible_focusesSeekBarNotNextEpisodeButton() {
+    fun directionPress_whenNextEpisodeVisible_focusesPlayPauseButtonNotNextEpisodeButton() {
         composeRule.setContent {
             PlayerPlaybackTestHost {
                 PlaybackShellHarness(
@@ -172,7 +172,7 @@ class PlayerPlaybackContentUiTest {
             .performKeyInput { pressKey(Key.DirectionDown) }
 
         composeRule.onNodeWithTag(PlayerTestTags.ControlsOverlay).assertIsDisplayed()
-        composeRule.onNodeWithTag(PlayerTestTags.SeekBar, useUnmergedTree = true).assertIsFocused()
+        composeRule.onNodeWithTag(PlayerTestTags.PlayPauseButton, useUnmergedTree = true).assertIsFocused()
     }
 
     @Test

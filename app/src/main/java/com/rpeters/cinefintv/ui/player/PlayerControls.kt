@@ -102,6 +102,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
 import androidx.tv.material3.IconButtonDefaults
+import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
@@ -185,14 +186,6 @@ internal fun PlayerControls(
                         false
                     }
                 }
-                .background(
-                    Brush.verticalGradient(
-                        0.0f to Color.Black.copy(alpha = 0.45f),
-                        0.2f to Color.Transparent,
-                        0.7f to Color.Transparent,
-                        1.0f to Color.Black.copy(alpha = 0.75f)
-                    )
-                )
         ) {
             // Minimalist Top-Left Info
             Row(
@@ -274,20 +267,12 @@ internal fun PlayerControls(
                         }
                     }
                 }
-            }            // Bottom controls - Glassy Floating Bar
-            Surface(
+            }            // Bottom controls - Floating Bar (transparent background)
+            Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = spacing.gutter * 2, vertical = 32.dp)
-                    .fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = SurfaceDefaults.colors(
-                    containerColor = expressiveColors.surfaceContainerHigh.copy(alpha = 0.55f),
-                ),
-                border = Border(
-                    border = BorderStroke(1.dp, expressiveColors.playerContentPrimary.copy(alpha = 0.12f))
-                ),
-                tonalElevation = 6.dp
+                    .fillMaxWidth()
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
@@ -357,6 +342,7 @@ internal fun PlayerControls(
                                 .align(Alignment.Center)
                                 .size(64.dp) // Slightly larger
                                 .focusRequester(playPauseFocusRequester)
+                                .testTag(PlayerTestTags.PlayPauseButton)
                                 .focusProperties {
                                     up = seekBarFocusRequester
                                     if (hasContentRow) down = contentRowFocusRequester
@@ -986,7 +972,7 @@ private fun ActionIconButton(
         colors = IconButtonDefaults.colors(
             containerColor = Color.Transparent,
             contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.8f),
-            focusedContainerColor = expressiveColors.playerContentPrimary.copy(alpha = 0.2f),
+            focusedContainerColor = MaterialTheme.colorScheme.primary,
             focusedContentColor = expressiveColors.playerContentPrimary
         )
     ) {
@@ -999,7 +985,7 @@ private fun ActionIconButton(
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelSmall,
-                    color = expressiveColors.playerContentPrimary.copy(alpha = 0.8f),
+                    color = LocalContentColor.current,
                     maxLines = 1,
                 )
             }

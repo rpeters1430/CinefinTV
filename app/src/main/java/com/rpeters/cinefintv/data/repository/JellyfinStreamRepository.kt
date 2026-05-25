@@ -481,6 +481,13 @@ class JellyfinStreamRepository @Inject constructor(
     fun getBackdropUrl(item: BaseItemDto): String? {
         return try {
             val server = validateServer()
+
+            // For episodes, use the TV series' backdrop if seriesId is present to avoid low-res stretched thumbnails
+            if (item.type == BaseItemKind.EPISODE && item.seriesId != null) {
+                val seriesId = item.seriesId.toString()
+                return "${server.url}/Items/$seriesId/Images/Backdrop?maxHeight=$BACKDROP_MAX_HEIGHT&maxWidth=$BACKDROP_MAX_WIDTH"
+            }
+
             val backdropTag = item.backdropImageTags?.firstOrNull()
             if (backdropTag != null) {
                 "${server.url}/Items/${item.id}/Images/Backdrop?tag=$backdropTag&maxHeight=$BACKDROP_MAX_HEIGHT&maxWidth=$BACKDROP_MAX_WIDTH"

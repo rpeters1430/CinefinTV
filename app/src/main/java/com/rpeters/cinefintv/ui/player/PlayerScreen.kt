@@ -485,7 +485,7 @@ internal fun PlayerPlaybackContent(
 
     LaunchedEffect(controlsVisible, isTrackPanelVisible) {
         if (controlsVisible && !isTrackPanelVisible) {
-            seekBarFocusRequester.requestFocus()
+            playPauseFocusRequester.requestFocus()
         } else if (!controlsVisible) {
             playerFocusRequester.requestFocus()
             isContentShelfVisible = false
