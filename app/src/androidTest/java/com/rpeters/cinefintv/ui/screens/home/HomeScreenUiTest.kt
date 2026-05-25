@@ -19,7 +19,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -485,6 +485,49 @@ class HomeScreenUiTest {
         composeRule.onNodeWithTag("top_nav")
             .performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton).assertIsFocused()
+    }
+
+    @Test
+    fun topNavDown_afterLoadingTransitionsToFeaturedThenShelf() {
+        val uiState = mutableStateOf<HomeUiState>(HomeUiState.Loading)
+
+        composeRule.setContent {
+            HomeTestHost(showTopNav = true) {
+                HomeScreenContent(
+                    uiState = uiState.value,
+                    onOpenItem = {},
+                    onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
+                    onRetry = {},
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("top_nav")
+            .requestFocus()
+            .assertIsFocused()
+
+        composeRule.runOnIdle {
+            uiState.value = sampleContentState(
+                featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))
+            )
+        }
+
+        composeRule.onNodeWithTag(HomeTestTags.FeaturedCarousel).assertIsDisplayed()
+        composeRule.onNodeWithTag("top_nav")
+            .requestFocus()
+            .assertIsFocused()
+
+        composeRule.onNodeWithTag("top_nav")
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton).assertIsFocused()
+
+        composeRule.onNodeWithTag(HomeTestTags.FeaturedPlayButton)
+            .performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0)).assertIsFocused()
     }
 
     @Test

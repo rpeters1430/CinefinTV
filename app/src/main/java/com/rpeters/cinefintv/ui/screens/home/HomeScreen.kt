@@ -76,7 +76,6 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Carousel
 import androidx.tv.material3.CarouselDefaults
-import androidx.tv.material3.CarouselItem
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
@@ -633,25 +632,19 @@ private fun FeaturedCarousel(
         },
     ) { index ->
         val item = items[index]
-        CarouselItem(
-            background = {
-                // Background is handled by ImmersiveBackground at the root of HomeScreen
-            }
-        ) {
-            HeroItem(
-                item = item,
-                onMoreInfo = { onMoreInfo(item) },
-                onPlay = { onPlay(item.id) },
-                destinationFocus = destinationFocus,
-                primaryActionFocusRequester = if (index == carouselState.activeItemIndex) {
-                    primaryActionFocusRequester
-                } else {
-                    remember { FocusRequester() }
-                },
-                downRequester = downRequester,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        HeroItem(
+            item = item,
+            onMoreInfo = { onMoreInfo(item) },
+            onPlay = { onPlay(item.id) },
+            destinationFocus = destinationFocus,
+            primaryActionFocusRequester = if (index == carouselState.activeItemIndex) {
+                primaryActionFocusRequester
+            } else {
+                remember { FocusRequester() }
+            },
+            downRequester = downRequester,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }
 

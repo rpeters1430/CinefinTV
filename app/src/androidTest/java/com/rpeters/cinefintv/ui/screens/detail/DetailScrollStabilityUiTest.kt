@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
@@ -62,8 +62,10 @@ class DetailScrollStabilityUiTest {
                     description = "Description for stability test.",
                     heroSecondaryActions = listOf(HeroSecondaryAction(label = "···", onClick = {})),
                     castItems = emptyList(),
+                    trailers = emptyList(),
                     similarItems = emptyList(),
                     onCastClick = {},
+                    onTrailerClick = {},
                     onSimilarClick = {},
                     listState = listState,
                 )
@@ -112,8 +114,10 @@ class DetailScrollStabilityUiTest {
                     seasons = emptyList(),
                     onSeasonClick = {},
                     castItems = emptyList(),
+                    trailers = emptyList(),
                     similarItems = emptyList(),
                     onCastClick = {},
+                    onTrailerClick = {},
                     onSimilarClick = {},
                     description = "Description for stability test.",
                     heroSecondaryActions = listOf(HeroSecondaryAction(label = "···", onClick = {})),

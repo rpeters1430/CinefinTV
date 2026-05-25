@@ -305,7 +305,7 @@ class JellyfinStreamRepository @Inject constructor(
             
         okHttpClient.newCall(request).execute().use { response: Response ->
             if (!response.isSuccessful) return@executeWithClient null
-            val body = response.body?.string() ?: return@executeWithClient null
+            val body = response.body.string()
             trickplayJson.decodeFromString<TrickplayManifest>(body)
         }
     }

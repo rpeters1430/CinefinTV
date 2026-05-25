@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
@@ -52,6 +52,7 @@ class DetailFocusUiTest {
                         description = "A test movie overview.",
                         heroSecondaryActions = listOf(HeroSecondaryAction(label = "+ Watchlist", onClick = {})),
                         castItems = listOf(CastModel(id = "p1", name = "Jane Doe", role = "Lead", imageUrl = null)),
+                        trailers = emptyList(),
                         similarItems = listOf(
                             SimilarMovieModel(
                                 id = "s1",
@@ -62,6 +63,7 @@ class DetailFocusUiTest {
                             )
                         ),
                         onCastClick = {},
+                        onTrailerClick = {},
                         onSimilarClick = {},
                         listState = listState,
                     )
@@ -115,6 +117,7 @@ class DetailFocusUiTest {
                         ),
                         onSeasonClick = {},
                         castItems = listOf(CastModel(id = "p1", name = "Actor One", role = "Lead", imageUrl = null)),
+                        trailers = emptyList(),
                         similarItems = listOf(
                             SimilarMovieModel(
                                 id = "show-2",
@@ -125,6 +128,7 @@ class DetailFocusUiTest {
                             )
                         ),
                         onCastClick = {},
+                        onTrailerClick = {},
                         onSimilarClick = {},
                         description = "A test show overview.",
                         heroSecondaryActions = listOf(HeroSecondaryAction(label = "···", onClick = {})),

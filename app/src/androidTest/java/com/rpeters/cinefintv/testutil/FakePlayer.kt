@@ -23,6 +23,7 @@ import androidx.media3.common.util.Size
 /**
  * A manual fake for [Player] to avoid using MockK in instrumented tests.
  */
+@Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
 class FakePlayer : Player {
     var lastSeekPosition: Long = -1L
     var playCalled: Boolean = false
@@ -83,7 +84,7 @@ class FakePlayer : Player {
     override fun stop() {}
     override fun release() {}
     override fun getCurrentTracks(): Tracks = Tracks.EMPTY
-    override fun getTrackSelectionParameters(): TrackSelectionParameters = TrackSelectionParameters.DEFAULT_WITHOUT_CONTEXT
+    override fun getTrackSelectionParameters(): TrackSelectionParameters = TrackSelectionParameters.Builder().build()
     override fun setTrackSelectionParameters(parameters: TrackSelectionParameters) {}
     override fun getMediaMetadata(): MediaMetadata = MediaMetadata.EMPTY
     override fun getPlaylistMetadata(): MediaMetadata = MediaMetadata.EMPTY

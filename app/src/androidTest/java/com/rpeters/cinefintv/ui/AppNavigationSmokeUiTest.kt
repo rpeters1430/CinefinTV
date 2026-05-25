@@ -22,7 +22,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -45,8 +45,10 @@ import com.rpeters.cinefintv.ui.navigation.MovieDetail
 import com.rpeters.cinefintv.ui.navigation.NavDestination
 import com.rpeters.cinefintv.ui.navigation.PersonDetail
 import com.rpeters.cinefintv.ui.navigation.Player
+import com.rpeters.cinefintv.ui.navigation.ProfilePicker
 import com.rpeters.cinefintv.ui.navigation.Search
 import com.rpeters.cinefintv.ui.navigation.SeasonDetail
+import com.rpeters.cinefintv.ui.navigation.ServerDiscovery
 import com.rpeters.cinefintv.ui.navigation.Settings
 import com.rpeters.cinefintv.ui.navigation.CollectionDetail
 import com.rpeters.cinefintv.ui.navigation.TvShowDetail
@@ -481,6 +483,8 @@ private fun AppNavigationSmokeHarness() {
             is com.rpeters.cinefintv.ui.navigation.ServerConnection -> SmokeScreen("Server Connection")
             is com.rpeters.cinefintv.ui.navigation.Login -> SmokeScreen("Login")
             is com.rpeters.cinefintv.ui.navigation.AudioPlayer -> SmokeScreen("Audio Player")
+            is ProfilePicker -> SmokeScreen("Profile Picker")
+            is ServerDiscovery -> SmokeScreen("Server Discovery")
         }
     }
 }

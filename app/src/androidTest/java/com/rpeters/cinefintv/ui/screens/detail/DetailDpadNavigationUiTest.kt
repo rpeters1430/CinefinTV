@@ -8,7 +8,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -226,8 +226,10 @@ class DetailDpadNavigationUiTest {
                     description = "Movie description",
                     heroSecondaryActions = listOf(HeroSecondaryAction(label = "···", onClick = {})),
                     castItems = castItems,
+                    trailers = emptyList(),
                     similarItems = similarItems,
                     onCastClick = {},
+                    onTrailerClick = {},
                     onSimilarClick = {},
                     listState = listState,
                 )
@@ -260,8 +262,10 @@ class DetailDpadNavigationUiTest {
                     seasons = seasons,
                     onSeasonClick = {},
                     castItems = castItems,
+                    trailers = emptyList(),
                     similarItems = listOf(SimilarMovieModel("s1", "Similar", null, WatchStatus.NONE, null)),
                     onCastClick = {},
+                    onTrailerClick = {},
                     onSimilarClick = {},
                     description = "Show description",
                     heroSecondaryActions = listOf(HeroSecondaryAction(label = "···", onClick = {})),

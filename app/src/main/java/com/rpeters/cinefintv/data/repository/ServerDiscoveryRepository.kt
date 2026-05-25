@@ -21,7 +21,7 @@ data class DiscoveredServer(
 )
 
 class ServerDiscoveryRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
 ) {
     private val nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
 
@@ -33,6 +33,7 @@ class ServerDiscoveryRepository @Inject constructor(
         launch {
             for (serviceInfo in resolveQueue) {
                 val resolved = suspendCancellableCoroutine<NsdServiceInfo?> { cont ->
+                    @Suppress("DEPRECATION")
                     nsdManager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
                         override fun onResolveFailed(info: NsdServiceInfo, errorCode: Int) {
                             cont.resume(null)
@@ -43,7 +44,9 @@ class ServerDiscoveryRepository @Inject constructor(
                     })
                 } ?: continue
 
-                val host = resolved.host?.hostAddress ?: continue
+                @Suppress("DEPRECATION")
+                val hostAddress = resolved.host?.hostAddress
+                val host = hostAddress ?: continue
                 val port = resolved.port
                 val scheme = if (port == 443 || port == 8920) "https" else "http"
                 found[resolved.serviceName] = DiscoveredServer(
