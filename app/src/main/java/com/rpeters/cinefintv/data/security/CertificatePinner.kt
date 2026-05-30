@@ -370,6 +370,24 @@ class CertificatePinningManager @Inject constructor(
         }
     }
 
+    /**
+     * Explicitly trusts a new certificate pin, promoted from a validation exception.
+     * This is used when a user manually confirms they trust the new certificate.
+     */
+    suspend fun forceTrustNewPin(exception: PinningValidationException) {
+        val pinRecord = exception.pinRecord ?: return
+        val newPrimary = exception.attemptedPins.firstOrNull() ?: return
+
+        promotePin(
+            hostname = exception.hostname,
+            newPrimary = newPrimary,
+            chainPins = exception.attemptedPins,
+            existingRecord = pinRecord
+        )
+
+        Log.i(TAG, "Force-trusted new certificate pin for ${exception.hostname}")
+    }
+
     private fun getPinKey(hostname: String): String {
         return "$PIN_PREFIX$hostname"
     }

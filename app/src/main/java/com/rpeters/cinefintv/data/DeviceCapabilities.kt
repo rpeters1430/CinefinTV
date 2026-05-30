@@ -44,6 +44,7 @@ class DeviceCapabilities @Inject constructor(
     private var hdrSupported: Boolean? = null
     private var totalRAM: Long? = null
     private var deviceId: String? = null
+    private val failedCodecs = mutableSetOf<String>()
 
     /**
      * Get unique device ID for API requests
@@ -57,7 +58,35 @@ class DeviceCapabilities @Inject constructor(
             prefs.edit().putString("device_id", id).apply()
         }
         deviceId = id
+        
+        // Also load failed codecs from preferences
+        val failed = prefs.getStringSet("failed_codecs", emptySet())
+        if (!failed.isNullOrEmpty()) {
+            failedCodecs.addAll(failed)
+            SecureLogger.w(TAG, "Loaded blacklisted hardware codecs: $failedCodecs")
+        }
+
         return id
+    }
+
+    /**
+     * Mark a codec as failed on this device to prevent future usage.
+     */
+    fun markCodecAsFailed(codec: String, isHdr: Boolean = false) {
+        val key = if (isHdr) "${codec}_hdr" else codec
+        if (failedCodecs.add(key)) {
+            SecureLogger.w(TAG, "Blacklisting hardware codec: $key due to initialization failure")
+            val prefs = context.getSharedPreferences("device_prefs", Context.MODE_PRIVATE)
+            prefs.edit().putStringSet("failed_codecs", failedCodecs).apply()
+        }
+    }
+
+    /**
+     * Check if a codec is blacklisted on this device.
+     */
+    fun isCodecBlacklisted(codec: String, isHdr: Boolean = false): Boolean {
+        val key = if (isHdr) "${codec}_hdr" else codec
+        return failedCodecs.contains(key)
     }
 
     /**
@@ -92,6 +121,9 @@ class DeviceCapabilities @Inject constructor(
 
         val normalizedCodec = normalizeVideoCodec(codec.lowercase())
         if (!SUPPORTED_VIDEO_CODECS.contains(normalizedCodec)) return false
+        
+        // Check blacklist
+        if (isCodecBlacklisted(normalizedCodec)) return false
 
         // Check resolution limits if specified
         if (width > 0 && height > 0) {
@@ -764,7 +796,7 @@ class DeviceCapabilities @Inject constructor(
     /**
      * Determine device performance profile
      */
-    private fun getDevicePerformanceProfile(): DevicePerformanceProfile {
+    fun getDevicePerformanceProfile(): DevicePerformanceProfile {
         val maxRes = getMaxSupportedResolution()
         val supports4K = supports4K()
         val ramSize = getTotalRAM()

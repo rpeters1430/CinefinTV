@@ -43,6 +43,7 @@ import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.isWatched
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.rpeters.cinefintv.data.security.PinningValidationException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -72,6 +73,7 @@ class PlayerViewModel @Inject constructor(
     private val okHttpClient: OkHttpClient,
     private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
     private val syncPlayRepository: SyncPlayRepository,
+    private val certificatePinningManager: com.rpeters.cinefintv.data.security.CertificatePinningManager,
 ) : ViewModel() {
     private val playbackSessionId: String = UUID.randomUUID().toString()
     var itemId: String = ""
@@ -147,6 +149,26 @@ class PlayerViewModel @Inject constructor(
     private var playbackStartReported = false
     private var pendingPlaybackStartPositionMs: Long? = null
 
+    /**
+     * Trusts the new certificate pin detected during a mismatch and retries playback.
+     */
+    fun trustNewCertificate() {
+        val error = uiState.value.securityError ?: return
+        viewModelScope.launch {
+            try {
+                certificatePinningManager.forceTrustNewPin(error)
+                _uiState.value = _uiState.value.copy(securityError = null)
+                load()
+            } catch (e: Exception) {
+                SecureLogger.e("PlayerViewModel", "Failed to force trust new pin", e)
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Failed to trust new certificate: ${e.message}",
+                    securityError = null,
+                )
+            }
+        }
+    }
+
     private data class ResolvedPlayback(
         val url: String,
         val isHdrPlayback: Boolean,
@@ -175,10 +197,26 @@ class PlayerViewModel @Inject constructor(
             isRetrying = false,
             retryCount = 0,
             errorMessage = null,
+            securityError = null,
         )
 
         viewModelScope.launch {
-            loadInternal()
+            try {
+                loadInternal()
+            } catch (e: PinningValidationException) {
+                SecureLogger.e("PlayerViewModel", "Security Exception: Certificate Pin Mismatch", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    securityError = e,
+                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                SecureLogger.e("PlayerViewModel", "Failed to load media item", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = "Failed to load media: ${e.message}",
+                )
+            }
         }
     }
 
@@ -609,33 +647,48 @@ class PlayerViewModel @Inject constructor(
         if (currentItemId.isBlank()) return
 
         viewModelScope.launch {
-            val resolvedPlayback = resolvePlaybackUrl(
-                item = currentItem,
-                audioStreamIndex = uiState.value.selectedAudioTrack?.streamIndex,
-                subtitleStreamIndex = uiState.value.selectedSubtitleTrack?.streamIndex,
-                startPositionMs = positionMs,
-            )
-            val streamUrl = resolvedPlayback?.url ?: repositories.stream.getHlsTranscodeStreamUrl(
-                itemId = currentItemId,
-                mediaSourceId = activeMediaSourceId,
-                playSessionId = activePlaySessionId,
-                audioStreamIndex = uiState.value.selectedAudioTrack?.streamIndex,
-                subtitleStreamIndex = uiState.value.selectedSubtitleTrack?.streamIndex,
-            ) ?: repositories.stream.getStreamUrl(currentItemId)
-                ?: return@launch
+            try {
+                val resolvedPlayback = resolvePlaybackUrl(
+                    item = currentItem,
+                    audioStreamIndex = uiState.value.selectedAudioTrack?.streamIndex,
+                    subtitleStreamIndex = uiState.value.selectedSubtitleTrack?.streamIndex,
+                    startPositionMs = positionMs,
+                )
+                val streamUrl = resolvedPlayback?.url ?: repositories.stream.getHlsTranscodeStreamUrl(
+                    itemId = currentItemId,
+                    mediaSourceId = activeMediaSourceId,
+                    playSessionId = activePlaySessionId,
+                    audioStreamIndex = uiState.value.selectedAudioTrack?.streamIndex,
+                    subtitleStreamIndex = uiState.value.selectedSubtitleTrack?.streamIndex,
+                ) ?: repositories.stream.getStreamUrl(currentItemId)
+                    ?: return@launch
 
-            _uiState.value = _uiState.value.copy(
-                streamUrl = streamUrl,
-                isHdrPlayback = resolvedPlayback?.isHdrPlayback ?: false,
-            )
-            syncAdaptiveBitrateMonitorContext()
-            clearPlaybackStartState()
-            _player?.apply {
-                setMediaItem(MediaItem.fromUri(streamUrl), positionMs.coerceAtLeast(0L))
-                queuePlaybackStartReport(positionMs)
-                prepare()
-                applyTrackSelection(uiState.value.selectedAudioTrack, uiState.value.selectedSubtitleTrack)
-                this.playWhenReady = playWhenReady
+                _uiState.value = _uiState.value.copy(
+                    streamUrl = streamUrl,
+                    isHdrPlayback = resolvedPlayback?.isHdrPlayback ?: false,
+                )
+                syncAdaptiveBitrateMonitorContext()
+                clearPlaybackStartState()
+                _player?.apply {
+                    setMediaItem(MediaItem.fromUri(streamUrl), positionMs.coerceAtLeast(0L))
+                    queuePlaybackStartReport(positionMs)
+                    prepare()
+                    applyTrackSelection(uiState.value.selectedAudioTrack, uiState.value.selectedSubtitleTrack)
+                    this.playWhenReady = playWhenReady
+                }
+            } catch (e: PinningValidationException) {
+                SecureLogger.e("PlayerViewModel", "Security Exception during reload: Certificate Pin Mismatch", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    securityError = e,
+                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                SecureLogger.e("PlayerViewModel", "Failed to reload media stream", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = "Failed to reload stream: ${e.message}",
+                )
             }
         }
     }
@@ -814,6 +867,17 @@ class PlayerViewModel @Inject constructor(
         }
 
         if (canRetry && uiState.value.retryCount < MAX_RETRIES) {
+            // Check for hardware decoder failures and blacklist
+            if (error.errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED) {
+                currentItem?.mediaSources?.firstOrNull()?.let { source ->
+                    val videoStream = source.mediaStreams?.firstOrNull { it.type == org.jellyfin.sdk.model.api.MediaStreamType.VIDEO }
+                    videoStream?.codec?.let { codec ->
+                        val isHdr = uiState.value.isHdrPlayback
+                        SecureLogger.w("PlayerViewModel", "Blacklisting failing codec: $codec (isHdr=$isHdr)")
+                        repositories.stream.deviceCapabilities.markCodecAsFailed(codec, isHdr)
+                    }
+                }
+            }
             attemptRetry(error)
             return
         }

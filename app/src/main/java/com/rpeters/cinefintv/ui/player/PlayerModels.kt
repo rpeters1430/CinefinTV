@@ -1,5 +1,6 @@
 package com.rpeters.cinefintv.ui.player
 
+import com.rpeters.cinefintv.data.security.PinningValidationException
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.preferences.VideoSeekIncrement
@@ -91,4 +92,5 @@ data class PlayerUiState(
     val isRetrying: Boolean = false,
     val retryCount: Int = 0,
     val errorMessage: String? = null,
+    val securityError: PinningValidationException? = null,
 )

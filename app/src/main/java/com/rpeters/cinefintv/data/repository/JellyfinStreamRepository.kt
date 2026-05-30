@@ -44,7 +44,7 @@ class JellyfinStreamRepository @Inject constructor(
     sessionManager: JellyfinSessionManager,
     cache: JellyfinCache,
     dispatchers: DispatcherProvider,
-    private val deviceCapabilities: DeviceCapabilities,
+    val deviceCapabilities: DeviceCapabilities,
     private val okHttpClient: OkHttpClient,
 ) : BaseJellyfinRepository(authRepository, sessionManager, cache, dispatchers) {
     companion object {

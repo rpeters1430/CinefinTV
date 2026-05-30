@@ -61,6 +61,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 
+import com.rpeters.cinefintv.data.security.CertificatePinningManager
+import com.rpeters.cinefintv.data.security.PinningValidationException
+import com.rpeters.cinefintv.data.security.PinnedCertificateRecord
+
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @LooperMode(LooperMode.Mode.PAUSED)
@@ -91,6 +95,9 @@ class PlayerViewModelTest {
         every { sessionState } returns MutableStateFlow<SyncPlaySessionState>(SyncPlaySessionState.Idle).asStateFlow()
         every { incomingCommands } returns kotlinx.coroutines.flow.MutableSharedFlow<SyncPlayCommand>().asSharedFlow()
     }
+    private val certificatePinningManager: CertificatePinningManager = mockk {
+        coEvery { forceTrustNewPin(any()) } just Runs
+    }
 
     init {
         mockkObject(PlaybackPositionStore)
@@ -107,7 +114,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("", -1L) }
         runCurrent()
 
@@ -134,7 +141,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -161,7 +168,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -208,7 +215,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("ep-1", -1L) }
         runCurrent()
 
@@ -281,7 +288,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("series-1", -1L) }
         runCurrent()
 
@@ -328,7 +335,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("movie-1", -1L) }
         runCurrent()
 
@@ -359,7 +366,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -390,7 +397,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -421,7 +428,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -448,7 +455,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -486,7 +493,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         )
         viewModel.init("item-1", -1L)
         runCurrent()
@@ -528,7 +535,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -566,7 +573,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -636,7 +643,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("movie-1", -1L) }
         runCurrent()
 
@@ -700,7 +707,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("movie-301", -1L) }
         runCurrent()
 
@@ -801,7 +808,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("movie-401", -1L) }
         runCurrent()
 
@@ -843,7 +850,7 @@ class PlayerViewModelTest {
             appContext = appContext,
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
-            syncPlayRepository = syncPlayRepository,
+            syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
         ).apply { init("movie-501", -1L) } // -1L = no explicit start, falls back to server position
         runCurrent()
 

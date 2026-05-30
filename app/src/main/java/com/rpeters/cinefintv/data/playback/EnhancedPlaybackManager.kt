@@ -3,6 +3,7 @@ package com.rpeters.cinefintv.data.playback
 import android.content.Context
 import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.data.DeviceCapabilities
+import com.rpeters.cinefintv.data.DevicePerformanceProfile
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.repository.JellyfinAuthRepository
@@ -18,6 +19,7 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.MediaSourceInfo
 import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.PlaybackInfoResponse
+import com.rpeters.cinefintv.data.security.PinningValidationException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
@@ -105,8 +107,9 @@ class EnhancedPlaybackManager @Inject constructor(
                 }
 
                 return@withContext decision
-            } catch (e: CancellationException) {
-                throw e
+            } catch (e: Exception) {
+                if (e is CancellationException || e is PinningValidationException) throw e
+                PlaybackResult.Error("Failed to resolve playback URL: ${e.message}")
             }
         }
     }
@@ -145,7 +148,7 @@ class EnhancedPlaybackManager @Inject constructor(
 
                 // Try Direct Stream first - copies video, only transcodes audio.
                 // This avoids unnecessary video re-encoding when only the audio was the problem.
-                if (canDirectStreamMediaSource(anySource, item, null)) {
+                if (canDirectStreamMediaSource(anySource, item, null, subtitleStreamIndex)) {
                     SecureLogger.d(TAG, "Direct Play fallback -> trying Direct Stream (video copy, audio transcode)")
                     val directStreamResult = getDirectStreamWithAudioTranscode(
                         item, anySource, playbackInfo, audioStreamIndex, subtitleStreamIndex,
@@ -159,12 +162,12 @@ class EnhancedPlaybackManager @Inject constructor(
                 // Full transcoding fallback
                 SecureLogger.d(TAG, "Using full transcoding fallback for: $itemName")
                 getOptimalTranscodingUrl(item, playbackInfo, audioStreamIndex, subtitleStreamIndex)
-            } catch (e: CancellationException) {
-                throw e
+            } catch (e: Exception) {
+                if (e is CancellationException || e is PinningValidationException) throw e
+                PlaybackResult.Error("Fallback playback failed: ${e.message}")
             }
         }
     }
-
     /**
      * Centralized decision engine (Phase 2).
      * Replaces getServerDirectedPlaybackUrl with structured trace logging.
@@ -205,7 +208,7 @@ class EnhancedPlaybackManager @Inject constructor(
             } else true
 
             if (audioCanBeDirectPlayed &&
-                canDirectPlayMediaSource(anySource, item, reasons, bypassServerDecision = true, preferHdr = shouldPreserveHdr)
+                canDirectPlayMediaSource(anySource, item, reasons, subtitleStreamIndex, bypassServerDecision = true, preferHdr = shouldPreserveHdr)
             ) {
                 // Audio is fine - server likely incorrectly rejected (e.g. 10-bit HEVC profile)
                 val container = anySource.container ?: "mkv"
@@ -233,7 +236,7 @@ class EnhancedPlaybackManager @Inject constructor(
         // Try standard Direct Play
         val directPlaySource = mediaSources.firstOrNull { it.supportsDirectPlay }
         if (directPlaySource != null &&
-            canDirectPlayMediaSource(directPlaySource, item, reasons, preferHdr = shouldPreserveHdr)
+            canDirectPlayMediaSource(directPlaySource, item, reasons, subtitleStreamIndex, preferHdr = shouldPreserveHdr)
         ) {
             val container = directPlaySource.container ?: "mkv"
             val url = buildDirectPlayUrl(serverUrl, itemId, directPlaySource.id, container, playSessionId)
@@ -259,7 +262,7 @@ class EnhancedPlaybackManager @Inject constructor(
         }
 
         // Try Direct Stream (audio transcode only)
-        if (canDirectStreamMediaSource(anySource, item, reasons, preferHdr = shouldPreserveHdr)) {
+        if (canDirectStreamMediaSource(anySource, item, reasons, subtitleStreamIndex, preferHdr = shouldPreserveHdr)) {
             reasons.add(ReasonCodes.DIRECT_STREAM_VIDEO_COPY_OK)
             if (shouldPreserveHdr) {
                 reasons.add(ReasonCodes.HDR_PRESERVATION_MODE)
@@ -347,6 +350,7 @@ class EnhancedPlaybackManager @Inject constructor(
         mediaSource: org.jellyfin.sdk.model.api.MediaSourceInfo,
         item: BaseItemDto,
         reasons: MutableList<String>? = null,
+        subtitleStreamIndex: Int? = null,
         bypassServerDecision: Boolean = false,
         preferHdr: Boolean = false,
     ): Boolean {
@@ -393,6 +397,16 @@ class EnhancedPlaybackManager @Inject constructor(
             }
         }
 
+        // Subtitle memory safety check for low-end devices
+        if (deviceCapabilities.getDevicePerformanceProfile() == DevicePerformanceProfile.LOW_END) {
+            val subtitleStream = mediaSource.mediaStreams?.firstOrNull { it.index == subtitleStreamIndex }
+            val format = subtitleStream?.codec?.lowercase()
+            if (format == "ass" || format == "ssa") {
+                SecureLogger.w(TAG, "Forcing subtitle transcode (burn-in) for complex format '$format' on low-end device")
+                return false
+            }
+        }
+
         // Check network conditions for high-bitrate content
         val bitrate = mediaSource.bitrate ?: 0
         if (!isNetworkSuitableForDirectPlay(bitrate, preferHdr)) {
@@ -413,6 +427,7 @@ class EnhancedPlaybackManager @Inject constructor(
         mediaSource: org.jellyfin.sdk.model.api.MediaSourceInfo,
         item: BaseItemDto,
         reasons: MutableList<String>? = null,
+        subtitleStreamIndex: Int? = null,
         preferHdr: Boolean = false,
     ): Boolean {
         // Check video codec support (REQUIRED for direct stream)
@@ -446,6 +461,16 @@ class EnhancedPlaybackManager @Inject constructor(
                 return false
             }
             SecureLogger.d(TAG, "Container '$container' unsupported, but codec '$videoCodec' is remuxable - allowing Direct Stream")
+        }
+
+        // Subtitle memory safety check for low-end devices
+        if (deviceCapabilities.getDevicePerformanceProfile() == DevicePerformanceProfile.LOW_END) {
+            val subtitleStream = mediaSource.mediaStreams?.firstOrNull { it.index == subtitleStreamIndex }
+            val format = subtitleStream?.codec?.lowercase()
+            if (format == "ass" || format == "ssa") {
+                SecureLogger.w(TAG, "Forcing subtitle transcode (burn-in) for complex format '$format' on low-end device (Direct Stream)")
+                return false
+            }
         }
 
         // Check network conditions
@@ -690,7 +715,7 @@ class EnhancedPlaybackManager @Inject constructor(
         return try {
             streamRepository.getPlaybackInfo(itemId, audioStreamIndex, subtitleStreamIndex, startPositionMs)
         } catch (e: Exception) {
-            if (e is CancellationException) throw e
+            if (e is CancellationException || e is PinningValidationException) throw e
             SecureLogger.e(TAG, "Failed to get playback info for item $itemId", e)
             null
         }
@@ -782,7 +807,16 @@ class EnhancedPlaybackManager @Inject constructor(
     ): Boolean {
         if (!capabilities.supportsHdr) return false
         if (!capabilities.hevc10BitSupported && capabilities.maxVideoBitDepth < 10) return false
+        
         val videoStream = mediaSource.findDefaultVideoStream() ?: return false
+        
+        // Check blacklist for HDR version of this codec
+        val codec = videoStream.codec?.lowercase() ?: "h264"
+        if (deviceCapabilities.isCodecBlacklisted(codec, isHdr = true)) {
+            SecureLogger.w("EnhancedPlaybackManager", "HDR preservation disabled for $codec: codec is blacklisted for HDR")
+            return false
+        }
+
         return isHdrVideoStream(videoStream)
     }
 

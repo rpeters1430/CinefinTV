@@ -127,12 +127,13 @@ class PinningTrustManager(
 
         // Check certificate pinning (blocking call - OkHttp calls this on background thread)
         // CRITICAL: OkHttp's TrustManager API is synchronous, so we must use runBlocking here.
-        // We verify that this is NOT called on the main thread to avoid deadlocks.
-        check(android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) {
-            "checkServerTrusted must not be called on the main thread as it contains blocking operations"
+        // We ensure this is safe by switching to Dispatchers.IO if accidentally called on main.
+        val isOnMainThread = android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
+        if (isOnMainThread) {
+            Log.w(TAG, "checkServerTrusted called on main thread! Switching to IO dispatcher to avoid deadlock.")
         }
 
-        runBlocking {
+        val validationBlock: suspend kotlinx.coroutines.CoroutineScope.() -> Unit = {
             try {
                 val storedPin = certPinningManager.getStoredPinRecord(hostname)
 
@@ -146,6 +147,12 @@ class PinningTrustManager(
             } catch (e: CancellationException) {
                 throw e
             }
+        }
+
+        if (isOnMainThread) {
+            runBlocking(kotlinx.coroutines.Dispatchers.IO, validationBlock)
+        } else {
+            runBlocking(block = validationBlock)
         }
     }
 

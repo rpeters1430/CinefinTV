@@ -182,6 +182,14 @@ fun PlayerScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    if (uiState.securityError != null) {
+        SecurityAlertDialog(
+            hostname = uiState.securityError?.hostname ?: "Server",
+            onTrust = { viewModel.trustNewCertificate() },
+            onCancel = onBack
+        )
+    }
+
     when {
         uiState.isLoading || uiState.isRetrying -> {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
@@ -963,6 +971,52 @@ private fun ResumeDialog(
                 confirmLabel = "Resume",
                 onDismiss = onStartOver,
                 onConfirm = onResume,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun SecurityAlertDialog(
+    hostname: String,
+    onTrust: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    CinefinDialogSurface(
+        onDismissRequest = onCancel
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Security Alert: Certificate Changed",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.error
+            )
+
+            Text(
+                text = "The security certificate for your server ($hostname) has changed. This can happen if you recently renewed it, but could also indicate a security risk.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            
+            Text(
+                text = "Do you want to trust the new certificate? This will update your saved security settings.",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            CinefinDialogActions(
+                dismissLabel = "Cancel",
+                confirmLabel = "Trust and Continue",
+                onDismiss = onCancel,
+                onConfirm = onTrust,
             )
         }
     }

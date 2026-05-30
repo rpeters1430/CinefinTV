@@ -139,6 +139,9 @@ object NetworkModule {
         @ApplicationContext context: Context,
         deviceIdentityProvider: DeviceIdentityProvider,
         remoteConfig: RemoteConfigRepository,
+        sslSocketFactory: javax.net.ssl.SSLSocketFactory,
+        pinningTrustManager: com.rpeters.cinefintv.data.security.PinningTrustManager,
+        hostnameVerifier: com.rpeters.cinefintv.data.security.PinningHostnameVerifier,
     ): Jellyfin {
         val connectTimeout = remoteConfig.getLong("sdk_connect_timeout_seconds").takeIf { it > 0 } ?: 15L
         val readTimeout = remoteConfig.getLong("sdk_read_timeout_seconds").takeIf { it > 0 } ?: 30L
@@ -153,6 +156,9 @@ object NetworkModule {
             .connectionPool(okhttp3.ConnectionPool(5, 5, TimeUnit.MINUTES))
             .retryOnConnectionFailure(true)
             .protocols(listOf(Protocol.HTTP_2, Protocol.HTTP_1_1))
+            // SECURITY: Ensure API calls are pinned to the same certificate as playback
+            .sslSocketFactory(sslSocketFactory, pinningTrustManager)
+            .hostnameVerifier(hostnameVerifier)
             .build()
 
         return createJellyfin {
