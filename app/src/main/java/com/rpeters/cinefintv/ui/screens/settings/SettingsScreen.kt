@@ -1,18 +1,20 @@
 package com.rpeters.cinefintv.ui.screens.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -43,13 +46,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
-import androidx.tv.material3.Switch
 import androidx.tv.material3.Text
 import com.rpeters.cinefintv.data.preferences.AccentColor
 import com.rpeters.cinefintv.data.preferences.AudioChannelPreference
@@ -66,6 +68,8 @@ import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.preferences.VideoSeekIncrement
 import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
 import com.rpeters.cinefintv.ui.components.CinefinOptionDialog
+import com.rpeters.cinefintv.ui.components.CinefinSettingListItem
+import com.rpeters.cinefintv.ui.components.CinefinSwitchListItem
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
 private enum class SettingsChoiceDialog {
@@ -111,6 +115,7 @@ private enum class SettingsCategory(
     ),
 }
 
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onNavigateToProfilePicker: () -> Unit = {},
@@ -128,14 +133,13 @@ fun SettingsScreen(
     val destinationFocus = rememberTopLevelDestinationFocus(
         categoryFocusRequesters.getValue(selectedCategory)
     )
+
+    // D-pad navigation helper: Left goes back to category list
     val firstSectionItemModifier = Modifier
         .focusRequester(firstSectionItemRequester)
-        .then(
-            destinationFocus.drawerEscapeModifier(
-                isLeftEdge = true,
-                up = categoryFocusRequesters.getValue(selectedCategory),
-            )
-        )
+        .focusProperties {
+            left = categoryFocusRequesters.getValue(selectedCategory)
+        }
 
     when (activeDialog) {
         SettingsChoiceDialog.THEME_MODE -> CinefinOptionDialog(
@@ -258,7 +262,7 @@ fun SettingsScreen(
         null -> Unit
     }
 
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxSize()
             .background(
@@ -268,479 +272,278 @@ fun SettingsScreen(
                         expressiveColors.backgroundBottom,
                     ),
                 ),
-            ),
+            )
+            .padding(top = 32.dp, bottom = 32.dp),
+        horizontalArrangement = Arrangement.spacedBy(28.dp)
     ) {
-        LazyColumn(
-            state = listState,
-            contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 32.dp, bottom = 48.dp),
-            verticalArrangement = Arrangement.spacedBy(22.dp),
-        ) {
-            item {
-                SettingsCategorySelector(
-                    selected = selectedCategory,
-                    onCategorySelected = { selectedCategory = it },
-                    categoryFocusRequesters = categoryFocusRequesters,
-                    sectionFocusRequester = firstSectionItemRequester,
-                    destinationFocus = destinationFocus,
-                )
-            }
-
-            if (uiState.isLoading) {
-                item {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = SurfaceDefaults.colors(
-                            containerColor = expressiveColors.surfaceContainerLow.copy(alpha = 0.92f),
-                        ),
-                    ) {
-                        Text(
-                            text = "Loading settings...",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(24.dp),
-                        )
-                    }
-                }
-            } else {
-                item {
-                    when (selectedCategory) {
-                        SettingsCategory.APPEARANCE -> SettingsSectionCard(
-                            title = "Appearance",
-                            description = "Global TV theme controls applied across the app.",
-                            icon = Icons.Default.Palette,
-                        ) {
-                            SettingsChoiceRow(
-                                icon = Icons.Default.Palette,
-                                title = "Theme mode",
-                                description = "System, light, dark, or AMOLED black.",
-                                selectedLabel = uiState.appearance.themeMode.name.replace('_', ' '),
-                                onClick = { activeDialog = SettingsChoiceDialog.THEME_MODE },
-                                modifier = firstSectionItemModifier,
-                            )
-                            SettingsToggleRow(
-                                icon = Icons.Default.Palette,
-                                title = "Use dynamic colors",
-                                description = "Use artwork-derived accent colors across the TV UI.",
-                                checked = uiState.appearance.useDynamicColors,
-                                onCheckedChange = viewModel::setUseDynamicColors,
-                            )
-                            SettingsChoiceRow(
-                                icon = Icons.Default.Palette,
-                                title = "Accent color",
-                                description = "Fallback accent color when dynamic colors are disabled.",
-                                selectedLabel = uiState.appearance.accentColor.name.replace('_', ' '),
-                                onClick = { activeDialog = SettingsChoiceDialog.ACCENT_COLOR },
-                            )
-                            SettingsChoiceRow(
-                                icon = Icons.Default.Contrast,
-                                title = "Contrast level",
-                                description = "Strengthen focus and surface separation.",
-                                selectedLabel = uiState.appearance.contrastLevel.name.replace('_', ' '),
-                                onClick = { activeDialog = SettingsChoiceDialog.CONTRAST_LEVEL },
-                            )
-                        }
-                        SettingsCategory.PLAYBACK -> SettingsSectionCard(
-                            title = "Playback",
-                            description = "Defaults for streaming behavior and episode progression.",
-                            icon = Icons.Default.PlayArrow,
-                        ) {
-                            SettingsToggleRow(
-                                icon = Icons.Default.PlayArrow,
-                                title = "Auto-play next episode",
-                                description = "Start the next episode near the end of current playback.",
-                                checked = uiState.playback.autoPlayNextEpisode,
-                                onCheckedChange = viewModel::setAutoPlayNextEpisode,
-                                modifier = firstSectionItemModifier,
-                            )
-                            SettingsChoiceRow(
-                                icon = Icons.Default.PlayArrow,
-                                title = "Resume playback",
-                                description = "Control how saved progress is handled.",
-                                selectedLabel = uiState.playback.resumePlaybackMode.label,
-                                onClick = { activeDialog = SettingsChoiceDialog.RESUME_PLAYBACK },
-                            )
-                            SettingsChoiceRow(
-                                icon = Icons.Default.Tune,
-                                title = "Seek step",
-                                description = "Choose how far forward and back playback jumps.",
-                                selectedLabel = uiState.playback.videoSeekIncrement.label,
-                                onClick = { activeDialog = SettingsChoiceDialog.VIDEO_SEEK_INCREMENT },
-                            )
-                            SettingsChoiceRow(
-                                icon = Icons.Default.HighQuality,
-                                title = "Streaming quality",
-                                description = "Cap transcoding quality for stable playback.",
-                                selectedLabel = uiState.playback.transcodingQuality.label,
-                                onClick = { activeDialog = SettingsChoiceDialog.STREAMING_QUALITY },
-                            )
-                            SettingsChoiceRow(
-                                icon = Icons.Default.MusicNote,
-                                title = "Audio channels",
-                                description = "Limit maximum playback channel count.",
-                                selectedLabel = uiState.playback.audioChannels.label,
-                                onClick = { activeDialog = SettingsChoiceDialog.AUDIO_CHANNELS },
-                            )
-                            SettingsChoiceRow(
-                                icon = Icons.Default.MusicNote,
-                                title = "Default audio language",
-                                description = "Preferred language when playback starts.",
-                                selectedLabel = uiState.playback.audioLanguage.label,
-                                onClick = { activeDialog = SettingsChoiceDialog.AUDIO_LANGUAGE },
-                            )
-                        }
-                        SettingsCategory.SUBTITLES -> SettingsSectionCard(
-                            title = "Subtitles",
-                            description = "Default language and player styling for subtitles.",
-                            icon = Icons.Default.Subtitles,
-                        ) {
-                            SettingsChoiceRow(
-                                icon = Icons.Default.Subtitles,
-                                title = "Default subtitle language",
-                                description = "Subtitle track to load automatically at the start of playback.",
-                                selectedLabel = uiState.playback.subtitleLanguage.label,
-                                onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_LANGUAGE },
-                                modifier = firstSectionItemModifier,
-                            )
-                            SettingsChoiceRow(
-                                icon = Icons.Default.Subtitles,
-                                title = "Text size",
-                                description = "Preferred subtitle text size.",
-                                selectedLabel = uiState.subtitles.textSize.name.replace('_', ' '),
-                                onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_TEXT_SIZE },
-                            )
-                            SettingsChoiceRow(
-                                icon = Icons.Default.ClosedCaption,
-                                title = "Font",
-                                description = "Choose subtitle font style.",
-                                selectedLabel = uiState.subtitles.font.name.replace('_', ' '),
-                                onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_FONT },
-                            )
-                            SettingsChoiceRow(
-                                icon = Icons.Default.ClosedCaption,
-                                title = "Background",
-                                description = "Improve subtitle contrast over bright scenes.",
-                                selectedLabel = uiState.subtitles.background.name.replace('_', ' '),
-                                onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_BACKGROUND },
-                            )
-                            SettingsChoiceRow(
-                                icon = Icons.Default.ClosedCaption,
-                                title = "Text color",
-                                description = "Set the subtitle text color used in the player.",
-                                selectedLabel = uiState.subtitles.textColor.name.replace('_', ' '),
-                                onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_TEXT_COLOR },
-                            )
-                        }
-                        SettingsCategory.ACCOUNT -> SettingsSectionCard(
-                            title = "Account",
-                            description = "Manage the current Jellyfin session on this device.",
-                            icon = Icons.Default.Tune,
-                        ) {
-                            SettingsChoiceRow(
-                                icon = Icons.Default.Tune,
-                                title = "Switch Profile",
-                                description = "Switch between saved Jellyfin accounts or add a new one.",
-                                selectedLabel = "Profiles",
-                                onClick = onNavigateToProfilePicker,
-                                modifier = firstSectionItemModifier,
-                            )
-                            SettingsChoiceRow(
-                                icon = Icons.Default.Tune,
-                                title = "Sign out",
-                                description = uiState.signOutError ?: "Remove this device session and return to server sign-in.",
-                                selectedLabel = if (uiState.isSigningOut) "Signing out..." else "Sign out",
-                                onClick = viewModel::logout,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingsHero(
-    title: String,
-    subtitle: String,
-    primaryValue: String,
-    secondaryValue: String,
-) {
-    val expressiveColors = LocalCinefinExpressiveColors.current
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(30.dp),
-        colors = SurfaceDefaults.colors(containerColor = Color.Transparent),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            expressiveColors.surfaceContainerHigh.copy(alpha = 0.96f),
-                            expressiveColors.accentSurface.copy(alpha = 0.86f),
-                            expressiveColors.surfaceContainerLow.copy(alpha = 0.94f),
-                        ),
-                    ),
-                    shape = RoundedCornerShape(30.dp),
-                )
-                .padding(28.dp),
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Tune,
-                        contentDescription = null,
-                        tint = expressiveColors.titleAccent,
-                        modifier = Modifier.size(28.dp),
-                    )
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatusPill(text = primaryValue)
-                    StatusPill(text = secondaryValue)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatusPill(text: String) {
-    val expressiveColors = LocalCinefinExpressiveColors.current
-    Surface(
-        shape = RoundedCornerShape(50),
-        colors = SurfaceDefaults.colors(
-            containerColor = expressiveColors.pillStrong,
-        ),
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-        )
-    }
-}
-
-@Composable
-private fun SettingsCategorySelector(
-    selected: SettingsCategory,
-    onCategorySelected: (SettingsCategory) -> Unit,
-    categoryFocusRequesters: Map<SettingsCategory, FocusRequester>,
-    sectionFocusRequester: FocusRequester,
-    destinationFocus: com.rpeters.cinefintv.ui.TopLevelDestinationFocus,
-) {
-    val expressiveColors = LocalCinefinExpressiveColors.current
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        itemsIndexed(SettingsCategory.entries) { index, category ->
-            val isSelected = category == selected
-            OutlinedButton(
-                onClick = { onCategorySelected(category) },
-                modifier = Modifier
-                    .focusRequester(categoryFocusRequesters.getValue(category))
-                    .focusProperties {
-                        destinationFocus.drawerFocusRequester?.let { up = it }
-                        down = sectionFocusRequester
-                        left = categoryFocusRequesters[SettingsCategory.entries.getOrNull(index - 1)]
-                            ?: destinationFocus.drawerFocusRequester
-                            ?: FocusRequester.Cancel
-                        right = categoryFocusRequesters[SettingsCategory.entries.getOrNull(index + 1)]
-                            ?: FocusRequester.Cancel
-                    },
-                colors = androidx.tv.material3.ButtonDefaults.colors(
-                    containerColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                    focusedContainerColor = if (isSelected) {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.88f)
-                    } else {
-                        expressiveColors.focusGlow.copy(alpha = 0.24f)
-                    },
-                    focusedContentColor = if (isSelected) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                ),
-                border = androidx.tv.material3.ButtonDefaults.border(
-                    border = androidx.tv.material3.Border(
-                        border = androidx.compose.foundation.BorderStroke(
-                            width = 1.dp,
-                            color = if (isSelected) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-                            } else {
-                                expressiveColors.borderSubtle.copy(alpha = 0.7f)
-                            },
-                        ),
-                    ),
-                    focusedBorder = androidx.tv.material3.Border(
-                        border = androidx.compose.foundation.BorderStroke(
-                            width = 2.dp,
-                            color = expressiveColors.focusRing,
-                        ),
-                    ),
-                ),
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(imageVector = category.icon, contentDescription = null)
-                    Text(text = category.label)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingsSectionCard(
-    title: String,
-    description: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    val expressiveColors = LocalCinefinExpressiveColors.current
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(26.dp),
-        colors = SurfaceDefaults.colors(
-            containerColor = expressiveColors.surfaceContainerLow.copy(alpha = 0.93f),
-        ),
-    ) {
+        // Left Pane: Settings Categories
         Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .width(300.dp)
+                .fillMaxHeight()
+                .padding(start = 56.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Rebuilt beautiful title section
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(bottom = 12.dp)
             ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = SurfaceDefaults.colors(
-                        containerColor = expressiveColors.accentSurface.copy(alpha = 0.66f),
-                    ),
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = expressiveColors.titleAccent,
-                        modifier = Modifier.padding(10.dp),
-                    )
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Icon(
+                    imageVector = Icons.Default.Tune,
+                    contentDescription = null,
+                    tint = expressiveColors.titleAccent,
+                    modifier = Modifier.size(32.dp)
+                )
+                Text(
+                    text = "Settings",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // List of Categories using TV ListItem
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                itemsIndexed(SettingsCategory.entries) { index, category ->
+                    val isSelected = category == selectedCategory
+                    val focusRequester = categoryFocusRequesters.getValue(category)
+
+                    ListItem(
+                        selected = isSelected,
+                        onClick = { selectedCategory = category },
+                        modifier = Modifier
+                            .focusRequester(focusRequester)
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    selectedCategory = category
+                                }
+                            }
+                            .focusProperties {
+                                destinationFocus.drawerFocusRequester?.let { left = it }
+                                right = firstSectionItemRequester
+                                up = categoryFocusRequesters[SettingsCategory.entries.getOrNull(index - 1)]
+                                    ?: FocusRequester.Cancel
+                                down = categoryFocusRequesters[SettingsCategory.entries.getOrNull(index + 1)]
+                                    ?: FocusRequester.Cancel
+                            },
+                        leadingContent = {
+                            Icon(
+                                imageVector = category.icon,
+                                contentDescription = null,
+                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        headlineContent = {
+                            Text(
+                                text = category.label,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                text = category.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        colors = androidx.tv.material3.ListItemDefaults.colors(
+                            containerColor = if (isSelected) expressiveColors.accentSurface.copy(alpha = 0.25f) else Color.Transparent,
+                            focusedContainerColor = expressiveColors.focusGlow.copy(alpha = 0.16f),
+                            selectedContainerColor = expressiveColors.accentSurface.copy(alpha = 0.4f),
+                            focusedSelectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.88f),
+                            selectedContentColor = MaterialTheme.colorScheme.onPrimary,
+                            focusedSelectedContentColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     )
                 }
             }
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = SurfaceDefaults.colors(
-                    containerColor = expressiveColors.surfaceContainer.copy(alpha = 0.92f),
-                ),
+        }
+
+        // Right Pane: Active Category Detail List
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .padding(end = 56.dp, start = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = selectedCategory.label,
+                style = MaterialTheme.typography.headlineSmall,
+                color = expressiveColors.titleAccent,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            LazyColumn(
+                state = listState,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 32.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(
-                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    content = content,
-                )
+                if (uiState.isLoading) {
+                    item {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = SurfaceDefaults.colors(
+                                containerColor = expressiveColors.surfaceContainerLow.copy(alpha = 0.6f)
+                            )
+                        ) {
+                            Text(
+                                text = "Loading details...",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(24.dp)
+                            )
+                        }
+                    }
+                } else {
+                    item {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = SurfaceDefaults.colors(
+                                containerColor = expressiveColors.surfaceContainerLow.copy(alpha = 0.8f)
+                            ),
+                            border = androidx.tv.material3.Border(
+                                border = BorderStroke(
+                                    1.dp,
+                                    expressiveColors.borderSubtle.copy(alpha = 0.4f)
+                                )
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                when (selectedCategory) {
+                                    SettingsCategory.APPEARANCE -> {
+                                        CinefinSettingListItem(
+                                            headline = "Theme mode",
+                                            supporting = "Switch between system, light, dark, and AMOLED black.",
+                                            trailingText = uiState.appearance.themeMode.name.replace('_', ' '),
+                                            onClick = { activeDialog = SettingsChoiceDialog.THEME_MODE },
+                                            modifier = firstSectionItemModifier
+                                        )
+                                        CinefinSwitchListItem(
+                                            headline = "Use dynamic colors",
+                                            supporting = "Use artwork-derived accent colors across the TV UI.",
+                                            checked = uiState.appearance.useDynamicColors,
+                                            onCheckedChange = viewModel::setUseDynamicColors
+                                        )
+                                        CinefinSettingListItem(
+                                            headline = "Accent color",
+                                            supporting = "Fallback accent color when dynamic colors are disabled.",
+                                            trailingText = uiState.appearance.accentColor.name.replace('_', ' '),
+                                            onClick = { activeDialog = SettingsChoiceDialog.ACCENT_COLOR }
+                                        )
+                                        CinefinSettingListItem(
+                                            headline = "Contrast level",
+                                            supporting = "Strengthen focus-ring and surface separation for readability.",
+                                            trailingText = uiState.appearance.contrastLevel.name.replace('_', ' '),
+                                            onClick = { activeDialog = SettingsChoiceDialog.CONTRAST_LEVEL }
+                                        )
+                                    }
+                                    SettingsCategory.PLAYBACK -> {
+                                        CinefinSwitchListItem(
+                                            headline = "Auto-play next episode",
+                                            supporting = "Start the next episode near the end of current playback.",
+                                            checked = uiState.playback.autoPlayNextEpisode,
+                                            onCheckedChange = viewModel::setAutoPlayNextEpisode,
+                                            modifier = firstSectionItemModifier
+                                        )
+                                        CinefinSettingListItem(
+                                            headline = "Resume playback",
+                                            supporting = "Control how saved progress is handled.",
+                                            trailingText = uiState.playback.resumePlaybackMode.label,
+                                            onClick = { activeDialog = SettingsChoiceDialog.RESUME_PLAYBACK }
+                                        )
+                                        CinefinSettingListItem(
+                                            headline = "Seek step",
+                                            supporting = "Choose how far forward and back playback jumps.",
+                                            trailingText = uiState.playback.videoSeekIncrement.label,
+                                            onClick = { activeDialog = SettingsChoiceDialog.VIDEO_SEEK_INCREMENT }
+                                        )
+                                        CinefinSettingListItem(
+                                            headline = "Streaming quality",
+                                            supporting = "Cap transcoding quality for stable playback.",
+                                            trailingText = uiState.playback.transcodingQuality.label,
+                                            onClick = { activeDialog = SettingsChoiceDialog.STREAMING_QUALITY }
+                                        )
+                                        CinefinSettingListItem(
+                                            headline = "Audio channels",
+                                            supporting = "Limit maximum playback channel count.",
+                                            trailingText = uiState.playback.audioChannels.label,
+                                            onClick = { activeDialog = SettingsChoiceDialog.AUDIO_CHANNELS }
+                                        )
+                                        CinefinSettingListItem(
+                                            headline = "Default audio language",
+                                            supporting = "Preferred language when playback starts.",
+                                            trailingText = uiState.playback.audioLanguage.label,
+                                            onClick = { activeDialog = SettingsChoiceDialog.AUDIO_LANGUAGE }
+                                        )
+                                    }
+                                    SettingsCategory.SUBTITLES -> {
+                                        CinefinSettingListItem(
+                                            headline = "Default subtitle language",
+                                            supporting = "Subtitle track to load automatically at the start of playback.",
+                                            trailingText = uiState.playback.subtitleLanguage.label,
+                                            onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_LANGUAGE },
+                                            modifier = firstSectionItemModifier
+                                        )
+                                        CinefinSettingListItem(
+                                            headline = "Text size",
+                                            supporting = "Preferred subtitle text size in the player.",
+                                            trailingText = uiState.subtitles.textSize.name.replace('_', ' '),
+                                            onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_TEXT_SIZE }
+                                        )
+                                        CinefinSettingListItem(
+                                            headline = "Font",
+                                            supporting = "Choose subtitle font style.",
+                                            trailingText = uiState.subtitles.font.name.replace('_', ' '),
+                                            onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_FONT }
+                                        )
+                                        CinefinSettingListItem(
+                                            headline = "Background",
+                                            supporting = "Improve subtitle contrast over bright scenes.",
+                                            trailingText = uiState.subtitles.background.name.replace('_', ' '),
+                                            onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_BACKGROUND }
+                                        )
+                                        CinefinSettingListItem(
+                                            headline = "Text color",
+                                            supporting = "Set the subtitle text color used in the player.",
+                                            trailingText = uiState.subtitles.textColor.name.replace('_', ' '),
+                                            onClick = { activeDialog = SettingsChoiceDialog.SUBTITLE_TEXT_COLOR }
+                                        )
+                                    }
+                                    SettingsCategory.ACCOUNT -> {
+                                        CinefinSettingListItem(
+                                            headline = "Switch Profile",
+                                            supporting = "Switch between saved Jellyfin accounts or add a new one.",
+                                            trailingText = "Profiles",
+                                            onClick = onNavigateToProfilePicker,
+                                            modifier = firstSectionItemModifier
+                                        )
+                                        CinefinSettingListItem(
+                                            headline = "Sign out",
+                                            supporting = uiState.signOutError ?: "Remove this device session and return to server sign-in.",
+                                            trailingText = if (uiState.isSigningOut) "Signing out..." else "Sign out",
+                                            onClick = viewModel::logout
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
-}
-
-@Composable
-private fun SettingsToggleRow(
-    icon: ImageVector,
-    title: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    ListItem(
-        selected = checked,
-        onClick = { onCheckedChange(!checked) },
-        modifier = modifier.fillMaxWidth(),
-        leadingContent = { Icon(imageVector = icon, contentDescription = null) },
-        headlineContent = { Text(text = title, style = MaterialTheme.typography.titleMedium) },
-        supportingContent = {
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-            )
-        },
-    )
-}
-
-@Composable
-private fun SettingsChoiceRow(
-    icon: ImageVector,
-    title: String,
-    description: String,
-    selectedLabel: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    ListItem(
-        selected = false,
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        leadingContent = { Icon(imageVector = icon, contentDescription = null) },
-        headlineContent = { Text(text = title, style = MaterialTheme.typography.titleMedium) },
-        supportingContent = {
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-        trailingContent = {
-            Surface(
-                shape = RoundedCornerShape(50),
-                colors = SurfaceDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                ),
-            ) {
-                Text(
-                    text = selectedLabel,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                )
-            }
-        },
-    )
 }

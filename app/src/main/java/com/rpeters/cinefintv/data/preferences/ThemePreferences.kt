@@ -67,7 +67,7 @@ data class ThemePreferences(
     /**
      * Theme mode selection (System, Light, Dark, AMOLED Black).
      */
-    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val themeMode: ThemeMode = ThemeMode.DARK,
 
     /**
      * Whether to use Material You dynamic colors on Android 12+.

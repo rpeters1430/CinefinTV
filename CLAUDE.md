@@ -209,14 +209,14 @@ Canonical versions live in `gradle/libs.versions.toml`.
 | Dependency | Version |
 |---|---|
 | Kotlin | 2.3.21 |
-| Compose BOM | 2026.05.00 |
-| androidx.tv:tv-material | 1.1.0-beta01 |
+| Compose BOM | 2026.05.01 |
+| androidx.tv:tv-material | 1.1.0 |
 | Hilt | 2.59.2 (KSP) |
-| Media3 | 1.10.0 |
-| Jellyfin SDK | 1.8.8 |
+| Media3 | 1.10.1 |
+| Jellyfin SDK | 1.8.10 |
 | jellyfin-media3-ffmpeg | 1.9.0+1 |
-| Coil | 3.4.0 |
+| Coil | 3.5.0-beta01 |
 | OkHttp | 5.3.2 |
 | Firebase BOM | 34.13.0 |
-| Gradle / AGP | 9.1.0 / 9.2.1 |
+| Gradle / AGP | 9.4.1 / 9.2.1 |
 | compileSdk / targetSdk / minSdk | 37 / 35 / 26 |

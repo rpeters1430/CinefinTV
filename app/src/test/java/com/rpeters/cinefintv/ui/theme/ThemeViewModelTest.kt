@@ -69,6 +69,7 @@ class ThemeViewModelTest {
             ThemePreferences.DEFAULT.copy(respectReduceMotion = false)
         )
         val viewModelNormalMotion = ThemeViewModel(themePrefsRepo)
+        advanceUntilIdle()
         
         viewModelNormalMotion.motionSpec.test {
             // StateFlow immediately emits the mapped value once subscribed
@@ -81,8 +82,12 @@ class ThemeViewModelTest {
             ThemePreferences.DEFAULT.copy(respectReduceMotion = true)
         )
         val viewModelReducedMotion = ThemeViewModel(themePrefsRepo)
+        advanceUntilIdle()
 
         viewModelReducedMotion.motionSpec.test {
+            // StateFlow immediately emits the initialValue (reduceMotion = false)
+            assertEquals(CinefinMotion.create(reduceMotion = false), awaitItem())
+            // Then the mapping coroutine runs and emits the mapped value (reduceMotion = true)
             assertEquals(CinefinMotion.create(reduceMotion = true), awaitItem())
             cancelAndIgnoreRemainingEvents()
         }

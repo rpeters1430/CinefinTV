@@ -470,7 +470,7 @@ private fun HomeLoadedContent(
                 val upFocusRequester = when {
                     index == 0 && state.featuredItems.isNotEmpty() -> featuredPrimaryActionRequester
                     index == 0 -> destinationFocus.drawerFocusRequester
-                    else -> sectionItemFocusRequesters[index - 1].firstOrNull()
+                    else -> sectionItemFocusRequesters.getOrNull(index - 1)?.firstOrNull()
                 }
                 val previousSectionFocusRequester = sectionItemFocusRequesters
                     .getOrNull(index - 1)
@@ -495,7 +495,7 @@ private fun HomeLoadedContent(
                         ensureSectionVisible(index)
                     },
                     onEpisodeMenuRequested = { selectedEpisodeMenuItem = it },
-                    itemFocusRequesters = sectionItemFocusRequesters[index],
+                    itemFocusRequesters = sectionItemFocusRequesters.getOrNull(index) ?: emptyList(),
                     upFocusRequester = upFocusRequester,
                     downFocusRequester = sectionItemFocusRequesters.getOrNull(index + 1)?.firstOrNull(),
                     onNavigateUp = when {
@@ -632,6 +632,7 @@ private fun FeaturedCarousel(
         },
     ) { index ->
         val item = items[index]
+        val fallbackRequester = remember { FocusRequester() }
         HeroItem(
             item = item,
             onMoreInfo = { onMoreInfo(item) },
@@ -640,7 +641,7 @@ private fun FeaturedCarousel(
             primaryActionFocusRequester = if (index == carouselState.activeItemIndex) {
                 primaryActionFocusRequester
             } else {
-                remember { FocusRequester() }
+                fallbackRequester
             },
             downRequester = downRequester,
             modifier = Modifier.fillMaxSize(),

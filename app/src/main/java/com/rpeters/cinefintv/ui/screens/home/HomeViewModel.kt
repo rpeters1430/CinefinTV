@@ -173,7 +173,7 @@ class HomeViewModel @Inject constructor(
 
     private fun loadCachedData() {
         viewModelScope.launch(dispatchers.io) {
-            val trace = FirebasePerformance.startTrace("home_load_cache")
+            val perfTrace = try { FirebasePerformance.startTrace("home_load_cache") } catch (e: Exception) { null }
             val startedAt = SystemClock.elapsedRealtime()
             trace { "Cache load start" }
             val librariesDeferred = async { repositories.media.getCachedLibraries() }
@@ -284,7 +284,7 @@ class HomeViewModel @Inject constructor(
                     trace { "Cache load produced no visible sections" }
                 }
             }
-            trace.stop()
+            perfTrace?.stop()
         }
     }
 
@@ -319,9 +319,9 @@ class HomeViewModel @Inject constructor(
             "refresh#$refreshId requested: silent=$silent forceRefresh=$forceRefresh ui=${_uiState.value.debugSummary()} server=${repositories.auth.currentServer.value.debugSummary()}"
         }
         viewModelScope.launch {
-            val trace = FirebasePerformance.startTrace("home_refresh_full")
-            trace.putAttribute("is_silent", silent.toString())
-            trace.putAttribute("is_forced", forceRefresh.toString())
+            val perfTrace = try { FirebasePerformance.startTrace("home_refresh_full") } catch (e: Exception) { null }
+            perfTrace?.putAttribute("is_silent", silent.toString())
+            perfTrace?.putAttribute("is_forced", forceRefresh.toString())
 
             val waitingAt = SystemClock.elapsedRealtime()
             refreshMutex.withLock {
@@ -462,15 +462,15 @@ class HomeViewModel @Inject constructor(
                     trace {
                         "refresh#$refreshId complete in ${SystemClock.elapsedRealtime() - refreshStartedAt}ms with ui=${_uiState.value.debugSummary()}"
                     }
-                    trace.stop()
+                    perfTrace?.stop()
                 } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                    trace.stop()
+                    perfTrace?.stop()
                     trace { "refresh#$refreshId timed out after 30s" }
                     if (_uiState.value is HomeUiState.Loading) {
                         _uiState.value = HomeUiState.Error("Server took too long to respond. Please check your connection and try again.")
                     }
                 } catch (e: Exception) {
-                    trace.stop()
+                    perfTrace?.stop()
                     if (e is kotlinx.coroutines.CancellationException) throw e
                     val errorMessage = "Failed to load home content: ${e.message ?: "Unknown error"}"
                     SecureLogger.e(TAG, "refresh#$refreshId $errorMessage", e)

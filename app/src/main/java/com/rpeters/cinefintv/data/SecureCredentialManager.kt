@@ -33,6 +33,8 @@ import java.security.GeneralSecurityException
 import java.security.KeyStore
 import java.security.KeyStoreException
 import java.security.MessageDigest
+import android.provider.Settings
+import javax.crypto.spec.SecretKeySpec
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -182,12 +184,26 @@ class SecureCredentialManager @Inject constructor(
         return keyGenerator.generateKey()
     }
 
+    private fun getSoftwareSecretKey(): SecretKey {
+        val androidId = Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ANDROID_ID
+        ) ?: "CinefinFallbackSeed"
+        
+        val salt = "CinefinTVSecuritySalt"
+        val input = "$androidId::$salt::${Constants.Security.KEY_ALIAS}".toByteArray()
+        val digest = MessageDigest.getInstance("SHA-256")
+        val keyBytes = digest.digest(input)
+        return SecretKeySpec(keyBytes, "AES")
+    }
+
     /**
      * Encrypts data using AES/GCM/NoPadding with a new IV for each encryption.
      * Performs keystore operations on background thread.
      */
     private suspend fun encrypt(data: String): String = withContext(dispatchers.io) {
         try {
+            // Try Keystore first
             val cipher = Cipher.getInstance(Constants.Security.ENCRYPTION_TRANSFORMATION)
             cipher.init(Cipher.ENCRYPT_MODE, getOrCreateSecretKey())
 
@@ -196,12 +212,26 @@ class SecureCredentialManager @Inject constructor(
 
             // Combine IV + encrypted data and encode to Base64
             val combined = iv + encryptedData
-            Base64.encodeToString(combined, Base64.NO_WRAP)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: GeneralSecurityException) {
-            SecureLogger.e(TAG, "encrypt: failed to encrypt credential", e)
-            throw CredentialEncryptionException("Failed to encrypt credential", e)
+            "ks:" + Base64.encodeToString(combined, Base64.NO_WRAP)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            SecureLogger.w(TAG, "encrypt: Keystore encryption failed, falling back to software encryption", e)
+            try {
+                // Software fallback
+                val cipher = Cipher.getInstance(Constants.Security.ENCRYPTION_TRANSFORMATION)
+                cipher.init(Cipher.ENCRYPT_MODE, getSoftwareSecretKey())
+
+                val iv = cipher.iv
+                val encryptedData = cipher.doFinal(data.toByteArray())
+
+                // Combine IV + encrypted data and encode to Base64
+                val combined = iv + encryptedData
+                "sw:" + Base64.encodeToString(combined, Base64.NO_WRAP)
+            } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
+                SecureLogger.e(TAG, "encrypt: Software fallback encryption also failed", ex)
+                throw CredentialEncryptionException("Failed to encrypt credential", ex)
+            }
         }
     }
 
@@ -211,7 +241,27 @@ class SecureCredentialManager @Inject constructor(
      */
     private suspend fun decrypt(encryptedData: String): String? = withContext(dispatchers.io) {
         try {
-            val combined = Base64.decode(encryptedData, Base64.NO_WRAP)
+            if (encryptedData.startsWith("ks:")) {
+                val base64Data = encryptedData.substring(3)
+                decryptWithKeystore(base64Data)
+            } else if (encryptedData.startsWith("sw:")) {
+                val base64Data = encryptedData.substring(3)
+                decryptWithSoftware(base64Data)
+            } else {
+                // Legacy: no prefix. Try keystore first, then software.
+                decryptWithKeystore(encryptedData) ?: decryptWithSoftware(encryptedData)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            SecureLogger.w(TAG, "decrypt: failed to decrypt saved credential", e)
+            null
+        }
+    }
+
+    private suspend fun decryptWithKeystore(base64Data: String): String? = withContext(dispatchers.io) {
+        try {
+            val combined = Base64.decode(base64Data, Base64.NO_WRAP)
             val iv = combined.sliceArray(0 until Constants.Security.IV_LENGTH)
             val cipherData = combined.sliceArray(Constants.Security.IV_LENGTH until combined.size)
 
@@ -223,10 +273,27 @@ class SecureCredentialManager @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: UserNotAuthenticatedException) {
-            logDebug { "decrypt: user authentication required before key use" }
+            logDebug { "decryptWithKeystore: user authentication required before key use" }
             null
         } catch (e: Exception) {
-            SecureLogger.w(TAG, "decrypt: failed to decrypt saved credential", e)
+            SecureLogger.w(TAG, "decryptWithKeystore: failed", e)
+            null
+        }
+    }
+
+    private fun decryptWithSoftware(base64Data: String): String? {
+        return try {
+            val combined = Base64.decode(base64Data, Base64.NO_WRAP)
+            val iv = combined.sliceArray(0 until Constants.Security.IV_LENGTH)
+            val cipherData = combined.sliceArray(Constants.Security.IV_LENGTH until combined.size)
+
+            val cipher = Cipher.getInstance(Constants.Security.ENCRYPTION_TRANSFORMATION)
+            val spec = GCMParameterSpec(128, iv)
+            cipher.init(Cipher.DECRYPT_MODE, getSoftwareSecretKey(), spec)
+
+            String(cipher.doFinal(cipherData))
+        } catch (e: Exception) {
+            SecureLogger.w(TAG, "decryptWithSoftware: failed", e)
             null
         }
     }
