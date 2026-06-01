@@ -161,6 +161,7 @@ open class JellyfinAuthRepository @Inject constructor(
                 normalizedServerUrl = normalizedServerUrl,
                 authResult = authResult,
                 usernameHint = username,
+                password = password,
             )
 
             return ApiResult.Success(authResult)
@@ -448,6 +449,7 @@ open class JellyfinAuthRepository @Inject constructor(
         normalizedServerUrl: String = normalizeServerUrl(serverUrl),
         authResult: AuthenticationResult,
         usernameHint: String? = null,
+        password: String? = null,
     ) {
         val resolvedUsername = usernameHint ?: authResult.user?.name
         val server = JellyfinServer(
@@ -465,6 +467,13 @@ open class JellyfinAuthRepository @Inject constructor(
         _currentServer.update { server }
         saveNewToken(authResult.accessToken)
         _isConnected.update { true }
+        if (!password.isNullOrEmpty() && !resolvedUsername.isNullOrBlank()) {
+            try {
+                secureCredentialManager.savePassword(serverUrl, resolvedUsername, password)
+            } catch (e: Exception) {
+                SecureLogger.w(TAG, "persistAuthenticationState: failed to save password", e)
+            }
+        }
         try {
             secureCredentialManager.saveServerState(server)
         } catch (e: Exception) {

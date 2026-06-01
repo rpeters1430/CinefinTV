@@ -2,7 +2,6 @@ package com.rpeters.cinefintv.ui.screens.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.rpeters.cinefintv.data.SecureCredentialManager
 import com.rpeters.cinefintv.data.repository.JellyfinAuthRepository
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.utils.ServerUrlValidator
@@ -38,7 +37,6 @@ data class AuthUiState(
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: JellyfinAuthRepository,
-    private val secureCredentialManager: SecureCredentialManager,
 ) : ViewModel() {
     private var quickConnectPollJob: Job? = null
 
@@ -178,7 +176,6 @@ class AuthViewModel @Inject constructor(
 
             when (val result = authRepository.authenticateUser(serverUrl, username.trim(), password)) {
                 is ApiResult.Success -> {
-                    secureCredentialManager.savePassword(serverUrl, username.trim(), password)
                     stopQuickConnect()
                     _uiState.update {
                         it.copy(

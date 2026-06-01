@@ -3,6 +3,7 @@ package com.rpeters.cinefintv.data.repository
 import android.content.Context
 import com.rpeters.cinefintv.data.JellyfinServer
 import com.rpeters.cinefintv.data.SecureCredentialManager
+import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.testutil.DeterministicDispatcherProvider
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
 import io.mockk.coEvery
@@ -103,6 +104,36 @@ class JellyfinAuthRepositoryTest {
         assertEquals("fresh-token", repository.currentServer.value?.accessToken)
         assertEquals(savedServer.username, repository.currentServer.value?.username)
         assertTrue(repository.isConnected.value)
+    }
+
+    @Test
+    fun authenticateUser_whenAuthSucceeds_persistsPasswordAndServerState() = runTest {
+        val secureCredentialManager = mockk<SecureCredentialManager>(relaxed = true)
+        val authResult = authenticationResult(accessToken = "fresh-token")
+        val authClient = fakeApiClient { method, path, _, _, requestBody ->
+            assertEquals(HttpMethod.POST, method)
+            assertTrue(path.contains("AuthenticateByName"))
+            val authRequest = requestBody as AuthenticateUserByName
+            assertEquals("demo", authRequest.username)
+            assertEquals("password123", authRequest.pw)
+            rawResponse(authResult)
+        }
+        val jellyfin = jellyfinForClients(
+            "http://localhost:8096" to mapOf(null to authClient),
+        )
+
+        val repository = JellyfinAuthRepository(jellyfin, secureCredentialManager, dispatchers)
+
+        val result = repository.authenticateUser("http://localhost:8096", "demo", "password123")
+
+        assertTrue(result is ApiResult.Success)
+        assertEquals("fresh-token", repository.currentServer.value?.accessToken)
+        assertTrue(repository.isConnected.value)
+        coVerify(exactly = 1) {
+            secureCredentialManager.savePassword("http://localhost:8096", "demo", "password123")
+        }
+        coVerify(exactly = 1) { secureCredentialManager.saveServerState(any()) }
+        coVerify(exactly = 1) { secureCredentialManager.saveProfile(any()) }
     }
 
     @Test

@@ -1,15 +1,12 @@
 package com.rpeters.cinefintv.ui.screens.auth
 
-import com.rpeters.cinefintv.data.SecureCredentialManager
 import com.rpeters.cinefintv.data.repository.JellyfinAuthRepository
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.testutil.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.runs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceTimeBy
@@ -31,7 +28,6 @@ class AuthViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val authRepository: JellyfinAuthRepository = mockk()
-    private val secureCredentialManager: SecureCredentialManager = mockk()
     private val isSessionRestoredFlow = MutableStateFlow<Boolean?>(null)
     private val isConnectedFlow = MutableStateFlow(false)
 
@@ -47,7 +43,7 @@ class AuthViewModelTest {
         setupMocks()
         isSessionRestoredFlow.value = false
 
-        val viewModel = AuthViewModel(authRepository, secureCredentialManager)
+        val viewModel = AuthViewModel(authRepository)
         advanceUntilIdle()
 
         viewModel.updateServerUrlInput("not a url")
@@ -59,15 +55,14 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun login_whenAuthSucceeds_setsSuccessAndSavesPassword() = runTest {
+    fun login_whenAuthSucceeds_setsSuccess() = runTest {
         setupMocks()
         isSessionRestoredFlow.value = false
         coEvery { authRepository.testServerConnection(any()) } returns ApiResult.Success(mockk())
         coEvery { authRepository.isQuickConnectEnabled(any()) } returns ApiResult.Success(false)
         coEvery { authRepository.authenticateUser(any(), any(), any()) } returns ApiResult.Success(mockk<AuthenticationResult>())
-        coEvery { secureCredentialManager.savePassword(any(), any(), any()) } just runs
 
-        val viewModel = AuthViewModel(authRepository, secureCredentialManager)
+        val viewModel = AuthViewModel(authRepository)
         advanceUntilIdle()
 
         viewModel.updateServerUrlInput("http://192.168.1.1:8096")
@@ -89,7 +84,7 @@ class AuthViewModelTest {
         isSessionRestoredFlow.value = false
         coEvery { authRepository.authenticateUser(any(), any(), any()) } returns ApiResult.Error("Bad credentials")
 
-        val viewModel = AuthViewModel(authRepository, secureCredentialManager)
+        val viewModel = AuthViewModel(authRepository)
         advanceUntilIdle()
 
         viewModel.updateServerUrlInput("http://192.168.1.1:8096")
@@ -107,7 +102,7 @@ class AuthViewModelTest {
         isSessionRestoredFlow.value = true
         isConnectedFlow.value = true
 
-        val viewModel = AuthViewModel(authRepository, secureCredentialManager)
+        val viewModel = AuthViewModel(authRepository)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -121,7 +116,7 @@ class AuthViewModelTest {
         isSessionRestoredFlow.value = true
         isConnectedFlow.value = true
 
-        val viewModel = AuthViewModel(authRepository, secureCredentialManager)
+        val viewModel = AuthViewModel(authRepository)
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.isSessionActive)
 
@@ -137,7 +132,7 @@ class AuthViewModelTest {
         setupMocks()
         isSessionRestoredFlow.value = false
 
-        val viewModel = AuthViewModel(authRepository, secureCredentialManager)
+        val viewModel = AuthViewModel(authRepository)
         advanceUntilIdle()
 
         // No server URL set — both connectedServerUrl and serverUrlInput are blank
@@ -159,7 +154,7 @@ class AuthViewModelTest {
         coEvery { authRepository.getQuickConnectState(any(), any()) } returns
             ApiResult.Success(com.rpeters.cinefintv.data.model.QuickConnectState("Pending"))
 
-        val viewModel = AuthViewModel(authRepository, secureCredentialManager)
+        val viewModel = AuthViewModel(authRepository)
         advanceUntilIdle()
 
         viewModel.updateServerUrlInput("http://192.168.1.1:8096")
@@ -189,7 +184,7 @@ class AuthViewModelTest {
         coEvery { authRepository.authenticateWithQuickConnect(any(), any()) } returns
             ApiResult.Success(authResult)
 
-        val viewModel = AuthViewModel(authRepository, secureCredentialManager)
+        val viewModel = AuthViewModel(authRepository)
         advanceUntilIdle()
 
         viewModel.updateServerUrlInput("http://192.168.1.1:8096")
@@ -214,7 +209,7 @@ class AuthViewModelTest {
         coEvery { authRepository.getQuickConnectState(any(), any()) } returns
             ApiResult.Success(com.rpeters.cinefintv.data.model.QuickConnectState("Denied"))
 
-        val viewModel = AuthViewModel(authRepository, secureCredentialManager)
+        val viewModel = AuthViewModel(authRepository)
         advanceUntilIdle()
 
         viewModel.updateServerUrlInput("http://192.168.1.1:8096")
@@ -237,7 +232,7 @@ class AuthViewModelTest {
         coEvery { authRepository.getQuickConnectState(any(), any()) } returns
             ApiResult.Success(com.rpeters.cinefintv.data.model.QuickConnectState("Pending"))
 
-        val viewModel = AuthViewModel(authRepository, secureCredentialManager)
+        val viewModel = AuthViewModel(authRepository)
         advanceUntilIdle()
 
         viewModel.updateServerUrlInput("http://192.168.1.1:8096")
@@ -282,7 +277,7 @@ class AuthViewModelTest {
         isSessionRestoredFlow.value = true
         isConnectedFlow.value = true
 
-        val viewModel = AuthViewModel(authRepository, secureCredentialManager)
+        val viewModel = AuthViewModel(authRepository)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -307,7 +302,7 @@ class AuthViewModelTest {
         isSessionRestoredFlow.value = true
         isConnectedFlow.value = true
 
-        val viewModel = AuthViewModel(authRepository, secureCredentialManager)
+        val viewModel = AuthViewModel(authRepository)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value

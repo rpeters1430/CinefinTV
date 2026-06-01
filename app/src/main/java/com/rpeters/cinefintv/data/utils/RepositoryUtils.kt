@@ -1,6 +1,5 @@
 package com.rpeters.cinefintv.data.utils
 
-import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.data.JellyfinServer
 import com.rpeters.cinefintv.data.repository.common.ErrorType
 import com.rpeters.cinefintv.data.security.PinningValidationException
@@ -173,10 +172,6 @@ object RepositoryUtils {
         if (server.userId == null) {
             SecureLogger.w(TAG, "validateServer: Server has no user ID - authentication may be incomplete")
             throw IllegalStateException("User authentication is incomplete. Please log in again.")
-        }
-
-        if (BuildConfig.DEBUG) {
-            SecureLogger.v(TAG, "validateServer: Server validation passed for user ${server.username} on ${server.url}")
         }
 
         return server
