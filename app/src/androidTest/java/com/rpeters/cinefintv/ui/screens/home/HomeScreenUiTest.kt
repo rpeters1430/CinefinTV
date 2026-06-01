@@ -595,6 +595,35 @@ class HomeScreenUiTest {
     }
 
     @Test
+    fun returningFromPlayer_withChromeRestoreSignal_restoresCardFocus() {
+        composeRule.setContent {
+            HomeTestHost(showTopNav = true) {
+                HomeNavigationHarness(
+                    uiState = sampleContentState(
+                        featuredItems = listOf(sampleCard(id = "featured-1", title = "Featured One"))
+                    ),
+                    useChromeRestoreSignalOnBack = true,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
+            .requestFocus()
+            .assertIsFocused()
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        composeRule.onNodeWithTag("player_back").assertIsDisplayed()
+        composeRule.onNodeWithTag("player_back")
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        composeRule.mainClock.advanceTimeBy(1_100)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(HomeTestTags.sectionItem(0, 0))
+            .assertIsFocused()
+    }
+
+    @Test
     fun equivalentContentRefresh_keepsFocusedItemFocused() {
         val uiState = mutableStateOf<HomeUiState>(
             sampleContentState(
@@ -705,9 +734,11 @@ private fun androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>.waitUnt
 @Composable
 private fun HomeNavigationHarness(
     uiState: HomeUiState,
+    useChromeRestoreSignalOnBack: Boolean = false,
 ) {
     val backStack: NavBackStack<NavKey> = rememberNavBackStack(Home)
     var shouldRestoreFocusOnResume by remember { mutableStateOf(false) }
+    val chromeFocusController = LocalAppChromeFocusController.current
     val isPlayerVisible = backStack.lastOrNull() is Player
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -729,7 +760,11 @@ private fun HomeNavigationHarness(
             ) {
                 Button(
                     onClick = {
-                        shouldRestoreFocusOnResume = true
+                        if (useChromeRestoreSignalOnBack) {
+                            chromeFocusController?.shouldRestoreFocusToContent = true
+                        } else {
+                            shouldRestoreFocusOnResume = true
+                        }
                         backStack.removeAt(backStack.size - 1)
                     },
                     modifier = Modifier.testTag("player_back"),
