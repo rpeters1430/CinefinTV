@@ -102,7 +102,7 @@ class PlayerPlaybackContentUiTest {
             }
         }
 
-        composeRule.onNodeWithTag(PlayerTestTags.SkipAction).assertIsDisplayed()
+        composeRule.onNodeWithTag(PlayerTestTags.SkipIntroAction).assertIsDisplayed()
         composeRule.onNodeWithTag(PlayerTestTags.SkipActionButton)
             .performSemanticsAction(SemanticsActions.OnClick)
 
