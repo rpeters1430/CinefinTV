@@ -54,7 +54,8 @@
       "Bash(gh issue *)",
       "Bash(gh api *)",
       "Bash(echo \"exit: $?\")",
-      "Skill(r8-analyzer)"
+      "Skill(r8-analyzer)",
+      "Bash(bc)"
     ]
   }
 }
