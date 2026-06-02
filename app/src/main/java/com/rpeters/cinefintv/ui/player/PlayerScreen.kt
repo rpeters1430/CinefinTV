@@ -446,6 +446,7 @@ internal fun PlayerPlaybackContent(
     val seekBarFocusRequester = remember { FocusRequester() }
     val playerFocusRequester = remember { FocusRequester() }
     val skipFocusRequester = remember { FocusRequester() }
+    val creditsFocusRequester = remember { FocusRequester() }
     var overlayActionFocused by remember { mutableStateOf(false) }
     var isContentShelfVisible by remember { mutableStateOf(false) }
     var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -618,17 +619,34 @@ internal fun PlayerPlaybackContent(
             modifier = Modifier.align(Alignment.TopEnd)
         )
 
-        // Skip actions localized
-        PlayerSkipActions(
+        // Skip intro — bottom left
+        PlayerSkipIntroAction(
             player = exoPlayer,
             introRange = introRange,
-            creditsRange = creditsRange,
+            autoSkip = uiState.autoSkipIntro,
             controlsVisible = controlsVisible,
             onSkip = { targetMs ->
                 exoPlayer.seekTo(targetMs)
                 onInteract()
             },
             focusRequester = skipFocusRequester,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(bottom = 96.dp, start = 48.dp)
+                .onFocusChanged { overlayActionFocused = it.hasFocus }
+        )
+
+        // Skip credits — bottom right
+        PlayerSkipCreditsAction(
+            player = exoPlayer,
+            creditsRange = creditsRange,
+            autoSkip = uiState.autoSkipCredits,
+            controlsVisible = controlsVisible,
+            onSkip = { targetMs ->
+                exoPlayer.seekTo(targetMs)
+                onInteract()
+            },
+            focusRequester = creditsFocusRequester,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(bottom = 96.dp, end = 48.dp)
@@ -863,45 +881,97 @@ private fun BadgeSurface(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun PlayerSkipActions(
+private fun PlayerSkipIntroAction(
     player: Player,
     introRange: SkipRange?,
-    creditsRange: SkipRange?,
+    autoSkip: Boolean,
     controlsVisible: Boolean,
     onSkip: (Long) -> Unit,
     focusRequester: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
     var showSkip by remember { mutableStateOf(false) }
-    var skipLabel by remember { mutableStateOf<String?>(null) }
     var skipTargetMs by remember { mutableLongStateOf(0L) }
 
-    LaunchedEffect(player, introRange, creditsRange) {
+    LaunchedEffect(player, introRange, autoSkip) {
+        var hasAutoSkipped = false
         while (true) {
             val pos = player.currentPosition
             val duration = player.duration.coerceAtLeast(0L)
-            val activeSkipLabel = when {
-                isInSkipRange(pos, introRange) -> "Skip Intro"
-                isInSkipRange(pos, creditsRange) -> "Skip Credits"
-                else -> null
+            val inRange = isInSkipRange(pos, introRange)
+            val targetMs = introRange?.endMs?.coerceAtMost(duration) ?: duration
+
+            if (inRange && autoSkip && !hasAutoSkipped) {
+                hasAutoSkipped = true
+                onSkip(targetMs)
             }
+            if (!inRange) hasAutoSkipped = false
 
-            val activeSkipTargetMs = when (activeSkipLabel) {
-                "Skip Intro" -> introRange?.endMs?.coerceAtMost(duration) ?: duration
-                "Skip Credits" -> creditsRange?.endMs?.coerceAtMost(duration) ?: duration
-                else -> 0L
-            }
-
-            showSkip = activeSkipLabel != null
-            skipLabel = activeSkipLabel
-            skipTargetMs = activeSkipTargetMs
-
+            showSkip = inRange
+            skipTargetMs = targetMs
             delay(500L)
         }
     }
 
-    LaunchedEffect(showSkip, controlsVisible, player) {
-        if (showSkip && !controlsVisible) {
+    LaunchedEffect(showSkip, controlsVisible, autoSkip) {
+        if (showSkip && !controlsVisible && !autoSkip) {
+            withFrameNanos { }
+            runCatching { focusRequester.requestFocus() }
+        }
+    }
+
+    AnimatedVisibility(
+        visible = showSkip,
+        enter = fadeIn() + slideInHorizontally { -it / 2 },
+        exit = fadeOut() + slideOutHorizontally { -it / 2 },
+        modifier = modifier,
+    ) {
+        SkipActionCard(
+            label = "Skip Intro",
+            subtitle = if (autoSkip) "Auto-skipping" else "Press to skip",
+            onSkip = { onSkip(skipTargetMs) },
+            buttonFocusRequester = focusRequester,
+            modifier = Modifier.testTag(PlayerTestTags.SkipIntroAction),
+        )
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun PlayerSkipCreditsAction(
+    player: Player,
+    creditsRange: SkipRange?,
+    autoSkip: Boolean,
+    controlsVisible: Boolean,
+    onSkip: (Long) -> Unit,
+    focusRequester: FocusRequester,
+    modifier: Modifier = Modifier,
+) {
+    var showSkip by remember { mutableStateOf(false) }
+    var skipTargetMs by remember { mutableLongStateOf(0L) }
+
+    LaunchedEffect(player, creditsRange, autoSkip) {
+        var hasAutoSkipped = false
+        while (true) {
+            val pos = player.currentPosition
+            val duration = player.duration.coerceAtLeast(0L)
+            val inRange = isInSkipRange(pos, creditsRange)
+            val targetMs = creditsRange?.endMs?.coerceAtMost(duration) ?: duration
+
+            if (inRange && autoSkip && !hasAutoSkipped) {
+                hasAutoSkipped = true
+                onSkip(targetMs)
+            }
+            if (!inRange) hasAutoSkipped = false
+
+            showSkip = inRange
+            skipTargetMs = targetMs
+            delay(500L)
+        }
+    }
+
+    LaunchedEffect(showSkip, controlsVisible, autoSkip) {
+        if (showSkip && !controlsVisible && !autoSkip) {
             withFrameNanos { }
             runCatching { focusRequester.requestFocus() }
         }
@@ -911,18 +981,15 @@ private fun PlayerSkipActions(
         visible = showSkip,
         enter = fadeIn() + slideInHorizontally { it / 2 },
         exit = fadeOut() + slideOutHorizontally { it / 2 },
-        modifier = modifier
+        modifier = modifier,
     ) {
-        val currentLabel = skipLabel
-        if (currentLabel != null) {
-            SkipActionCard(
-                label = currentLabel,
-                subtitle = "Press to skip",
-                onSkip = { onSkip(skipTargetMs) },
-                buttonFocusRequester = focusRequester,
-                modifier = Modifier.testTag(PlayerTestTags.SkipAction)
-            )
-        }
+        SkipActionCard(
+            label = "Skip Credits",
+            subtitle = if (autoSkip) "Auto-skipping" else "Press to skip",
+            onSkip = { onSkip(skipTargetMs) },
+            buttonFocusRequester = focusRequester,
+            modifier = Modifier.testTag(PlayerTestTags.SkipCreditsAction),
+        )
     }
 }
 

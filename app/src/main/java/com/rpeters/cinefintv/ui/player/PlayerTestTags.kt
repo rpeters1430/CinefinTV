@@ -12,6 +12,8 @@ object PlayerTestTags {
     const val SettingsButton = "player_settings_button"
     const val SkipAction = "player_skip_action"
     const val SkipActionButton = "player_skip_action_button"
+    const val SkipIntroAction = "player_skip_intro_action"
+    const val SkipCreditsAction = "player_skip_credits_action"
     const val NextEpisodeCard = "player_next_episode_card"
     const val NextEpisodeButton = "player_next_episode_button"
     const val PlayPauseButton = "player_play_pause_button"
