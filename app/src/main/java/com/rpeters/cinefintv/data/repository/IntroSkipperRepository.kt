@@ -4,6 +4,7 @@ import com.rpeters.cinefintv.data.cache.JellyfinCache
 import com.rpeters.cinefintv.data.common.DispatcherProvider
 import com.rpeters.cinefintv.data.repository.common.BaseJellyfinRepository
 import com.rpeters.cinefintv.data.session.JellyfinSessionManager
+import com.rpeters.cinefintv.ui.player.IntroSkipperSegments
 import com.rpeters.cinefintv.ui.player.SkipRange
 import com.rpeters.cinefintv.utils.SecureLogger
 import kotlinx.coroutines.CancellationException
@@ -30,11 +31,7 @@ data class IntroSkipperSegment(
     @SerialName("End") val end: Double,
 )
 
-data class IntroSkipperSegments(
-    val intro: SkipRange?,
-    val credits: SkipRange?,
-)
-
+// open for Firebase Performance instrumentation workaround — see IntroSkipperRepositoryTest
 @Singleton
 open class IntroSkipperRepository @Inject constructor(
     authRepository: JellyfinAuthRepository,
@@ -44,7 +41,9 @@ open class IntroSkipperRepository @Inject constructor(
     private val okHttpClient: OkHttpClient,
 ) : BaseJellyfinRepository(authRepository, sessionManager, cache, dispatchers) {
 
-    private val json = Json { ignoreUnknownKeys = true }
+    private companion object {
+        val json = Json { ignoreUnknownKeys = true }
+    }
 
     /** Executes an HTTP call. Separated to allow overriding in tests without Firebase instrumentation. */
     protected open fun executeCall(request: Request): Response = okHttpClient.newCall(request).execute()

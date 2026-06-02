@@ -20,6 +20,11 @@ data class ChapterMarker(val positionMs: Long, val name: String?)
 
 data class SkipRange(val startMs: Long, val endMs: Long?)
 
+data class IntroSkipperSegments(
+    val intro: SkipRange?,
+    val credits: SkipRange?,
+)
+
 @Serializable
 data class TrickplayManifest(
     @SerialName("Version") val version: String,
