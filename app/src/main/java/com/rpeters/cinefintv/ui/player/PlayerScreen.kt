@@ -630,10 +630,10 @@ internal fun PlayerPlaybackContent(
                 onInteract()
             },
             focusRequester = skipFocusRequester,
+            onFocusChanged = { overlayActionFocused = it },
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(bottom = 96.dp, start = 48.dp)
-                .onFocusChanged { overlayActionFocused = it.hasFocus }
         )
 
         // Skip credits — bottom right
@@ -647,10 +647,10 @@ internal fun PlayerPlaybackContent(
                 onInteract()
             },
             focusRequester = creditsFocusRequester,
+            onFocusChanged = { overlayActionFocused = it },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(bottom = 96.dp, end = 48.dp)
-                .onFocusChanged { overlayActionFocused = it.hasFocus }
         )
 
         // Next Episode Overlay
@@ -888,6 +888,7 @@ private fun PlayerSkipIntroAction(
     controlsVisible: Boolean,
     onSkip: (Long) -> Unit,
     focusRequester: FocusRequester,
+    onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showSkip by remember { mutableStateOf(false) }
@@ -931,7 +932,9 @@ private fun PlayerSkipIntroAction(
             subtitle = if (autoSkip) "Auto-skipping" else "Press to skip",
             onSkip = { onSkip(skipTargetMs) },
             buttonFocusRequester = focusRequester,
-            modifier = Modifier.testTag(PlayerTestTags.SkipIntroAction),
+            modifier = Modifier
+                .testTag(PlayerTestTags.SkipIntroAction)
+                .onFocusChanged { onFocusChanged(it.hasFocus) },
         )
     }
 }
@@ -945,6 +948,7 @@ private fun PlayerSkipCreditsAction(
     controlsVisible: Boolean,
     onSkip: (Long) -> Unit,
     focusRequester: FocusRequester,
+    onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showSkip by remember { mutableStateOf(false) }
@@ -988,7 +992,9 @@ private fun PlayerSkipCreditsAction(
             subtitle = if (autoSkip) "Auto-skipping" else "Press to skip",
             onSkip = { onSkip(skipTargetMs) },
             buttonFocusRequester = focusRequester,
-            modifier = Modifier.testTag(PlayerTestTags.SkipCreditsAction),
+            modifier = Modifier
+                .testTag(PlayerTestTags.SkipCreditsAction)
+                .onFocusChanged { onFocusChanged(it.hasFocus) },
         )
     }
 }
