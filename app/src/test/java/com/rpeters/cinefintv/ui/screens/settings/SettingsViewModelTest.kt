@@ -202,10 +202,13 @@ class SettingsViewModelTest {
         coEvery { introSkipRepo.setAutoSkipIntro(true) } returns Unit
 
         val viewModel = SettingsViewModel(themeRepo, playbackRepo, subtitleRepo, libraryRepo, userRepo, introSkipRepo)
+        advanceUntilIdle()
+
         viewModel.setAutoSkipIntro(true)
         advanceUntilIdle()
 
         coVerify { introSkipRepo.setAutoSkipIntro(true) }
+        assertTrue(viewModel.uiState.value.introSkip.autoSkipIntro)
     }
 
     @Test
@@ -225,9 +228,12 @@ class SettingsViewModelTest {
         coEvery { introSkipRepo.setAutoSkipCredits(true) } returns Unit
 
         val viewModel = SettingsViewModel(themeRepo, playbackRepo, subtitleRepo, libraryRepo, userRepo, introSkipRepo)
+        advanceUntilIdle()
+
         viewModel.setAutoSkipCredits(true)
         advanceUntilIdle()
 
         coVerify { introSkipRepo.setAutoSkipCredits(true) }
+        assertTrue(viewModel.uiState.value.introSkip.autoSkipCredits)
     }
 }

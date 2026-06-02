@@ -30,7 +30,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -66,17 +65,20 @@ class SettingsViewModel @Inject constructor(
                 playbackPreferencesRepository.preferences,
                 subtitleAppearancePreferencesRepository.preferencesFlow,
                 libraryActionsPreferencesRepository.preferences,
+                introSkipPreferencesRepository.preferencesFlow,
             ) { values: Array<Any> ->
                 val appearance = values[0] as ThemePreferences
                 val playback = values[1] as PlaybackPreferences
                 val subtitles = values[2] as SubtitleAppearancePreferences
                 val libraryActions = values[3] as LibraryActionsPreferences
+                val introSkip = values[4] as IntroSkipPreferences
                 SettingsUiState(
                     isLoading = false,
                     appearance = appearance,
                     playback = playback,
                     subtitles = subtitles,
                     libraryActions = libraryActions,
+                    introSkip = introSkip,
                 )
             }.collect { preferenceState ->
                 // Atomically merge preference state with transient logout state.
@@ -89,11 +91,6 @@ class SettingsViewModel @Inject constructor(
                         signOutError = current.signOutError,
                     )
                 }
-            }
-        }
-        viewModelScope.launch {
-            introSkipPreferencesRepository.preferencesFlow.collectLatest { prefs ->
-                _uiState.update { it.copy(introSkip = prefs) }
             }
         }
     }
@@ -194,12 +191,12 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setAutoSkipIntro(enabled: Boolean) {
-        viewModelScope.launch { introSkipPreferencesRepository.setAutoSkipIntro(enabled) }
+        updatePreference { introSkipPreferencesRepository.setAutoSkipIntro(enabled) }
         _uiState.update { it.copy(introSkip = it.introSkip.copy(autoSkipIntro = enabled)) }
     }
 
     fun setAutoSkipCredits(enabled: Boolean) {
-        viewModelScope.launch { introSkipPreferencesRepository.setAutoSkipCredits(enabled) }
+        updatePreference { introSkipPreferencesRepository.setAutoSkipCredits(enabled) }
         _uiState.update { it.copy(introSkip = it.introSkip.copy(autoSkipCredits = enabled)) }
     }
 

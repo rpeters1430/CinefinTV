@@ -547,14 +547,14 @@ fun SettingsScreen(
                                     SettingsCategory.SKIP_INTRO -> {
                                         CinefinSwitchListItem(
                                             headline = "Auto-skip intros",
-                                            supporting = "Automatically skip intro segments when detected",
+                                            supporting = "Automatically skip intro segments when detected.",
                                             checked = uiState.introSkip.autoSkipIntro,
                                             onCheckedChange = viewModel::setAutoSkipIntro,
                                             modifier = firstSectionItemModifier
                                         )
                                         CinefinSwitchListItem(
                                             headline = "Auto-skip credits",
-                                            supporting = "Automatically skip end credits when detected",
+                                            supporting = "Automatically skip end credits when detected.",
                                             checked = uiState.introSkip.autoSkipCredits,
                                             onCheckedChange = viewModel::setAutoSkipCredits,
                                         )
