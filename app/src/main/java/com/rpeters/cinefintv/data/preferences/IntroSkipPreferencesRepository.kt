@@ -23,30 +23,40 @@ data class IntroSkipPreferences(
 
 @Singleton
 class IntroSkipPreferencesRepository @Inject constructor(
-    @PlaybackPreferencesDataStore private val dataStore: DataStore<Preferences>,
+    @param:PlaybackPreferencesDataStore private val dataStore: DataStore<Preferences>,
 ) {
-    private val autoSkipIntroKey = booleanPreferencesKey("auto_skip_intro")
-    private val autoSkipCreditsKey = booleanPreferencesKey("auto_skip_credits")
 
     val preferencesFlow: Flow<IntroSkipPreferences> = dataStore.data
         .catch { e ->
             if (e is IOException) {
-                SecureLogger.e("IntroSkipPreferencesRepository", "Error reading prefs", e)
+                SecureLogger.e(TAG, "Error reading prefs", e)
                 emit(emptyPreferences())
-            } else throw e
+            } else {
+                SecureLogger.e(TAG, "Unexpected error reading prefs", e)
+                throw e
+            }
         }
         .map { prefs ->
             IntroSkipPreferences(
-                autoSkipIntro = prefs[autoSkipIntroKey] ?: false,
-                autoSkipCredits = prefs[autoSkipCreditsKey] ?: false,
+                autoSkipIntro = prefs[PreferencesKeys.autoSkipIntroKey] ?: false,
+                autoSkipCredits = prefs[PreferencesKeys.autoSkipCreditsKey] ?: false,
             )
         }
 
     suspend fun setAutoSkipIntro(enabled: Boolean) {
-        dataStore.edit { it[autoSkipIntroKey] = enabled }
+        dataStore.edit { it[PreferencesKeys.autoSkipIntroKey] = enabled }
     }
 
     suspend fun setAutoSkipCredits(enabled: Boolean) {
-        dataStore.edit { it[autoSkipCreditsKey] = enabled }
+        dataStore.edit { it[PreferencesKeys.autoSkipCreditsKey] = enabled }
+    }
+
+    private companion object {
+        const val TAG = "IntroSkipPreferencesRepository"
+
+        object PreferencesKeys {
+            val autoSkipIntroKey = booleanPreferencesKey("auto_skip_intro")
+            val autoSkipCreditsKey = booleanPreferencesKey("auto_skip_credits")
+        }
     }
 }
