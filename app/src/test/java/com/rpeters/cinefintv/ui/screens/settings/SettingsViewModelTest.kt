@@ -1,5 +1,7 @@
 package com.rpeters.cinefintv.ui.screens.settings
 
+import com.rpeters.cinefintv.data.preferences.IntroSkipPreferences
+import com.rpeters.cinefintv.data.preferences.IntroSkipPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.LibraryActionsPreferences
 import com.rpeters.cinefintv.data.preferences.LibraryActionsPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.AudioLanguagePreference
@@ -43,19 +45,16 @@ class SettingsViewModelTest {
         val subtitleRepo = mockk<SubtitleAppearancePreferencesRepository>(relaxed = true)
         val libraryRepo = mockk<LibraryActionsPreferencesRepository>(relaxed = true)
         val userRepo = mockk<JellyfinUserRepository>(relaxed = true)
+        val introSkipRepo = mockk<IntroSkipPreferencesRepository>(relaxed = true) {
+            every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+        }
 
         every { themeRepo.themePreferencesFlow } returns flowOf(ThemePreferences.DEFAULT)
         every { playbackRepo.preferences } returns flowOf(PlaybackPreferences.DEFAULT)
         every { subtitleRepo.preferencesFlow } returns flowOf(SubtitleAppearancePreferences.DEFAULT)
         every { libraryRepo.preferences } returns flowOf(LibraryActionsPreferences.DEFAULT)
 
-        val viewModel = SettingsViewModel(
-            themeRepo,
-            playbackRepo,
-            subtitleRepo,
-            libraryRepo,
-            userRepo,
-        )
+        val viewModel = SettingsViewModel(themeRepo, playbackRepo, subtitleRepo, libraryRepo, userRepo, introSkipRepo)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -69,19 +68,16 @@ class SettingsViewModelTest {
         val subtitleRepo = mockk<SubtitleAppearancePreferencesRepository>(relaxed = true)
         val libraryRepo = mockk<LibraryActionsPreferencesRepository>(relaxed = true)
         val userRepo = mockk<JellyfinUserRepository>(relaxed = true)
+        val introSkipRepo = mockk<IntroSkipPreferencesRepository>(relaxed = true) {
+            every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+        }
 
         every { themeRepo.themePreferencesFlow } returns flowOf(ThemePreferences.DEFAULT)
         every { playbackRepo.preferences } returns flowOf(PlaybackPreferences.DEFAULT)
         every { subtitleRepo.preferencesFlow } returns flowOf(SubtitleAppearancePreferences.DEFAULT)
         every { libraryRepo.preferences } returns flowOf(LibraryActionsPreferences.DEFAULT)
 
-        val viewModel = SettingsViewModel(
-            themeRepo,
-            playbackRepo,
-            subtitleRepo,
-            libraryRepo,
-            userRepo,
-        )
+        val viewModel = SettingsViewModel(themeRepo, playbackRepo, subtitleRepo, libraryRepo, userRepo, introSkipRepo)
         advanceUntilIdle()
 
         viewModel.setVideoSeekIncrement(VideoSeekIncrement.FIVE_SECONDS)
@@ -98,19 +94,16 @@ class SettingsViewModelTest {
         val subtitleRepo = mockk<SubtitleAppearancePreferencesRepository>(relaxed = true)
         val libraryRepo = mockk<LibraryActionsPreferencesRepository>(relaxed = true)
         val userRepo = mockk<JellyfinUserRepository>(relaxed = true)
+        val introSkipRepo = mockk<IntroSkipPreferencesRepository>(relaxed = true) {
+            every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+        }
 
         every { themeRepo.themePreferencesFlow } returns flowOf(ThemePreferences.DEFAULT)
         every { playbackRepo.preferences } returns flowOf(PlaybackPreferences.DEFAULT)
         every { subtitleRepo.preferencesFlow } returns flowOf(SubtitleAppearancePreferences.DEFAULT)
         every { libraryRepo.preferences } returns flowOf(LibraryActionsPreferences.DEFAULT)
 
-        val viewModel = SettingsViewModel(
-            themeRepo,
-            playbackRepo,
-            subtitleRepo,
-            libraryRepo,
-            userRepo,
-        )
+        val viewModel = SettingsViewModel(themeRepo, playbackRepo, subtitleRepo, libraryRepo, userRepo, introSkipRepo)
         advanceUntilIdle()
 
         viewModel.setAudioLanguage(AudioLanguagePreference.SPANISH)
@@ -127,6 +120,9 @@ class SettingsViewModelTest {
         val subtitleRepo = mockk<SubtitleAppearancePreferencesRepository>(relaxed = true)
         val libraryRepo = mockk<LibraryActionsPreferencesRepository>(relaxed = true)
         val userRepo = mockk<JellyfinUserRepository>(relaxed = true)
+        val introSkipRepo = mockk<IntroSkipPreferencesRepository>(relaxed = true) {
+            every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+        }
 
         every { themeRepo.themePreferencesFlow } returns flowOf(ThemePreferences.DEFAULT)
         every { playbackRepo.preferences } returns flowOf(PlaybackPreferences.DEFAULT)
@@ -134,13 +130,7 @@ class SettingsViewModelTest {
         every { libraryRepo.preferences } returns flowOf(LibraryActionsPreferences.DEFAULT)
         coEvery { userRepo.logout() } just runs
 
-        val viewModel = SettingsViewModel(
-            themeRepo,
-            playbackRepo,
-            subtitleRepo,
-            libraryRepo,
-            userRepo,
-        )
+        val viewModel = SettingsViewModel(themeRepo, playbackRepo, subtitleRepo, libraryRepo, userRepo, introSkipRepo)
         advanceUntilIdle()
 
         viewModel.logout()
@@ -165,12 +155,15 @@ class SettingsViewModelTest {
         val libraryRepo = mockk<LibraryActionsPreferencesRepository>(relaxed = true)
         every { libraryRepo.preferences } returns flowOf(LibraryActionsPreferences.DEFAULT)
         val userRepo = mockk<JellyfinUserRepository>()
+        val introSkipRepo = mockk<IntroSkipPreferencesRepository>(relaxed = true) {
+            every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+        }
         val logoutGate = kotlinx.coroutines.CompletableDeferred<Unit>()
         coEvery { userRepo.logout() } coAnswers { logoutGate.await() }
 
         themeFlow.emit(ThemePreferences.DEFAULT)
 
-        val viewModel = SettingsViewModel(themeRepo, playbackRepo, subtitleRepo, libraryRepo, userRepo)
+        val viewModel = SettingsViewModel(themeRepo, playbackRepo, subtitleRepo, libraryRepo, userRepo, introSkipRepo)
         advanceUntilIdle()
         assertFalse(viewModel.uiState.value.isSigningOut)
 
@@ -190,5 +183,51 @@ class SettingsViewModelTest {
         logoutGate.complete(Unit)
         advanceUntilIdle()
         assertFalse(viewModel.uiState.value.isSigningOut)
+    }
+
+    @Test
+    fun setAutoSkipIntro_callsRepository() = runTest {
+        val themeRepo = mockk<ThemePreferencesRepository>(relaxed = true)
+        val playbackRepo = mockk<PlaybackPreferencesRepository>(relaxed = true)
+        val subtitleRepo = mockk<SubtitleAppearancePreferencesRepository>(relaxed = true)
+        val libraryRepo = mockk<LibraryActionsPreferencesRepository>(relaxed = true)
+        val userRepo = mockk<JellyfinUserRepository>(relaxed = true)
+        val introSkipRepo = mockk<IntroSkipPreferencesRepository>(relaxed = true) {
+            every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+        }
+        every { themeRepo.themePreferencesFlow } returns flowOf(ThemePreferences.DEFAULT)
+        every { playbackRepo.preferences } returns flowOf(PlaybackPreferences.DEFAULT)
+        every { subtitleRepo.preferencesFlow } returns flowOf(SubtitleAppearancePreferences.DEFAULT)
+        every { libraryRepo.preferences } returns flowOf(LibraryActionsPreferences.DEFAULT)
+        coEvery { introSkipRepo.setAutoSkipIntro(true) } returns Unit
+
+        val viewModel = SettingsViewModel(themeRepo, playbackRepo, subtitleRepo, libraryRepo, userRepo, introSkipRepo)
+        viewModel.setAutoSkipIntro(true)
+        advanceUntilIdle()
+
+        coVerify { introSkipRepo.setAutoSkipIntro(true) }
+    }
+
+    @Test
+    fun setAutoSkipCredits_callsRepository() = runTest {
+        val themeRepo = mockk<ThemePreferencesRepository>(relaxed = true)
+        val playbackRepo = mockk<PlaybackPreferencesRepository>(relaxed = true)
+        val subtitleRepo = mockk<SubtitleAppearancePreferencesRepository>(relaxed = true)
+        val libraryRepo = mockk<LibraryActionsPreferencesRepository>(relaxed = true)
+        val userRepo = mockk<JellyfinUserRepository>(relaxed = true)
+        val introSkipRepo = mockk<IntroSkipPreferencesRepository>(relaxed = true) {
+            every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+        }
+        every { themeRepo.themePreferencesFlow } returns flowOf(ThemePreferences.DEFAULT)
+        every { playbackRepo.preferences } returns flowOf(PlaybackPreferences.DEFAULT)
+        every { subtitleRepo.preferencesFlow } returns flowOf(SubtitleAppearancePreferences.DEFAULT)
+        every { libraryRepo.preferences } returns flowOf(LibraryActionsPreferences.DEFAULT)
+        coEvery { introSkipRepo.setAutoSkipCredits(true) } returns Unit
+
+        val viewModel = SettingsViewModel(themeRepo, playbackRepo, subtitleRepo, libraryRepo, userRepo, introSkipRepo)
+        viewModel.setAutoSkipCredits(true)
+        advanceUntilIdle()
+
+        coVerify { introSkipRepo.setAutoSkipCredits(true) }
     }
 }

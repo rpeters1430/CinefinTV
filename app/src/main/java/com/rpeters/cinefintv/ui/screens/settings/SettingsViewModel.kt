@@ -7,6 +7,8 @@ import com.rpeters.cinefintv.data.preferences.AudioChannelPreference
 import com.rpeters.cinefintv.data.preferences.AudioLanguagePreference
 import com.rpeters.cinefintv.data.preferences.SubtitleLanguagePreference
 import com.rpeters.cinefintv.data.preferences.ContrastLevel
+import com.rpeters.cinefintv.data.preferences.IntroSkipPreferences
+import com.rpeters.cinefintv.data.preferences.IntroSkipPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.LibraryActionsPreferences
 import com.rpeters.cinefintv.data.preferences.LibraryActionsPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferences
@@ -28,6 +30,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -41,6 +44,7 @@ data class SettingsUiState(
     val playback: PlaybackPreferences = PlaybackPreferences.DEFAULT,
     val subtitles: SubtitleAppearancePreferences = SubtitleAppearancePreferences.DEFAULT,
     val libraryActions: LibraryActionsPreferences = LibraryActionsPreferences.DEFAULT,
+    val introSkip: IntroSkipPreferences = IntroSkipPreferences.DEFAULT,
 )
 
 @HiltViewModel
@@ -50,6 +54,7 @@ class SettingsViewModel @Inject constructor(
     private val subtitleAppearancePreferencesRepository: SubtitleAppearancePreferencesRepository,
     private val libraryActionsPreferencesRepository: LibraryActionsPreferencesRepository,
     private val userRepository: JellyfinUserRepository,
+    private val introSkipPreferencesRepository: IntroSkipPreferencesRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -84,6 +89,11 @@ class SettingsViewModel @Inject constructor(
                         signOutError = current.signOutError,
                     )
                 }
+            }
+        }
+        viewModelScope.launch {
+            introSkipPreferencesRepository.preferencesFlow.collectLatest { prefs ->
+                _uiState.update { it.copy(introSkip = prefs) }
             }
         }
     }
@@ -181,6 +191,16 @@ class SettingsViewModel @Inject constructor(
     fun setLibraryManagementActions(enabled: Boolean) {
         updatePreference { libraryActionsPreferencesRepository.setEnableManagementActions(enabled) }
         _uiState.update { it.copy(libraryActions = it.libraryActions.copy(enableManagementActions = enabled)) }
+    }
+
+    fun setAutoSkipIntro(enabled: Boolean) {
+        viewModelScope.launch { introSkipPreferencesRepository.setAutoSkipIntro(enabled) }
+        _uiState.update { it.copy(introSkip = it.introSkip.copy(autoSkipIntro = enabled)) }
+    }
+
+    fun setAutoSkipCredits(enabled: Boolean) {
+        viewModelScope.launch { introSkipPreferencesRepository.setAutoSkipCredits(enabled) }
+        _uiState.update { it.copy(introSkip = it.introSkip.copy(autoSkipCredits = enabled)) }
     }
 
     fun logout() {

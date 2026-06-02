@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Contrast
+import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
@@ -112,6 +113,11 @@ private enum class SettingsCategory(
         label = "Account",
         description = "Session and sign-out controls",
         icon = Icons.Default.Tune,
+    ),
+    SKIP_INTRO(
+        label = "Skip Intro",
+        description = "Auto-skip behavior for intros and credits",
+        icon = Icons.Default.FastForward,
     ),
 }
 
@@ -536,6 +542,21 @@ fun SettingsScreen(
                                             supporting = uiState.signOutError ?: "Remove this device session and return to server sign-in.",
                                             trailingText = if (uiState.isSigningOut) "Signing out..." else "Sign out",
                                             onClick = viewModel::logout
+                                        )
+                                    }
+                                    SettingsCategory.SKIP_INTRO -> {
+                                        CinefinSwitchListItem(
+                                            headline = "Auto-skip intros",
+                                            supporting = "Automatically skip intro segments when detected",
+                                            checked = uiState.introSkip.autoSkipIntro,
+                                            onCheckedChange = viewModel::setAutoSkipIntro,
+                                            modifier = firstSectionItemModifier
+                                        )
+                                        CinefinSwitchListItem(
+                                            headline = "Auto-skip credits",
+                                            supporting = "Automatically skip end credits when detected",
+                                            checked = uiState.introSkip.autoSkipCredits,
+                                            onCheckedChange = viewModel::setAutoSkipCredits,
                                         )
                                     }
                                 }
