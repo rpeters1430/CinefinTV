@@ -24,9 +24,11 @@ import com.rpeters.cinefintv.data.playback.AdaptiveBitrateMonitor
 import com.rpeters.cinefintv.data.playback.EnhancedPlaybackManager
 import com.rpeters.cinefintv.data.playback.PlaybackResult
 import com.rpeters.cinefintv.data.playback.RecommendationSeverity
+import com.rpeters.cinefintv.data.preferences.IntroSkipPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.PlaybackPreferencesRepository
 import com.rpeters.cinefintv.data.preferences.ResumePlaybackMode
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferencesRepository
+import com.rpeters.cinefintv.data.repository.IntroSkipperRepository
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
 import com.rpeters.cinefintv.data.syncplay.SyncPlayCommand
@@ -74,6 +76,8 @@ class PlayerViewModel @Inject constructor(
     private val updateBus: com.rpeters.cinefintv.data.common.MediaUpdateBus,
     private val syncPlayRepository: SyncPlayRepository,
     private val certificatePinningManager: com.rpeters.cinefintv.data.security.CertificatePinningManager,
+    private val introSkipperRepository: IntroSkipperRepository,
+    private val introSkipPreferencesRepository: IntroSkipPreferencesRepository,
 ) : ViewModel() {
     private val playbackSessionId: String = UUID.randomUUID().toString()
     var itemId: String = ""
@@ -117,6 +121,14 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             subtitleAppearancePreferencesRepository.preferencesFlow.collectLatest { preferences ->
                 _uiState.value = _uiState.value.copy(subtitleAppearance = preferences)
+            }
+        }
+        viewModelScope.launch {
+            introSkipPreferencesRepository.preferencesFlow.collectLatest { prefs ->
+                _uiState.value = _uiState.value.copy(
+                    autoSkipIntro = prefs.autoSkipIntro,
+                    autoSkipCredits = prefs.autoSkipCredits,
+                )
             }
         }
         viewModelScope.launch {
@@ -243,6 +255,11 @@ class PlayerViewModel @Inject constructor(
                 name.contains("credit") || name.contains("outro") ->
                     creditsSkipRange = SkipRange(startMs = chapter.positionMs, endMs = nextStart)
             }
+        }
+        // Prefer intro-skipper plugin timestamps over chapter-based detection when available.
+        introSkipperRepository.getSegments(resolvedItemId)?.let { segments ->
+            introSkipRange = segments.intro ?: introSkipRange
+            creditsSkipRange = segments.credits ?: creditsSkipRange
         }
         val serverPlaybackPositionMs = item?.userData?.playbackPositionTicks
             ?.takeIf { it > 0L }

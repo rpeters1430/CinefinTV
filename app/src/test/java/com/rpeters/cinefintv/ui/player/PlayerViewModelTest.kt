@@ -61,6 +61,11 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 
+import com.rpeters.cinefintv.data.preferences.IntroSkipPreferences
+import com.rpeters.cinefintv.data.preferences.IntroSkipPreferencesRepository
+import com.rpeters.cinefintv.data.repository.IntroSkipperRepository
+import com.rpeters.cinefintv.ui.player.IntroSkipperSegments
+import com.rpeters.cinefintv.ui.player.SkipRange
 import com.rpeters.cinefintv.data.security.CertificatePinningManager
 import com.rpeters.cinefintv.data.security.PinningValidationException
 import com.rpeters.cinefintv.data.security.PinnedCertificateRecord
@@ -115,6 +120,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("", -1L) }
         runCurrent()
 
@@ -142,6 +151,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -169,6 +182,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -216,6 +233,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("ep-1", -1L) }
         runCurrent()
 
@@ -289,6 +310,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("series-1", -1L) }
         runCurrent()
 
@@ -336,6 +361,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("movie-1", -1L) }
         runCurrent()
 
@@ -367,6 +396,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -398,6 +431,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -429,6 +466,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -456,6 +497,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -494,6 +539,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         )
         viewModel.init("item-1", -1L)
         runCurrent()
@@ -536,6 +585,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -574,6 +627,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("item-1", -1L) }
         runCurrent()
 
@@ -644,6 +701,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("movie-1", -1L) }
         runCurrent()
 
@@ -708,6 +769,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("movie-301", -1L) }
         runCurrent()
 
@@ -809,6 +874,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("movie-401", -1L) }
         runCurrent()
 
@@ -851,6 +920,10 @@ class PlayerViewModelTest {
             okHttpClient = OkHttpClient(),
             updateBus = updateBus,
             syncPlayRepository = syncPlayRepository, certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
         ).apply { init("movie-501", -1L) } // -1L = no explicit start, falls back to server position
         runCurrent()
 
@@ -883,6 +956,76 @@ class PlayerViewModelTest {
                 startPositionMs = 0L,
             )
         }
+    }
+
+    @Test
+    fun load_prefersPluginIntroRange_overChapter() = runTest {
+        val fakeRepos = FakePlayerRepositories()
+        val introSkipperRepo: IntroSkipperRepository = mockk {
+            coEvery { getSegments("item-1") } returns IntroSkipperSegments(
+                intro = SkipRange(startMs = 5_000L, endMs = 40_000L),
+                credits = null,
+            )
+        }
+        val introSkipPrefsRepo: IntroSkipPreferencesRepository = mockk {
+            every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+        }
+        every { fakeRepos.stream.getStreamUrl("item-1") } returns "https://stream/item-1"
+        every { fakeRepos.stream.getLogoUrl(any()) } returns null
+        coEvery { fakeRepos.media.getItemDetails("item-1") } returns ApiResult.Error("not found")
+        coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "item-1") } returns 0L
+
+        val viewModel = PlayerViewModel(
+            repositories = fakeRepos.coordinator,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
+            playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
+            appContext = appContext,
+            okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
+            certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = introSkipperRepo,
+            introSkipPreferencesRepository = introSkipPrefsRepo,
+        ).apply { init("item-1", -1L) }
+        advanceUntilIdle()
+
+        assertEquals(5_000L, viewModel.uiState.value.introSkipRange?.startMs)
+        assertEquals(40_000L, viewModel.uiState.value.introSkipRange?.endMs)
+    }
+
+    @Test
+    fun load_whenPluginReturnsNull_keepsChapterRange() = runTest {
+        val fakeRepos = FakePlayerRepositories()
+        val introSkipperRepo: IntroSkipperRepository = mockk {
+            coEvery { getSegments("item-1") } returns null
+        }
+        val introSkipPrefsRepo: IntroSkipPreferencesRepository = mockk {
+            every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+        }
+        every { fakeRepos.stream.getStreamUrl("item-1") } returns "https://stream/item-1"
+        every { fakeRepos.stream.getLogoUrl(any()) } returns null
+        coEvery { fakeRepos.media.getItemDetails("item-1") } returns ApiResult.Error("not found")
+        coEvery { PlaybackPositionStore.getPlaybackPosition(appContext, "item-1") } returns 0L
+
+        val viewModel = PlayerViewModel(
+            repositories = fakeRepos.coordinator,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
+            playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
+            appContext = appContext,
+            okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
+            certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = introSkipperRepo,
+            introSkipPreferencesRepository = introSkipPrefsRepo,
+        ).apply { init("item-1", -1L) }
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.introSkipRange)
     }
 
     private fun createPlaybackPreferencesRepository(): PlaybackPreferencesRepository {

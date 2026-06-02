@@ -90,6 +90,8 @@ data class PlayerUiState(
     val chapters: List<ChapterMarker> = emptyList(),
     val introSkipRange: SkipRange? = null,
     val creditsSkipRange: SkipRange? = null,
+    val autoSkipIntro: Boolean = false,
+    val autoSkipCredits: Boolean = false,
     val trickplayManifest: TrickplayManifest? = null,
     val trickplayBaseUrl: String? = null,
     val contentRow: PlayerContentRow? = null,
