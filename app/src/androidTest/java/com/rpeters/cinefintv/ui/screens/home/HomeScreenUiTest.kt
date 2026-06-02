@@ -786,6 +786,24 @@ private fun HomeTestHost(
         val topNavFocusRequester = remember { FocusRequester() }
         chromeFocusController.topNavFocusRequester = if (showTopNav) topNavFocusRequester else null
 
+        val focusCoordinator = LocalFocusNavigationCoordinator.current
+        LaunchedEffect(
+            chromeFocusController.shouldRestoreFocusToContent,
+            chromeFocusController.primaryContentFocusRequester,
+        ) {
+            if (chromeFocusController.shouldRestoreFocusToContent) {
+                val target = chromeFocusController.primaryContentFocusRequester
+                if (target != null) {
+                    chromeFocusController.shouldRestoreFocusToContent = false
+                    if (focusCoordinator != null) {
+                        focusCoordinator.requestFocus(target, delayMs = 120L)
+                    } else {
+                        target.requestFocus()
+                    }
+                }
+            }
+        }
+
         CompositionLocalProvider(
             LocalAppChromeFocusController provides chromeFocusController,
             LocalCinefinThemeController provides object : ThemeColorController {

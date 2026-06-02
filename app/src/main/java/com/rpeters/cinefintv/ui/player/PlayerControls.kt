@@ -1108,8 +1108,9 @@ private fun SeekBarControl(
     LaunchedEffect(seekInteractionVersion) {
         if (seekInteractionVersion == 0) return@LaunchedEffect
         val versionAtLaunch = seekInteractionVersion
-        delay(450L)
+        delay(600L) // Wait 600ms for user to finish pressing/holding D-Pad keys
         if (seekInteractionVersion == versionAtLaunch) {
+            onSeekCommitted(seekPosition)
             finishSeekInteraction()
         }
     }
@@ -1145,7 +1146,10 @@ private fun SeekBarControl(
             .onFocusChanged {
                 isFocused = it.isFocused || it.hasFocus
                 if (!isFocused) {
-                    finishSeekInteraction()
+                    if (isSeeking) {
+                        onSeekCommitted(seekPosition)
+                        finishSeekInteraction()
+                    }
                     seekPosition = positionProvider()
                 }
             }
@@ -1159,7 +1163,6 @@ private fun SeekBarControl(
                         seekPosition = nextPosition
                         isSeeking = true
                         seekInteractionVersion += 1
-                        onSeekCommitted(nextPosition)
                         onInteract()
                         true
                     }
@@ -1170,7 +1173,6 @@ private fun SeekBarControl(
                         seekPosition = nextPosition
                         isSeeking = true
                         seekInteractionVersion += 1
-                        onSeekCommitted(nextPosition)
                         onInteract()
                         true
                     }
@@ -1178,8 +1180,13 @@ private fun SeekBarControl(
                         (keyEvent.key == Key.DirectionCenter ||
                             keyEvent.key == Key.Enter ||
                             keyEvent.key == Key.Spacebar) -> {
-                        finishSeekInteraction()
-                        true
+                        if (isSeeking) {
+                            onSeekCommitted(seekPosition)
+                            finishSeekInteraction()
+                            true
+                        } else {
+                            false
+                        }
                     }
                     keyEvent.type == KeyEventType.KeyUp &&
                         (keyEvent.key == Key.DirectionLeft || keyEvent.key == Key.DirectionRight) -> true

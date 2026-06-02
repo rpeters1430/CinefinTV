@@ -330,19 +330,11 @@ private fun HomeLoadedContent(
     }
     val destinationFocus = rememberTopLevelDestinationFocus(preferredFocusRequester)
 
-    val shouldRestoreFromChromeSignal = chromeFocusController?.shouldRestoreFocusToContent == true
-
-    LaunchedEffect(shouldRestoreFocusOnResume, shouldRestoreFromChromeSignal) {
-        when {
-            shouldRestoreFocusOnResume -> {
-                shouldRestoreFocus = true
-                chromeFocusController?.shouldRestoreFocusToContent = true
-                onConsumedRestore()
-            }
-            shouldRestoreFromChromeSignal -> {
-                shouldRestoreFocus = true
-                chromeFocusController?.shouldRestoreFocusToContent = false
-            }
+    LaunchedEffect(shouldRestoreFocusOnResume) {
+        if (shouldRestoreFocusOnResume) {
+            shouldRestoreFocus = true
+            chromeFocusController?.shouldRestoreFocusToContent = true
+            onConsumedRestore()
         }
     }
 
