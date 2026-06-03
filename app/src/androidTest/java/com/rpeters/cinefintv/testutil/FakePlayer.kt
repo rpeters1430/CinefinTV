@@ -24,7 +24,10 @@ import androidx.media3.common.util.Size
  * A manual fake for [Player] to avoid using MockK in instrumented tests.
  */
 @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
-class FakePlayer : Player {
+class FakePlayer(
+    var currentPositionMs: Long = 0L,
+    var durationMs: Long = 0L,
+) : Player {
     var lastSeekPosition: Long = -1L
     var playCalled: Boolean = false
     var pauseCalled: Boolean = false
@@ -103,8 +106,8 @@ class FakePlayer : Player {
     override fun getCurrentMediaItem(): MediaItem? = null
     override fun getMediaItemCount(): Int = 0
     override fun getMediaItemAt(index: Int): MediaItem = MediaItem.EMPTY
-    override fun getDuration(): Long = 0L
-    override fun getCurrentPosition(): Long = 0L
+    override fun getDuration(): Long = durationMs
+    override fun getCurrentPosition(): Long = currentPositionMs
     override fun getBufferedPosition(): Long = 0L
     override fun getBufferedPercentage(): Int = 0
     override fun getTotalBufferedDuration(): Long = 0L

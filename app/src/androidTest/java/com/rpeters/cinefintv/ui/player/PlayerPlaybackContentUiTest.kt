@@ -81,7 +81,7 @@ class PlayerPlaybackContentUiTest {
 
     @Test
     fun skipIntroAction_clickSeeksToSkipTarget() {
-        val player = FakePlayer()
+        val player = FakePlayer(currentPositionMs = 10_000L, durationMs = 90_000L)
 
         composeRule.setContent {
             PlayerPlaybackTestHost {
