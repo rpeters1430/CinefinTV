@@ -125,7 +125,7 @@ class JellyfinUserRepository @Inject constructor(
                 playSessionId = sessionId,
             )
             client.playStateApi.reportPlaybackStart(info)
-            Unit
+            return@withServerClient Unit
         }
 
     suspend fun reportPlaybackProgress(
@@ -154,7 +154,7 @@ class JellyfinUserRepository @Inject constructor(
                 playSessionId = sessionId,
             )
             client.playStateApi.reportPlaybackProgress(info)
-            Unit
+            return@withServerClient Unit
         }
 
     suspend fun reportPlaybackStopped(
@@ -175,7 +175,7 @@ class JellyfinUserRepository @Inject constructor(
                 failed = failed,
             )
             client.playStateApi.reportPlaybackStopped(info)
-            Unit
+            return@withServerClient Unit
         }
 
     suspend fun getFavorites(): ApiResult<List<BaseItemDto>> =
