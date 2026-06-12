@@ -1,6 +1,6 @@
 package com.rpeters.cinefintv.data.repository.common
 
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.BuildConfig
 import kotlinx.coroutines.CancellationException
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -57,7 +57,7 @@ object ApiParameterValidator {
             )
 
             if (BuildConfig.DEBUG && finalParams != null) {
-                Log.d(
+                SecureLogger.d(
                     TAG,
                     "Validated params: parentId=${finalParams.parentId}, " +
                         "itemTypes=${finalParams.itemTypes}, collectionType=${finalParams.collectionType}, " +
@@ -96,11 +96,11 @@ object ApiParameterValidator {
     private fun validateStartIndex(startIndex: Int): Int {
         return when {
             startIndex < MIN_START_INDEX -> {
-                Log.w(TAG, "startIndex $startIndex too small, using $MIN_START_INDEX")
+                SecureLogger.w(TAG, "startIndex $startIndex too small, using $MIN_START_INDEX")
                 MIN_START_INDEX
             }
             startIndex > MAX_START_INDEX -> {
-                Log.w(TAG, "startIndex $startIndex too large, using $MAX_START_INDEX")
+                SecureLogger.w(TAG, "startIndex $startIndex too large, using $MAX_START_INDEX")
                 MAX_START_INDEX
             }
             else -> startIndex
@@ -113,11 +113,11 @@ object ApiParameterValidator {
     private fun validateLimit(limit: Int): Int {
         return when {
             limit < MIN_LIMIT -> {
-                Log.w(TAG, "limit $limit too small, using $MIN_LIMIT")
+                SecureLogger.w(TAG, "limit $limit too small, using $MIN_LIMIT")
                 MIN_LIMIT
             }
             limit > MAX_LIMIT -> {
-                Log.w(TAG, "limit $limit too large, using $MAX_LIMIT")
+                SecureLogger.w(TAG, "limit $limit too large, using $MAX_LIMIT")
                 MAX_LIMIT
             }
             else -> limit
@@ -140,7 +140,7 @@ object ApiParameterValidator {
         val filteredTypes = requestedTypes.filter { type ->
             val isValid = type in validItemTypes
             if (!isValid && BuildConfig.DEBUG) {
-                Log.w(TAG, "Unknown item type: $type")
+                SecureLogger.w(TAG, "Unknown item type: $type")
             }
             isValid
         }
@@ -148,7 +148,7 @@ object ApiParameterValidator {
         return if (filteredTypes.isNotEmpty()) {
             filteredTypes.joinToString(",")
         } else {
-            Log.w(TAG, "No valid item types found in: $itemTypes")
+            SecureLogger.w(TAG, "No valid item types found in: $itemTypes")
             null
         }
     }
@@ -168,7 +168,7 @@ object ApiParameterValidator {
         return if (normalizedType in validCollectionTypes) {
             normalizedType
         } else {
-            Log.w(TAG, "Unknown collection type: $collectionType")
+            SecureLogger.w(TAG, "Unknown collection type: $collectionType")
             null
         }
     }
@@ -187,7 +187,7 @@ object ApiParameterValidator {
         // Rule 1: If no parentId and no itemTypes, we need at least collection type or default types
         if (parentId == null && itemTypes == null && collectionType == null) {
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "No specific parameters provided, using default mixed content strategy")
+                SecureLogger.d(TAG, "No specific parameters provided, using default mixed content strategy")
             }
             return ValidatedApiLibraryParams(
                 parentId = null,
@@ -206,7 +206,7 @@ object ApiParameterValidator {
                     itemTypes == null -> "Movie"
                     itemTypes.contains("Movie") -> "Movie"
                     else -> {
-                        Log.w(TAG, "Incompatible item types '$itemTypes' for movies collection, using Movie")
+                        SecureLogger.w(TAG, "Incompatible item types '$itemTypes' for movies collection, using Movie")
                         "Movie"
                     }
                 }
@@ -217,7 +217,7 @@ object ApiParameterValidator {
                     itemTypes == null -> "Series"
                     itemTypes.contains("Series") || itemTypes.contains("Episode") -> itemTypes
                     else -> {
-                        Log.w(TAG, "Incompatible item types '$itemTypes' for tvshows collection, using Series")
+                        SecureLogger.w(TAG, "Incompatible item types '$itemTypes' for tvshows collection, using Series")
                         "Series"
                     }
                 }
@@ -228,7 +228,7 @@ object ApiParameterValidator {
                     itemTypes == null -> "MusicAlbum,MusicArtist,Audio"
                     itemTypes.contains("Audio") || itemTypes.contains("MusicAlbum") || itemTypes.contains("MusicArtist") -> itemTypes
                     else -> {
-                        Log.w(TAG, "Incompatible item types '$itemTypes' for music collection, using default music types")
+                        SecureLogger.w(TAG, "Incompatible item types '$itemTypes' for music collection, using default music types")
                         "MusicAlbum,MusicArtist,Audio"
                     }
                 }
@@ -239,7 +239,7 @@ object ApiParameterValidator {
                     itemTypes == null -> null // Let server decide item types to prevent HTTP 400 errors
                     itemTypes.contains("Video") -> itemTypes
                     else -> {
-                        Log.w(TAG, "Incompatible item types '$itemTypes' for homevideos collection, letting server decide")
+                        SecureLogger.w(TAG, "Incompatible item types '$itemTypes' for homevideos collection, letting server decide")
                         null // Let server decide instead of forcing Video type
                     }
                 }
@@ -249,7 +249,7 @@ object ApiParameterValidator {
                     itemTypes == null -> "Photo"
                     itemTypes.contains("Photo") -> itemTypes
                     else -> {
-                        Log.w(TAG, "Incompatible item types '$itemTypes' for photos collection, using Photo")
+                        SecureLogger.w(TAG, "Incompatible item types '$itemTypes' for photos collection, using Photo")
                         "Photo"
                     }
                 }
@@ -259,7 +259,7 @@ object ApiParameterValidator {
                     itemTypes == null -> "Book,AudioBook"
                     itemTypes.contains("Book") || itemTypes.contains("AudioBook") -> itemTypes
                     else -> {
-                        Log.w(TAG, "Incompatible item types '$itemTypes' for books collection, using Book,AudioBook")
+                        SecureLogger.w(TAG, "Incompatible item types '$itemTypes' for books collection, using Book,AudioBook")
                         "Book,AudioBook"
                     }
                 }
@@ -357,7 +357,7 @@ object ApiParameterValidator {
         // Validate query
         val validQuery = query?.trim()?.takeIf { it.isNotBlank() && it.length >= 2 }
         if (validQuery == null) {
-            Log.w(TAG, "Search query is too short or empty")
+            SecureLogger.w(TAG, "Search query is too short or empty")
             return null
         }
 

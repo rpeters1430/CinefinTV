@@ -73,6 +73,7 @@ import coil3.request.crossfade
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.components.shouldOpenCardMenu
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import com.rpeters.cinefintv.ui.navigation.safeRequestFocus
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -106,12 +107,8 @@ suspend fun focusDetailScreenAtTop(
             layoutInfo.visibleItemsInfo.any { it.index == 0 }
     }.first { it }
 
-    // Retry focus request over a few frames to handle layout settling
-    repeat(4) { attempt ->
-        withFrameNanos { }
-        if (runCatching { initialFocusRequester.requestFocus() }.isSuccess) return@focusDetailScreenAtTop
-        delay(if (attempt == 0) 64L else 32L)
-    }
+    // Retry focus request over a few frames using centralized helper
+    initialFocusRequester.safeRequestFocus(retries = 3)
 }
 
 suspend fun LazyListState.scrollToItemAndAwaitLayout(index: Int) {
@@ -860,7 +857,7 @@ fun EpisodeListRow(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(end = 4.dp, bottom = 4.dp)
-                            .background(Color(0xBF000000), RoundedCornerShape(999.dp))
+                            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.75f), RoundedCornerShape(999.dp))
                             .padding(horizontal = 7.dp, vertical = 2.dp),
                     ) {
                         Text(

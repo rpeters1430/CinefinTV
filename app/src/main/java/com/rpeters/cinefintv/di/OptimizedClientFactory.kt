@@ -1,7 +1,7 @@
 package com.rpeters.cinefintv.di
 
 import android.content.Context
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.data.repository.JellyfinAuthRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -69,7 +69,7 @@ class OptimizedClientFactory @Inject constructor(
     private fun createLoggingInterceptor(): Interceptor {
         return HttpLoggingInterceptor { message ->
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "HTTP: $message")
+                SecureLogger.d(TAG, "HTTP: $message")
             }
         }.apply {
             level = if (BuildConfig.DEBUG) {
@@ -85,7 +85,7 @@ class OptimizedClientFactory @Inject constructor(
      */
     private fun logDebug(message: String) {
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, message)
+            SecureLogger.d(TAG, message)
         }
     }
 

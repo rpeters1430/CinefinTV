@@ -47,7 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -130,7 +130,7 @@ fun AudioPlayerScreen(
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(text = "Playback Error", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.error)
                 Text(
-                    text = uiState.errorMessage!!,
+                    text = uiState.errorMessage ?: "",
                     style = MaterialTheme.typography.bodyLarge,
                     color = expressiveColors.playerContentPrimary
                 )

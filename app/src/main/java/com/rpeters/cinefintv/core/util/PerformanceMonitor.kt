@@ -473,7 +473,7 @@ fun PerformanceTracker(
     performanceMonitor: PerformanceMonitor,
     content: @Composable () -> Unit,
 ) {
-    var startTime by remember { mutableStateOf(0L) }
+    var startTime by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(Unit) {
         startTime = System.currentTimeMillis()

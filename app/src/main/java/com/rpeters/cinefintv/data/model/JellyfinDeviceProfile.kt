@@ -1,6 +1,6 @@
 package com.rpeters.cinefintv.data.model
 
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.data.DirectPlayCapabilities
 import org.jellyfin.sdk.model.api.CodecProfile
 import org.jellyfin.sdk.model.api.CodecType
@@ -33,7 +33,7 @@ object JellyfinDeviceProfile {
         val maxVideoBitrate = capabilities.maxBitrate
         val maxVideoFramerate = DEFAULT_MAX_VIDEO_FRAMERATE
 
-        Log.d("JellyfinDeviceProfile", "Creating dynamic device profile for ${capabilities.supportedVideoCodecs.size} video and ${capabilities.supportedAudioCodecs.size} audio codecs")
+        SecureLogger.d("JellyfinDeviceProfile", "Creating dynamic device profile for ${capabilities.supportedVideoCodecs.size} video and ${capabilities.supportedAudioCodecs.size} audio codecs")
 
         // 1. Map detected audio codecs to a comma-separated string for DirectPlayProfiles
         // We include common software-decodable codecs too as they are "safe" for this client
@@ -178,7 +178,7 @@ object JellyfinDeviceProfile {
     }
 
     fun createDeviceProfileWithResolution(maxWidth: Int = 1920, maxHeight: Int = 1080): DeviceProfile {
-        Log.d("JellyfinDeviceProfile", "Creating static device profile with maxWidth=$maxWidth, maxHeight=$maxHeight")
+        SecureLogger.d("JellyfinDeviceProfile", "Creating static device profile with maxWidth=$maxWidth, maxHeight=$maxHeight")
 
         val permissiveAudioCodecs = "aac,mp3,ac3,eac3,flac,vorbis,opus,pcm,alac"
         val subtitleProfiles = listOf(

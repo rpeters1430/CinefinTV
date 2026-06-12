@@ -3,7 +3,7 @@ package com.rpeters.cinefintv.utils
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +33,7 @@ object MainThreadMonitor {
         if (!BuildConfig.DEBUG || isMonitoring) return
 
         isMonitoring = true
-        Log.d(TAG, "Starting main thread monitoring")
+        SecureLogger.d(TAG, "Starting main thread monitoring")
 
         // Start monitoring coroutine
         CoroutineScope(Dispatchers.Default).launch {
@@ -47,10 +47,10 @@ object MainThreadMonitor {
 
                     when {
                         responseTime >= ERROR_THRESHOLD_MS -> {
-                            Log.e(TAG, "Main thread blocked for ${responseTime}ms - severe frame drops likely")
+                            SecureLogger.e(TAG, "Main thread blocked for ${responseTime}ms - severe frame drops likely")
                         }
                         responseTime >= WARNING_THRESHOLD_MS -> {
-                            Log.w(TAG, "Main thread delayed by ${responseTime}ms - frame drops possible")
+                            SecureLogger.w(TAG, "Main thread delayed by ${responseTime}ms - frame drops possible")
                         }
                     }
                 }
@@ -67,7 +67,7 @@ object MainThreadMonitor {
         if (!BuildConfig.DEBUG) return
 
         isMonitoring = false
-        Log.d(TAG, "Stopped main thread monitoring")
+        SecureLogger.d(TAG, "Stopped main thread monitoring")
     }
 
     /**
@@ -84,13 +84,13 @@ object MainThreadMonitor {
 
         when {
             duration >= ERROR_THRESHOLD_MS -> {
-                Log.e(TAG, "CRITICAL: '$operationName' blocked main thread for ${duration}ms")
+                SecureLogger.e(TAG, "CRITICAL: '$operationName' blocked main thread for ${duration}ms")
             }
             duration >= WARNING_THRESHOLD_MS -> {
-                Log.w(TAG, "WARNING: '$operationName' took ${duration}ms on main thread")
+                SecureLogger.w(TAG, "WARNING: '$operationName' took ${duration}ms on main thread")
             }
             duration >= MONITORING_INTERVAL_MS -> {
-                Log.d(TAG, "'$operationName' took ${duration}ms on main thread")
+                SecureLogger.d(TAG, "'$operationName' took ${duration}ms on main thread")
             }
         }
 
@@ -103,7 +103,7 @@ object MainThreadMonitor {
     fun logPotentiallyExpensiveOperation(operation: String, details: String = "") {
         if (!BuildConfig.DEBUG) return
 
-        Log.d(TAG, "Potentially expensive operation: $operation ${if (details.isNotEmpty()) "- $details" else ""}")
+        SecureLogger.d(TAG, "Potentially expensive operation: $operation ${if (details.isNotEmpty()) "- $details" else ""}")
     }
 
     /**
@@ -120,7 +120,7 @@ object MainThreadMonitor {
         if (!BuildConfig.DEBUG) return
 
         if (isMainThread()) {
-            Log.w(TAG, "WARNING: '$operationName' is running on main thread - consider using background thread")
+            SecureLogger.w(TAG, "WARNING: '$operationName' is running on main thread - consider using background thread")
         }
     }
 }

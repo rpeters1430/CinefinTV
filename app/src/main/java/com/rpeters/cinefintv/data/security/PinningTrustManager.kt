@@ -1,6 +1,6 @@
 package com.rpeters.cinefintv.data.security
 
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
@@ -61,7 +61,7 @@ class PinningTrustManager(
     override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {
         // Fallback method - no hostname available
         if (BuildConfig.DEBUG) {
-            Log.w(TAG, "checkServerTrusted called without hostname - using basic validation")
+            SecureLogger.w(TAG, "checkServerTrusted called without hostname - using basic validation")
         }
         systemTrustManager.checkServerTrusted(chain, authType)
     }
@@ -96,14 +96,14 @@ class PinningTrustManager(
 
         if (hostname == null) {
             if (BuildConfig.DEBUG) {
-                Log.w(TAG, "Hostname not available - using basic validation")
+                SecureLogger.w(TAG, "Hostname not available - using basic validation")
             }
             systemTrustManager.checkServerTrusted(chain, authType)
             return
         }
 
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Validating certificate for hostname: $hostname")
+            SecureLogger.d(TAG, "Validating certificate for hostname: $hostname")
         }
 
         // Step 1: Perform standard certificate validation via system TrustManager
@@ -130,7 +130,7 @@ class PinningTrustManager(
         // We ensure this is safe by switching to Dispatchers.IO if accidentally called on main.
         val isOnMainThread = android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
         if (isOnMainThread) {
-            Log.w(TAG, "checkServerTrusted called on main thread! Switching to IO dispatcher to avoid deadlock.")
+            SecureLogger.w(TAG, "checkServerTrusted called on main thread! Switching to IO dispatcher to avoid deadlock.")
         }
 
         val validationBlock: suspend kotlinx.coroutines.CoroutineScope.() -> Unit = {
@@ -165,7 +165,7 @@ class PinningTrustManager(
         chain: List<X509Certificate>,
     ) {
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "First connection to $hostname - storing certificate pin")
+            SecureLogger.d(TAG, "First connection to $hostname - storing certificate pin")
         }
 
         // Compute the pin for this certificate
@@ -182,7 +182,7 @@ class PinningTrustManager(
             certPinningManager.storePin(hostname, pin, backupPins)
 
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Trusted and stored pin for $hostname")
+                SecureLogger.d(TAG, "Trusted and stored pin for $hostname")
             }
         } else {
             // User rejected the certificate
@@ -219,7 +219,7 @@ class PinningTrustManager(
                 return
             }
             val message = "Certificate pin mismatch for $hostname (Possible MITM attack detected!)"
-            Log.e(TAG, "$message - Expected: ${storedPin.primaryPin}, Got: ${chainPins.joinToString()}")
+            SecureLogger.e(TAG, "$message - Expected: ${storedPin.primaryPin}, Got: ${chainPins.joinToString()}")
             throw PinningValidationException.PinMismatch(
                 hostname = hostname,
                 pinRecord = storedPin,
@@ -234,7 +234,7 @@ class PinningTrustManager(
                 return
             }
             val message = "Certificate pin expired for $hostname"
-            Log.e(TAG, "$message - First seen: ${storedPin.firstSeenEpochMillis}")
+            SecureLogger.e(TAG, "$message - First seen: ${storedPin.firstSeenEpochMillis}")
             throw PinningValidationException.PinExpired(
                 hostname = hostname,
                 pinRecord = storedPin,
@@ -251,7 +251,7 @@ class PinningTrustManager(
         certPinningManager.clearTemporaryTrust(hostname)
 
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Certificate pin validated successfully for $hostname")
+            SecureLogger.d(TAG, "Certificate pin validated successfully for $hostname")
         }
     }
 

@@ -1,6 +1,6 @@
 package com.rpeters.cinefintv.data.repository
 
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.core.ErrorHandler
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.data.session.JellyfinSessionManager

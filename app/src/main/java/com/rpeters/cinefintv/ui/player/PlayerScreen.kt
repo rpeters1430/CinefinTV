@@ -58,7 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -81,8 +81,10 @@ import com.rpeters.cinefintv.data.preferences.SubtitleTextColor
 import com.rpeters.cinefintv.ui.player.PlayerConstants.CONTROLS_HIDE_DELAY_MS
 import com.rpeters.cinefintv.ui.player.PlayerConstants.EXIT_TRANSITION_DURATION_MS
 import com.rpeters.cinefintv.ui.player.PlayerConstants.NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS
+import com.rpeters.cinefintv.ui.player.PlayerConstants.NEXT_EPISODE_POLL_INTERVAL_MS
 import com.rpeters.cinefintv.ui.player.PlayerConstants.PROGRESS_UPDATE_INTERVAL_ACTIVE_MS
 import com.rpeters.cinefintv.ui.player.PlayerConstants.PROGRESS_UPDATE_INTERVAL_IDLE_MS
+import com.rpeters.cinefintv.ui.player.PlayerConstants.SKIP_RANGE_POLL_INTERVAL_MS
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -784,7 +786,7 @@ private fun NextEpisodeOverlay(
             showNextUp = show
             remainingMs = rem
 
-            delay(1000L)
+            delay(NEXT_EPISODE_POLL_INTERVAL_MS)
         }
     }
 
@@ -833,7 +835,7 @@ private fun PlayerTopBadges(
             }
         }
         if (isHdr) {
-            BadgeSurface(color = Color(0xFFFFD700).copy(alpha = 0.9f)) {
+            BadgeSurface(color = expressiveColors.badgeHDR.copy(alpha = 0.9f)) {
                 Text(
                     text = "HDR",
                     style = MaterialTheme.typography.labelSmall,
@@ -910,7 +912,7 @@ private fun PlayerSkipIntroAction(
 
             showSkip = inRange
             skipTargetMs = targetMs
-            delay(500L)
+            delay(SKIP_RANGE_POLL_INTERVAL_MS)
         }
     }
 
@@ -970,7 +972,7 @@ private fun PlayerSkipCreditsAction(
 
             showSkip = inRange
             skipTargetMs = targetMs
-            delay(500L)
+            delay(SKIP_RANGE_POLL_INTERVAL_MS)
         }
     }
 

@@ -87,22 +87,29 @@ class FocusNavigationCoordinator(private val scope: CoroutineScope) {
         focusJob?.cancel()
         focusJob = scope.launch {
             if (delayMs > 0) delay(delayMs)
-            repeat(retries + 1) { attempt ->
-                // Wait for a frame to ensure the UI has updated
-                withFrameNanos { }
-                try {
-                    focusRequester.requestFocus()
-                    return@launch
-                } catch (e: Exception) {
-                    // Slight delay before retry if it fails
-                    delay(if (attempt == 0) 64L else 32L)
-                }
-            }
+            focusRequester.safeRequestFocus(retries)
         }
     }
 
     private fun LazyListState.isIndexVisible(index: Int): Boolean =
         layoutInfo.visibleItemsInfo.any { it.index == index }
+}
+
+/**
+ * Centralized helper to safely request focus with retries and delay back-off.
+ */
+suspend fun FocusRequester.safeRequestFocus(retries: Int = 3) {
+    repeat(retries + 1) { attempt ->
+        // Wait for a frame to ensure the UI has updated
+        withFrameNanos { }
+        try {
+            requestFocus()
+            return
+        } catch (e: Exception) {
+            // Slight delay before retry if it fails
+            delay(if (attempt == 0) 64L else 32L)
+        }
+    }
 }
 
 /**

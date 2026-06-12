@@ -34,6 +34,8 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -57,7 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -95,6 +97,10 @@ import com.rpeters.cinefintv.update.UpdateInstallResult
 import com.rpeters.cinefintv.update.UpdateManager
 import com.rpeters.cinefintv.update.UpdateStatus
 import com.rpeters.cinefintv.update.shouldCheckForUpdate
+import com.rpeters.cinefintv.ui.navigation.Player
+import com.rpeters.cinefintv.ui.screens.screensaver.ScreensaverViewModel
+import com.rpeters.cinefintv.ui.screens.screensaver.ScreensaverOverlay
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -113,7 +119,8 @@ fun CinefinTvApp(
     initiallyAuthenticated: Boolean = false,
     isAuthenticated: Boolean = false,
     updateManager: UpdateManager? = null,
-    themeViewModel: ThemeViewModel = hiltViewModel()
+    themeViewModel: ThemeViewModel = hiltViewModel(),
+    screensaverViewModel: ScreensaverViewModel = hiltViewModel(),
 ) {
     val themePrefs by themeViewModel.themePreferences.collectAsState()
     val motionSpec by themeViewModel.motionSpec.collectAsState()
@@ -138,6 +145,14 @@ fun CinefinTvApp(
                 )
             }
             val currentDestination = backStack.lastOrNull() as? NavDestination
+            val isVideoPlaying = currentDestination is Player
+
+            LaunchedEffect(isAuthenticated, isVideoPlaying) {
+                screensaverViewModel.setEligibility(
+                    isAuthenticated = isAuthenticated,
+                    isVideoPlaying = isVideoPlaying
+                )
+            }
             
             val expressiveColors = LocalCinefinExpressiveColors.current
             val spacing = LocalCinefinSpacing.current
@@ -146,9 +161,9 @@ fun CinefinTvApp(
 
             var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
             var isDownloading by remember { mutableStateOf(false) }
-            var downloadProgress by remember { mutableStateOf(0f) }
+            var downloadProgress by remember { mutableFloatStateOf(0f) }
             var updateError by remember { mutableStateOf<String?>(null) }
-            var lastUpdateCheckAtMs by remember { mutableStateOf(0L) }
+            var lastUpdateCheckAtMs by remember { mutableLongStateOf(0L) }
             var isCheckingForUpdate by remember { mutableStateOf(false) }
 
             fun launchUpdateCheck(force: Boolean = false) {
@@ -255,6 +270,10 @@ fun CinefinTvApp(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .onPreviewKeyEvent {
+                        screensaverViewModel.onUserActivity()
+                        false
+                    }
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
@@ -273,6 +292,8 @@ fun CinefinTvApp(
                         backStack = backStack,
                     )
                 }
+
+                ScreensaverOverlay(viewModel = screensaverViewModel)
             }
         }
     }

@@ -3,7 +3,6 @@ package com.rpeters.cinefintv.data.repository
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.util.Log
 import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.data.repository.common.BaseJellyfinRepository
 import com.rpeters.cinefintv.data.session.JellyfinSessionManager
@@ -127,7 +126,7 @@ class JellyfinStreamRepository @Inject constructor(
             "${server.url}/Videos/$itemId/stream?${params.joinToString("&")}"
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w("JellyfinStreamRepository", "getTranscodedStreamUrl failed: ${e.message}")
+            SecureLogger.w("JellyfinStreamRepository", "getTranscodedStreamUrl failed: ${e.message}")
             null
         }
     }
@@ -195,7 +194,7 @@ class JellyfinStreamRepository @Inject constructor(
             "${server.url}/Videos/$itemId/master.m3u8?${params.joinToString("&")}"
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w("JellyfinStreamRepository", "getHlsTranscodeStreamUrl failed: ${e.message}")
+            SecureLogger.w("JellyfinStreamRepository", "getHlsTranscodeStreamUrl failed: ${e.message}")
             null
         }
     }

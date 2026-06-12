@@ -1030,6 +1030,7 @@ class PlayerViewModelTest {
 
     private fun createPlaybackPreferencesRepository(): PlaybackPreferencesRepository {
         val dataStore = PreferenceDataStoreFactory.create(
+            scope = kotlinx.coroutines.CoroutineScope(mainDispatcherRule.dispatcher),
             produceFile = {
                 File.createTempFile("playback-prefs", ".preferences_pb").apply {
                     deleteOnExit()

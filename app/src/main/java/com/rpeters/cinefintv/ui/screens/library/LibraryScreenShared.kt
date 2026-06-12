@@ -191,7 +191,11 @@ internal fun LibraryGridContent(
                         .fillMaxSize()
                         .testTag(LibraryTestTags.Grid),
                 ) {
-                    items(uiState.items.size) { index ->
+                    items(
+                        count = uiState.items.size,
+                        key = { index -> uiState.items[index].id },
+                        contentType = { "MediaCard" }
+                    ) { index ->
                         val item = uiState.items[index]
                         TvMediaCard(
                             title = item.title,

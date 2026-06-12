@@ -25,6 +25,8 @@ import com.rpeters.cinefintv.data.preferences.ThemePreferences
 import com.rpeters.cinefintv.data.preferences.ThemePreferencesRepository
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.data.preferences.VideoSeekIncrement
+import com.rpeters.cinefintv.data.preferences.ScreensaverPreferences
+import com.rpeters.cinefintv.data.preferences.ScreensaverPreferencesRepository
 import com.rpeters.cinefintv.data.repository.JellyfinUserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +46,7 @@ data class SettingsUiState(
     val subtitles: SubtitleAppearancePreferences = SubtitleAppearancePreferences.DEFAULT,
     val libraryActions: LibraryActionsPreferences = LibraryActionsPreferences.DEFAULT,
     val introSkip: IntroSkipPreferences = IntroSkipPreferences.DEFAULT,
+    val screensaver: ScreensaverPreferences = ScreensaverPreferences.DEFAULT,
 )
 
 @HiltViewModel
@@ -54,6 +57,7 @@ class SettingsViewModel @Inject constructor(
     private val libraryActionsPreferencesRepository: LibraryActionsPreferencesRepository,
     private val userRepository: JellyfinUserRepository,
     private val introSkipPreferencesRepository: IntroSkipPreferencesRepository,
+    private val screensaverPreferencesRepository: ScreensaverPreferencesRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -66,12 +70,14 @@ class SettingsViewModel @Inject constructor(
                 subtitleAppearancePreferencesRepository.preferencesFlow,
                 libraryActionsPreferencesRepository.preferences,
                 introSkipPreferencesRepository.preferencesFlow,
+                screensaverPreferencesRepository.screensaverPreferencesFlow,
             ) { values: Array<Any> ->
                 val appearance = values[0] as ThemePreferences
                 val playback = values[1] as PlaybackPreferences
                 val subtitles = values[2] as SubtitleAppearancePreferences
                 val libraryActions = values[3] as LibraryActionsPreferences
                 val introSkip = values[4] as IntroSkipPreferences
+                val screensaver = values[5] as ScreensaverPreferences
                 SettingsUiState(
                     isLoading = false,
                     appearance = appearance,
@@ -79,6 +85,7 @@ class SettingsViewModel @Inject constructor(
                     subtitles = subtitles,
                     libraryActions = libraryActions,
                     introSkip = introSkip,
+                    screensaver = screensaver,
                 )
             }.collect { preferenceState ->
                 // Atomically merge preference state with transient logout state.
@@ -93,6 +100,16 @@ class SettingsViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun setScreensaverEnabled(enabled: Boolean) {
+        updatePreference { screensaverPreferencesRepository.setEnabled(enabled) }
+        _uiState.update { it.copy(screensaver = it.screensaver.copy(isEnabled = enabled)) }
+    }
+
+    fun setScreensaverIdleTimeout(minutes: Int) {
+        updatePreference { screensaverPreferencesRepository.setIdleTimeoutMinutes(minutes) }
+        _uiState.update { it.copy(screensaver = it.screensaver.copy(idleTimeoutMinutes = minutes)) }
     }
 
     fun setThemeMode(themeMode: ThemeMode) {

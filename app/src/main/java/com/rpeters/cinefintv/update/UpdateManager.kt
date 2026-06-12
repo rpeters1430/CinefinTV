@@ -5,7 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import androidx.core.content.FileProvider
 import com.rpeters.cinefintv.data.common.DispatcherProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -90,7 +90,7 @@ class UpdateManager @Inject constructor(
                 }
 
                 val body = response.body.string()
-                Log.d("UpdateManager", "Received version JSON: $body")
+                SecureLogger.d("UpdateManager", "Received version JSON: $body")
                 val updateInfo = json.decodeFromString<UpdateInfo>(body)
 
                 val currentVersionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -100,18 +100,18 @@ class UpdateManager @Inject constructor(
                     context.packageManager.getPackageInfo(context.packageName, 0).versionCode
                 }
 
-                Log.d("UpdateManager", "Current versionCode: $currentVersionCode, Remote versionCode: ${updateInfo.versionCode}")
+                SecureLogger.d("UpdateManager", "Current versionCode: $currentVersionCode, Remote versionCode: ${updateInfo.versionCode}")
 
                 if (updateInfo.versionCode > currentVersionCode) {
-                    Log.i("UpdateManager", "Update available: ${updateInfo.versionName} (${updateInfo.versionCode})")
+                    SecureLogger.i("UpdateManager", "Update available: ${updateInfo.versionName} (${updateInfo.versionCode})")
                     UpdateStatus.UpdateAvailable(updateInfo)
                 } else {
-                    Log.i("UpdateManager", "App is up to date")
+                    SecureLogger.i("UpdateManager", "App is up to date")
                     UpdateStatus.NoUpdate
                 }
             }
         } catch (e: Exception) {
-            Log.e("UpdateManager", "Error checking for update", e)
+            SecureLogger.e("UpdateManager", "Error checking for update", e)
             UpdateStatus.Error(e.message ?: "Unknown error")
         }
     }
@@ -156,7 +156,7 @@ class UpdateManager @Inject constructor(
                 Result.success(installResult)
             }
         } catch (e: Exception) {
-            Log.e("UpdateManager", "Error downloading update", e)
+            SecureLogger.e("UpdateManager", "Error downloading update", e)
             Result.failure(e)
         }
     }

@@ -6,6 +6,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -14,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import kotlinx.coroutines.delay
 
 @Composable
 fun ImmersiveBackground(
@@ -22,9 +28,24 @@ fun ImmersiveBackground(
     baseColor: Color = Color.Black,
     scrimColor: Color = Color.Black,
 ) {
+    var stableBackdropUrl by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(backdropUrl) {
+        if (backdropUrl == null) {
+            stableBackdropUrl = null
+        } else if (stableBackdropUrl == null) {
+            // First load: set immediately to avoid a blank screen
+            stableBackdropUrl = backdropUrl
+        } else {
+            // Subsequent loads: wait until focus settles to prevent rapid flashing and lag
+            delay(500L)
+            stableBackdropUrl = backdropUrl
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize().background(baseColor)) {
         Crossfade(
-            targetState = backdropUrl,
+            targetState = stableBackdropUrl,
             animationSpec = tween(1000),
             label = "backdropCrossfade"
         ) { imageUrl ->

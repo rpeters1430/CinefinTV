@@ -1,6 +1,6 @@
 package com.rpeters.cinefintv.utils
 
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import android.util.Patterns
 import kotlinx.coroutines.CancellationException
 import java.net.MalformedURLException
@@ -48,7 +48,7 @@ object ServerUrlValidator {
         return if (isValidUrl(url)) {
             url
         } else {
-            Log.w(TAG, "Invalid URL after normalization: $url")
+            SecureLogger.w(TAG, "Invalid URL after normalization: $url")
             null
         }
     }
@@ -85,7 +85,7 @@ object ServerUrlValidator {
                 else -> null // No more fallbacks available
             }
         } catch (e: URISyntaxException) {
-            Log.w(TAG, "Failed to parse URI for fallback: $originalUrl", e)
+            SecureLogger.w(TAG, "Failed to parse URI for fallback: $originalUrl", e)
             null
         }
     }
@@ -273,7 +273,7 @@ object ServerUrlValidator {
 
             "${uri.scheme}://${uri.host}:$defaultPort${uri.path ?: ""}"
         } catch (e: URISyntaxException) {
-            Log.w(TAG, "Failed to parse URI for port addition: $url", e)
+            SecureLogger.w(TAG, "Failed to parse URI for port addition: $url", e)
             url
         }
     }
@@ -318,7 +318,7 @@ object ServerUrlValidator {
 
             true
         } catch (e: MalformedURLException) {
-            Log.w(TAG, "Malformed URL: $url", e)
+            SecureLogger.w(TAG, "Malformed URL: $url", e)
             false
         }
     }
@@ -390,7 +390,7 @@ object ServerUrlValidator {
             val port = if (uri.port == -1) "" else ":${uri.port}"
             "${uri.scheme}://${uri.host}$port"
         } catch (e: URISyntaxException) {
-            Log.w(TAG, "Failed to extract base URL from: $fullUrl", e)
+            SecureLogger.w(TAG, "Failed to extract base URL from: $fullUrl", e)
             null
         }
     }

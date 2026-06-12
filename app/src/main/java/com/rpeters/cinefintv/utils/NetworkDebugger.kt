@@ -5,7 +5,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.TrafficStats
 import android.os.Process
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.R
 import kotlinx.coroutines.CancellationException
@@ -157,22 +157,22 @@ object NetworkDebugger {
     fun logNetworkDiagnostics(context: Context, serverUrl: String?) {
         if (!BuildConfig.DEBUG) return
 
-        Log.d(TAG, "=== Network Diagnostics ===")
+        SecureLogger.d(TAG, "=== Network Diagnostics ===")
 
         val networkStatus = checkNetworkStatus(context)
-        Log.d(TAG, "Network Status: $networkStatus")
+        SecureLogger.d(TAG, "Network Status: $networkStatus")
 
         if (serverUrl != null) {
             val hostPort = parseHostPort(serverUrl)
             if (hostPort != null) {
-                Log.d(TAG, "Server: ${hostPort.first}:${hostPort.second}")
-                Log.d(TAG, "Will test socket connection asynchronously")
+                SecureLogger.d(TAG, "Server: ${hostPort.first}:${hostPort.second}")
+                SecureLogger.d(TAG, "Will test socket connection asynchronously")
             } else {
-                Log.w(TAG, "Could not parse server URL: $serverUrl")
+                SecureLogger.w(TAG, "Could not parse server URL: $serverUrl")
             }
         }
 
-        Log.d(TAG, "============================")
+        SecureLogger.d(TAG, "============================")
     }
 
     /**
@@ -181,26 +181,26 @@ object NetworkDebugger {
     suspend fun testAndLogServerConnectivity(context: Context, serverUrl: String) {
         if (!BuildConfig.DEBUG) return
 
-        Log.d(TAG, "Testing server connectivity: $serverUrl")
+        SecureLogger.d(TAG, "Testing server connectivity: $serverUrl")
 
         val hostPort = parseHostPort(serverUrl)
         if (hostPort == null) {
-            Log.w(TAG, "Could not parse server URL for testing: $serverUrl")
+            SecureLogger.w(TAG, "Could not parse server URL for testing: $serverUrl")
             return
         }
 
         val result = testSocketConnection(context, hostPort.first, hostPort.second)
-        Log.d(TAG, "Connection test result: $result")
+        SecureLogger.d(TAG, "Connection test result: $result")
 
         if (!result.success) {
-            Log.w(TAG, "Server connectivity issue detected - this may cause API failures")
+            SecureLogger.w(TAG, "Server connectivity issue detected - this may cause API failures")
 
             // Additional diagnostics
             val networkStatus = checkNetworkStatus(context)
             if (!networkStatus.hasInternet) {
-                Log.w(TAG, "Device has no validated internet connection")
+                SecureLogger.w(TAG, "Device has no validated internet connection")
             } else {
-                Log.i(TAG, "Device internet is working, server may be unreachable")
+                SecureLogger.i(TAG, "Device internet is working, server may be unreachable")
             }
         }
     }

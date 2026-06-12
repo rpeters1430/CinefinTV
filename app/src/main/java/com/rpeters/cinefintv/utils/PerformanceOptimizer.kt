@@ -2,7 +2,7 @@ package com.rpeters.cinefintv.utils
 
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -53,7 +53,7 @@ object PerformanceOptimizer {
      */
     fun warnIfMainThread(operation: String) {
         if (isMainThread() && com.rpeters.cinefintv.BuildConfig.DEBUG) {
-            Log.w(TAG, "Performance warning: $operation is being performed on main thread")
+            SecureLogger.w(TAG, "Performance warning: $operation is being performed on main thread")
         }
     }
 

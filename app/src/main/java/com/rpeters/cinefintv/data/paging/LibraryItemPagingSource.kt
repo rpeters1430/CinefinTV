@@ -1,6 +1,6 @@
 package com.rpeters.cinefintv.data.paging
 
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.rpeters.cinefintv.BuildConfig
@@ -33,7 +33,7 @@ class LibraryItemPagingSource(
             val startIndex = params.key ?: STARTING_PAGE_INDEX
 
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Loading startIndex=$startIndex, pageSize=$pageSize, loadSize=${params.loadSize}")
+                SecureLogger.d(TAG, "Loading startIndex=$startIndex, pageSize=$pageSize, loadSize=${params.loadSize}")
             }
 
             val itemTypesString = itemTypes?.joinToString(",") { type ->
@@ -69,7 +69,7 @@ class LibraryItemPagingSource(
                     }
 
                     if (BuildConfig.DEBUG) {
-                        Log.d(
+                        SecureLogger.d(
                             TAG,
                             "Loaded startIndex=$startIndex: raw=${rawItems.size}, filtered=${items.size}, excluded=${excludedItemIds.size}",
                         )
@@ -91,7 +91,7 @@ class LibraryItemPagingSource(
                 }
                 is ApiResult.Error -> {
                     if (BuildConfig.DEBUG) {
-                        Log.w(TAG, "Failed to load startIndex=$startIndex: ${result.message}")
+                        SecureLogger.w(TAG, "Failed to load startIndex=$startIndex: ${result.message}")
                     }
                     LoadResult.Error(Exception(result.message))
                 }
@@ -104,7 +104,7 @@ class LibraryItemPagingSource(
             throw exception
         } catch (exception: Exception) {
             if (BuildConfig.DEBUG) {
-                Log.e(TAG, "Unhandled exception while loading library page", exception)
+                SecureLogger.e(TAG, "Unhandled exception while loading library page", exception)
             }
             LoadResult.Error(exception)
         }

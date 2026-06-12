@@ -5,7 +5,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -107,13 +107,13 @@ class ConnectivityChecker @Inject constructor(
             override fun onAvailable(network: Network) {
                 availableNetworks.add(network)
                 trySend(true)
-                Log.d(TAG, "Network available: $network")
+                SecureLogger.d(TAG, "Network available: $network")
             }
 
             override fun onLost(network: Network) {
                 availableNetworks.remove(network)
                 trySend(availableNetworks.isNotEmpty())
-                Log.d(TAG, "Network lost: $network (${availableNetworks.size} remaining)")
+                SecureLogger.d(TAG, "Network lost: $network (${availableNetworks.size} remaining)")
             }
 
             override fun onCapabilitiesChanged(

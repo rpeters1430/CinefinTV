@@ -21,7 +21,7 @@ class IntroSkipPreferencesRepositoryTest {
     private fun buildRepo(): IntroSkipPreferencesRepository {
         val dataStore = PreferenceDataStoreFactory.create(
             scope = kotlinx.coroutines.CoroutineScope(UnconfinedTestDispatcher()),
-            produceFile = { tmpFolder.newFile("test_intro_skip.preferences_pb") }
+            produceFile = { tmpFolder.newFolder().resolve("test_intro_skip.preferences_pb") }
         )
         return IntroSkipPreferencesRepository(dataStore)
     }

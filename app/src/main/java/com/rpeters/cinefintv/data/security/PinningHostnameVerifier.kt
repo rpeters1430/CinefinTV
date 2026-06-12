@@ -1,6 +1,6 @@
 package com.rpeters.cinefintv.data.security
 
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.BuildConfig
 import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.HttpsURLConnection
@@ -24,7 +24,7 @@ class PinningHostnameVerifier : HostnameVerifier {
     override fun verify(hostname: String?, session: SSLSession?): Boolean {
         if (hostname == null || session == null) {
             if (BuildConfig.DEBUG) {
-                Log.w(TAG, "Hostname or session is null")
+                SecureLogger.w(TAG, "Hostname or session is null")
             }
             return false
         }
@@ -33,7 +33,7 @@ class PinningHostnameVerifier : HostnameVerifier {
         val verified = defaultVerifier.verify(hostname, session)
 
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Hostname verification for $hostname: $verified")
+            SecureLogger.d(TAG, "Hostname verification for $hostname: $verified")
         }
 
         return verified

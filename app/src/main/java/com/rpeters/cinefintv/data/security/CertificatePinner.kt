@@ -1,6 +1,6 @@
 package com.rpeters.cinefintv.data.security
 
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.firstOrNull
@@ -87,7 +87,7 @@ class CertificatePinningManager @Inject constructor(
         encryptedPreferences.removeKey(key)
 
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Removed certificate pin for $hostname")
+            SecureLogger.d(TAG, "Removed certificate pin for $hostname")
         }
     }
 
@@ -205,7 +205,7 @@ class CertificatePinningManager @Inject constructor(
     suspend fun allowTemporaryTrust(hostname: String, pins: List<String>) {
         val distinctPins = pins.distinct()
         if (distinctPins.isEmpty()) {
-            Log.w(TAG, "allowTemporaryTrust called with no pins for hostname: $hostname; ignoring.")
+            SecureLogger.w(TAG, "allowTemporaryTrust called with no pins for hostname: $hostname; ignoring.")
             return
         }
         overrideMutex.withLock {
@@ -253,7 +253,7 @@ class CertificatePinningManager @Inject constructor(
         }
 
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Cleared all certificate pins (${entries.size} hosts)")
+            SecureLogger.d(TAG, "Cleared all certificate pins (${entries.size} hosts)")
         }
     }
 
@@ -314,7 +314,7 @@ class CertificatePinningManager @Inject constructor(
         encryptedPreferences.putEncryptedString(getPinKey(record.hostname), serialized)
 
         if (BuildConfig.DEBUG) {
-            Log.d(
+            SecureLogger.d(
                 TAG,
                 "Stored certificate pin for ${record.hostname} (backups=${record.backupPins.size}, expires=${record.expiresAtEpochMillis})",
             )
@@ -385,7 +385,7 @@ class CertificatePinningManager @Inject constructor(
             existingRecord = pinRecord
         )
 
-        Log.i(TAG, "Force-trusted new certificate pin for ${exception.hostname}")
+        SecureLogger.i(TAG, "Force-trusted new certificate pin for ${exception.hostname}")
     }
 
     private fun getPinKey(hostname: String): String {

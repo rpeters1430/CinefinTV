@@ -1,6 +1,6 @@
 package com.rpeters.cinefintv.data.repository.common
 
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.data.repository.JellyfinMediaRepository
 import kotlinx.coroutines.CancellationException
@@ -56,7 +56,7 @@ class LibraryLoadingManager @Inject constructor(
             // Check if operation is already in progress
             ongoingOperations[operationKey]?.let { ongoing ->
                 if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "Joining ongoing library loading operation")
+                    SecureLogger.d(TAG, "Joining ongoing library loading operation")
                 }
                 return@withLock ongoing
             }
@@ -72,13 +72,13 @@ class LibraryLoadingManager @Inject constructor(
                         is ApiResult.Success -> {
                             updateLoadingState(operationKey, LibraryLoadingState.Success(result.data))
                             if (BuildConfig.DEBUG) {
-                                Log.d(TAG, "Successfully loaded ${result.data.size} libraries")
+                                SecureLogger.d(TAG, "Successfully loaded ${result.data.size} libraries")
                             }
                         }
                         is ApiResult.Error -> {
                             updateLoadingState(operationKey, LibraryLoadingState.Error(result.message))
                             if (BuildConfig.DEBUG) {
-                                Log.e(TAG, "Failed to load libraries: ${result.message}")
+                                SecureLogger.e(TAG, "Failed to load libraries: ${result.message}")
                             }
                         }
                         else -> { /* Loading state already set */ }
@@ -118,7 +118,7 @@ class LibraryLoadingManager @Inject constructor(
             // Check for ongoing operation
             ongoingOperations[operationKey]?.let { ongoing ->
                 if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "Joining ongoing library items operation: $operationKey")
+                    SecureLogger.d(TAG, "Joining ongoing library items operation: $operationKey")
                 }
                 return@withLock ongoing
             }
@@ -151,13 +151,13 @@ class LibraryLoadingManager @Inject constructor(
                         is ApiResult.Success -> {
                             updateLoadingState(operationKey, LibraryLoadingState.Success(result.data))
                             if (BuildConfig.DEBUG) {
-                                Log.d(TAG, "Successfully loaded ${result.data.size} library items for $operationKey")
+                                SecureLogger.d(TAG, "Successfully loaded ${result.data.size} library items for $operationKey")
                             }
                         }
                         is ApiResult.Error -> {
                             updateLoadingState(operationKey, LibraryLoadingState.Error(result.message))
                             if (BuildConfig.DEBUG) {
-                                Log.e(TAG, "Failed to load library items: ${result.message}")
+                                SecureLogger.e(TAG, "Failed to load library items: ${result.message}")
                             }
                         }
                         else -> { /* Loading state already set */ }
@@ -189,7 +189,7 @@ class LibraryLoadingManager @Inject constructor(
         if (requests.isEmpty()) return emptyMap()
 
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Loading ${requests.size} library types in parallel")
+            SecureLogger.d(TAG, "Loading ${requests.size} library types in parallel")
         }
 
         // Limit concurrent operations
@@ -215,7 +215,7 @@ class LibraryLoadingManager @Inject constructor(
 
         if (BuildConfig.DEBUG) {
             val successCount = results.values.count { it is ApiResult.Success }
-            Log.d(TAG, "Batch loading completed: $successCount/${results.size} successful")
+            SecureLogger.d(TAG, "Batch loading completed: $successCount/${results.size} successful")
         }
 
         return results
@@ -273,7 +273,7 @@ class LibraryLoadingManager @Inject constructor(
                         BaseItemKind.VIDEO -> "Video"
                         BaseItemKind.PHOTO -> "Photo"
                         else -> {
-                            Log.w(TAG, "Unknown item type: $kind")
+                            SecureLogger.w(TAG, "Unknown item type: $kind")
                             null
                         }
                     }

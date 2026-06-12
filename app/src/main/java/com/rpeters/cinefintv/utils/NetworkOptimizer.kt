@@ -3,7 +3,7 @@ package com.rpeters.cinefintv.utils
 import android.app.Application
 import android.net.TrafficStats
 import android.os.StrictMode
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +28,7 @@ object NetworkOptimizer {
                 // Set global traffic stats tagging for untagged operations
                 setupGlobalNetworkTagging()
 
-                Log.d(TAG, "Network optimizations initialized successfully")
+                SecureLogger.d(TAG, "Network optimizations initialized successfully")
             } catch (e: CancellationException) {
                 throw e
             }
@@ -44,7 +44,7 @@ object NetworkOptimizer {
 
         // This helps with ExoPlayer and other libraries that might not tag their sockets
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            Log.w(TAG, "Uncaught exception in thread ${thread.name}", throwable)
+            SecureLogger.w(TAG, "Uncaught exception in thread ${thread.name}", throwable)
 
             // Clear any lingering traffic stats tags
             try {
@@ -104,7 +104,7 @@ object NetworkOptimizer {
             try {
                 closeable?.close()
             } catch (e: IOException) {
-                Log.w(TAG, "Failed to close network resource", e)
+                SecureLogger.w(TAG, "Failed to close network resource", e)
             }
         }
     }

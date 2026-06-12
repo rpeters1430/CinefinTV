@@ -57,6 +57,7 @@ import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.ui.components.ImmersiveBackground
 import androidx.compose.ui.graphics.Color
+import com.rpeters.cinefintv.ui.navigation.safeRequestFocus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -206,10 +207,7 @@ fun TvShowDetailLayout(
                                             ) {
                                                 coroutineScope.launch {
                                                     listState.scrollToItemAndAwaitLayout(0)
-                                                    for (attempt in 0..2) {
-                                                        if (runCatching { primaryActionFocusRequester.requestFocus() }.isSuccess) break
-                                                        delay(if (attempt == 0) 64L else 32L)
-                                                    }
+                                                    primaryActionFocusRequester.safeRequestFocus(retries = 2)
                                                 }
                                                 true
                                             } else if (

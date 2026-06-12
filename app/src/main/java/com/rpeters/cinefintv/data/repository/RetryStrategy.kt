@@ -1,6 +1,6 @@
 package com.rpeters.cinefintv.data.repository
 
-import android.util.Log
+import com.rpeters.cinefintv.utils.SecureLogger
 import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import kotlinx.coroutines.CancellationException
@@ -198,7 +198,7 @@ class RetryStrategy @Inject constructor() {
      */
     private fun logDebug(message: String) {
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, message)
+            SecureLogger.d(TAG, message)
         }
     }
 

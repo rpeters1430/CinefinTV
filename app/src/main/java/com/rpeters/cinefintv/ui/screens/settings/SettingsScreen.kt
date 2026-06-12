@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,12 +41,15 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
@@ -60,6 +64,7 @@ import com.rpeters.cinefintv.data.preferences.AudioLanguagePreference
 import com.rpeters.cinefintv.data.preferences.SubtitleLanguagePreference
 import com.rpeters.cinefintv.data.preferences.ContrastLevel
 import com.rpeters.cinefintv.data.preferences.ResumePlaybackMode
+import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
 import com.rpeters.cinefintv.data.preferences.SubtitleBackground
 import com.rpeters.cinefintv.data.preferences.SubtitleFont
 import com.rpeters.cinefintv.data.preferences.SubtitleTextSize
@@ -87,6 +92,7 @@ private enum class SettingsChoiceDialog {
     SUBTITLE_FONT,
     SUBTITLE_BACKGROUND,
     SUBTITLE_TEXT_COLOR,
+    SCREENSAVER_TIMEOUT,
 }
 
 private enum class SettingsCategory(
@@ -264,6 +270,15 @@ fun SettingsScreen(
             labelFor = { it.name.replace('_', ' ') },
             onDismissRequest = { activeDialog = null },
             onOptionSelected = viewModel::setSubtitleTextColor,
+        )
+        SettingsChoiceDialog.SCREENSAVER_TIMEOUT -> CinefinOptionDialog(
+            title = "Screensaver timeout",
+            supportingText = "Choose how long to wait before showing the screensaver.",
+            options = listOf(2, 5, 10, 15, 30),
+            selected = uiState.screensaver.idleTimeoutMinutes,
+            labelFor = { "$it Minutes" },
+            onDismissRequest = { activeDialog = null },
+            onOptionSelected = viewModel::setScreensaverIdleTimeout,
         )
         null -> Unit
     }
@@ -456,6 +471,18 @@ fun SettingsScreen(
                                             trailingText = uiState.appearance.contrastLevel.name.replace('_', ' '),
                                             onClick = { activeDialog = SettingsChoiceDialog.CONTRAST_LEVEL }
                                         )
+                                        CinefinSwitchListItem(
+                                            headline = "Enable screensaver",
+                                            supporting = "Show a slow backdrop slideshow and clock when the TV is idle.",
+                                            checked = uiState.screensaver.isEnabled,
+                                            onCheckedChange = viewModel::setScreensaverEnabled
+                                        )
+                                        CinefinSettingListItem(
+                                            headline = "Screensaver timeout",
+                                            supporting = "How long to wait before screensaver starts.",
+                                            trailingText = "${uiState.screensaver.idleTimeoutMinutes} Minutes",
+                                            onClick = { activeDialog = SettingsChoiceDialog.SCREENSAVER_TIMEOUT }
+                                        )
                                     }
                                     SettingsCategory.PLAYBACK -> {
                                         CinefinSwitchListItem(
@@ -497,6 +524,10 @@ fun SettingsScreen(
                                         )
                                     }
                                     SettingsCategory.SUBTITLES -> {
+                                        SubtitlePreview(
+                                            preferences = uiState.subtitles,
+                                            modifier = Modifier.padding(bottom = 16.dp)
+                                        )
                                         CinefinSettingListItem(
                                             headline = "Default subtitle language",
                                             supporting = "Subtitle track to load automatically at the start of playback.",
@@ -566,5 +597,94 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SubtitlePreview(
+    preferences: SubtitleAppearancePreferences,
+    modifier: Modifier = Modifier,
+) {
+    val textColor = when (preferences.textColor) {
+        SubtitleTextColor.WHITE -> Color.White
+        SubtitleTextColor.OFF_WHITE -> Color(0xFFF0F0E6)
+        SubtitleTextColor.YELLOW -> Color(0xFFFFEB78)
+        SubtitleTextColor.CYAN -> Color(0xFF96EBFF)
+        SubtitleTextColor.GREEN -> Color(0xFFAAFFAA)
+    }
+
+    val backgroundColor = when (preferences.background) {
+        SubtitleBackground.NONE -> Color.Transparent
+        SubtitleBackground.BLACK -> Color.Black
+        SubtitleBackground.SEMI_TRANSPARENT -> Color(0xA0000000)
+    }
+
+    val fontFamily = when (preferences.font) {
+        SubtitleFont.DEFAULT, SubtitleFont.SANS_SERIF, SubtitleFont.ROBOTO, SubtitleFont.ROBOTO_FLEX -> FontFamily.SansSerif
+        SubtitleFont.SERIF, SubtitleFont.ROBOTO_SERIF -> FontFamily.Serif
+        SubtitleFont.MONOSPACE, SubtitleFont.ROBOTO_MONO -> FontFamily.Monospace
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(160.dp)
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFF0F172A),
+                        Color(0xFF1E293B),
+                        Color(0xFF334155),
+                    )
+                ),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .padding(16.dp),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        // Subtle background decoration to make it look like a video playback screenshot
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .size(48.dp)
+                .background(Color.White.copy(alpha = 0.08f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.25f),
+                modifier = Modifier.size(28.dp)
+            )
+        }
+
+        // Live Preview Title overlay
+        Text(
+            text = "LIVE PREVIEW",
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White.copy(alpha = 0.4f),
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(4.dp)
+        )
+
+        // Subtitle Text Styled exactly to match preferences
+        Text(
+            text = "The quick brown fox jumps over the lazy dog.",
+            color = textColor,
+            fontSize = preferences.textSize.sizeSp.sp,
+            fontFamily = fontFamily,
+            style = androidx.compose.ui.text.TextStyle(
+                shadow = androidx.compose.ui.graphics.Shadow(
+                    color = Color.Black,
+                    offset = androidx.compose.ui.geometry.Offset(2f, 2f),
+                    blurRadius = 2f
+                )
+            ),
+            modifier = Modifier
+                .background(backgroundColor, shape = RoundedCornerShape(4.dp))
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        )
     }
 }

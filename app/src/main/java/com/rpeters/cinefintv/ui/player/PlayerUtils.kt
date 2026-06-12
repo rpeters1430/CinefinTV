@@ -27,6 +27,8 @@ object PlayerConstants {
     const val CONTROLS_HIDE_DELAY_MS = 5_000L
     const val NEXT_EPISODE_COUNTDOWN_THRESHOLD_MS = 15_000L
     const val EXIT_TRANSITION_DURATION_MS = 180L
+    const val NEXT_EPISODE_POLL_INTERVAL_MS = 1000L
+    const val SKIP_RANGE_POLL_INTERVAL_MS = 500L
 }
 
 internal fun shouldShowNextEpisodeCard(
