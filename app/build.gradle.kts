@@ -15,7 +15,7 @@ plugins {
 
 android {
     namespace = "com.rpeters.cinefintv"
-    compileSdk = 36
+    compileSdk = 37
 
     val localProperties = Properties().apply {
         val file = rootProject.file("local.properties")
