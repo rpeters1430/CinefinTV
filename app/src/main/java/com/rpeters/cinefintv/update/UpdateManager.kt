@@ -12,6 +12,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -67,6 +68,22 @@ internal fun shouldCheckForUpdate(
     return nowMs - lastCheckedAtMs >= minIntervalMs
 }
 
+internal fun buildUpdateInfoRequest(
+    nowMs: Long,
+    baseUrl: String = UPDATE_JSON_URL,
+): Request {
+    val requestUrl = baseUrl.toHttpUrl()
+        .newBuilder()
+        .setQueryParameter("ts", nowMs.toString())
+        .build()
+
+    return Request.Builder()
+        .url(requestUrl)
+        .header("Cache-Control", "no-cache")
+        .header("Pragma", "no-cache")
+        .build()
+}
+
 // URL pointing to the version JSON file in your repository
 private const val UPDATE_JSON_URL = "https://raw.githubusercontent.com/rpeters1430/CinefinTV/main/updates/version.json"
 
@@ -80,9 +97,7 @@ class UpdateManager @Inject constructor(
 
     suspend fun checkForUpdate(): UpdateStatus = withContext(dispatchers.io) {
         try {
-            val request = Request.Builder()
-                .url(UPDATE_JSON_URL)
-                .build()
+            val request = buildUpdateInfoRequest(nowMs = System.currentTimeMillis())
 
             httpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {

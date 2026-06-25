@@ -67,4 +67,25 @@ class UpdateManagerTest {
             )
         )
     }
+
+    @Test
+    fun buildUpdateInfoRequest_addsTimestampToBypassStaleCaches() {
+        val request = buildUpdateInfoRequest(
+            nowMs = 1_234_567L,
+            baseUrl = "https://raw.githubusercontent.com/rpeters1430/CinefinTV/main/updates/version.json",
+        )
+
+        assertEquals("1234567", request.url.queryParameter("ts"))
+    }
+
+    @Test
+    fun buildUpdateInfoRequest_setsNoCacheHeaders() {
+        val request = buildUpdateInfoRequest(
+            nowMs = 123L,
+            baseUrl = "https://raw.githubusercontent.com/rpeters1430/CinefinTV/main/updates/version.json",
+        )
+
+        assertEquals("no-cache", request.header("Cache-Control"))
+        assertEquals("no-cache", request.header("Pragma"))
+    }
 }
