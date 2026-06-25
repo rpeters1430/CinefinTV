@@ -9,7 +9,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: issue-command-${{ github.repository }}-${{ github.event.comment.body }}
+  group: 'issue-command-${{ github.repository }}-${{ github.event.issue.number }}'
   cancel-in-progress: false
 
 jobs:
@@ -121,14 +121,29 @@ jobs:
           perl -0pi -e "s/versionCode = \Q$old_version_code\E/versionCode = $new_version_code/" app/build.gradle.kts
           perl -0pi -e "s/versionName = \"\Q$old_version_name\E\"/versionName = \"$new_version_name\"/" app/build.gradle.kts
 
+          mkdir -p updates
+          cat <<EOF > updates/version.json
+          {
+            "versionCode": $new_version_code,
+            "versionName": "$new_version_name",
+            "updateUrl": "https://github.com/$REPOSITORY/releases/latest/download/app-release.apk",
+            "releaseNotes": "Release v$new_version_name\n",
+            "isCritical": false
+          }
+          EOF
+
           echo "$CINEFIN_RELEASE_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/cinefintv-release.keystore"
           ./gradlew :app:assembleRelease
 
-          git add app/build.gradle.kts
+          git add app/build.gradle.kts updates/version.json
           git commit -m "chore: bump version to $new_version_name"
           git tag "$tag"
           git push origin main
           git push origin "$tag"
+
+          gh release create "$tag" app/build/outputs/apk/release/app-release.apk \
+            --title "$tag" \
+            --notes "Release $tag"
 
           {
             echo "tag=$tag"
@@ -141,7 +156,7 @@ jobs:
         run: |
           gh issue comment "$ISSUE_NUMBER" \
             --repo "$REPOSITORY" \
-            --body "Published \`${tag}\` by bumping to version \`${version_name}\` (code \`${version_code}\`). The tag push started the release workflow, which will build \`app-release.apk\` and update \`updates/version.json\`."
+            --body "Published \`${tag}\` by bumping to version \`${version_name}\` (code \`${version_code}\`). The release was successfully created, and \`updates/version.json\` was updated on main."
 
       - name: Comment on failure
         if: failure()
