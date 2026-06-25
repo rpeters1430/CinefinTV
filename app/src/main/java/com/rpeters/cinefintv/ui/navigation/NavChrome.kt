@@ -12,7 +12,6 @@ fun appChromeRouteSpec(currentDestination: NavDestination?): AppChromeRouteSpec 
         is MovieDetail,
         is TvShowDetail,
         is SeasonDetail,
-        is EpisodeDetail,
         is CollectionDetail,
         is PersonDetail,
         is Player,

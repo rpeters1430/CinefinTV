@@ -140,7 +140,7 @@ fun MovieDetailLayout(
                             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            items(castItems) { person ->
+                            items(castItems, key = { it.id }) { person ->
                                 val isFirstCastItem = person.id == castItems.firstOrNull()?.id
                                 PersonCircleCard(
                                     name = person.name,

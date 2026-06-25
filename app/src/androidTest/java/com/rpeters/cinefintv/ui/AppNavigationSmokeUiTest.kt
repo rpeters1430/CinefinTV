@@ -477,7 +477,6 @@ private fun AppNavigationSmokeHarness() {
             }
 
             is SeasonDetail -> SmokeScreen("Season Detail")
-            is com.rpeters.cinefintv.ui.navigation.EpisodeDetail -> SmokeScreen("Episode Detail")
             is CollectionDetail -> SmokeScreen("Collection Detail")
             is PersonDetail -> SmokeScreen("Person Detail")
             is com.rpeters.cinefintv.ui.navigation.ServerConnection -> SmokeScreen("Server Connection")

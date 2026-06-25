@@ -180,7 +180,7 @@ fun TvShowDetailLayout(
                             contentPadding = PaddingValues(horizontal = spacing.gutter),
                             horizontalArrangement = Arrangement.spacedBy(spacing.cardGap.div(1.2f)),
                         ) {
-                            items(seasons) { season ->
+                            items(seasons, key = { it.id }) { season ->
                                 val isFirstSeasonItem = season.id == seasons.firstOrNull()?.id
                                 SeasonShowcaseCard(
                                     season = season,
@@ -283,7 +283,7 @@ fun TvShowDetailLayout(
                             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            items(castItems) { person ->
+                            items(castItems, key = { it.id }) { person ->
                                 val isFirstCastItem = person.id == castItems.firstOrNull()?.id
                                 PersonCircleCard(
                                     name = person.name,

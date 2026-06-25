@@ -58,10 +58,6 @@ data class SeasonDetail(val itemId: String) : NavDestination
 
 @Serializable
 @Parcelize
-data class EpisodeDetail(val itemId: String) : NavDestination
-
-@Serializable
-@Parcelize
 data class CollectionDetail(val itemId: String) : NavDestination
 
 @Serializable

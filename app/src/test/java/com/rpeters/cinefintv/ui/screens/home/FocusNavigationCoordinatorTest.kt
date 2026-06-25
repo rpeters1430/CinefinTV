@@ -2,12 +2,14 @@ package com.rpeters.cinefintv.ui.screens.home
 
 import com.rpeters.cinefintv.ui.navigation.FocusNavigationCoordinator
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class FocusNavigationCoordinatorTest {
 
     @Test

@@ -16,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -309,9 +309,6 @@ fun CinefinTvNavGraph(
                         onBack = { backStack.pop() },
                     )
                 }
-                is EpisodeDetail -> {
-                    PlaceholderScreen("Episode Detail", onBack = { backStack.pop() })
-                }
                 is CollectionDetail -> {
                     CollectionDetailScreen(
                         itemId = destination.itemId,
@@ -391,30 +388,3 @@ private fun AuthBootstrapScreen() {
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun PlaceholderScreen(name: String, onBack: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            Text(
-                text = name,
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                text = "This feature is coming soon.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            androidx.tv.material3.Button(onClick = onBack) {
-                Text("Go Back")
-            }
-        }
-    }
-}
