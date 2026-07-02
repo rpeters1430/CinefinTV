@@ -4,6 +4,7 @@ import android.content.Context
 import coil3.ImageLoader
 import com.rpeters.cinefintv.BuildConfig
 import com.rpeters.cinefintv.OptInAppExperimentalApis
+import com.rpeters.cinefintv.core.constants.Constants
 import com.rpeters.cinefintv.data.DeviceCapabilities
 import com.rpeters.cinefintv.data.cache.JellyfinCache
 import com.rpeters.cinefintv.data.playback.EnhancedPlaybackManager
@@ -120,6 +121,9 @@ object NetworkModule {
         return OkHttpClient.Builder()
             .followRedirects(true)
             .followSslRedirects(true)
+            .connectTimeout(Constants.NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(Constants.NETWORK_READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .writeTimeout(Constants.NETWORK_WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
     }
 
