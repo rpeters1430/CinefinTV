@@ -115,6 +115,16 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @UpdateHttpClient
+    fun provideUpdateHttpClient(): OkHttpClient {
+        return OkHttpClient.Builder()
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideJellyfinAuthInterceptor(
         authRepositoryProvider: Provider<JellyfinAuthRepository>,
         deviceIdentityProvider: DeviceIdentityProvider,
