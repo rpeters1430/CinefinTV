@@ -8,6 +8,7 @@ import android.provider.Settings
 import com.rpeters.cinefintv.utils.SecureLogger
 import androidx.core.content.FileProvider
 import com.rpeters.cinefintv.data.common.DispatcherProvider
+import com.rpeters.cinefintv.di.UpdateHttpClient
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -90,6 +91,7 @@ private const val UPDATE_JSON_URL = "https://raw.githubusercontent.com/rpeters14
 @Singleton
 class UpdateManager @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    @UpdateHttpClient
     private val httpClient: OkHttpClient,
     private val dispatchers: DispatcherProvider,
 ) {
