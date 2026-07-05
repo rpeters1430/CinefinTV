@@ -110,6 +110,36 @@ class PlayerPlaybackContentUiTest {
     }
 
     @Test
+    fun skipCreditsAction_clickSeeksToSkipTarget() {
+        val player = FakePlayer(currentPositionMs = 80_000L, durationMs = 90_000L)
+
+        composeRule.setContent {
+            PlayerPlaybackTestHost {
+                PlaybackShellHarness(
+                    player = player,
+                    initialControlsVisible = false,
+                    uiState = PlayerUiState(
+                        title = "Episode Test",
+                        isLoading = false,
+                        creditsSkipRange = SkipRange(startMs = 75_000L, endMs = 88_000L),
+                    ),
+                    renderState = PlayerRenderState(
+                        isPlaying = true,
+                        duration = 90_000L,
+                    ),
+                    positionProvider = { 80_000L },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(PlayerTestTags.SkipCreditsAction).assertIsDisplayed()
+        composeRule.onNodeWithTag(PlayerTestTags.SkipActionButton)
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        assertEquals(88_000L, player.lastSeekPosition)
+    }
+
+    @Test
     fun nextEpisodeCard_clickInvokesOpenItem() {
         var openedItemId: String? = null
 

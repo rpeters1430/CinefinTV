@@ -43,6 +43,8 @@ import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.ui.navigation.Home
 import com.rpeters.cinefintv.ui.navigation.Player
+import com.rpeters.cinefintv.ui.navigation.LocalFocusNavigationCoordinator
+import androidx.compose.runtime.LaunchedEffect
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.ThemeColorController
 import org.junit.Assert.assertEquals
