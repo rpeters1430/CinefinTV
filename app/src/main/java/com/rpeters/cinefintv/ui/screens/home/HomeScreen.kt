@@ -447,6 +447,7 @@ private fun HomeLoadedContent(
                     val firstSectionRequester = sectionItemFocusRequesters.firstOrNull()?.firstOrNull()
                     FeaturedCarousel(
                         items = state.featuredItems,
+                        sections = state.sections,
                         onMoreInfo = onOpenItem,
                         onPlay = onPlayItem,
                         onItemFocused = { focusedItem = it },
@@ -476,7 +477,7 @@ private fun HomeLoadedContent(
                     .getOrNull(index - 1)
                     ?.firstOrNull()
 
-                HomeSection(
+                HomeShelf(
                     sectionIndex = index,
                     title = section.title,
                     items = section.items,
@@ -581,6 +582,7 @@ private fun HomeEpisodeActionDialog(
 @Composable
 private fun FeaturedCarousel(
     items: List<HomeCardModel>,
+    sections: List<HomeSectionModel>,
     onMoreInfo: (HomeCardModel) -> Unit,
     onPlay: (String) -> Unit,
     destinationFocus: com.rpeters.cinefintv.ui.TopLevelDestinationFocus,
@@ -635,6 +637,7 @@ private fun FeaturedCarousel(
         val fallbackRequester = remember { FocusRequester() }
         HeroItem(
             item = item,
+            sections = sections,
             onMoreInfo = { onMoreInfo(item) },
             onPlay = { onPlay(item.id) },
             destinationFocus = destinationFocus,
@@ -653,6 +656,7 @@ private fun FeaturedCarousel(
 @Composable
 private fun HeroItem(
     item: HomeCardModel,
+    sections: List<HomeSectionModel>,
     onMoreInfo: () -> Unit,
     onPlay: () -> Unit,
     destinationFocus: com.rpeters.cinefintv.ui.TopLevelDestinationFocus,
@@ -697,15 +701,11 @@ private fun HeroItem(
             )
             .build()
     }
-    val carouselMeta = remember(item.year, item.runtime, item.rating) {
-        listOfNotNull(
-            item.year?.toString(),
-            item.runtime,
-            item.rating?.let { "★ $it" },
-        ).joinToString("  •  ")
-    }
     val heroDescription = remember(item.description) {
         item.description ?: "Featured title from your library"
+    }
+    val playActionLabel = remember(item.playbackProgress) {
+        if ((item.playbackProgress ?: 0f) > 0f) "Resume" else "Play"
     }
 
     Box(
@@ -774,13 +774,7 @@ private fun HeroItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (carouselMeta.isNotBlank()) {
-                Text(
-                    text = carouselMeta,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.86f),
-                )
-            }
+            HomeHeroMetadata(item = item)
             item.subtitle?.let {
                 Text(
                     text = it,
@@ -833,7 +827,10 @@ private fun HeroItem(
                         )
                     )
                 ) {
-                    Text("Play", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                    Text(
+                        playActionLabel,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    )
                 }
                 OutlinedButton(
                     onClick = onMoreInfo,
@@ -876,6 +873,92 @@ private fun HeroItem(
                     Text("Details", style = MaterialTheme.typography.titleMedium)
                 }
             }
+            HomeDiscoveryStrip(
+                sections = sections,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeHeroMetadata(
+    item: HomeCardModel,
+    modifier: Modifier = Modifier,
+) {
+    val metadata = remember(item.year, item.runtime, item.rating, item.itemType) {
+        listOfNotNull(
+            item.year?.toString(),
+            item.runtime,
+            item.rating?.let { "★ $it" },
+            item.itemType,
+        ).joinToString("  •  ")
+    }
+
+    if (metadata.isNotBlank()) {
+        Text(
+            text = metadata,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.86f),
+            modifier = modifier,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun HomeDiscoveryStrip(
+    sections: List<HomeSectionModel>,
+    modifier: Modifier = Modifier,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    val prioritySections = remember(sections) {
+        val priority = listOf(
+            HomeSectionId.CONTINUE_WATCHING,
+            HomeSectionId.NEXT_EPISODES,
+            HomeSectionId.RECENT_MOVIES,
+            HomeSectionId.RECENT_EPISODES,
+            HomeSectionId.LIBRARIES,
+        )
+        priority.mapNotNull { id -> sections.firstOrNull { it.id == id } }
+            .take(3)
+    }
+
+    if (prioritySections.isEmpty()) return
+
+    Row(
+        modifier = modifier
+            .testTag(HomeTestTags.DiscoveryStrip),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        prioritySections.forEachIndexed { index, section ->
+            Column(
+                modifier = Modifier
+                    .background(
+                        color = Color.White.copy(alpha = 0.09f),
+                        shape = RoundedCornerShape(6.dp),
+                    )
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .testTag(HomeTestTags.discoveryStripItem(index)),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = section.title,
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "${section.items.size} ready",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = expressiveColors.titleAccent,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -883,7 +966,7 @@ private fun HeroItem(
 
 
 @Composable
-private fun HomeSection(
+private fun HomeShelf(
     sectionIndex: Int,
     title: String,
     items: List<HomeCardModel>,
