@@ -447,6 +447,7 @@ private fun HomeLoadedContent(
                     val firstSectionRequester = sectionItemFocusRequesters.firstOrNull()?.firstOrNull()
                     FeaturedCarousel(
                         items = state.featuredItems,
+                        sections = state.sections,
                         onMoreInfo = onOpenItem,
                         onPlay = onPlayItem,
                         onItemFocused = { focusedItem = it },
@@ -581,6 +582,7 @@ private fun HomeEpisodeActionDialog(
 @Composable
 private fun FeaturedCarousel(
     items: List<HomeCardModel>,
+    sections: List<HomeSectionModel>,
     onMoreInfo: (HomeCardModel) -> Unit,
     onPlay: (String) -> Unit,
     destinationFocus: com.rpeters.cinefintv.ui.TopLevelDestinationFocus,
@@ -635,6 +637,7 @@ private fun FeaturedCarousel(
         val fallbackRequester = remember { FocusRequester() }
         HeroItem(
             item = item,
+            sections = sections,
             onMoreInfo = { onMoreInfo(item) },
             onPlay = { onPlay(item.id) },
             destinationFocus = destinationFocus,
@@ -653,6 +656,7 @@ private fun FeaturedCarousel(
 @Composable
 private fun HeroItem(
     item: HomeCardModel,
+    sections: List<HomeSectionModel>,
     onMoreInfo: () -> Unit,
     onPlay: () -> Unit,
     destinationFocus: com.rpeters.cinefintv.ui.TopLevelDestinationFocus,
@@ -881,6 +885,66 @@ private fun HeroItem(
                 ) {
                     Text("Details", style = MaterialTheme.typography.titleMedium)
                 }
+            }
+            HomeDiscoveryStrip(
+                sections = sections,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeDiscoveryStrip(
+    sections: List<HomeSectionModel>,
+    modifier: Modifier = Modifier,
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    val prioritySections = remember(sections) {
+        val priority = listOf(
+            HomeSectionId.CONTINUE_WATCHING,
+            HomeSectionId.NEXT_EPISODES,
+            HomeSectionId.RECENT_MOVIES,
+            HomeSectionId.RECENT_EPISODES,
+            HomeSectionId.LIBRARIES,
+        )
+        priority.mapNotNull { id -> sections.firstOrNull { it.id == id } }
+            .take(3)
+    }
+
+    if (prioritySections.isEmpty()) return
+
+    Row(
+        modifier = modifier
+            .testTag(HomeTestTags.DiscoveryStrip),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        prioritySections.forEachIndexed { index, section ->
+            Column(
+                modifier = Modifier
+                    .background(
+                        color = Color.White.copy(alpha = 0.09f),
+                        shape = RoundedCornerShape(6.dp),
+                    )
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .testTag(HomeTestTags.discoveryStripItem(index)),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = section.title,
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "${section.items.size} ready",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = expressiveColors.titleAccent,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
