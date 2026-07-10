@@ -707,6 +707,9 @@ private fun HeroItem(
     val heroDescription = remember(item.description) {
         item.description ?: "Featured title from your library"
     }
+    val playActionLabel = remember(item.playbackProgress) {
+        if ((item.playbackProgress ?: 0f) > 0f) "Resume" else "Play"
+    }
 
     Box(
         modifier = modifier,
@@ -833,7 +836,10 @@ private fun HeroItem(
                         )
                     )
                 ) {
-                    Text("Play", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                    Text(
+                        playActionLabel,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    )
                 }
                 OutlinedButton(
                     onClick = onMoreInfo,

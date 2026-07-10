@@ -467,6 +467,62 @@ class HomeScreenUiTest {
     }
 
     @Test
+    fun featuredPrimaryAction_showsResume_whenPlaybackProgressExists() {
+        composeRule.setContent {
+            HomeTestHost {
+                HomeScreenContent(
+                    uiState = sampleContentState(
+                        featuredItems = listOf(
+                            sampleCard(
+                                id = "featured-progress",
+                                title = "In Progress",
+                                playbackProgress = 0.42f,
+                            )
+                        )
+                    ),
+                    onOpenItem = {},
+                    onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
+                    onRetry = {},
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Resume").assertIsDisplayed()
+    }
+
+    @Test
+    fun featuredPrimaryAction_showsPlay_whenPlaybackProgressIsMissing() {
+        composeRule.setContent {
+            HomeTestHost {
+                HomeScreenContent(
+                    uiState = sampleContentState(
+                        featuredItems = listOf(
+                            sampleCard(
+                                id = "featured-new",
+                                title = "New Feature",
+                                playbackProgress = null,
+                            )
+                        )
+                    ),
+                    onOpenItem = {},
+                    onPlayItem = {},
+                    onOpenSeries = {},
+                    onOpenSeason = {},
+                    onRetry = {},
+                    shouldRestoreFocusOnResume = false,
+                    onConsumedRestore = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Play").assertIsDisplayed()
+    }
+
+    @Test
     fun topNavDown_movesFocusToFeaturedPlay() {
         composeRule.setContent {
             HomeTestHost(showTopNav = true) {
@@ -694,6 +750,7 @@ private fun sampleCard(
     subtitle: String? = "2026",
     description: String? = "Sample description",
     mediaQuality: String? = "4K HDR",
+    playbackProgress: Float? = null,
 ): HomeCardModel = HomeCardModel(
     id = id,
     title = title,
@@ -708,7 +765,7 @@ private fun sampleCard(
     itemType = "Movie",
     collectionType = "movies",
     watchStatus = WatchStatus.NONE,
-    playbackProgress = null,
+    playbackProgress = playbackProgress,
     unwatchedCount = null,
     mediaQuality = mediaQuality,
 )
