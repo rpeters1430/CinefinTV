@@ -42,3 +42,4 @@ google-services.json
 !.gemini/skills/android/**
 gha-creds-*.json
 .superpowers/
+.worktrees/
