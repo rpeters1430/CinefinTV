@@ -477,7 +477,7 @@ private fun HomeLoadedContent(
                     .getOrNull(index - 1)
                     ?.firstOrNull()
 
-                HomeSection(
+                HomeShelf(
                     sectionIndex = index,
                     title = section.title,
                     items = section.items,
@@ -701,13 +701,6 @@ private fun HeroItem(
             )
             .build()
     }
-    val carouselMeta = remember(item.year, item.runtime, item.rating) {
-        listOfNotNull(
-            item.year?.toString(),
-            item.runtime,
-            item.rating?.let { "★ $it" },
-        ).joinToString("  •  ")
-    }
     val heroDescription = remember(item.description) {
         item.description ?: "Featured title from your library"
     }
@@ -781,13 +774,7 @@ private fun HeroItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (carouselMeta.isNotBlank()) {
-                Text(
-                    text = carouselMeta,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.86f),
-                )
-            }
+            HomeHeroMetadata(item = item)
             item.subtitle?.let {
                 Text(
                     text = it,
@@ -895,6 +882,32 @@ private fun HeroItem(
 }
 
 @Composable
+private fun HomeHeroMetadata(
+    item: HomeCardModel,
+    modifier: Modifier = Modifier,
+) {
+    val metadata = remember(item.year, item.runtime, item.rating, item.itemType) {
+        listOfNotNull(
+            item.year?.toString(),
+            item.runtime,
+            item.rating?.let { "★ $it" },
+            item.itemType,
+        ).joinToString("  •  ")
+    }
+
+    if (metadata.isNotBlank()) {
+        Text(
+            text = metadata,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.86f),
+            modifier = modifier,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
 private fun HomeDiscoveryStrip(
     sections: List<HomeSectionModel>,
     modifier: Modifier = Modifier,
@@ -953,7 +966,7 @@ private fun HomeDiscoveryStrip(
 
 
 @Composable
-private fun HomeSection(
+private fun HomeShelf(
     sectionIndex: Int,
     title: String,
     items: List<HomeCardModel>,
