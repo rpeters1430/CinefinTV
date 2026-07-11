@@ -41,9 +41,6 @@ object ServerUrlValidator {
             url = "https://$url"
         }
 
-        // Add default port if missing
-        url = addDefaultPortIfMissing(url)
-
         // Validate the final URL
         return if (isValidUrl(url)) {
             url
@@ -239,42 +236,6 @@ object ServerUrlValidator {
             // Common subdomain patterns for reverse proxy
             url.contains("jellyfin.") || url.contains("media.") || url.contains("stream.") -> true
             else -> false
-        }
-    }
-
-    /**
-     * Adds default Jellyfin port if no port is specified.
-     * For reverse proxy setups (URLs with paths), don't add default ports.
-     */
-    private fun addDefaultPortIfMissing(url: String): String {
-        return try {
-            val uri = URI(url)
-
-            // If port is already specified, keep it
-            if (uri.port != -1) {
-                return url
-            }
-
-            // Check if this looks like a reverse proxy setup
-            val path = uri.path ?: ""
-            val isReverseProxy = path.isNotEmpty() && path != "/"
-
-            // For reverse proxy setups, don't add default Jellyfin ports
-            if (isReverseProxy) {
-                return url
-            }
-
-            // Add default port based on protocol for direct connections
-            val defaultPort = when (uri.scheme?.lowercase()) {
-                "https" -> DEFAULT_HTTPS_PORT
-                "http" -> DEFAULT_HTTP_PORT
-                else -> DEFAULT_HTTP_PORT
-            }
-
-            "${uri.scheme}://${uri.host}:$defaultPort${uri.path ?: ""}"
-        } catch (e: URISyntaxException) {
-            SecureLogger.w(TAG, "Failed to parse URI for port addition: $url", e)
-            url
         }
     }
 
