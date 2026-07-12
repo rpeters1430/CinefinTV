@@ -143,14 +143,29 @@ class SecureCredentialManager @Inject constructor(
             return@withContext generateKey(stableAlias, requireUserAuthentication = false)
         }
 
-        // Return existing key if found
+        // Return existing key if found and verify it is usable
         if (existingKeyAlias != null) {
             logDebug { "Using existing key alias: $existingKeyAlias" }
-            return@withContext keyStore.getKey(existingKeyAlias, null) as SecretKey
+            try {
+                val key = keyStore.getKey(existingKeyAlias, null) as? SecretKey
+                if (key != null) {
+                    // Try to initialize a test cipher to ensure the key is usable (not permanently invalidated or corrupted)
+                    val cipher = Cipher.getInstance(Constants.Security.ENCRYPTION_TRANSFORMATION)
+                    cipher.init(Cipher.ENCRYPT_MODE, key)
+                    return@withContext key
+                }
+            } catch (e: Exception) {
+                SecureLogger.w(TAG, "Existing key $existingKeyAlias is corrupted or permanently invalidated. Deleting and recreating.", e)
+                try {
+                    keyStore.deleteEntry(existingKeyAlias)
+                } catch (ex: Exception) {
+                    SecureLogger.w(TAG, "Failed to delete corrupted key: $existingKeyAlias", ex)
+                }
+            }
         }
 
-        // No key found, generate stable one
-        logDebug { "No existing key found, generating new stable key: $stableAlias" }
+        // No key found or it was invalid, generate stable one
+        logDebug { "No existing key found or it was invalid, generating new stable key: $stableAlias" }
         return@withContext generateKey(stableAlias, requireUserAuthentication = false)
     }
 

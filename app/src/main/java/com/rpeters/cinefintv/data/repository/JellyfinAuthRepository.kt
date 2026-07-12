@@ -75,7 +75,7 @@ open class JellyfinAuthRepository @Inject constructor(
 
     companion object {
         private const val TAG = "JellyfinAuthRepository"
-        private const val RESTORE_STATE_TIMEOUT_MS = 5_000L
+        private const val RESTORE_STATE_TIMEOUT_MS = 15_000L
         private const val RESTORE_VALIDATION_TIMEOUT_MS = 5_000L
 
         /** HTTP status codes that indicate the access token has been definitively rejected. */
