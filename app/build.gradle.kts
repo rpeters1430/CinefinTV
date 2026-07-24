@@ -43,7 +43,7 @@ android {
 
     defaultConfig {
         applicationId = "com.rpeters.cinefintv"
-        minSdk = 26
+        minSdk = 30
         targetSdk = 35
         versionCode = 128
         versionName = "2.2.7"
