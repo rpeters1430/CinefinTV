@@ -144,6 +144,7 @@ private fun typefaceFor(font: SubtitleFont): Typeface? = when (font) {
 private fun PlayerVideoSurface(
     exoPlayer: Player,
     subtitleAppearance: SubtitleAppearancePreferences,
+    aspectRatioMode: com.rpeters.cinefintv.data.preferences.AspectRatioMode,
     modifier: Modifier = Modifier,
 ) {
     AndroidView(
@@ -155,6 +156,7 @@ private fun PlayerVideoSurface(
                 player = exoPlayer
                 isFocusable = false
                 isFocusableInTouchMode = false
+                resizeMode = aspectRatioMode.resizeMode
                 applySubtitleAppearance(subtitleAppearance)
             }
         },
@@ -162,6 +164,7 @@ private fun PlayerVideoSurface(
             if (pv.player !== exoPlayer) {
                 pv.player = exoPlayer
             }
+            pv.resizeMode = aspectRatioMode.resizeMode
             pv.applySubtitleAppearance(subtitleAppearance)
         },
     )
@@ -405,6 +408,8 @@ fun PlayerScreen(
                                 viewModel.setTranscodingQuality(it, positionProvider(), renderState.isPlaying)
                             },
                             onPlaybackSpeedSelected = { viewModel.setPlaybackSpeed(it) },
+                            onAspectRatioSelected = { viewModel.setAspectRatioMode(it) },
+                            onToggleStats = { viewModel.toggleStatsForNerds() },
                             onAutoPlayChange = { viewModel.setAutoPlayNextEpisode(it) },
                             onWatchTogetherClick = {
                                 viewModel.loadAvailableSyncGroups()
@@ -434,6 +439,8 @@ internal fun PlayerPlaybackContent(
     onSubtitleTrackSelected: (TrackOption?) -> Unit,
     onQualitySelected: (com.rpeters.cinefintv.data.preferences.TranscodingQuality) -> Unit,
     onPlaybackSpeedSelected: (Float) -> Unit,
+    onAspectRatioSelected: (com.rpeters.cinefintv.data.preferences.AspectRatioMode) -> Unit = {},
+    onToggleStats: () -> Unit = {},
     onAutoPlayChange: (Boolean) -> Unit,
     onWatchTogetherClick: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -453,6 +460,16 @@ internal fun PlayerPlaybackContent(
     var isContentShelfVisible by remember { mutableStateOf(false) }
     var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val expressiveColors = LocalCinefinExpressiveColors.current
+
+    var quickSeekText by remember { mutableStateOf<String?>(null) }
+    var isQuickSeekVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isQuickSeekVisible, quickSeekText) {
+        if (isQuickSeekVisible) {
+            delay(1200L)
+            isQuickSeekVisible = false
+        }
+    }
 
     val isPlaying = renderStateProvider().isPlaying
 
@@ -548,23 +565,22 @@ internal fun PlayerPlaybackContent(
                                 onInteract()
                                 true
                             } else {
-                                // Let the focus system handle UP traversal within the controls.
-                                // Consuming the event here would silently block focusProperties
-                                // (e.g. up = seekBarFocusRequester on utility buttons) from firing.
                                 false
                             }
                         }
                         Key.DirectionLeft, Key.DirectionRight -> {
                             if (!controlsVisible) {
                                 onInteract()
-                                // Seek immediately on first press rather than requiring a second press
                                 val duration = renderStateProvider().duration
                                 if (duration > 0L && !overlayActionFocused) {
                                     val seekMs = uiState.videoSeekIncrement.millis
-                                    val delta = if (keyEvent.key == Key.DirectionLeft) -seekMs else seekMs
+                                    val isLeft = keyEvent.key == Key.DirectionLeft
+                                    val delta = if (isLeft) -seekMs else seekMs
                                     val newPos = (exoPlayer.currentPosition + delta)
                                         .coerceIn(0L, duration)
                                     exoPlayer.seekTo(newPos)
+                                    quickSeekText = if (isLeft) "-${uiState.videoSeekIncrement.shortLabel}" else "+${uiState.videoSeekIncrement.shortLabel}"
+                                    isQuickSeekVisible = true
                                 }
                                 true
                             } else {
@@ -584,6 +600,7 @@ internal fun PlayerPlaybackContent(
             PlayerVideoSurface(
                 exoPlayer = exoPlayer,
                 subtitleAppearance = uiState.subtitleAppearance,
+                aspectRatioMode = uiState.aspectRatioMode,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -619,6 +636,20 @@ internal fun PlayerPlaybackContent(
             qualityLabel = uiState.transcodingQuality.takeIf { it != com.rpeters.cinefintv.data.preferences.TranscodingQuality.AUTO }?.label,
             playbackSpeed = uiState.playbackSpeed,
             modifier = Modifier.align(Alignment.TopEnd)
+        )
+
+        StatsForNerdsOverlay(
+            uiState = uiState,
+            renderStateProvider = renderStateProvider,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = 80.dp, start = 32.dp)
+        )
+
+        QuickSeekFeedbackOverlay(
+            text = quickSeekText,
+            isVisible = isQuickSeekVisible,
+            modifier = Modifier.align(Alignment.Center)
         )
 
         // Skip intro — bottom left
@@ -689,6 +720,8 @@ internal fun PlayerPlaybackContent(
             onSectionSelected = { trackPanelSection = it },
             onQualitySelected = onQualitySelected,
             onPlaybackSpeedSelected = onPlaybackSpeedSelected,
+            onAspectRatioSelected = onAspectRatioSelected,
+            onToggleStats = onToggleStats,
             onAutoPlayChange = onAutoPlayChange,
             onClose = {
                 isTrackPanelVisible = false

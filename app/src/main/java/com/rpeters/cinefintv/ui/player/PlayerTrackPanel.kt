@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.graphics.Color
@@ -55,10 +56,15 @@ import com.rpeters.cinefintv.data.preferences.TranscodingQuality
 import com.rpeters.cinefintv.ui.theme.CinefinGold
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
-internal enum class SettingsSection { AUDIO, SUBTITLES, QUALITY, SPEED, ALL }
+import androidx.compose.material.icons.filled.AspectRatio
+import androidx.compose.material.icons.filled.Info
+import com.rpeters.cinefintv.data.preferences.AspectRatioMode
+
+internal enum class SettingsSection { AUDIO, SUBTITLES, QUALITY, SPEED, ASPECT_RATIO, ALL }
 
 private val PLAYBACK_SPEEDS = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
 private val STREAMING_QUALITIES = TranscodingQuality.entries
+private val ASPECT_RATIO_MODES = AspectRatioMode.entries
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -74,14 +80,16 @@ internal fun PlayerTrackPanel(
     onSectionSelected: (SettingsSection) -> Unit,
     onQualitySelected: (TranscodingQuality) -> Unit,
     onPlaybackSpeedSelected: (Float) -> Unit,
+    onAspectRatioSelected: (AspectRatioMode) -> Unit = {},
+    onToggleStats: () -> Unit = {},
     onAutoPlayChange: (Boolean) -> Unit,
     onClose: () -> Unit,
     onInteract: () -> Unit
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
     if (isVisible && anchorBounds != null) {
-        val popupWidth = 320.dp
-        val popupMaxHeight = 400.dp
+        val popupWidth = 380.dp
+        val popupMaxHeight = 440.dp
         val density = LocalDensity.current
         val configuration = LocalConfiguration.current
         val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
@@ -122,29 +130,31 @@ internal fun PlayerTrackPanel(
                     containerColor = expressiveColors.chromeSurface.copy(alpha = 0.98f),
                 ),
                 border = androidx.tv.material3.Border(
-                    border = androidx.compose.foundation.BorderStroke(1.dp, expressiveColors.playerContentPrimary.copy(alpha = 0.15f))
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, expressiveColors.playerContentPrimary.copy(alpha = 0.2f))
                 ),
-                tonalElevation = 12.dp,
+                tonalElevation = 16.dp,
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .padding(horizontal = 20.dp, vertical = 16.dp)
                 ) {
                     val panelTitle = when (section) {
                         SettingsSection.AUDIO -> "Audio"
                         SettingsSection.SUBTITLES -> "Subtitles"
                         SettingsSection.QUALITY -> "Quality"
                         SettingsSection.SPEED -> "Speed"
+                        SettingsSection.ASPECT_RATIO -> "Aspect Ratio"
                         SettingsSection.ALL -> "Playback Options"
                     }
 
                     Text(
                         text = panelTitle,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 8.dp),
+                        modifier = Modifier.padding(bottom = 12.dp, start = 4.dp),
                     )
 
                     val listState = rememberLazyListState()
@@ -162,12 +172,15 @@ internal fun PlayerTrackPanel(
                         .takeIf { it >= 0 } ?: 0
                     val selectedSpeedIndex = PLAYBACK_SPEEDS.indexOf(uiState.playbackSpeed)
                         .takeIf { it >= 0 } ?: PLAYBACK_SPEEDS.indexOf(1.0f)
+                    val selectedAspectRatioIndex = ASPECT_RATIO_MODES.indexOf(uiState.aspectRatioMode)
+                        .takeIf { it >= 0 } ?: 0
                     val initialListIndex = when (section) {
                         SettingsSection.ALL -> 0
                         SettingsSection.AUDIO -> selectedAudioIndex
                         SettingsSection.SUBTITLES -> selectedSubtitleIndex
                         SettingsSection.QUALITY -> selectedQualityIndex
                         SettingsSection.SPEED -> selectedSpeedIndex
+                        SettingsSection.ASPECT_RATIO -> selectedAspectRatioIndex
                     }
 
                     LaunchedEffect(isVisible, section, initialListIndex) {
@@ -222,6 +235,18 @@ internal fun PlayerTrackPanel(
                             }
                             item {
                                 SettingsMenuItem(
+                                    icon = Icons.Default.AspectRatio,
+                                    title = "Aspect Ratio",
+                                    description = uiState.aspectRatioMode.label,
+                                    selectedValue = "",
+                                    onClick = {
+                                        onInteract()
+                                        onSectionSelected(SettingsSection.ASPECT_RATIO)
+                                    },
+                                )
+                            }
+                            item {
+                                SettingsMenuItem(
                                     icon = Icons.Default.PlayArrow,
                                     title = "Playback Speed",
                                     description = if (uiState.playbackSpeed == 1.0f) "Normal" else "${uiState.playbackSpeed}x",
@@ -230,6 +255,17 @@ internal fun PlayerTrackPanel(
                                         onInteract()
                                         onSectionSelected(SettingsSection.SPEED)
                                     },
+                                )
+                            }
+                            item {
+                                PlaybackSwitch(
+                                    title = "Playback Stats",
+                                    subtitle = "Show technical overlay",
+                                    checked = uiState.showStatsForNerds,
+                                    onCheckedChange = {
+                                        onInteract()
+                                        onToggleStats()
+                                    }
                                 )
                             }
                         }
@@ -310,6 +346,26 @@ internal fun PlayerTrackPanel(
                             }
                         }
 
+                        if (section == SettingsSection.ASPECT_RATIO) {
+                            items(ASPECT_RATIO_MODES.size) { index ->
+                                val mode = ASPECT_RATIO_MODES[index]
+                                TrackButton(
+                                    selected = uiState.aspectRatioMode == mode,
+                                    label = mode.label,
+                                    modifier = if (index == selectedAspectRatioIndex) {
+                                        Modifier.focusRequester(initialFocusRequester)
+                                    } else {
+                                        Modifier
+                                    },
+                                    onClick = {
+                                        onInteract()
+                                        onAspectRatioSelected(mode)
+                                        onClose()
+                                    },
+                                )
+                            }
+                        }
+
                         if (section == SettingsSection.SPEED) {
                             items(PLAYBACK_SPEEDS.size) { index ->
                                 val speed = PLAYBACK_SPEEDS[index]
@@ -368,7 +424,7 @@ private fun SettingsMenuItem(
         modifier = modifier.fillMaxWidth(),
         colors = ListItemDefaults.colors(
             containerColor = Color.Transparent,
-            contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.8f),
+            contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.85f),
             focusedContainerColor = expressiveColors.playerContentPrimary.copy(alpha = 0.15f),
             focusedContentColor = CinefinGold,
             selectedContainerColor = CinefinGold.copy(alpha = 0.1f),
@@ -380,20 +436,23 @@ private fun SettingsMenuItem(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(28.dp),
             )
         },
         headlineContent = {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold,
             )
         },
         supportingContent = {
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = androidx.tv.material3.LocalContentColor.current.copy(alpha = 0.7f),
+                fontSize = 16.sp,
+                color = androidx.tv.material3.LocalContentColor.current.copy(alpha = 0.72f),
             )
         },
         trailingContent = {
@@ -401,6 +460,7 @@ private fun SettingsMenuItem(
                 Text(
                     text = selectedValue,
                     style = MaterialTheme.typography.labelMedium,
+                    fontSize = 16.sp,
                     color = androidx.tv.material3.LocalContentColor.current,
                 )
             }
@@ -423,7 +483,7 @@ private fun NavigationListItem(
         modifier = modifier.fillMaxWidth(),
         colors = ListItemDefaults.colors(
             containerColor = Color.Transparent,
-            contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.8f),
+            contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.85f),
             focusedContainerColor = expressiveColors.playerContentPrimary.copy(alpha = 0.15f),
             focusedContentColor = CinefinGold,
             selectedContainerColor = CinefinGold.copy(alpha = 0.1f),
@@ -435,13 +495,15 @@ private fun NavigationListItem(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(28.dp),
             )
         },
         headlineContent = {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold,
             )
         },
     )
@@ -462,7 +524,7 @@ private fun PlaybackSwitch(
         modifier = Modifier.fillMaxWidth(),
         colors = ListItemDefaults.colors(
             containerColor = Color.Transparent,
-            contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.8f),
+            contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.85f),
             focusedContainerColor = expressiveColors.playerContentPrimary.copy(alpha = 0.15f),
             focusedContentColor = CinefinGold,
             selectedContainerColor = CinefinGold.copy(alpha = 0.1f),
@@ -474,13 +536,16 @@ private fun PlaybackSwitch(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold,
             )
         },
         supportingContent = {
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = androidx.tv.material3.LocalContentColor.current.copy(alpha = 0.7f),
+                fontSize = 16.sp,
+                color = androidx.tv.material3.LocalContentColor.current.copy(alpha = 0.72f),
             )
         },
         trailingContent = {
@@ -507,7 +572,7 @@ private fun TrackButton(
         modifier = modifier.fillMaxWidth(),
         colors = ListItemDefaults.colors(
             containerColor = Color.Transparent,
-            contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.8f),
+            contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.85f),
             focusedContainerColor = expressiveColors.playerContentPrimary.copy(alpha = 0.15f),
             focusedContentColor = CinefinGold,
             selectedContainerColor = CinefinGold.copy(alpha = 0.1f),
@@ -518,7 +583,9 @@ private fun TrackButton(
         headlineContent = {
             Text(
                 text = label,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleMedium,
+                fontSize = 20.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                 maxLines = 1
             )
         },
@@ -527,7 +594,7 @@ private fun TrackButton(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
         },

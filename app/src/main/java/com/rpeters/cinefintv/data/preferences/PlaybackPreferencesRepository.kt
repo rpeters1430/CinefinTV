@@ -80,6 +80,17 @@ enum class ResumePlaybackMode(val label: String) {
 }
 
 /**
+ * Aspect ratio scaling modes for video playback.
+ * The resizeMode integer maps to ExoPlayer AspectRatioFrameLayout RESIZE_MODE constants.
+ */
+enum class AspectRatioMode(val label: String, val resizeMode: Int) {
+    FIT("Fit (Letterbox)", 0),
+    FILL("Fill (Crop)", 3),
+    ZOOM("Zoom 16:9", 4),
+    STRETCH("Stretch", 1),
+}
+
+/**
  * Fixed seek step used by video playback controls.
  */
 enum class VideoSeekIncrement(val label: String, val shortLabel: String, val millis: Long) {
@@ -98,6 +109,7 @@ data class PlaybackPreferences(
     val autoPlayNextEpisode: Boolean,
     val resumePlaybackMode: ResumePlaybackMode,
     val videoSeekIncrement: VideoSeekIncrement,
+    val aspectRatioMode: AspectRatioMode,
 ) {
     companion object {
         val DEFAULT = PlaybackPreferences(
@@ -108,6 +120,7 @@ data class PlaybackPreferences(
             autoPlayNextEpisode = true, // enabled by default
             resumePlaybackMode = ResumePlaybackMode.ALWAYS, // always resume by default
             videoSeekIncrement = VideoSeekIncrement.TEN_SECONDS,
+            aspectRatioMode = AspectRatioMode.FIT,
         )
     }
 }
@@ -151,6 +164,9 @@ class PlaybackPreferencesRepository @Inject constructor(
                 videoSeekIncrement = runCatching {
                     VideoSeekIncrement.valueOf(prefs[PreferencesKeys.VIDEO_SEEK_INCREMENT] ?: "")
                 }.getOrDefault(PlaybackPreferences.DEFAULT.videoSeekIncrement),
+                aspectRatioMode = runCatching {
+                    AspectRatioMode.valueOf(prefs[PreferencesKeys.ASPECT_RATIO_MODE] ?: "")
+                }.getOrDefault(PlaybackPreferences.DEFAULT.aspectRatioMode),
             )
         }
 
@@ -182,6 +198,10 @@ class PlaybackPreferencesRepository @Inject constructor(
         dataStore.edit { it[PreferencesKeys.VIDEO_SEEK_INCREMENT] = increment.name }
     }
 
+    suspend fun setAspectRatioMode(mode: AspectRatioMode) {
+        dataStore.edit { it[PreferencesKeys.ASPECT_RATIO_MODE] = mode.name }
+    }
+
     private object PreferencesKeys {
         val TRANSCODING_QUALITY = stringPreferencesKey("transcoding_quality")
         val AUDIO_CHANNELS = stringPreferencesKey("audio_channels")
@@ -190,6 +210,7 @@ class PlaybackPreferencesRepository @Inject constructor(
         val AUTO_PLAY_NEXT_EPISODE = booleanPreferencesKey("auto_play_next_episode")
         val RESUME_PLAYBACK_MODE = stringPreferencesKey("resume_playback_mode")
         val VIDEO_SEEK_INCREMENT = stringPreferencesKey("video_seek_increment")
+        val ASPECT_RATIO_MODE = stringPreferencesKey("aspect_ratio_mode")
     }
 
     companion object {

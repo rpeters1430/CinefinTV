@@ -115,6 +115,7 @@ class PlayerViewModel @Inject constructor(
                     autoPlayNextEpisode = prefs.autoPlayNextEpisode,
                     transcodingQuality = prefs.transcodingQuality,
                     videoSeekIncrement = prefs.videoSeekIncrement,
+                    aspectRatioMode = prefs.aspectRatioMode,
                 )
             }
         }
@@ -362,6 +363,31 @@ class PlayerViewModel @Inject constructor(
         val trickplayManifest = repositories.stream.getTrickplayManifest(resolvedItemId)
         val trickplayBaseUrl = if (trickplayManifest != null) repositories.stream.getTrickplayBaseUrl(resolvedItemId) else null
 
+        val videoStream = mediaSource?.mediaStreams?.firstOrNull { it.type == org.jellyfin.sdk.model.api.MediaStreamType.VIDEO }
+        val audioStream = mediaSource?.mediaStreams?.firstOrNull { it.type == org.jellyfin.sdk.model.api.MediaStreamType.AUDIO }
+        val videoCodec = runCatching { videoStream?.codec }.getOrNull()?.uppercase()
+        val audioCodec = runCatching { audioStream?.codec }.getOrNull()?.uppercase()
+        val videoWidth = runCatching { videoStream?.width }.getOrNull()
+        val videoHeight = runCatching { videoStream?.height }.getOrNull()
+        val resolution = if (videoWidth != null && videoHeight != null && videoWidth > 0 && videoHeight > 0) {
+            "${videoWidth}x${videoHeight}"
+        } else if (resolvedPlayback?.isHdrPlayback == true) {
+            "4K HDR"
+        } else null
+        val frameRate = runCatching { videoStream?.realFrameRate }.getOrNull()?.let { "${it.toInt()} fps" }
+        val bitrate = runCatching { mediaSource?.bitrate }.getOrNull()?.let { "${it / 1000} kbps" }
+        val container = runCatching { mediaSource?.container }.getOrNull()?.uppercase()
+
+        val playbackStats = PlaybackStats(
+            videoCodec = videoCodec,
+            audioCodec = audioCodec,
+            resolution = resolution,
+            frameRate = frameRate,
+            playMethod = activePlayMethod.name.replace("_", " "),
+            bitrate = bitrate,
+            container = container,
+        )
+
         _uiState.value = _uiState.value.copy(
             itemId = resolvedItemId,
             title = title,
@@ -385,6 +411,7 @@ class PlayerViewModel @Inject constructor(
             isHdrPlayback = resolvedPlayback?.isHdrPlayback ?: false,
             trickplayManifest = trickplayManifest,
             trickplayBaseUrl = trickplayBaseUrl,
+            playbackStats = playbackStats,
             // Chapters are instant (already loaded); episodes/recommendations load below.
             contentRow = if (chapters.size >= 2) PlayerContentRow.Chapters(chapters) else null,
             isLoading = false,
@@ -1109,6 +1136,21 @@ class PlayerViewModel @Inject constructor(
                 isPaused = false,
             )
         }
+    }
+
+    fun setAspectRatioMode(mode: com.rpeters.cinefintv.data.preferences.AspectRatioMode) {
+        _uiState.value = _uiState.value.copy(aspectRatioMode = mode)
+        viewModelScope.launch {
+            playbackPreferencesRepository.setAspectRatioMode(mode)
+        }
+    }
+
+    fun toggleStatsForNerds() {
+        _uiState.value = _uiState.value.copy(showStatsForNerds = !_uiState.value.showStatsForNerds)
+    }
+
+    fun setSubtitleOffsetMs(offsetMs: Long) {
+        _uiState.value = _uiState.value.copy(subtitleOffsetMs = offsetMs)
     }
 
     companion object {

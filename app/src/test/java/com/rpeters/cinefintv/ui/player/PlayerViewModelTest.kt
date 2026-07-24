@@ -1028,6 +1028,55 @@ class PlayerViewModelTest {
         assertNull(viewModel.uiState.value.introSkipRange)
     }
 
+    @Test
+    fun setAspectRatioMode_updatesState() = runTest {
+        val repo = createPlaybackPreferencesRepository()
+        val viewModel = PlayerViewModel(
+            repositories = FakePlayerRepositories().coordinator,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
+            playbackPreferencesRepository = repo,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
+            appContext = appContext,
+            okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
+            certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
+        )
+        viewModel.setAspectRatioMode(com.rpeters.cinefintv.data.preferences.AspectRatioMode.FILL)
+        advanceUntilIdle()
+        assertEquals(com.rpeters.cinefintv.data.preferences.AspectRatioMode.FILL, viewModel.uiState.value.aspectRatioMode)
+    }
+
+    @Test
+    fun toggleStatsForNerds_togglesState() = runTest {
+        val viewModel = PlayerViewModel(
+            repositories = FakePlayerRepositories().coordinator,
+            enhancedPlaybackManager = enhancedPlaybackManager,
+            adaptiveBitrateMonitor = adaptiveBitrateMonitor,
+            playbackPreferencesRepository = playbackPreferencesRepository,
+            subtitleAppearancePreferencesRepository = subtitleAppearancePreferencesRepository,
+            appContext = appContext,
+            okHttpClient = OkHttpClient(),
+            updateBus = updateBus,
+            syncPlayRepository = syncPlayRepository,
+            certificatePinningManager = certificatePinningManager,
+            introSkipperRepository = mockk { coEvery { getSegments(any()) } returns null },
+            introSkipPreferencesRepository = mockk {
+                every { preferencesFlow } returns flowOf(IntroSkipPreferences.DEFAULT)
+            },
+        )
+        assertFalse(viewModel.uiState.value.showStatsForNerds)
+        viewModel.toggleStatsForNerds()
+        assertTrue(viewModel.uiState.value.showStatsForNerds)
+        viewModel.toggleStatsForNerds()
+        assertFalse(viewModel.uiState.value.showStatsForNerds)
+    }
+
     private fun createPlaybackPreferencesRepository(): PlaybackPreferencesRepository {
         val dataStore = PreferenceDataStoreFactory.create(
             scope = kotlinx.coroutines.CoroutineScope(mainDispatcherRule.dispatcher),

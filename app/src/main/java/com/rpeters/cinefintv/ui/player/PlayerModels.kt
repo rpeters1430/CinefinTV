@@ -1,5 +1,6 @@
 package com.rpeters.cinefintv.ui.player
 
+import com.rpeters.cinefintv.data.preferences.AspectRatioMode
 import com.rpeters.cinefintv.data.security.PinningValidationException
 import com.rpeters.cinefintv.data.preferences.SubtitleAppearancePreferences
 import com.rpeters.cinefintv.data.preferences.TranscodingQuality
@@ -23,6 +24,16 @@ data class SkipRange(val startMs: Long, val endMs: Long?)
 data class IntroSkipperSegments(
     val intro: SkipRange?,
     val credits: SkipRange?,
+)
+
+data class PlaybackStats(
+    val videoCodec: String? = null,
+    val audioCodec: String? = null,
+    val resolution: String? = null,
+    val frameRate: String? = null,
+    val playMethod: String? = null,
+    val bitrate: String? = null,
+    val container: String? = null,
 )
 
 @Serializable
@@ -84,8 +95,12 @@ data class PlayerUiState(
     val selectedSubtitleTrack: TrackOption? = null,
     val transcodingQuality: TranscodingQuality = TranscodingQuality.AUTO,
     val videoSeekIncrement: VideoSeekIncrement = VideoSeekIncrement.TEN_SECONDS,
+    val aspectRatioMode: AspectRatioMode = AspectRatioMode.FIT,
     val playbackSpeed: Float = 1.0f,
     val subtitleAppearance: SubtitleAppearancePreferences = SubtitleAppearancePreferences.DEFAULT,
+    val subtitleOffsetMs: Long = 0L,
+    val showStatsForNerds: Boolean = false,
+    val playbackStats: PlaybackStats = PlaybackStats(),
     val isHdrPlayback: Boolean = false,
     val chapters: List<ChapterMarker> = emptyList(),
     val introSkipRange: SkipRange? = null,

@@ -519,3 +519,125 @@ internal fun NextEpisodeCard(
         }
     }
 }
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+internal fun StatsForNerdsOverlay(
+    uiState: PlayerUiState,
+    renderStateProvider: () -> PlayerRenderState,
+    modifier: Modifier = Modifier
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    val stats = uiState.playbackStats
+    val renderState = renderStateProvider()
+
+    AnimatedVisibility(
+        visible = uiState.showStatsForNerds,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = modifier
+    ) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            colors = SurfaceDefaults.colors(
+                containerColor = SurfaceDark.copy(alpha = 0.92f),
+            ),
+            border = Border(
+                border = BorderStroke(1.5.dp, expressiveColors.playerContentPrimary.copy(alpha = 0.25f))
+            ),
+            modifier = Modifier
+                .width(420.dp)
+                .padding(24.dp)
+                .testTag(PlayerTestTags.StatsOverlay)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "PLAYBACK STATISTICS",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 22.sp
+                )
+
+                StatRow("Play Method", stats.playMethod ?: "Direct Play")
+                StatRow("Resolution", stats.resolution ?: if (uiState.isHdrPlayback) "4K HDR" else "1080p")
+                StatRow("Video Codec", stats.videoCodec ?: "HEVC/H.265")
+                StatRow("Audio Codec", stats.audioCodec ?: uiState.selectedAudioTrack?.label ?: "AAC / EAC3")
+                stats.bitrate?.let { StatRow("Bitrate", it) }
+                stats.frameRate?.let { StatRow("Frame Rate", it) }
+                stats.container?.let { StatRow("Container", it) }
+                StatRow("Aspect Ratio", uiState.aspectRatioMode.label)
+                StatRow("Buffer Level", "${(renderState.bufferedFraction * 100).toInt()}%")
+                if (uiState.subtitleOffsetMs != 0L) {
+                    StatRow("Subtitle Sync", "${uiState.subtitleOffsetMs}ms")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatRow(label: String, value: String) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = expressiveColors.playerContentSecondary,
+            fontSize = 16.sp
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold,
+            color = expressiveColors.playerContentPrimary,
+            fontSize = 16.sp
+        )
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+internal fun QuickSeekFeedbackOverlay(
+    text: String?,
+    isVisible: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val expressiveColors = LocalCinefinExpressiveColors.current
+    AnimatedVisibility(
+        visible = isVisible && !text.isNullOrBlank(),
+        enter = fadeIn() + androidx.compose.animation.scaleIn(initialScale = 0.8f),
+        exit = fadeOut() + androidx.compose.animation.scaleOut(targetScale = 0.8f),
+        modifier = modifier
+    ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            colors = SurfaceDefaults.colors(
+                containerColor = SurfaceDark.copy(alpha = 0.88f)
+            ),
+            border = Border(
+                border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+            ),
+            modifier = Modifier.testTag(PlayerTestTags.SeekFeedbackPill)
+        ) {
+            Box(
+                modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = text.orEmpty(),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Black,
+                    color = expressiveColors.playerContentPrimary,
+                    fontSize = 28.sp
+                )
+            }
+        }
+    }
+}

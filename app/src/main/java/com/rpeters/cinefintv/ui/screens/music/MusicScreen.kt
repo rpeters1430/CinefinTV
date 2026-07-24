@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -19,8 +21,12 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -28,19 +34,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
+import coil3.compose.AsyncImage
 import com.rpeters.cinefintv.ui.components.CinefinShelfTitle
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.rememberTopLevelDestinationFocus
@@ -285,28 +294,83 @@ private fun AlbumDetailContent(
                 ),
                 tonalElevation = 2.dp,
             ) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.padding(24.dp)
+                Row(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(28.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    CinefinShelfTitle(
-                        title = albumTitle,
-                        eyebrow = album.albumArtist ?: album.artists?.firstOrNull() ?: "Album Detail",
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Text(
-                        text = listOfNotNull(albumYear, album.albumArtist ?: album.artists?.firstOrNull())
-                            .joinToString("  •  "),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedButton(
-                        onClick = onBack,
-                        modifier = Modifier
-                            .padding(top = 8.dp)
-                            .then(destinationFocus.primaryContentModifier()),
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.size(160.dp),
+                        colors = SurfaceDefaults.colors(containerColor = expressiveColors.accentSurface)
                     ) {
-                        Text("Back")
+                        val albumCoverUrl = imageUrl(album)
+                        if (albumCoverUrl != null) {
+                            AsyncImage(
+                                model = albumCoverUrl,
+                                contentDescription = albumTitle,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                            )
+                        } else {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.MusicNote,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = expressiveColors.titleAccent,
+                                )
+                            }
+                        }
+                    }
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        CinefinShelfTitle(
+                            title = albumTitle,
+                            eyebrow = album.albumArtist ?: album.artists?.firstOrNull() ?: "Album Detail",
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Text(
+                            text = listOfNotNull(albumYear, album.albumArtist ?: album.artists?.firstOrNull())
+                                .joinToString("  •  "),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontSize = 18.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    state.tracks.firstOrNull()?.let(onPlayTrack)
+                                },
+                                modifier = Modifier.then(destinationFocus.primaryContentModifier())
+                            ) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+                                Text("Play All")
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    state.tracks.shuffled().firstOrNull()?.let(onPlayTrack)
+                                }
+                            ) {
+                                Icon(Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+                                Text("Shuffle")
+                            }
+
+                            OutlinedButton(onClick = onBack) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+                                Text("Back")
+                            }
+                        }
                     }
                 }
             }

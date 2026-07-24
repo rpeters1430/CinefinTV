@@ -1,5 +1,17 @@
 package com.rpeters.cinefintv.ui.player.audio
 
+import androidx.compose.foundation.focusable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.unit.sp
+import com.rpeters.cinefintv.ui.theme.CinefinGold
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -444,23 +456,52 @@ private fun QueueItem(
 private fun AudioSeekBar(
     position: Long,
     duration: Long,
-    onSeek: (Long) -> Unit
+    onSeek: (Long) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val progress = if (duration > 0) position.toFloat() / duration.toFloat() else 0f
     val expressiveColors = LocalCinefinExpressiveColors.current
-    
+    var isFocused by remember { mutableStateOf(false) }
+
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .height(6.dp)
-            .background(expressiveColors.playerContentPrimary.copy(alpha = 0.2f), CircleShape)
+            .height(28.dp)
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
+            .onPreviewKeyEvent { keyEvent ->
+                if (keyEvent.type == KeyEventType.KeyDown) {
+                    when (keyEvent.key) {
+                        Key.DirectionLeft -> {
+                            val newPos = (position - 10_000L).coerceAtLeast(0L)
+                            onSeek(newPos)
+                            true
+                        }
+                        Key.DirectionRight -> {
+                            val newPos = (position + 10_000L).coerceAtMost(duration)
+                            onSeek(newPos)
+                            true
+                        }
+                        else -> false
+                    }
+                } else false
+            },
+        contentAlignment = Alignment.CenterStart
     ) {
         Box(
             modifier = Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(progress.coerceIn(0f, 1f))
-                .background(MaterialTheme.colorScheme.primary, CircleShape)
-        )
+                .fillMaxWidth()
+                .height(if (isFocused) 10.dp else 6.dp)
+                .clip(CircleShape)
+                .background(expressiveColors.playerContentPrimary.copy(alpha = 0.2f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(progress.coerceIn(0f, 1f))
+                    .background(if (isFocused) CinefinGold else MaterialTheme.colorScheme.primary, CircleShape)
+            )
+        }
     }
 }
 

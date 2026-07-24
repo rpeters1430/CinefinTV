@@ -40,6 +40,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.FastForward
@@ -147,6 +148,7 @@ internal fun PlayerControls(
     val (subtitleButtonBounds, setSubtitleButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
     val (audioButtonBounds, setAudioButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
     val (qualityButtonBounds, setQualityButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
+    val (aspectRatioButtonBounds, setAspectRatioButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
     val (speedButtonBounds, setSpeedButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
     val (settingsButtonBounds, setSettingsButtonBounds) = remember { mutableStateOf<Rect>(defaultBounds) }
 
@@ -154,6 +156,7 @@ internal fun PlayerControls(
     val subtitleFocusRequester = remember { FocusRequester() }
     val audioFocusRequester = remember { FocusRequester() }
     val qualityFocusRequester = remember { FocusRequester() }
+    val aspectRatioFocusRequester = remember { FocusRequester() }
     val speedFocusRequester = remember { FocusRequester() }
     val settingsFocusRequester = remember { FocusRequester() }
     val skipBackFocusRequester = remember { FocusRequester() }
@@ -187,6 +190,39 @@ internal fun PlayerControls(
                     }
                 }
         ) {
+            // Ambient Top Scrim Gradient for high contrast on TV
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(240.dp)
+                    .align(Alignment.TopCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.88f),
+                                Color.Black.copy(alpha = 0.45f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+            // Ambient Bottom Scrim Gradient for high contrast on TV
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(340.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.6f),
+                                Color.Black.copy(alpha = 0.95f)
+                            )
+                        )
+                    )
+            )
+
             // Minimalist Top-Left Info
             Row(
                 modifier = Modifier
@@ -203,14 +239,15 @@ internal fun PlayerControls(
                     IconButton(
                         onClick = { onInteract(); onBack() },
                         modifier = Modifier
+                            .size(52.dp)
                             .focusRequester(backFocusRequester)
                             .focusProperties {
                                 up = FocusRequester.Cancel
                                 down = seekBarFocusRequester
                             },
-                        scale = IconButtonDefaults.scale(focusedScale = 1.15f),
+                        scale = IconButtonDefaults.scale(focusedScale = 1.2f),
                         colors = IconButtonDefaults.colors(
-                            containerColor = expressiveColors.playerContentPrimary.copy(alpha = 0.1f),
+                            containerColor = expressiveColors.playerContentPrimary.copy(alpha = 0.15f),
                             contentColor = expressiveColors.playerContentPrimary,
                             focusedContainerColor = MaterialTheme.colorScheme.primary,
                             focusedContentColor = expressiveColors.playerContentPrimary,
@@ -219,7 +256,7 @@ internal fun PlayerControls(
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(28.dp)
                         )
                     }
 
@@ -230,13 +267,14 @@ internal fun PlayerControls(
                                 contentDescription = uiState.title,
                                 contentScale = ContentScale.Fit,
                                 modifier = Modifier
-                                    .width(220.dp)
-                                    .height(56.dp),
+                                    .width(260.dp)
+                                    .height(64.dp),
                             )
                         } else {
                             Text(
                                 text = uiState.title,
-                                style = MaterialTheme.typography.headlineMedium,
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontSize = 28.sp,
                                 color = expressiveColors.playerContentPrimary,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
@@ -260,6 +298,7 @@ internal fun PlayerControls(
                             Text(
                                 text = metadataLine,
                                 style = MaterialTheme.typography.titleMedium,
+                                fontSize = 18.sp,
                                 color = expressiveColors.playerContentSecondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -417,9 +456,24 @@ internal fun PlayerControls(
                                         up = seekBarFocusRequester
                                         if (hasContentRow) down = contentRowFocusRequester
                                         left = subtitleFocusRequester
-                                        right = speedFocusRequester
+                                        right = aspectRatioFocusRequester
                                     }
                                     .onGloballyPositioned { setQualityButtonBounds(it.boundsInRoot()) }
+                            )
+
+                            ActionIconButton(
+                                icon = Icons.Default.AspectRatio,
+                                onClick = { onInteract(); onSettingsClick(SettingsSection.ASPECT_RATIO, aspectRatioButtonBounds) },
+                                modifier = Modifier
+                                    .focusRequester(aspectRatioFocusRequester)
+                                    .testTag(PlayerTestTags.AspectRatioButton)
+                                    .focusProperties {
+                                        up = seekBarFocusRequester
+                                        if (hasContentRow) down = contentRowFocusRequester
+                                        left = qualityFocusRequester
+                                        right = speedFocusRequester
+                                    }
+                                    .onGloballyPositioned { setAspectRatioButtonBounds(it.boundsInRoot()) }
                             )
 
                             ActionIconButton(
@@ -432,7 +486,7 @@ internal fun PlayerControls(
                                     .focusProperties {
                                         up = seekBarFocusRequester
                                         if (hasContentRow) down = contentRowFocusRequester
-                                        left = qualityFocusRequester
+                                        left = aspectRatioFocusRequester
                                         right = settingsFocusRequester
                                     }
                                     .onGloballyPositioned { setSpeedButtonBounds(it.boundsInRoot()) }
@@ -735,8 +789,8 @@ private fun PlayPauseButton(
     val expressiveColors = LocalCinefinExpressiveColors.current
     IconButton(
         onClick = onClick,
-        modifier = modifier,
-        scale = IconButtonDefaults.scale(focusedScale = 1.2f),
+        modifier = modifier.size(72.dp),
+        scale = IconButtonDefaults.scale(focusedScale = 1.25f),
         colors = IconButtonDefaults.colors(
             containerColor = expressiveColors.playerContentPrimary,
             contentColor = expressiveColors.playerSurface,
@@ -755,7 +809,7 @@ private fun PlayPauseButton(
             Icon(
                 if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                 contentDescription = if (playing) "Pause" else "Play",
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(44.dp)
             )
         }
     }
@@ -772,11 +826,11 @@ private fun ActionIconButton(
     val expressiveColors = LocalCinefinExpressiveColors.current
     IconButton(
         onClick = onClick,
-        modifier = modifier,
-        scale = IconButtonDefaults.scale(focusedScale = 1.15f),
+        modifier = modifier.size(56.dp),
+        scale = IconButtonDefaults.scale(focusedScale = 1.2f),
         colors = IconButtonDefaults.colors(
             containerColor = Color.Transparent,
-            contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.8f),
+            contentColor = expressiveColors.playerContentPrimary.copy(alpha = 0.9f),
             focusedContainerColor = MaterialTheme.colorScheme.primary,
             focusedContentColor = expressiveColors.playerContentPrimary
         )
@@ -785,11 +839,13 @@ private fun ActionIconButton(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(26.dp))
+            Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp))
             if (label != null) {
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelSmall,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
                     color = LocalContentColor.current,
                     maxLines = 1,
                 )

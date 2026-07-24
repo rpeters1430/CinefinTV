@@ -17,5 +17,8 @@ object PlayerTestTags {
     const val NextEpisodeCard = "player_next_episode_card"
     const val NextEpisodeButton = "player_next_episode_button"
     const val PlayPauseButton = "player_play_pause_button"
+    const val AspectRatioButton = "player_aspect_ratio_button"
+    const val StatsOverlay = "player_stats_overlay"
+    const val SeekFeedbackPill = "player_seek_feedback_pill"
     const val ResumeDialog = "player_resume_dialog"
 }
