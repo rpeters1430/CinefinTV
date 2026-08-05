@@ -37,8 +37,21 @@ object ServerUrlValidator {
 
         // Add protocol if missing
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
-            // Default to HTTPS for modern Jellyfin setups
-            url = "https://$url"
+            // Only assume SSL when the user explicitly typed a scheme. A bare
+            // IP address (or "localhost") is typically a direct, unencrypted
+            // LAN connection, so default those to HTTP. Hostnames/domains are
+            // more likely to sit behind a reverse proxy with TLS, so keep
+            // defaulting those to HTTPS.
+            val hostPart = extractHostForSchemeInference(url)
+            val isIpHost = isValidIPAddress(hostPart) || hostPart.equals("localhost", ignoreCase = true)
+            // A bare (unbracketed) IPv6 literal must be wrapped in brackets to
+            // form a valid URI authority, e.g. "::1" -> "[::1]".
+            val authority = if (!url.startsWith("[") && hostPart.count { it == ':' } > 1) {
+                url.replaceFirst(hostPart, "[$hostPart]")
+            } else {
+                url
+            }
+            url = if (isIpHost) "http://$authority" else "https://$authority"
         }
 
         // Validate the final URL
@@ -281,6 +294,20 @@ object ServerUrlValidator {
         } catch (e: MalformedURLException) {
             SecureLogger.w(TAG, "Malformed URL: $url", e)
             false
+        }
+    }
+
+    /**
+     * Extracts the host portion of a scheme-less input for classifying it as an
+     * IP address vs. a hostname. Handles bracketed IPv6 literals (`[::1]:8096`)
+     * and bare IPv6 literals (`2001:db8::1`), which contain colons that would
+     * otherwise be mistaken for a port separator.
+     */
+    private fun extractHostForSchemeInference(url: String): String {
+        return when {
+            url.startsWith("[") -> url.substringAfter("[").substringBefore("]")
+            url.count { it == ':' } > 1 -> url.substringBefore("/")
+            else -> url.substringBefore("/").substringBefore(":")
         }
     }
 
