@@ -67,6 +67,27 @@ class ServerUrlValidatorTest {
     }
 
     @Test
+    fun validateAndNormalizeUrl_forBracketedIpv6WithPortWithoutScheme_defaultsToHttp() {
+        val normalized = ServerUrlValidator.validateAndNormalizeUrl("[::1]:8096")
+
+        assertEquals("http://[::1]:8096", normalized)
+    }
+
+    @Test
+    fun validateAndNormalizeUrl_forBracketedIpv6WithoutPortOrScheme_defaultsToHttp() {
+        val normalized = ServerUrlValidator.validateAndNormalizeUrl("[::1]")
+
+        assertEquals("http://[::1]", normalized)
+    }
+
+    @Test
+    fun validateAndNormalizeUrl_forBareIpv6WithoutScheme_defaultsToHttpAndAddsBrackets() {
+        val normalized = ServerUrlValidator.validateAndNormalizeUrl("::1")
+
+        assertEquals("http://[::1]", normalized)
+    }
+
+    @Test
     fun normalizeServerUrl_stripsDefaultHttpsPort() {
         val result1 = normalizeServerUrl("https://jellyfin.example.com")
         val result2 = normalizeServerUrl("https://jellyfin.example.com:443")
