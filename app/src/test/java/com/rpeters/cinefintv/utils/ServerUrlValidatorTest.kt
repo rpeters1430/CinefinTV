@@ -32,6 +32,41 @@ class ServerUrlValidatorTest {
     }
 
     @Test
+    fun validateAndNormalizeUrl_forIpAddressWithPortWithoutScheme_defaultsToHttp() {
+        val normalized = ServerUrlValidator.validateAndNormalizeUrl("10.1.1.20:8096")
+
+        assertEquals("http://10.1.1.20:8096", normalized)
+    }
+
+    @Test
+    fun validateAndNormalizeUrl_forIpAddressWithoutScheme_defaultsToHttp() {
+        val normalized = ServerUrlValidator.validateAndNormalizeUrl("192.168.1.50")
+
+        assertEquals("http://192.168.1.50", normalized)
+    }
+
+    @Test
+    fun validateAndNormalizeUrl_forIpAddressWithExplicitHttps_preservesHttps() {
+        val normalized = ServerUrlValidator.validateAndNormalizeUrl("https://10.1.1.20:8920")
+
+        assertEquals("https://10.1.1.20:8920", normalized)
+    }
+
+    @Test
+    fun validateAndNormalizeUrl_forLocalhostWithoutScheme_defaultsToHttp() {
+        val normalized = ServerUrlValidator.validateAndNormalizeUrl("localhost:8096")
+
+        assertEquals("http://localhost:8096", normalized)
+    }
+
+    @Test
+    fun validateAndNormalizeUrl_forDomainWithoutScheme_stillDefaultsToHttps() {
+        val normalized = ServerUrlValidator.validateAndNormalizeUrl("media.example.com")
+
+        assertEquals("https://media.example.com", normalized)
+    }
+
+    @Test
     fun normalizeServerUrl_stripsDefaultHttpsPort() {
         val result1 = normalizeServerUrl("https://jellyfin.example.com")
         val result2 = normalizeServerUrl("https://jellyfin.example.com:443")

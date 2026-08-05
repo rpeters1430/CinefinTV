@@ -37,8 +37,17 @@ object ServerUrlValidator {
 
         // Add protocol if missing
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
-            // Default to HTTPS for modern Jellyfin setups
-            url = "https://$url"
+            // Only assume SSL when the user explicitly typed a scheme. A bare
+            // IP address (or "localhost") is typically a direct, unencrypted
+            // LAN connection, so default those to HTTP. Hostnames/domains are
+            // more likely to sit behind a reverse proxy with TLS, so keep
+            // defaulting those to HTTPS.
+            val hostPart = url.substringBefore("/").substringBefore(":")
+            url = if (isValidIPAddress(hostPart) || hostPart.equals("localhost", ignoreCase = true)) {
+                "http://$url"
+            } else {
+                "https://$url"
+            }
         }
 
         // Validate the final URL
