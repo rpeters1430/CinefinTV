@@ -228,7 +228,11 @@ internal fun SearchScreenContent(
                             modifier = Modifier.testTag(SearchTestTags.ResultsCount),
                         )
                     }
-                    itemsIndexed(uiState.results, key = { _, item -> item.id }) { index, item ->
+                    itemsIndexed(
+                        uiState.results,
+                        key = { _, item -> item.id },
+                        contentType = { _, item -> item.itemType ?: "search_media" },
+                    ) { index, item ->
                         TvMediaCard(
                             title = item.title,
                             subtitle = item.subtitle,

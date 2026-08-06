@@ -85,6 +85,7 @@ internal fun LibraryGridContent(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalCinefinSpacing.current
+    val expressiveColors = LocalCinefinExpressiveColors.current
     var focusedItem by remember { androidx.compose.runtime.mutableStateOf<LibraryCardModel?>(null) }
     
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
@@ -103,7 +104,32 @@ internal fun LibraryGridContent(
                         .testTag(LibraryTestTags.Loading),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
+                    androidx.tv.material3.Surface(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                        colors = androidx.tv.material3.SurfaceDefaults.colors(
+                            containerColor = expressiveColors.chromeSurface.copy(alpha = 0.65f),
+                        ),
+                        border = androidx.tv.material3.Border(
+                            border = androidx.compose.foundation.BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.4f))
+                        ),
+                        tonalElevation = 6.dp,
+                    ) {
+                        androidx.compose.foundation.layout.Column(
+                            modifier = Modifier.padding(horizontal = 40.dp, vertical = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(18.dp),
+                        ) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.primary,
+                                strokeWidth = 3.dp,
+                            )
+                            Text(
+                                text = "Loading library...",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                    }
                 }
             }
 
@@ -116,31 +142,43 @@ internal fun LibraryGridContent(
                         .testTag(LibraryTestTags.Error),
                     contentAlignment = Alignment.Center,
                 ) {
-                    androidx.compose.foundation.layout.Column(
+                    androidx.tv.material3.Surface(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+                        colors = androidx.tv.material3.SurfaceDefaults.colors(
+                            containerColor = expressiveColors.chromeSurface.copy(alpha = 0.75f),
+                        ),
+                        border = androidx.tv.material3.Border(
+                            border = androidx.compose.foundation.BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.5f))
+                        ),
+                        tonalElevation = 8.dp,
                         modifier = Modifier.padding(spacing.gutter),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
                     ) {
-                        Text(
-                            text = errorTitle,
-                            style = MaterialTheme.typography.displaySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.Black
-                        )
-                        Text(
-                            text = uiState.message,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                            textAlign = TextAlign.Center
-                        )
-                        Button(
-                            onClick = onRetry,
-                            modifier = Modifier
-                                .then(destinationFocus.primaryContentModifier())
-                                .testTag(LibraryTestTags.RetryButton),
-                            scale = androidx.tv.material3.ButtonDefaults.scale(focusedScale = 1.1f)
+                        androidx.compose.foundation.layout.Column(
+                            modifier = Modifier.padding(horizontal = 36.dp, vertical = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            Text("Try Again", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = errorTitle,
+                                style = MaterialTheme.typography.headlineLarge,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = uiState.message,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                            Button(
+                                onClick = onRetry,
+                                modifier = Modifier
+                                    .then(destinationFocus.primaryContentModifier())
+                                    .testTag(LibraryTestTags.RetryButton),
+                                scale = androidx.tv.material3.ButtonDefaults.scale(focusedScale = 1.05f)
+                            ) {
+                                Text("Try Again", style = MaterialTheme.typography.titleMedium)
+                            }
                         }
                     }
                 }
@@ -153,21 +191,33 @@ internal fun LibraryGridContent(
                         .testTag(LibraryTestTags.Empty),
                     contentAlignment = Alignment.Center,
                 ) {
-                    androidx.compose.foundation.layout.Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    androidx.tv.material3.Surface(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                        colors = androidx.tv.material3.SurfaceDefaults.colors(
+                            containerColor = expressiveColors.chromeSurface.copy(alpha = 0.55f),
+                        ),
+                        border = androidx.tv.material3.Border(
+                            border = androidx.compose.foundation.BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.35f))
+                        ),
+                        tonalElevation = 4.dp,
                     ) {
-                        Text(
-                            text = emptyTitle,
-                            style = MaterialTheme.typography.displaySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                            fontWeight = FontWeight.Black
-                        )
-                        Text(
-                            text = "Check your library or server connection.",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                        )
+                        androidx.compose.foundation.layout.Column(
+                            modifier = Modifier.padding(horizontal = 36.dp, vertical = 28.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = emptyTitle,
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Check your library or server connection.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
