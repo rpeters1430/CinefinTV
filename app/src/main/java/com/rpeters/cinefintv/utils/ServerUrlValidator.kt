@@ -36,22 +36,15 @@ object ServerUrlValidator {
         url = url.trimEnd('/')
 
         // Add protocol if missing
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-            // Only assume SSL when the user explicitly typed a scheme. A bare
-            // IP address (or "localhost") is typically a direct, unencrypted
-            // LAN connection, so default those to HTTP. Hostnames/domains are
-            // more likely to sit behind a reverse proxy with TLS, so keep
-            // defaulting those to HTTPS.
+        if (!url.startsWith("http://", ignoreCase = true) && !url.startsWith("https://", ignoreCase = true)) {
             val hostPart = extractHostForSchemeInference(url)
-            val isIpHost = isValidIPAddress(hostPart) || hostPart.equals("localhost", ignoreCase = true)
-            // A bare (unbracketed) IPv6 literal must be wrapped in brackets to
-            // form a valid URI authority, e.g. "::1" -> "[::1]".
             val authority = if (!url.startsWith("[") && hostPart.count { it == ':' } > 1) {
                 url.replaceFirst(hostPart, "[$hostPart]")
             } else {
                 url
             }
-            url = if (isIpHost) "http://$authority" else "https://$authority"
+            val scheme = getDefaultScheme(authority)
+            url = "$scheme://$authority"
         }
 
         // Validate the final URL
@@ -61,6 +54,86 @@ object ServerUrlValidator {
             SecureLogger.w(TAG, "Invalid URL after normalization: $url")
             null
         }
+    }
+
+    /**
+     * Determines default scheme ("http" vs "https") for a URL string when no scheme is provided.
+     * Uses HTTP for IP addresses, local network hosts, local TLDs, and standard HTTP ports (8096, 80).
+     */
+    fun getDefaultScheme(inputUrl: String): String {
+        val trimmed = inputUrl.trim()
+        if (trimmed.startsWith("http://", ignoreCase = true)) return "http"
+        if (trimmed.startsWith("https://", ignoreCase = true)) return "https"
+
+        val (host, port) = try {
+            val hostPortAndPath = trimmed.split("/", limit = 2)[0]
+            if (hostPortAndPath.startsWith("[")) {
+                val closeBracket = hostPortAndPath.indexOf("]")
+                if (closeBracket != -1) {
+                    val h = hostPortAndPath.substring(1, closeBracket)
+                    val p = hostPortAndPath.substringAfter("]:", "").toIntOrNull() ?: -1
+                    Pair(h, p)
+                } else {
+                    Pair(hostPortAndPath.removeSurrounding("[", "]"), -1)
+                }
+            } else if (hostPortAndPath.contains(":")) {
+                val h = hostPortAndPath.substringBefore(":")
+                val p = hostPortAndPath.substringAfter(":").toIntOrNull() ?: -1
+                Pair(h, p)
+            } else {
+                Pair(hostPortAndPath, -1)
+            }
+        } catch (e: Exception) {
+            Pair("", -1)
+        }
+
+        // Standard HTTP ports
+        if (port == DEFAULT_HTTP_PORT || port == 80) {
+            return "http"
+        }
+        // Standard HTTPS ports
+        if (port == DEFAULT_HTTPS_PORT || port == 443) {
+            return "https"
+        }
+
+        // Local IP address, localhost, or local domain check
+        if (host.isNotBlank() && isLocalOrIpHost(host)) {
+            return "http"
+        }
+
+        return "https"
+    }
+
+    /**
+     * Checks if host is an IP address, localhost, local TLD, or single-word local hostname.
+     */
+    fun isLocalOrIpHost(host: String): Boolean {
+        val cleanHost = host.trim().lowercase().removeSurrounding("[", "]")
+        if (cleanHost.isEmpty()) return false
+
+        if (cleanHost == "localhost" || cleanHost == "127.0.0.1" || cleanHost == "::1") {
+            return true
+        }
+
+        if (isValidIPAddress(cleanHost) || isLocalNetworkIP(cleanHost)) {
+            return true
+        }
+
+        if (cleanHost.endsWith(".local") ||
+            cleanHost.endsWith(".lan") ||
+            cleanHost.endsWith(".home") ||
+            cleanHost.endsWith(".internal") ||
+            cleanHost.endsWith(".arpa")
+        ) {
+            return true
+        }
+
+        // Single word hostnames without dots (e.g., "jellyfin", "mediaserver", "nas")
+        if (!cleanHost.contains(".")) {
+            return true
+        }
+
+        return false
     }
 
     /**
@@ -187,32 +260,51 @@ object ServerUrlValidator {
                 }
                 else -> {
                     // No protocol specified, but looks like reverse proxy
-                    variations.add("https://$host${jellyfinPathIfMissing(path)}")
-                    variations.add("http://$host${jellyfinPathIfMissing(path)}")
-                    variations.add("https://$host:443${jellyfinPathIfMissing(path)}")
-                    variations.add("http://$host:80${jellyfinPathIfMissing(path)}")
+                    val defaultScheme = getDefaultScheme(baseUrl)
+                    if (defaultScheme == "http") {
+                        variations.add("http://$host${jellyfinPathIfMissing(path)}")
+                        variations.add("https://$host${jellyfinPathIfMissing(path)}")
+                        variations.add("http://$host:80${jellyfinPathIfMissing(path)}")
+                        variations.add("https://$host:443${jellyfinPathIfMissing(path)}")
+                    } else {
+                        variations.add("https://$host${jellyfinPathIfMissing(path)}")
+                        variations.add("http://$host${jellyfinPathIfMissing(path)}")
+                        variations.add("https://$host:443${jellyfinPathIfMissing(path)}")
+                        variations.add("http://$host:80${jellyfinPathIfMissing(path)}")
+                    }
                 }
             }
         } else {
             // Direct connection: use standard Jellyfin port priorities
             when {
                 baseUrl.startsWith("https://") -> {
+                    if (originalPort != -1) variations.add("https://$host:$originalPort$path")
                     variations.add("https://$host:$DEFAULT_HTTPS_PORT")
                     variations.add("https://$host:443")
                     variations.add("http://$host:$DEFAULT_HTTP_PORT")
                     variations.add("http://$host:80")
                 }
                 baseUrl.startsWith("http://") -> {
+                    if (originalPort != -1) variations.add("http://$host:$originalPort$path")
                     variations.add("http://$host:$DEFAULT_HTTP_PORT")
                     variations.add("http://$host:80")
                     variations.add("https://$host:$DEFAULT_HTTPS_PORT")
                     variations.add("https://$host:443")
                 }
                 else -> {
-                    variations.add("http://$host:$DEFAULT_HTTP_PORT")
-                    variations.add("https://$host:$DEFAULT_HTTPS_PORT")
-                    variations.add("http://$host:80")
-                    variations.add("https://$host:443")
+                    val defaultScheme = getDefaultScheme(baseUrl)
+                    if (originalPort != -1) variations.add("$defaultScheme://$host:$originalPort$path")
+                    if (defaultScheme == "http") {
+                        variations.add("http://$host:$DEFAULT_HTTP_PORT")
+                        variations.add("http://$host:80")
+                        variations.add("https://$host:$DEFAULT_HTTPS_PORT")
+                        variations.add("https://$host:443")
+                    } else {
+                        variations.add("https://$host:$DEFAULT_HTTPS_PORT")
+                        variations.add("https://$host:443")
+                        variations.add("http://$host:$DEFAULT_HTTP_PORT")
+                        variations.add("http://$host:80")
+                    }
                 }
             }
         }

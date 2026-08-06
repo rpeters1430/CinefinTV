@@ -83,7 +83,10 @@ class JellyfinSystemRepository @Inject constructor(
         val trimmed = serverUrl.trim()
         return when {
             trimmed.isBlank() -> ""
-            !trimmed.startsWith("http") -> "https://$trimmed"
+            !trimmed.startsWith("http://", ignoreCase = true) && !trimmed.startsWith("https://", ignoreCase = true) -> {
+                val scheme = com.rpeters.cinefintv.utils.ServerUrlValidator.getDefaultScheme(trimmed)
+                "$scheme://${trimmed.trimEnd('/')}"
+            }
             else -> trimmed.trimEnd('/')
         }
     }

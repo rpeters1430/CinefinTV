@@ -101,7 +101,7 @@ fun ServerConnectionScreen(
                     label = "Server URL",
                     value = serverUrl,
                     onValueChange = onServerUrlChange,
-                    placeholder = "https://media.example.com",
+                    placeholder = "192.168.1.100:8096 or https://media.example.com",
                     imeAction = ImeAction.Done,
                     keyboardType = KeyboardType.Uri,
                     modifier = Modifier.testTag(AuthTestTags.ServerField),

@@ -10,11 +10,12 @@ import java.net.URISyntaxException
 fun normalizeServerUrl(input: String): String {
     var url = input.trim()
     if (!url.startsWith("http://", ignoreCase = true) && !url.startsWith("https://", ignoreCase = true)) {
-        url = "https://$url"
+        val scheme = ServerUrlValidator.getDefaultScheme(url)
+        url = "$scheme://$url"
     }
     return try {
         val uri = URI(url)
-        val scheme = (uri.scheme ?: "https").lowercase()
+        val scheme = (uri.scheme ?: ServerUrlValidator.getDefaultScheme(input)).lowercase()
         val host = uri.host?.lowercase() ?: return input
         val isDefaultPort = (scheme == "https" && uri.port == 443) || (scheme == "http" && uri.port == 80)
         val port = if (uri.port != -1 && !isDefaultPort) ":${uri.port}" else ""
@@ -35,11 +36,12 @@ fun normalizeServerUrl(input: String): String {
 fun normalizeServerUrlLegacy(input: String): String {
     var url = input.trim()
     if (!url.startsWith("http://", ignoreCase = true) && !url.startsWith("https://", ignoreCase = true)) {
-        url = "https://$url"
+        val scheme = ServerUrlValidator.getDefaultScheme(url)
+        url = "$scheme://$url"
     }
     return try {
         val uri = URI(url)
-        val scheme = (uri.scheme ?: "https").lowercase()
+        val scheme = (uri.scheme ?: ServerUrlValidator.getDefaultScheme(input)).lowercase()
         val host = uri.host?.lowercase() ?: return url
         val port = if (uri.port != -1) ":${uri.port}" else ""
         val path = uri.rawPath?.trimEnd('/') ?: ""

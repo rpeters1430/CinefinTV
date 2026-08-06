@@ -60,6 +60,13 @@ class ServerUrlValidatorTest {
     }
 
     @Test
+    fun validateAndNormalizeUrl_forLocalTld_defaultsToHttp() {
+        val normalized = ServerUrlValidator.validateAndNormalizeUrl("jellyfin.local:8096")
+
+        assertEquals("http://jellyfin.local:8096", normalized)
+    }
+
+    @Test
     fun validateAndNormalizeUrl_forDomainWithoutScheme_stillDefaultsToHttps() {
         val normalized = ServerUrlValidator.validateAndNormalizeUrl("media.example.com")
 
@@ -115,6 +122,12 @@ class ServerUrlValidatorTest {
     fun normalizeServerUrl_preservesCustomHttpPort() {
         val result = normalizeServerUrl("http://jellyfin.example.com:8096")
         assertEquals("http://jellyfin.example.com:8096", result)
+    }
+
+    @Test
+    fun normalizeServerUrl_forLocalIpWithoutScheme_defaultsToHttp() {
+        val result = normalizeServerUrl("192.168.1.100:8096")
+        assertEquals("http://192.168.1.100:8096", result)
     }
 
     @Test
