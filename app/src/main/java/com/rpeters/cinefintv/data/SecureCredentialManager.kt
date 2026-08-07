@@ -331,9 +331,10 @@ class SecureCredentialManager @Inject constructor(
         logDebug { "savePassword: Saving password for user='$username'" }
 
         try {
-            val encryptedPassword = encrypt(password)
-            // CRITICAL FIX: Use NonCancellable to ensure password save completes
+            // CRITICAL: Run encrypt + DataStore write together under NonCancellable so that
+            // a parent-scope cancellation cannot interrupt the save mid-way.
             withContext(NonCancellable + dispatchers.io) {
+                val encryptedPassword = encrypt(password)
                 secureCredentialsDataStore.edit { prefs ->
                     val passwordKey = stringPreferencesKey(keys.newKey)
                     val timestampKey = longPreferencesKey("${keys.newKey}_timestamp")
@@ -471,8 +472,11 @@ class SecureCredentialManager @Inject constructor(
     suspend fun saveServerState(server: JellyfinServer) {
         try {
             val json = kotlinx.serialization.json.Json.encodeToString(server)
-            val encryptedJson = encrypt(json)
+            // CRITICAL: Run encrypt + DataStore write together under NonCancellable so that
+            // a parent-scope cancellation (e.g. user navigating away immediately after login)
+            // cannot interrupt the save mid-way and leave credentials unpersisted.
             withContext(NonCancellable + dispatchers.io) {
+                val encryptedJson = encrypt(json)
                 secureCredentialsDataStore.edit { prefs ->
                     prefs[stringPreferencesKey(SERVER_STATE_KEY)] = encryptedJson
                 }
@@ -545,8 +549,8 @@ class SecureCredentialManager @Inject constructor(
     private suspend fun saveProfileList(profiles: List<JellyfinServer>) {
         try {
             val json = kotlinx.serialization.json.Json.encodeToString<List<JellyfinServer>>(profiles)
-            val encrypted = encrypt(json)
             withContext(NonCancellable + dispatchers.io) {
+                val encrypted = encrypt(json)
                 secureCredentialsDataStore.edit { prefs ->
                     prefs[stringPreferencesKey(PROFILES_KEY)] = encrypted
                 }

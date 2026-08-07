@@ -84,8 +84,13 @@ object NetworkModule {
             // SECURITY: Add certificate pinning
             .sslSocketFactory(sslSocketFactory, pinningTrustManager)
             .hostnameVerifier(hostnameVerifier)
-            // Configure TLS versions to avoid handshake failures
-            .connectionSpecs(listOf(modernTls, compatibleTls))
+            // Configure TLS versions to avoid handshake failures.
+            // CLEARTEXT is included to support self-hosted Jellyfin servers on plain HTTP
+            // (local network without SSL/TLS). This is consistent with the
+            // network_security_config.xml opt-in and the Jellyfin SDK's own OkHttpClient
+            // which also allows cleartext. Auth tokens sent to an HTTP server are an
+            // accepted trade-off when the user explicitly runs a non-SSL local server.
+            .connectionSpecs(listOf(modernTls, compatibleTls, ConnectionSpec.CLEARTEXT))
 
         if (BuildConfig.DEBUG) {
             val loggingInterceptor = HttpLoggingInterceptor().apply {
