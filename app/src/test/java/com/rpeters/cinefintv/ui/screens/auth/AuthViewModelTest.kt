@@ -310,4 +310,42 @@ class AuthViewModelTest {
         assertTrue(state.isSessionActive)
         assertFalse(state.showProfilePickerOnStart)
     }
+
+    @Test
+    fun dismissProfilePickerOnStart_clearsShowProfilePickerOnStartAndActivatesSession() = runTest {
+        setupMocks()
+        val testServer1 = com.rpeters.cinefintv.data.JellyfinServer(
+            id = "server1",
+            name = "Server 1",
+            url = "http://url1",
+            userId = "userId1",
+            username = "user1",
+            accessToken = "token1"
+        )
+        val testServer2 = com.rpeters.cinefintv.data.JellyfinServer(
+            id = "server2",
+            name = "Server 2",
+            url = "http://url2",
+            userId = "userId2",
+            username = "user2",
+            accessToken = "token2"
+        )
+        coEvery { authRepository.getSavedProfiles() } returns listOf(testServer1, testServer2)
+
+        isSessionRestoredFlow.value = true
+        isConnectedFlow.value = true
+
+        val viewModel = AuthViewModel(authRepository)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.showProfilePickerOnStart)
+        assertFalse(viewModel.uiState.value.isSessionActive)
+
+        viewModel.dismissProfilePickerOnStart()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.showProfilePickerOnStart)
+        assertTrue(state.isSessionActive)
+    }
 }

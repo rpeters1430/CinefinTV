@@ -249,6 +249,7 @@ fun CinefinTvNavGraph(
                 is ProfilePicker -> {
                     ProfilePickerScreen(
                         onProfileSwitched = {
+                            authViewModel.dismissProfilePickerOnStart()
                             if (backStack.size > 1) {
                                 backStack.pop()
                             } else {
@@ -257,12 +258,17 @@ fun CinefinTvNavGraph(
                             }
                         },
                         onAddProfile = {
+                            authViewModel.dismissProfilePickerOnStart()
                             backStack.clear()
                             backStack.add(ServerConnection)
                         },
                         onBack = {
+                            authViewModel.dismissProfilePickerOnStart()
                             if (backStack.size > 1) {
                                 backStack.pop()
+                            } else {
+                                backStack.clear()
+                                backStack.add(Home)
                             }
                         },
                     )

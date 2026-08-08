@@ -56,15 +56,18 @@ class AuthViewModel @Inject constructor(
         observeConnectionState()
     }
 
+    private var hasDismissedProfilePickerOnStart = false
+
     private fun checkProfilesAndRestoreState(isRestored: Boolean) {
         viewModelScope.launch {
             val profiles = authRepository.getSavedProfiles()
             val hasMultipleProfiles = profiles.size > 1
+            val showPicker = hasMultipleProfiles && isRestored && !hasDismissedProfilePickerOnStart
             _uiState.update {
                 it.copy(
                     isSessionChecked = true,
-                    isSessionActive = if (hasMultipleProfiles) false else isRestored,
-                    showProfilePickerOnStart = hasMultipleProfiles && isRestored,
+                    isSessionActive = if (showPicker) false else isRestored,
+                    showProfilePickerOnStart = showPicker,
                 )
             }
         }
@@ -84,9 +87,21 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             authRepository.isConnected.collect { isConnected ->
                 _uiState.update {
-                    it.copy(isSessionActive = isConnected)
+                    it.copy(
+                        isSessionActive = if (it.showProfilePickerOnStart) false else isConnected,
+                    )
                 }
             }
+        }
+    }
+
+    fun dismissProfilePickerOnStart() {
+        hasDismissedProfilePickerOnStart = true
+        _uiState.update {
+            it.copy(
+                showProfilePickerOnStart = false,
+                isSessionActive = authRepository.isConnected.value,
+            )
         }
     }
 
