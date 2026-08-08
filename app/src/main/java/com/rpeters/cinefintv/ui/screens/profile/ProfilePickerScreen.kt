@@ -2,6 +2,7 @@
 
 package com.rpeters.cinefintv.ui.screens.profile
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,6 +55,8 @@ fun ProfilePickerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val expressiveColors = LocalCinefinExpressiveColors.current
+
+    BackHandler(onBack = onBack)
 
     Box(
         modifier = Modifier
@@ -110,7 +113,11 @@ fun ProfilePickerScreen(
                             isActive = profile.userId == uiState.currentUserId,
                             isSwitching = uiState.isSwitching,
                             onSelect = {
-                                viewModel.switchToProfile(profile, onProfileSwitched)
+                                if (profile.userId == uiState.currentUserId) {
+                                    onProfileSwitched()
+                                } else {
+                                    viewModel.switchToProfile(profile, onProfileSwitched)
+                                }
                             },
                             onRemove = { viewModel.removeProfile(profile) },
                         )
@@ -152,7 +159,7 @@ private fun ProfileListItem(
     val expressiveColors = LocalCinefinExpressiveColors.current
     ListItem(
         selected = isActive,
-        onClick = { if (!isActive && !isSwitching) onSelect() },
+        onClick = { if (!isSwitching) onSelect() },
         leadingContent = {
             Box(
                 modifier = Modifier
