@@ -204,6 +204,32 @@ class JellyfinAuthRepositoryTest {
         coVerify(exactly = 1) { secureCredentialManager.clearServerState() }
     }
 
+    @Test
+    fun switchToProfile_marksServerConnectedAndUpdatesState() = runTest {
+        val secureCredentialManager = mockk<SecureCredentialManager>(relaxed = true)
+        val jellyfin = mockk<Jellyfin>(relaxed = true)
+        val targetProfile = JellyfinServer(
+            id = "server-id",
+            name = "Server",
+            url = "http://localhost:8096",
+            isConnected = false,
+            userId = "user-2",
+            username = "user2",
+            accessToken = "token2",
+        )
+        coEvery { secureCredentialManager.saveServerState(any()) } just runs
+
+        val repository = JellyfinAuthRepository(jellyfin, secureCredentialManager, dispatchers)
+
+        val success = repository.switchToProfile(targetProfile)
+
+        assertTrue(success)
+        assertTrue(repository.isConnected.value)
+        assertEquals("token2", repository.currentServer.value?.accessToken)
+        assertTrue(repository.currentServer.value?.isConnected == true)
+        coVerify(exactly = 1) { secureCredentialManager.saveServerState(match { it.isConnected }) }
+    }
+
     private fun savedServer(accessToken: String) = JellyfinServer(
         id = "server-id",
         name = "Server",

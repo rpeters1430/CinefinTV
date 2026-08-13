@@ -15,7 +15,8 @@ fun appChromeRouteSpec(currentDestination: NavDestination?): AppChromeRouteSpec 
         is CollectionDetail,
         is PersonDetail,
         is Player,
-        is AudioPlayer -> false
+        is AudioPlayer,
+        is ProfilePicker -> false
         else -> true
     }
 

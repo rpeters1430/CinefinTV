@@ -81,6 +81,12 @@ fun CinefinTvNavGraph(
     }
 
     val current = backStack.lastOrNull() as? NavDestination
+    LaunchedEffect(current, authUiState.showProfilePickerOnStart) {
+        if (current != ProfilePicker && current != null && authUiState.showProfilePickerOnStart) {
+            authViewModel.dismissProfilePickerOnStart()
+        }
+    }
+
     if (authUiState.showProfilePickerOnStart && current == Home) {
         LaunchedEffect(Unit) {
             backStack.clear()

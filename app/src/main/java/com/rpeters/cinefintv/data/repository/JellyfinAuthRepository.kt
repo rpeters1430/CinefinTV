@@ -493,9 +493,10 @@ open class JellyfinAuthRepository @Inject constructor(
     suspend fun switchToProfile(server: JellyfinServer): Boolean {
         if (server.accessToken.isNullOrBlank()) return false
         return authMutex.withLock {
-            seedCurrentServer(server)
+            val serverToUse = server.copy(isConnected = true)
+            seedCurrentServer(serverToUse)
             try {
-                secureCredentialManager.saveServerState(server)
+                secureCredentialManager.saveServerState(serverToUse)
             } catch (e: Exception) {
                 SecureLogger.w(TAG, "switchToProfile: failed to persist state", e)
             }
