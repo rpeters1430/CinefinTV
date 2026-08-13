@@ -352,48 +352,49 @@ internal fun PlayerControls(
                         )
                     }
 
-                    // Button row: left skip, center play/pause, right utility cluster.
-                    Box(
+                    // Button row: transport controls (left), utility cluster (right).
+                    // Using a Row instead of Box to prevent overlap on TV displays.
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        ActionIconButton(
-                            icon = Icons.Default.FastRewind,
-                            label = seekIncrement.shortLabel,
-                            onClick = { onInteract(); player.seekTo((player.currentPosition - seekIncrement.millis).coerceAtLeast(0L)) },
-                            modifier = Modifier
-                                .align(Alignment.CenterStart)
-                                .focusRequester(skipBackFocusRequester)
-                                .focusProperties {
-                                    up = seekBarFocusRequester
-                                    if (hasContentRow) down = contentRowFocusRequester
-                                    left = skipBackFocusRequester
-                                    right = playPauseFocusRequester
-                                }
-                        )
-
-                        PlayPauseButton(
-                            isPlaying = isPlaying,
-                            onClick = {
-                                onInteract()
-                                if (isPlaying) player.pause() else player.play()
-                            },
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .size(64.dp) // Slightly larger
-                                .focusRequester(playPauseFocusRequester)
-                                .testTag(PlayerTestTags.PlayPauseButton)
-                                .focusProperties {
-                                    up = seekBarFocusRequester
-                                    if (hasContentRow) down = contentRowFocusRequester
-                                    left = skipBackFocusRequester
-                                    right = skipForwardFocusRequester
-                                }
-                        )
-
+                        // Transport controls: skip-back, play/pause, skip-forward
                         Row(
-                            modifier = Modifier.align(Alignment.CenterEnd),
                             verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
+                            ActionIconButton(
+                                icon = Icons.Default.FastRewind,
+                                label = seekIncrement.shortLabel,
+                                onClick = { onInteract(); player.seekTo((player.currentPosition - seekIncrement.millis).coerceAtLeast(0L)) },
+                                modifier = Modifier
+                                    .focusRequester(skipBackFocusRequester)
+                                    .focusProperties {
+                                        up = seekBarFocusRequester
+                                        if (hasContentRow) down = contentRowFocusRequester
+                                        left = skipBackFocusRequester
+                                        right = playPauseFocusRequester
+                                    }
+                            )
+
+                            PlayPauseButton(
+                                isPlaying = isPlaying,
+                                onClick = {
+                                    onInteract()
+                                    if (isPlaying) player.pause() else player.play()
+                                },
+                                modifier = Modifier
+                                    .focusRequester(playPauseFocusRequester)
+                                    .testTag(PlayerTestTags.PlayPauseButton)
+                                    .focusProperties {
+                                        up = seekBarFocusRequester
+                                        if (hasContentRow) down = contentRowFocusRequester
+                                        left = skipBackFocusRequester
+                                        right = skipForwardFocusRequester
+                                    }
+                            )
+
                             ActionIconButton(
                                 icon = Icons.Default.FastForward,
                                 label = seekIncrement.shortLabel,
@@ -407,7 +408,10 @@ internal fun PlayerControls(
                                         right = audioFocusRequester
                                     }
                             )
+                        }
 
+                        // Utility controls: audio, subtitles, quality, aspect ratio, speed, settings
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
                                     .padding(horizontal = 16.dp)
