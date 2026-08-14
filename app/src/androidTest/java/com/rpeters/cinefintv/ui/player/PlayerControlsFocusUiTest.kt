@@ -1,9 +1,13 @@
 package com.rpeters.cinefintv.ui.player
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
@@ -15,12 +19,14 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.rpeters.cinefintv.ui.LocalCinefinThemeController
 import com.rpeters.cinefintv.ui.theme.CinefinTvTheme
 import com.rpeters.cinefintv.ui.theme.ThemeColorController
 import com.rpeters.cinefintv.testutil.FakePlayer
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -113,6 +119,36 @@ class PlayerControlsFocusUiTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(PlayerTestTags.SubtitleButton, useUnmergedTree = true)
             .assertIsFocused()
+    }
+
+    @Test
+    fun compactTvWidth_playPauseDoesNotOverlapAudioButton() {
+        composeRule.setContent {
+            PlayerTestHost {
+                Box(
+                    modifier = Modifier
+                        .width(720.dp)
+                        .height(720.dp),
+                ) {
+                    PlayerControlsVisibilityHarness()
+                }
+            }
+        }
+
+        composeRule.waitForIdle()
+        val playPauseBounds = composeRule
+            .onNodeWithTag(PlayerTestTags.PlayPauseButton, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val audioBounds = composeRule
+            .onNodeWithTag(PlayerTestTags.AudioButton, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(
+            "Play/Pause bounds $playPauseBounds overlap audio bounds $audioBounds",
+            playPauseBounds.right <= audioBounds.left,
+        )
     }
 }
 
