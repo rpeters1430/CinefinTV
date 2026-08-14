@@ -140,6 +140,7 @@ private fun typefaceFor(font: SubtitleFont): Typeface? = when (font) {
     SubtitleFont.ROBOTO_MONO -> Typeface.create("monospace", Typeface.NORMAL)
 }
 
+@OptIn(UnstableApi::class)
 @Composable
 private fun PlayerVideoSurface(
     exoPlayer: Player,
@@ -423,7 +424,7 @@ fun PlayerScreen(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, UnstableApi::class)
 @Composable
 internal fun PlayerPlaybackContent(
     exoPlayer: Player,
