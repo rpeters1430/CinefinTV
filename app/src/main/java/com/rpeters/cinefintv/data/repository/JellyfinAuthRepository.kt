@@ -25,6 +25,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.api.client.ApiClient
+import org.jellyfin.sdk.api.client.exception.ApiClientException
 import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 import org.jellyfin.sdk.api.client.extensions.quickConnectApi
 import org.jellyfin.sdk.api.client.extensions.systemApi
@@ -356,8 +357,14 @@ open class JellyfinAuthRepository @Inject constructor(
         } catch (e: IOException) {
             // Network unreachable — leave session intact; Home will show connection errors
             SecureLogger.d(TAG, "validateRestoredSession: network unavailable, proceeding optimistically")
+        } catch (e: ApiClientException) {
+            // Jellyfin SDK wraps transport failures (connect timeout/no route) in ApiClientException.
+            // Treat these as temporary network failures and keep the restored session active.
+            SecureLogger.d(TAG, "validateRestoredSession: sdk client error, proceeding optimistically")
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
+        } catch (e: Exception) {
+            SecureLogger.w(TAG, "validateRestoredSession: unexpected validation failure", e)
         }
     }
 
