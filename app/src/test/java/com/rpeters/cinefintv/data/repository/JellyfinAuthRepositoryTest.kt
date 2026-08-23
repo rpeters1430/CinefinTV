@@ -25,6 +25,7 @@ import org.jellyfin.sdk.api.client.ApiClientFactory
 import org.jellyfin.sdk.api.client.HttpClientOptions
 import org.jellyfin.sdk.api.client.HttpMethod
 import org.jellyfin.sdk.api.client.RawResponse
+import org.jellyfin.sdk.api.client.exception.ApiClientException
 import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 import org.jellyfin.sdk.api.sockets.SocketApi
 import org.jellyfin.sdk.api.sockets.SocketConnectionFactory
@@ -213,6 +214,29 @@ class JellyfinAuthRepositoryTest {
             assertEquals(HttpMethod.GET, method)
             assertEquals("/System/Info/Public", path)
             throw IllegalStateException("Connection failed")
+        }
+        val jellyfin = jellyfinForClients(savedServer.url to mapOf("valid-token" to flakyValidationClient))
+
+        coEvery { secureCredentialManager.loadServerState() } returns savedServer
+
+        val repository = JellyfinAuthRepository(jellyfin, secureCredentialManager, dispatchers)
+
+        val restored = repository.tryRestoreSession()
+        advanceUntilIdle()
+
+        assertTrue(restored)
+        assertEquals(true, repository.isSessionRestored.value)
+        assertEquals("valid-token", repository.currentServer.value?.accessToken)
+    }
+
+    @Test
+    fun tryRestoreSession_whenValidationThrowsApiClientException_restoresWithoutCrash() = runTest {
+        val secureCredentialManager = mockk<SecureCredentialManager>(relaxed = true)
+        val savedServer = savedServer(accessToken = "valid-token")
+        val flakyValidationClient = fakeApiClient { method, path, _, _, _ ->
+            assertEquals(HttpMethod.GET, method)
+            assertEquals("/System/Info/Public", path)
+            throw mockk<ApiClientException>(relaxed = true)
         }
         val jellyfin = jellyfinForClients(savedServer.url to mapOf("valid-token" to flakyValidationClient))
 
