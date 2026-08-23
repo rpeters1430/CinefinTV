@@ -45,8 +45,8 @@ android {
         applicationId = "com.rpeters.cinefintv"
         minSdk = 30
         targetSdk = 35
-        versionCode = 137
-        versionName = "2.3.12"
+        versionCode = 138
+        versionName = "2.3.14"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
