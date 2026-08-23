@@ -89,6 +89,7 @@ data class PlayerUiState(
     val nextEpisodeId: String? = null,
     val nextEpisodeTitle: String? = null,
     val nextEpisodeThumbnailUrl: String? = null,
+    val queueIds: List<String> = emptyList(),
     val audioTracks: List<TrackOption> = emptyList(),
     val subtitleTracks: List<TrackOption> = emptyList(),
     val selectedAudioTrack: TrackOption? = null,

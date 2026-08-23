@@ -42,6 +42,10 @@ data object LibraryMusic : NavDestination
 
 @Serializable
 @Parcelize
+data object LibraryPlaylists : NavDestination
+
+@Serializable
+@Parcelize
 data object Settings : NavDestination
 
 @Serializable
@@ -62,11 +66,19 @@ data class CollectionDetail(val itemId: String) : NavDestination
 
 @Serializable
 @Parcelize
+data class PlaylistDetail(val itemId: String) : NavDestination
+
+@Serializable
+@Parcelize
 data class PersonDetail(val personId: String) : NavDestination
 
 @Serializable
 @Parcelize
-data class Player(val itemId: String, val startPositionMs: Long = -1L) : NavDestination
+data class Player(
+    val itemId: String,
+    val startPositionMs: Long = -1L,
+    val queueIds: List<String>? = null,
+) : NavDestination
 
 @Serializable
 @Parcelize

@@ -100,13 +100,13 @@ class PlayerViewModel @Inject constructor(
     private val _availableSyncGroups = MutableStateFlow<List<SyncPlayGroup>>(emptyList())
     val availableSyncGroups: StateFlow<List<SyncPlayGroup>> = _availableSyncGroups.asStateFlow()
 
-    fun init(id: String, start: Long) {
+    fun init(id: String, start: Long, queueIds: List<String> = emptyList()) {
         if (isInitialized && itemId == id) return
         isInitialized = true
         itemId = id
         requestedStartPositionMs = start
         resolvedItemId = id
-        _uiState.value = _uiState.value.copy(itemId = id)
+        _uiState.value = _uiState.value.copy(itemId = id, queueIds = queueIds)
 
         observeSyncPlayCommands()
 

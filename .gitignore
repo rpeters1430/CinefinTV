@@ -43,3 +43,4 @@ google-services.json
 gha-creds-*.json
 .superpowers/
 .worktrees/
+.plan/

@@ -262,7 +262,7 @@ private fun OverviewNarrativeCard(
         )
         Text(
             text = if (description.isNotBlank()) description else "No overview available.",
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp, lineHeight = 22.sp),
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 18.sp, lineHeight = 25.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 6,
             overflow = TextOverflow.Ellipsis,

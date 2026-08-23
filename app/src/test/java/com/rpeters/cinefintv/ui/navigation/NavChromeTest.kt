@@ -33,7 +33,8 @@ class NavChromeTest {
         assertEquals(0, appChromeRouteSpec(Home).selectedTabIndex)
         assertEquals(1, appChromeRouteSpec(LibraryMovies).selectedTabIndex)
         assertEquals(2, appChromeRouteSpec(LibraryTvShows).selectedTabIndex)
-        assertEquals(6, appChromeRouteSpec(Settings).selectedTabIndex)
+        assertEquals(5, appChromeRouteSpec(LibraryPlaylists).selectedTabIndex)
+        assertEquals(7, appChromeRouteSpec(Settings).selectedTabIndex)
     }
 
     @Test
@@ -54,6 +55,7 @@ class NavChromeTest {
             LibraryTvShows,
             LibraryCollections,
             LibraryMusic,
+            LibraryPlaylists,
             Settings,
         )
 

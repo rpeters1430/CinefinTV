@@ -165,7 +165,7 @@ fun MetaFactItem(
                 }
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp),
                     color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -933,7 +933,7 @@ fun EpisodeListRow(
                 episode.overview?.let {
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp),
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 18.sp),
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         maxLines = 2,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,

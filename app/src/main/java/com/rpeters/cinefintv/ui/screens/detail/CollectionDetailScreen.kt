@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -360,7 +360,7 @@ private fun CollectionFolderContent(
                     horizontalArrangement = Arrangement.spacedBy(18.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp),
                 ) {
-                    items(items, key = { it.id }) { item ->
+                    itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
                         TvMediaCard(
                             title = item.title,
                             subtitle = item.subtitle,
@@ -376,6 +376,9 @@ private fun CollectionFolderContent(
                                     } else {
                                         Modifier
                                     }
+                                )
+                                .then(
+                                    destinationFocus.drawerEscapeModifier(isLeftEdge = index % 4 == 0)
                                 ),
                             watchStatus = item.watchStatus,
                             playbackProgress = item.playbackProgress,

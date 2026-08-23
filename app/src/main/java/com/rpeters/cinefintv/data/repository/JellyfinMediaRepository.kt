@@ -54,6 +54,7 @@ class JellyfinMediaRepository @Inject constructor(
         "homevideos" -> null // Don't specify types for home videos - let server decide
         "photos" -> listOf(BaseItemKind.PHOTO)
         "books" -> listOf(BaseItemKind.BOOK, BaseItemKind.AUDIO_BOOK)
+        "playlists" -> listOf(BaseItemKind.PLAYLIST)
         else -> null
     }
 

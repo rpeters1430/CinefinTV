@@ -177,12 +177,13 @@ private fun PlayerVideoSurface(
 fun PlayerScreen(
     itemId: String,
     startPositionMs: Long = -1L,
+    queueIds: List<String> = emptyList(),
     onBack: () -> Unit,
     onOpenItem: (String) -> Unit = {},
     viewModel: PlayerViewModel = hiltViewModel(),
 ) {
-    LaunchedEffect(itemId, startPositionMs) {
-        viewModel.init(itemId, startPositionMs)
+    LaunchedEffect(itemId, startPositionMs, queueIds) {
+        viewModel.init(itemId, startPositionMs, queueIds)
     }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

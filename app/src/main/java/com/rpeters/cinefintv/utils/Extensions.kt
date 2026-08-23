@@ -59,6 +59,7 @@ fun BaseItemDto.isEpisode(): Boolean = type == org.jellyfin.sdk.model.api.BaseIt
 fun BaseItemDto.isMusic(): Boolean = type == org.jellyfin.sdk.model.api.BaseItemKind.AUDIO
 fun BaseItemDto.isPhoto(): Boolean = type == org.jellyfin.sdk.model.api.BaseItemKind.PHOTO
 fun BaseItemDto.isPerson(): Boolean = type == org.jellyfin.sdk.model.api.BaseItemKind.PERSON
+fun BaseItemDto.isPlaylist(): Boolean = type == org.jellyfin.sdk.model.api.BaseItemKind.PLAYLIST
 
 /**
  * Maps BaseItemKind to the standard CamelCase strings used for navigation in NavGraph.
@@ -76,6 +77,7 @@ fun BaseItemDto.getItemTypeString(): String {
         org.jellyfin.sdk.model.api.BaseItemKind.AUDIO -> "Audio"
         org.jellyfin.sdk.model.api.BaseItemKind.MUSIC_ALBUM -> "MusicAlbum"
         org.jellyfin.sdk.model.api.BaseItemKind.MUSIC_ARTIST -> "MusicArtist"
+        org.jellyfin.sdk.model.api.BaseItemKind.PLAYLIST -> "Playlist"
         else -> type.toString()
     }
 }

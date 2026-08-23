@@ -15,9 +15,11 @@ class JellyfinRepositoryCoordinator @Inject constructor(
     private val lazyUser: Lazy<JellyfinUserRepository>,
     private val lazySearch: Lazy<JellyfinSearchRepository>,
     private val lazyStream: Lazy<JellyfinStreamRepository>,
+    private val lazyPlaylist: Lazy<JellyfinPlaylistRepository>,
     val auth: JellyfinAuthRepository,
 ) {
     val user: JellyfinUserRepository get() = lazyUser.get()
     val search: JellyfinSearchRepository get() = lazySearch.get()
     val stream: JellyfinStreamRepository get() = lazyStream.get()
+    val playlist: JellyfinPlaylistRepository get() = lazyPlaylist.get()
 }

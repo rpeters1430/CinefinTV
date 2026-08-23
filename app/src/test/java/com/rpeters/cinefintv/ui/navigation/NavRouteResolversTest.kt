@@ -20,8 +20,16 @@ class NavRouteResolversTest {
             routeForBrowsableItem("music-folder", "CollectionFolder", "music"),
         )
         assertEquals(
-            LibraryCollections,
+            CollectionDetail("homevideos-folder"),
             routeForBrowsableItem("homevideos-folder", "CollectionFolder", "homevideos"),
+        )
+        assertEquals(
+            CollectionDetail("other-homevideos-folder"),
+            routeForBrowsableItem("other-homevideos-folder", "CollectionFolder", "homevideos"),
+        )
+        assertEquals(
+            CollectionDetail("photos-folder"),
+            routeForBrowsableItem("photos-folder", "CollectionFolder", "photos"),
         )
         assertEquals(
             CollectionDetail("other-folder"),

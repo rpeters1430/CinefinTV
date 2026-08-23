@@ -4,18 +4,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
@@ -27,8 +19,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
+import com.rpeters.cinefintv.ui.components.SessionRestoringScreen
 import com.rpeters.cinefintv.ui.player.PlayerScreen
 import com.rpeters.cinefintv.ui.player.audio.AudioPlayerScreen
 import com.rpeters.cinefintv.ui.screens.auth.AuthViewModel
@@ -39,10 +30,12 @@ import com.rpeters.cinefintv.ui.screens.auth.ServerDiscoveryViewModel
 import com.rpeters.cinefintv.ui.screens.detail.MovieDetailScreen
 import com.rpeters.cinefintv.ui.screens.detail.SeasonScreen
 import com.rpeters.cinefintv.ui.screens.detail.CollectionDetailScreen
+import com.rpeters.cinefintv.ui.screens.detail.PlaylistDetailScreen
 import com.rpeters.cinefintv.ui.screens.detail.TvShowDetailScreen
 import com.rpeters.cinefintv.ui.screens.home.HomeScreen
 import com.rpeters.cinefintv.ui.screens.library.MovieLibraryScreen
 import com.rpeters.cinefintv.ui.screens.library.CollectionLibraryScreen
+import com.rpeters.cinefintv.ui.screens.library.PlaylistLibraryScreen
 import com.rpeters.cinefintv.ui.screens.library.TvShowLibraryScreen
 import com.rpeters.cinefintv.ui.screens.music.MusicScreen
 import com.rpeters.cinefintv.ui.screens.person.PersonScreen
@@ -76,7 +69,7 @@ fun CinefinTvNavGraph(
     )
 
     if (!authUiState.isSessionChecked) {
-        AuthBootstrapScreen()
+        SessionRestoringScreen()
         return
     }
 
@@ -92,7 +85,7 @@ fun CinefinTvNavGraph(
             backStack.clear()
             backStack.add(ProfilePicker)
         }
-        AuthBootstrapScreen()
+        SessionRestoringScreen()
         return
     }
 
@@ -247,6 +240,13 @@ fun CinefinTvNavGraph(
                         },
                     )
                 }
+                is LibraryPlaylists -> {
+                    PlaylistLibraryScreen(
+                        onOpenItem = { item ->
+                            backStack.add(PlaylistDetail(item.id))
+                        },
+                    )
+                }
                 is Settings -> {
                     SettingsScreen(
                         onNavigateToProfilePicker = { backStack.add(ProfilePicker) },
@@ -333,6 +333,21 @@ fun CinefinTvNavGraph(
                         onBack = { backStack.pop() },
                     )
                 }
+                is PlaylistDetail -> {
+                    PlaylistDetailScreen(
+                        itemId = destination.itemId,
+                        onOpenItem = { id, type ->
+                            backStack.add(routeForLinkedDetailItem(id, type))
+                        },
+                        onPlayTrack = { request ->
+                            backStack.add(AudioPlayer(request.trackId, request.queueIds))
+                        },
+                        onPlayVideo = { itemId, queueIds ->
+                            backStack.add(Player(itemId, queueIds = queueIds))
+                        },
+                        onBack = { backStack.pop() },
+                    )
+                }
                 is PersonDetail -> {
                     PersonScreen(
                         personId = destination.personId,
@@ -346,9 +361,10 @@ fun CinefinTvNavGraph(
                     PlayerScreen(
                         itemId = destination.itemId,
                         startPositionMs = destination.startPositionMs,
+                        queueIds = destination.queueIds.orEmpty(),
                         onBack = { backStack.pop() },
                         onOpenItem = { nextItemId ->
-                            backStack.add(Player(nextItemId))
+                            backStack.add(Player(nextItemId, queueIds = destination.queueIds))
                         },
                     )
                 }
@@ -377,26 +393,5 @@ fun CinefinTvNavGraph(
 // Only pops when there is more than one entry, preventing the back stack from going empty.
 private fun NavBackStack<NavKey>.pop() {
     if (size > 1) removeAt(size - 1)
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun AuthBootstrapScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            CircularProgressIndicator()
-            Text(
-                text = "Restoring session...",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
 }
 

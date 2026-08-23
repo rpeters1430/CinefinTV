@@ -60,11 +60,13 @@ class JellyfinSessionManager @Inject constructor(
         if (authRepository.isTokenMissing()) {
             reauthMutex.withLock {
                 if (authRepository.isTokenMissing()) {
+                    val staleServerUrl = authRepository.getCurrentServer()?.url
                     Logger.d(LogCategory.NETWORK, "SessionManager", "Token expired for $operationName, forcing re-authentication")
                     try {
                         val success = withTimeout(10_000L) { authRepository.forceReAuthenticate() }
                         if (success) {
                             Logger.i(LogCategory.NETWORK, "SessionManager", "Proactive re-authentication successful for $operationName")
+                            staleServerUrl?.let { optimizedClientFactory.invalidateClient(it) }
                         } else {
                             Logger.w(LogCategory.NETWORK, "SessionManager", "Proactive re-authentication failed for $operationName")
                         }
@@ -90,11 +92,13 @@ class JellyfinSessionManager @Inject constructor(
                 // If another coroutine already reauthed, skip
                 val inProgress = authRepository.isAuthenticating.value
                 if (!inProgress) {
+                    val staleServerUrl = authRepository.getCurrentServer()?.url ?: server.url
                     Logger.d(LogCategory.NETWORK, "SessionManager", "$operationName: 401 detected, forcing re-authentication")
                     try {
                         val success = withTimeout(10_000L) { authRepository.forceReAuthenticate() }
                         if (success) {
                             Logger.i(LogCategory.NETWORK, "SessionManager", "Retry re-authentication successful for $operationName")
+                            optimizedClientFactory.invalidateClient(staleServerUrl)
                         } else {
                             Logger.w(LogCategory.NETWORK, "SessionManager", "Retry re-authentication failed for $operationName")
                         }

@@ -11,10 +11,6 @@ object Constants {
     const val NETWORK_READ_TIMEOUT_SECONDS = 60L
     const val NETWORK_WRITE_TIMEOUT_SECONDS = 30L
 
-    // Authentication
-    const val TOKEN_VALIDITY_DURATION_MS = 45 * 60 * 1000L // 45 minutes (15 min before typical 60min server expiry)
-    const val TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000L // 5 minutes before expiry
-
     // Pagination
     const val DEFAULT_PAGE_SIZE = 20
     const val LARGE_PAGE_SIZE = 50

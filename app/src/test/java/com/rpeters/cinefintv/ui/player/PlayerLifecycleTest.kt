@@ -38,4 +38,36 @@ class PlayerLifecycleTest {
 
         assertNull(nextPlaybackCompletionTarget(uiState))
     }
+
+    @Test
+    fun nextPlaybackCompletionTarget_advancesThroughPlaylistQueueWhenNotEpisodic() {
+        val uiState = PlayerUiState(
+            itemId = "video-1",
+            isEpisodicContent = false,
+            queueIds = listOf("video-1", "video-2", "video-3"),
+        )
+
+        assertEquals("video-2", nextPlaybackCompletionTarget(uiState))
+    }
+
+    @Test
+    fun nextPlaybackCompletionTarget_returnsNullAtEndOfPlaylistQueue() {
+        val uiState = PlayerUiState(
+            itemId = "video-3",
+            isEpisodicContent = false,
+            queueIds = listOf("video-1", "video-2", "video-3"),
+        )
+
+        assertNull(nextPlaybackCompletionTarget(uiState))
+    }
+
+    @Test
+    fun nextInQueue_returnsNullWhenCurrentItemNotInQueue() {
+        assertNull(nextInQueue(listOf("a", "b"), "not-in-queue"))
+    }
+
+    @Test
+    fun nextInQueue_returnsFollowingId() {
+        assertEquals("b", nextInQueue(listOf("a", "b", "c"), "a"))
+    }
 }

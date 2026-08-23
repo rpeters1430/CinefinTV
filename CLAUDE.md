@@ -157,7 +157,7 @@ mediaUpdateBus.events.collect { event ->
 
 ### Centralized Constants
 `core/constants/Constants.kt` is the single source of truth for all magic numbers. Key groups:
-- **Network:** 30s connect / 60s read / 30s write timeouts; token validity 45 min, refresh threshold 5 min
+- **Network:** 30s connect / 60s read / 30s write timeouts. Token refresh is purely reactive (401-triggered), not time-based — Jellyfin doesn't expose token expiry metadata to the client.
 - **Pagination:** DEFAULT=20, LARGE=50, SEARCH=30, PREFETCH=3
 - **Image:** 50 MB cache, max 800×1200, quality tiers 85/75/60
 - **Animation:** 300ms default / 150ms fast / 500ms slow; search debounce 300ms

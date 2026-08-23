@@ -10,6 +10,7 @@ import androidx.paging.map
 import com.rpeters.cinefintv.data.paging.LibraryItemPagingSource
 import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.repository.JellyfinRepositoryCoordinator
+import com.rpeters.cinefintv.data.repository.JellyfinStreamRepository
 import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.getDisplayTitle
 import com.rpeters.cinefintv.utils.getItemTypeString
@@ -43,6 +44,33 @@ data class LibraryCardModel(
     val playbackProgress: Float? = null,
     val unwatchedCount: Int? = null,
 )
+
+/**
+ * Shared BaseItemDto -> LibraryCardModel mapping used by every library grid ViewModel.
+ * Pass [subtitleOverride] when a screen needs subtitle semantics other than
+ * [toMediaCardPresentation]'s playback/detail line (e.g. an item count for playlists).
+ */
+fun BaseItemDto.toLibraryCardModel(
+    streamRepository: JellyfinStreamRepository,
+    subtitleOverride: String? = null,
+): LibraryCardModel {
+    val presentation = toMediaCardPresentation()
+
+    return LibraryCardModel(
+        id = id.toString(),
+        title = getDisplayTitle(),
+        subtitle = subtitleOverride ?: presentation.subtitle,
+        imageUrl = streamRepository.getPosterCardImageUrl(this),
+        backdropUrl = streamRepository.getBackdropUrl(this),
+        description = overview?.take(200),
+        year = getYear(),
+        rating = communityRating?.let { String.format(java.util.Locale.US, "%.1f", it) },
+        itemType = getItemTypeString(),
+        watchStatus = presentation.watchStatus,
+        playbackProgress = presentation.playbackProgress,
+        unwatchedCount = presentation.unwatchedCount,
+    )
+}
 
 abstract class BaseLibraryViewModel(
     protected val repositories: JellyfinRepositoryCoordinator,
@@ -93,25 +121,8 @@ abstract class BaseLibraryViewModel(
         refreshSignal.update { it + 1 }
     }
 
-    private fun toCardModel(item: BaseItemDto): LibraryCardModel {
-        val id = item.id.toString()
-        val presentation = item.toMediaCardPresentation()
-
-        return LibraryCardModel(
-            id = id,
-            title = item.getDisplayTitle(),
-            subtitle = presentation.subtitle,
-            imageUrl = repositories.stream.getPosterCardImageUrl(item),
-            backdropUrl = repositories.stream.getBackdropUrl(item),
-            description = item.overview?.take(200),
-            year = item.getYear(),
-            rating = item.communityRating?.let { String.format(java.util.Locale.US, "%.1f", it) },
-            itemType = item.getItemTypeString(),
-            watchStatus = presentation.watchStatus,
-            playbackProgress = presentation.playbackProgress,
-            unwatchedCount = presentation.unwatchedCount,
-        )
-    }
+    private fun toCardModel(item: BaseItemDto): LibraryCardModel =
+        item.toLibraryCardModel(repositories.stream)
 }
 
 @HiltViewModel

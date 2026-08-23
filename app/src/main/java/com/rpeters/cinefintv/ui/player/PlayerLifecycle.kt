@@ -109,10 +109,20 @@ internal fun PlayerLifecycleManager(
 }
 
 internal fun nextPlaybackCompletionTarget(uiState: PlayerUiState): String? {
-    return when {
+    val nextEpisode = when {
         !uiState.isEpisodicContent -> null
         !uiState.autoPlayNextEpisode -> null
         uiState.nextEpisodeId.isNullOrBlank() -> null
         else -> uiState.nextEpisodeId
     }
+    if (nextEpisode != null) return nextEpisode
+
+    return nextInQueue(uiState.queueIds, uiState.itemId)
+}
+
+/** Returns the id immediately after [currentItemId] in [queueIds], or null at the end/absent. */
+internal fun nextInQueue(queueIds: List<String>, currentItemId: String): String? {
+    val currentIndex = queueIds.indexOf(currentItemId)
+    if (currentIndex == -1) return null
+    return queueIds.getOrNull(currentIndex + 1)
 }
