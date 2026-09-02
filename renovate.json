@@ -1,0 +1,70 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices"
+  ],
+  "timezone": "America/Los_Angeles",
+  "schedule": [
+    "* 8-11 * * *"
+  ],
+  "automergeSchedule": [
+    "* 12-15 * * *"
+  ],
+  "platformAutomerge": false,
+  "dependencyDashboard": true,
+  "assignees": [
+    "rpeters1430"
+  ],
+  "assignAutomerge": true,
+  "labels": [
+    "dependencies",
+    "renovate"
+  ],
+  "prConcurrentLimit": 5,
+  "packageRules": [
+    {
+      "description": "Group and automerge stable minor and patch updates",
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "matchCurrentVersion": "!/^0/",
+      "groupName": "Safe non-major dependency updates",
+      "groupSlug": "safe-non-major-dependencies",
+      "groupSingleUpdates": true,
+      "minimumReleaseAge": "3 days",
+      "minimumReleaseAgeBehaviour": "timestamp-optional",
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Group and automerge dependency pins",
+      "matchUpdateTypes": [
+        "pin"
+      ],
+      "groupName": "Safe non-major dependency updates",
+      "groupSlug": "safe-non-major-dependencies",
+      "groupSingleUpdates": true,
+      "minimumReleaseAge": "3 days",
+      "minimumReleaseAgeBehaviour": "timestamp-optional",
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Group and automerge GitHub Actions digest updates",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "digest"
+      ],
+      "groupName": "Safe non-major dependency updates",
+      "groupSlug": "safe-non-major-dependencies",
+      "groupSingleUpdates": true,
+      "minimumReleaseAge": "3 days",
+      "minimumReleaseAgeBehaviour": "timestamp-optional",
+      "automerge": true,
+      "automergeType": "pr"
+    }
+  ]
+}
