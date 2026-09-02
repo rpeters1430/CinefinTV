@@ -1,10 +1,37 @@
 {
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices"
+  ],
+  "timezone": "America/Los_Angeles",
+  "schedule": [
+    "* 8-11 * * *"
+  ],
+  "automergeSchedule": [
+    "* 12-15 * * *"
+  ],
+  "platformAutomerge": false,
   "dependencyDashboard": true,
-  "enabledManagers": ["gradle"],
+  "enabledManagers": [
+    "gradle",
+    "github-actions"
+  ],
+  "assignees": [
+    "rpeters1430"
+  ],
+  "assignAutomerge": true,
+  "labels": [
+    "dependencies",
+    "renovate"
+  ],
+  "prConcurrentLimit": 5,
+  "rebaseWhen": "behind-base-branch",
   "packageRules": [
     {
       "description": "Enable pre-releases for AndroidX libraries",
-      "matchDatasources": ["maven"],
+      "matchDatasources": [
+        "maven"
+      ],
       "matchPackageNames": [
         "/^androidx\\./",
         "/^androidx\\..*/",
@@ -16,7 +43,9 @@
     },
     {
       "description": "Enable pre-releases for other Android development libraries",
-      "matchDatasources": ["maven"],
+      "matchDatasources": [
+        "maven"
+      ],
       "matchPackageNames": [
         "com.google.android.material:material",
         "/^com\\.google\\.accompanist\\./",
@@ -35,7 +64,9 @@
     },
     {
       "description": "Keep Kotlin and KSP stable (they must match)",
-      "matchDatasources": ["maven"],
+      "matchDatasources": [
+        "maven"
+      ],
       "matchPackageNames": [
         "/^org\\.jetbrains\\.kotlin\\./",
         "/^com\\.google\\.devtools\\.ksp/"
@@ -43,9 +74,51 @@
       "ignoreUnstable": true,
       "rangeStrategy": "bump",
       "versioning": "gradle"
+    },
+    {
+      "description": "Group and automerge stable minor and patch updates",
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "matchCurrentVersion": "!/^0/",
+      "matchNewValue": "!/-/",
+      "groupName": "Safe non-major dependency updates",
+      "groupSlug": "safe-non-major-dependencies",
+      "groupSingleUpdates": true,
+      "minimumReleaseAge": "3 days",
+      "minimumReleaseAgeBehaviour": "timestamp-optional",
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Group and automerge dependency pins",
+      "matchUpdateTypes": [
+        "pin"
+      ],
+      "groupName": "Safe non-major dependency updates",
+      "groupSlug": "safe-non-major-dependencies",
+      "groupSingleUpdates": true,
+      "minimumReleaseAge": "3 days",
+      "minimumReleaseAgeBehaviour": "timestamp-optional",
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Group and automerge GitHub Actions digest updates",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "digest"
+      ],
+      "groupName": "Safe non-major dependency updates",
+      "groupSlug": "safe-non-major-dependencies",
+      "groupSingleUpdates": true,
+      "minimumReleaseAge": "3 days",
+      "minimumReleaseAgeBehaviour": "timestamp-optional",
+      "automerge": true,
+      "automergeType": "pr"
     }
-  ],
-  "labels": ["dependencies"],
-  "automerge": false,
-  "rebaseWhen": "behind-base-branch"
+  ]
 }
