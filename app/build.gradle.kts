@@ -44,7 +44,7 @@ android {
     defaultConfig {
         applicationId = "com.rpeters.cinefintv"
         minSdk = 30
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 139
         versionName = "2.3.16"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

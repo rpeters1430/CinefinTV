@@ -1,11 +1,11 @@
 package com.rpeters.cinefintv.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tv
@@ -24,7 +24,7 @@ val navTabItems = listOf(
     NavTabItem(LibraryTvShows, "TV Shows", Icons.Default.Tv),
     NavTabItem(LibraryCollections, "Collections", Icons.Default.Folder),
     NavTabItem(LibraryMusic, "Music", Icons.Default.MusicNote),
-    NavTabItem(LibraryPlaylists, "Playlists", Icons.Default.PlaylistPlay),
+    NavTabItem(LibraryPlaylists, "Playlists", Icons.AutoMirrored.Filled.PlaylistPlay),
     NavTabItem(Search, "Search", Icons.Default.Search),
     NavTabItem(Settings, "Settings", Icons.Default.Settings),
 )
