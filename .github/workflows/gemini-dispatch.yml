@@ -136,6 +136,7 @@ jobs:
       issues: 'write'
       pull-requests: 'write'
     with:
+      pr_number: '${{ needs.dispatch.outputs.issue_number }}'
       additional_context: '${{ needs.dispatch.outputs.additional_context }}'
     secrets: 'inherit'
 
