@@ -5,7 +5,7 @@
   ],
   "timezone": "America/Los_Angeles",
   "schedule": [
-    "* 8-11 * * *"
+    "at any time"
   ],
   "automergeSchedule": [
     "* 12-15 * * *"
@@ -24,9 +24,30 @@
     "dependencies",
     "renovate"
   ],
-  "prConcurrentLimit": 5,
+  "prConcurrentLimit": 0,
   "rebaseWhen": "behind-base-branch",
   "packageRules": [
+    {
+      "description": "Create updates immediately and consolidate updates requiring manual review",
+      "matchPackageNames": [
+        "*"
+      ],
+      "minimumReleaseAge": "0 days",
+      "schedule": [
+        "at any time"
+      ],
+      "prCreation": "immediate",
+      "dependencyDashboardApproval": false,
+      "groupName": "Dependency updates requiring review",
+      "groupSlug": "dependencies-requiring-review",
+      "groupSingleUpdates": true,
+      "minimumGroupSize": 1,
+      "separateMajorMinor": false,
+      "separateMinorPatch": false,
+      "separateMultipleMajor": false,
+      "separateMultipleMinor": false,
+      "automerge": false
+    },
     {
       "description": "Enable pre-releases for AndroidX libraries",
       "matchDatasources": [
@@ -86,7 +107,6 @@
       "groupName": "Safe non-major dependency updates",
       "groupSlug": "safe-non-major-dependencies",
       "groupSingleUpdates": true,
-      "minimumReleaseAgeBehaviour": "timestamp-optional",
       "automerge": true,
       "automergeType": "pr"
     },
@@ -98,7 +118,6 @@
       "groupName": "Safe non-major dependency updates",
       "groupSlug": "safe-non-major-dependencies",
       "groupSingleUpdates": true,
-      "minimumReleaseAgeBehaviour": "timestamp-optional",
       "automerge": true,
       "automergeType": "pr"
     },
@@ -113,9 +132,11 @@
       "groupName": "Safe non-major dependency updates",
       "groupSlug": "safe-non-major-dependencies",
       "groupSingleUpdates": true,
-      "minimumReleaseAgeBehaviour": "timestamp-optional",
       "automerge": true,
       "automergeType": "pr"
     }
-  ]
+  ],
+  "minimumReleaseAge": "0 days",
+  "prCreation": "immediate",
+  "prHourlyLimit": 0
 }
