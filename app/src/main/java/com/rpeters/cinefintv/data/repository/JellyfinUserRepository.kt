@@ -7,11 +7,10 @@ import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.data.repository.common.BaseJellyfinRepository
 import com.rpeters.cinefintv.data.repository.common.ErrorType
 import kotlinx.coroutines.CancellationException
-import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
-import org.jellyfin.sdk.api.client.extensions.playStateApi
+import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.api.client.extensions.userApi
-import org.jellyfin.sdk.api.client.extensions.userLibraryApi
+import org.jellyfin.sdk.api.client.extensions.userDataApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.PlayMethod
 import org.jellyfin.sdk.model.api.PlaybackOrder
@@ -58,9 +57,9 @@ class JellyfinUserRepository @Inject constructor(
             val userUuid = parseUuid(server.userId ?: "", "user")
             val itemUuid = parseUuid(itemId, "item")
             if (isFavorite) {
-                client.userLibraryApi.unmarkFavoriteItem(itemId = itemUuid, userId = userUuid)
+                client.userDataApi.unmarkFavoriteItem(itemId = itemUuid, userId = userUuid)
             } else {
-                client.userLibraryApi.markFavoriteItem(itemId = itemUuid, userId = userUuid)
+                client.userDataApi.markFavoriteItem(itemId = itemUuid, userId = userUuid)
             }
             !isFavorite
         }
@@ -71,7 +70,7 @@ class JellyfinUserRepository @Inject constructor(
         return withServerClient("markAsWatched") { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
             val itemUuid = parseUuid(itemId, "item")
-            client.playStateApi.markPlayedItem(itemId = itemUuid, userId = userUuid)
+            client.userDataApi.markPlayedItem(itemId = itemUuid, userId = userUuid)
             cache.invalidateWatchStateCaches()
             updateBus.refreshItem(itemId)
             true
@@ -84,7 +83,7 @@ class JellyfinUserRepository @Inject constructor(
         return withServerClient("markAsUnwatched") { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
             val itemUuid = parseUuid(itemId, "item")
-            client.playStateApi.markUnplayedItem(itemId = itemUuid, userId = userUuid)
+            client.userDataApi.markUnplayedItem(itemId = itemUuid, userId = userUuid)
             cache.invalidateWatchStateCaches()
             updateBus.refreshItem(itemId)
             true
@@ -95,7 +94,7 @@ class JellyfinUserRepository @Inject constructor(
         withServerClient("getItemUserData") { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
             val itemUuid = parseUuid(itemId, "item")
-            val response = client.itemsApi.getItemUserData(itemId = itemUuid, userId = userUuid)
+            val response = client.userDataApi.getItemUserData(itemId = itemUuid, userId = userUuid)
             response.content
         }
 
@@ -124,7 +123,7 @@ class JellyfinUserRepository @Inject constructor(
                 playbackOrder = PlaybackOrder.DEFAULT,
                 playSessionId = sessionId,
             )
-            client.playStateApi.reportPlaybackStart(info)
+            client.sessionApi.reportPlaybackStart(info)
             return@withServerClient Unit
         }
 
@@ -153,7 +152,7 @@ class JellyfinUserRepository @Inject constructor(
                 playbackOrder = PlaybackOrder.DEFAULT,
                 playSessionId = sessionId,
             )
-            client.playStateApi.reportPlaybackProgress(info)
+            client.sessionApi.reportPlaybackProgress(info)
             return@withServerClient Unit
         }
 
@@ -174,7 +173,7 @@ class JellyfinUserRepository @Inject constructor(
                 playSessionId = sessionId,
                 failed = failed,
             )
-            client.playStateApi.reportPlaybackStopped(info)
+            client.sessionApi.reportPlaybackStopped(info)
             return@withServerClient Unit
         }
 
@@ -182,7 +181,7 @@ class JellyfinUserRepository @Inject constructor(
         // ✅ FIX: Use withServerClient helper to ensure fresh server/client on token refresh
         withServerClient("getFavorites") { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
-            val response = client.itemsApi.getItems(
+            val response = client.libraryApi.getItems(
                 userId = userUuid,
                 recursive = true,
                 sortBy = listOf(org.jellyfin.sdk.model.api.ItemSortBy.SORT_NAME),

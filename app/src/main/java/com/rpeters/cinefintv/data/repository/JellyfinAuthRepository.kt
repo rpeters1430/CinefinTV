@@ -27,9 +27,8 @@ import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.exception.ApiClientException
 import org.jellyfin.sdk.api.client.exception.InvalidStatusException
-import org.jellyfin.sdk.api.client.extensions.quickConnectApi
+import org.jellyfin.sdk.api.client.extensions.authenticationApi
 import org.jellyfin.sdk.api.client.extensions.systemApi
-import org.jellyfin.sdk.api.client.extensions.userApi
 import org.jellyfin.sdk.model.api.AuthenticateUserByName
 import org.jellyfin.sdk.model.api.AuthenticationResult
 import org.jellyfin.sdk.model.api.PublicSystemInfo
@@ -146,7 +145,7 @@ open class JellyfinAuthRepository @Inject constructor(
 
             val response = withContext(dispatchers.io) {
                 val client = createApiClient(serverUrl)
-                client.userApi.authenticateUserByName(
+                client.authenticationApi.authenticateUserByName(
                     AuthenticateUserByName(
                         username = username,
                         pw = password,
@@ -520,7 +519,7 @@ open class JellyfinAuthRepository @Inject constructor(
         return try {
             val response = withContext(dispatchers.io) {
                 val client = createApiClient(serverUrl)
-                client.quickConnectApi.initiateQuickConnect()
+                client.authenticationApi.initiateQuickConnect()
             }
             ApiResult.Success(response.content.toDomainQuickConnectResult())
         } catch (e: Exception) {
@@ -535,7 +534,7 @@ open class JellyfinAuthRepository @Inject constructor(
         return try {
             val response = withContext(dispatchers.io) {
                 val client = createApiClient(serverUrl)
-                client.quickConnectApi.getQuickConnectEnabled()
+                client.authenticationApi.getQuickConnectEnabled()
             }
             ApiResult.Success(response.content)
         } catch (e: InvalidStatusException) {
@@ -560,7 +559,7 @@ open class JellyfinAuthRepository @Inject constructor(
         return try {
             val response = withContext(dispatchers.io) {
                 val client = createApiClient(serverUrl)
-                client.quickConnectApi.getQuickConnectState(secret)
+                client.authenticationApi.getQuickConnectState(secret)
             }
             val state = if (response.content.authenticated) {
                 QuickConnectState(state = "Approved")
@@ -594,7 +593,7 @@ open class JellyfinAuthRepository @Inject constructor(
             try {
                 val response = withContext(dispatchers.io) {
                     val client = createApiClient(serverUrl)
-                    client.userApi.authenticateWithQuickConnect(
+                    client.authenticationApi.authenticateWithQuickConnect(
                         org.jellyfin.sdk.model.api.QuickConnectDto(secret = secret),
                     )
                 }

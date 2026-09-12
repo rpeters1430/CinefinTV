@@ -3,7 +3,7 @@ package com.rpeters.cinefintv.data.repository
 import com.rpeters.cinefintv.data.cache.JellyfinCache
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.data.repository.common.BaseJellyfinRepository
-import org.jellyfin.sdk.api.client.extensions.itemsApi
+import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import javax.inject.Inject
@@ -41,7 +41,7 @@ class JellyfinSearchRepository @Inject constructor(
                 val userUuid = parseUuid(server.userId ?: "", "user")
                 val client = getClient(server.url, server.accessToken)
 
-                val response = client.itemsApi.getItems(
+                val response = client.libraryApi.getItems(
                     userId = userUuid,
                     searchTerm = query.trim(),
                     recursive = true,

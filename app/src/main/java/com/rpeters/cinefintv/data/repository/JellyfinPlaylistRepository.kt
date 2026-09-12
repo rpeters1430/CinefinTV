@@ -6,9 +6,8 @@ import com.rpeters.cinefintv.data.common.MediaUpdateBus
 import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.data.repository.common.BaseJellyfinRepository
 import com.rpeters.cinefintv.data.session.JellyfinSessionManager
-import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
-import org.jellyfin.sdk.api.client.extensions.playlistsApi
+import org.jellyfin.sdk.api.client.extensions.playlistApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.CreatePlaylistDto
@@ -38,7 +37,7 @@ class JellyfinPlaylistRepository @Inject constructor(
     suspend fun getAllPlaylists(): ApiResult<List<BaseItemDto>> =
         withServerClient("getAllPlaylists") { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
-            val response = client.itemsApi.getItems(
+            val response = client.libraryApi.getItems(
                 userId = userUuid,
                 includeItemTypes = listOf(BaseItemKind.PLAYLIST),
                 recursive = true,
@@ -57,7 +56,7 @@ class JellyfinPlaylistRepository @Inject constructor(
         withServerClient("getPlaylistItems", playlistId) { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
             val playlistUuid = parseUuid(playlistId, "playlist")
-            val response = client.playlistsApi.getPlaylistItems(
+            val response = client.playlistApi.getPlaylistItems(
                 playlistId = playlistUuid,
                 userId = userUuid,
                 fields = listOf(
@@ -72,7 +71,7 @@ class JellyfinPlaylistRepository @Inject constructor(
     suspend fun createPlaylist(name: String, itemIds: List<String> = emptyList()): ApiResult<String> =
         withServerClient("createPlaylist") { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
-            val result = client.playlistsApi.createPlaylist(
+            val result = client.playlistApi.createPlaylist(
                 CreatePlaylistDto(
                     name = name,
                     ids = itemIds.map { parseUuid(it, "item") },
@@ -89,7 +88,7 @@ class JellyfinPlaylistRepository @Inject constructor(
         withServerClient("addItemsToPlaylist", playlistId) { server, client ->
             val userUuid = parseUuid(server.userId ?: "", "user")
             val playlistUuid = parseUuid(playlistId, "playlist")
-            client.playlistsApi.addItemToPlaylist(
+            client.playlistApi.addItemToPlaylist(
                 playlistId = playlistUuid,
                 ids = itemIds.map { parseUuid(it, "item") },
                 userId = userUuid,
@@ -104,7 +103,7 @@ class JellyfinPlaylistRepository @Inject constructor(
      */
     suspend fun removeItemsFromPlaylist(playlistId: String, entryIds: List<String>): ApiResult<Boolean> =
         withServerClient("removeItemsFromPlaylist", playlistId) { _, client ->
-            client.playlistsApi.removeItemFromPlaylist(
+            client.playlistApi.removeItemFromPlaylist(
                 playlistId = playlistId,
                 entryIds = entryIds,
             )
@@ -118,7 +117,7 @@ class JellyfinPlaylistRepository @Inject constructor(
      */
     suspend fun movePlaylistItem(playlistId: String, entryId: String, newIndex: Int): ApiResult<Boolean> =
         withServerClient("movePlaylistItem", playlistId) { _, client ->
-            client.playlistsApi.moveItem(
+            client.playlistApi.moveItem(
                 playlistId = playlistId,
                 itemId = entryId,
                 newIndex = newIndex,
@@ -130,7 +129,7 @@ class JellyfinPlaylistRepository @Inject constructor(
     suspend fun renamePlaylist(playlistId: String, newName: String): ApiResult<Boolean> =
         withServerClient("renamePlaylist", playlistId) { _, client ->
             val playlistUuid = parseUuid(playlistId, "playlist")
-            client.playlistsApi.updatePlaylist(
+            client.playlistApi.updatePlaylist(
                 playlistId = playlistUuid,
                 data = UpdatePlaylistDto(name = newName),
             )
