@@ -208,15 +208,15 @@ Canonical versions live in `gradle/libs.versions.toml`.
 
 | Dependency | Version |
 |---|---|
-| Kotlin | 2.3.21 |
-| Compose BOM | 2026.05.01 |
+| Kotlin | 2.4.20 |
+| Compose BOM | 2026.09.00 |
 | androidx.tv:tv-material | 1.1.0 |
-| Hilt | 2.59.2 (KSP) |
-| Media3 | 1.10.1 |
-| Jellyfin SDK | 1.8.10 |
+| Hilt | 2.60.1 (KSP) |
+| Media3 | 1.11.1 |
+| Jellyfin SDK | 1.9.0 (targets Jellyfin Server 12.0+; incompatible with 10.11 and earlier) |
 | jellyfin-media3-ffmpeg | 1.9.0+1 |
-| Coil | 3.5.0-beta01 |
-| OkHttp | 5.3.2 |
-| Firebase BOM | 34.13.0 |
-| Gradle / AGP | 9.4.1 / 9.2.1 |
+| Coil | 3.6.2 |
+| OkHttp | 5.5.0 |
+| Firebase BOM | 34.19.0 |
+| Gradle / AGP | 9.7.1 / 9.4.0 |
 | compileSdk / targetSdk / minSdk | 37 / 35 / 26 |
