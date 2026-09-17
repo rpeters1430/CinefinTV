@@ -22,7 +22,7 @@ val navTabItems = listOf(
     NavTabItem(Home, "Home", Icons.Default.Home),
     NavTabItem(LibraryMovies, "Movies", Icons.Default.Movie),
     NavTabItem(LibraryTvShows, "TV Shows", Icons.Default.Tv),
-    NavTabItem(LibraryCollections, "Collections", Icons.Default.Folder),
+    NavTabItem(LibraryCollections, "Libraries", Icons.Default.Folder),
     NavTabItem(LibraryMusic, "Music", Icons.Default.MusicNote),
     NavTabItem(LibraryPlaylists, "Playlists", Icons.AutoMirrored.Filled.PlaylistPlay),
     NavTabItem(Search, "Search", Icons.Default.Search),

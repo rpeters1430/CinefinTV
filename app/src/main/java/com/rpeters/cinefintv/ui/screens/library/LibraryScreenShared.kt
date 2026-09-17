@@ -34,7 +34,6 @@ import com.rpeters.cinefintv.ui.components.ImmersiveBackground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -43,13 +42,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import com.rpeters.cinefintv.ui.components.CinefinChip
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.animation.shrinkVertically
 
 sealed class LibraryGridUiState {
     data object Loading : LibraryGridUiState()
@@ -319,62 +313,66 @@ internal fun LibraryGridContent(
     }
 }
 
+// Fixed so the header never reflows the grid below it: a dynamically-sized header
+// (expand/shrink per focused item's description length) shifted the grid's weight(1f)
+// viewport on every focus change while scrolling, which left the previous row's card
+// text/bottoms visibly poking out from under the header.
+private val LibraryMetadataHeaderHeight = 140.dp
+
 @Composable
 private fun LibraryMetadataHeader(
     item: LibraryCardModel?,
     modifier: Modifier = Modifier
 ) {
-    val expressiveColors = LocalCinefinExpressiveColors.current
     val spacing = LocalCinefinSpacing.current
 
-    AnimatedVisibility(
-        visible = item != null,
-        enter = fadeIn() + expandVertically(),
-        exit = fadeOut() + shrinkVertically()
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(LibraryMetadataHeaderHeight)
+            .padding(horizontal = spacing.gridContentPadding + 16.dp, vertical = 24.dp),
     ) {
-        item?.let {
-            Column(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = spacing.gridContentPadding + 16.dp, vertical = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+        Crossfade(
+            targetState = item,
+            label = "LibraryMetadataHeaderCrossfade",
+        ) { current ->
+            if (current != null) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    it.itemType?.let { type -> CinefinChip(label = type, strong = true) }
-                    it.year?.let { year -> CinefinChip(label = year.toString()) }
-                    it.rating?.let { rating -> CinefinChip(label = "★ $rating") }
-                }
-                
-                Text(
-                    text = it.title,
-                    style = MaterialTheme.typography.displaySmall.copy(
-                        fontWeight = FontWeight.Black,
-                        fontSize = 36.sp
-                    ),
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                
-                it.description?.let { desc ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        current.itemType?.let { type -> CinefinChip(label = type, strong = true) }
+                        current.year?.let { year -> CinefinChip(label = year.toString()) }
+                        current.rating?.let { rating -> CinefinChip(label = "★ $rating") }
+                    }
+
                     Text(
-                        text = desc,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.8f),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 800.dp)
+                        text = current.title,
+                        style = MaterialTheme.typography.displaySmall.copy(
+                            fontWeight = FontWeight.Black,
+                            fontSize = 36.sp
+                        ),
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+
+                    current.description?.let { desc ->
+                        Text(
+                            text = desc,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.White.copy(alpha = 0.8f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.widthIn(max = 800.dp)
+                        )
+                    }
                 }
             }
         }
-    }
-    
-    if (item == null) {
-        Spacer(modifier = Modifier.height(140.dp))
     }
 }
 

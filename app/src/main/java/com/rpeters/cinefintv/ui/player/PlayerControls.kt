@@ -110,6 +110,7 @@ import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.toBitmap
+import com.rpeters.cinefintv.ui.theme.CinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.ui.theme.SurfaceDark
@@ -166,8 +167,16 @@ internal fun PlayerControls(
 
     AnimatedVisibility(
         visible = isVisible,
-        enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
-        exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 }),
+        enter = fadeIn(tween(CinefinMotion.DurationMedium, easing = CinefinMotion.Emphasized)) +
+            slideInVertically(
+                animationSpec = tween(CinefinMotion.DurationMedium, easing = CinefinMotion.Emphasized),
+                initialOffsetY = { it / 4 },
+            ),
+        exit = fadeOut(tween(CinefinMotion.DurationMedium, easing = CinefinMotion.Emphasized)) +
+            slideOutVertically(
+                animationSpec = tween(CinefinMotion.DurationMedium, easing = CinefinMotion.Emphasized),
+                targetOffsetY = { it / 4 },
+            ),
     ) {
         Box(
             modifier = Modifier

@@ -7,6 +7,7 @@ import com.rpeters.cinefintv.data.repository.common.ApiResult
 import com.rpeters.cinefintv.ui.components.WatchStatus
 import com.rpeters.cinefintv.utils.canResume
 import com.rpeters.cinefintv.utils.getDisplayTitle
+import com.rpeters.cinefintv.utils.getEpisodeCode
 import com.rpeters.cinefintv.utils.getFormattedDuration
 import com.rpeters.cinefintv.utils.getItemTypeString
 import com.rpeters.cinefintv.utils.getMediaQualityLabel
@@ -255,7 +256,7 @@ class HomeViewModel @Inject constructor(
                         }
 
                         cachedEpisodes?.let { items ->
-                            val episodeItems = items.take(12).map { toCardModel(it) }
+                            val episodeItems = toRecentEpisodeSeriesCardModels(items)
                             if (episodeItems.isNotEmpty()) {
                                 add(
                                     HomeSectionModel(
@@ -596,7 +597,18 @@ class HomeViewModel @Inject constructor(
             }
         }
 
-        results.episodes?.let { addSection(HomeSectionId.RECENT_EPISODES, it) }
+        (results.episodes as? ApiResult.Success)?.data?.let { items ->
+            val episodeItems = toRecentEpisodeSeriesCardModels(items)
+            if (episodeItems.isNotEmpty()) {
+                add(
+                    HomeSectionModel(
+                        id = HomeSectionId.RECENT_EPISODES,
+                        title = HomeSectionId.RECENT_EPISODES.displayTitle,
+                        items = episodeItems,
+                    ),
+                )
+            }
+        }
         results.movies?.let { addSection(HomeSectionId.RECENT_MOVIES, it) }
         results.music?.let { addSection(HomeSectionId.RECENT_MUSIC, it) }
         results.videos?.let { addSection(HomeSectionId.RECENT_COLLECTIONS, it) }
@@ -734,6 +746,42 @@ class HomeViewModel @Inject constructor(
             .distinctBy { it.id.toString() }
             .take(12)
             .mapNotNull(::toCardModelSafely)
+    }
+
+    /**
+     * Groups recently-added episodes by their parent show and renders one card per show
+     * (the show's own backdrop art) with an unwatched-count chip for how many new episodes
+     * arrived, instead of one card per raw episode thumbnail.
+     */
+    private fun toRecentEpisodeSeriesCardModels(items: List<BaseItemDto>): List<HomeCardModel> {
+        val bySeries = LinkedHashMap<String, MutableList<BaseItemDto>>()
+        items.forEach { episode ->
+            val key = episode.seriesId?.toString() ?: episode.id.toString()
+            bySeries.getOrPut(key) { mutableListOf() }.add(episode)
+        }
+
+        return bySeries.values.take(12).mapNotNull { episodesForSeries ->
+            val representative = episodesForSeries.first()
+            runCatching {
+                HomeCardModel(
+                    id = representative.seriesId?.toString() ?: representative.id.toString(),
+                    title = representative.seriesName?.takeIf { it.isNotBlank() }
+                        ?: representative.getDisplayTitle(),
+                    subtitle = representative.getEpisodeCode(),
+                    imageUrl = repositories.stream.getBackdropUrl(representative)
+                        ?: repositories.stream.getLandscapeImageUrl(representative),
+                    backdropUrl = repositories.stream.getBackdropUrl(representative),
+                    description = representative.overview?.take(140),
+                    year = representative.getYear(),
+                    itemType = "Series",
+                    unwatchedCount = episodesForSeries.size.takeIf { it > 0 },
+                    seriesId = representative.seriesId?.toString(),
+                    seasonId = representative.parentId?.toString(),
+                )
+            }.onFailure { error ->
+                SecureLogger.w("HomeViewModel", "Failed to map recent episode series card ${representative.id}", error)
+            }.getOrNull()
+        }
     }
 
     private fun toCardModelSafely(item: BaseItemDto): HomeCardModel? {

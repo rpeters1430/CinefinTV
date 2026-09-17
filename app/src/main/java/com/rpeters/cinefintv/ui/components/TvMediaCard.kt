@@ -88,16 +88,24 @@ fun TvMediaCard(
         else 1.06f
     }
 
+    // Card-to-card D-pad scrolling relies on the LazyRow's own focus-follow scroll animation.
+    // Running a long overshoot scale animation on the newly focused card at the same time
+    // makes that scroll read as choppy, since two independently-timed motions (translate +
+    // scale) are visible at once. Only HIGH-tier devices — which have the frame budget to
+    // spare — get the slower "premium" overshoot; everything else settles quickly with a
+    // plain ease so the scroll itself reads as the dominant motion.
+    val isHighTier = performanceProfile.tier == DevicePerformanceProfile.Tier.HIGH
     val animatedScale by animateFloatAsState(
         targetValue = if (isFocused) focusedScaleValue else 1f,
-        animationSpec = tween(
-            durationMillis = CinefinMotion.DurationMedium,
-            easing = CinefinMotion.PremiumOvershoot
-        ),
+        animationSpec = if (isHighTier) {
+            tween(durationMillis = CinefinMotion.DurationMedium, easing = CinefinMotion.PremiumOvershoot)
+        } else {
+            tween(durationMillis = CinefinMotion.DurationShort, easing = CinefinMotion.Standard)
+        },
         label = "MediaCardScale"
     )
 
-    val useAnimations = performanceProfile.tier != DevicePerformanceProfile.Tier.LOW
+    val useAnimations = isHighTier
 
     val titleColorValue = if (isFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface
     val titleColor by if (useAnimations) {

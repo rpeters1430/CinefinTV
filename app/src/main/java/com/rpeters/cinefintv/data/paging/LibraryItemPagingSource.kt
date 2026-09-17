@@ -20,6 +20,7 @@ class LibraryItemPagingSource(
     private val itemTypes: List<BaseItemKind>? = null,
     private val collectionType: String? = null,
     private val excludedItemIds: Set<String> = emptySet(),
+    private val excludedCollectionTypes: Set<String> = emptySet(),
     private val pageSize: Int = 20,
 ) : PagingSource<Int, BaseItemDto>() {
 
@@ -62,11 +63,12 @@ class LibraryItemPagingSource(
             ) {
                 is ApiResult.Success -> {
                     val rawItems = result.data
-                    val items = if (excludedItemIds.isEmpty()) {
-                        rawItems
-                    } else {
-                        rawItems.filterNot { item -> excludedItemIds.contains(item.id.toString()) }
-                    }
+                    val items = rawItems
+                        .filterNot { item -> excludedItemIds.contains(item.id.toString()) }
+                        .filterNot { item ->
+                            val type = item.collectionType?.toString()?.lowercase()
+                            type != null && excludedCollectionTypes.contains(type)
+                        }
 
                     if (BuildConfig.DEBUG) {
                         SecureLogger.d(

@@ -135,7 +135,7 @@ fun FlatDetailHero(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(start = 20.dp, bottom = 24.dp)
-                    .width(100.dp)
+                    .width(140.dp)
                     .aspectRatio(2f / 3f)
                     .border(
                         width = 1.dp,
@@ -152,7 +152,7 @@ fun FlatDetailHero(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = 136.dp, end = 24.dp, bottom = 24.dp)
+                .padding(start = 176.dp, end = 24.dp, bottom = 24.dp)
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {

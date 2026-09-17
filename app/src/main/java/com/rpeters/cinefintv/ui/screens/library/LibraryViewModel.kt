@@ -76,6 +76,7 @@ abstract class BaseLibraryViewModel(
     protected val repositories: JellyfinRepositoryCoordinator,
     private val updateBus: MediaUpdateBus,
     private val itemTypes: List<BaseItemKind>,
+    private val excludedCollectionTypes: Set<String> = emptySet(),
 ) : ViewModel() {
 
     private companion object {
@@ -99,7 +100,8 @@ abstract class BaseLibraryViewModel(
                 pagingSourceFactory = {
                     LibraryItemPagingSource(
                         mediaRepository = repositories.media,
-                        itemTypes = itemTypes
+                        itemTypes = itemTypes,
+                        excludedCollectionTypes = excludedCollectionTypes,
                     )
                 }
             ).flow
@@ -141,7 +143,15 @@ class TvShowLibraryViewModel @Inject constructor(
 class CollectionLibraryViewModel @Inject constructor(
     repositories: JellyfinRepositoryCoordinator,
     private val updateBus: MediaUpdateBus,
-) : BaseLibraryViewModel(repositories, updateBus, listOf(BaseItemKind.VIDEO, BaseItemKind.COLLECTION_FOLDER)) {
+) : BaseLibraryViewModel(
+    repositories,
+    updateBus,
+    itemTypes = listOf(BaseItemKind.COLLECTION_FOLDER, BaseItemKind.BOX_SET),
+    // Movies/TV Shows/Music/Playlists already have dedicated nav tabs; every other
+    // library (Home Videos & Photos, Books, Mixed Content, multiple libraries of the
+    // same type, etc.) is listed here individually rather than flattened together.
+    excludedCollectionTypes = setOf("movies", "tvshows", "music", "playlists"),
+) {
     fun markWatched(itemId: String, onComplete: (() -> Unit)? = null) {
         viewModelScope.launch {
             if (repositories.user.markAsWatched(itemId) is com.rpeters.cinefintv.data.repository.common.ApiResult.Success) {
