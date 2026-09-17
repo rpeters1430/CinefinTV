@@ -15,6 +15,7 @@ import com.rpeters.cinefintv.utils.getYear
 import com.rpeters.cinefintv.utils.isEpisode
 import com.rpeters.cinefintv.utils.isMovie
 import com.rpeters.cinefintv.utils.isSeries
+import com.rpeters.cinefintv.utils.isWatched
 import com.rpeters.cinefintv.utils.toMediaCardPresentation
 import com.rpeters.cinefintv.data.common.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -762,6 +763,7 @@ class HomeViewModel @Inject constructor(
 
         return bySeries.values.take(12).mapNotNull { episodesForSeries ->
             val representative = episodesForSeries.first()
+            val hasSeries = representative.seriesId != null
             runCatching {
                 HomeCardModel(
                     id = representative.seriesId?.toString() ?: representative.id.toString(),
@@ -773,8 +775,11 @@ class HomeViewModel @Inject constructor(
                     backdropUrl = repositories.stream.getBackdropUrl(representative),
                     description = representative.overview?.take(140),
                     year = representative.getYear(),
-                    itemType = "Series",
-                    unwatchedCount = episodesForSeries.size.takeIf { it > 0 },
+                    // Without a seriesId, `id` above falls back to the episode's own id, so the
+                    // card must keep behaving like an episode (routes to the player) rather than
+                    // claiming to be a Series (which would route to a nonexistent show detail).
+                    itemType = if (hasSeries) "Series" else representative.getItemTypeString(),
+                    unwatchedCount = episodesForSeries.count { !it.isWatched() }.takeIf { it > 0 },
                     seriesId = representative.seriesId?.toString(),
                     seasonId = representative.parentId?.toString(),
                 )

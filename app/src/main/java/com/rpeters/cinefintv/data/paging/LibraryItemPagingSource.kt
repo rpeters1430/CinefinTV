@@ -48,6 +48,9 @@ class LibraryItemPagingSource(
                     BaseItemKind.BOOK -> "Book"
                     BaseItemKind.AUDIO_BOOK -> "AudioBook"
                     BaseItemKind.VIDEO -> "Video"
+                    BaseItemKind.COLLECTION_FOLDER -> "CollectionFolder"
+                    BaseItemKind.BOX_SET -> "BoxSet"
+                    BaseItemKind.USER_VIEW -> "UserView"
                     else -> type.name
                 }
             }

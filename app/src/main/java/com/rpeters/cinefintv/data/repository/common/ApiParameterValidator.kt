@@ -133,7 +133,7 @@ object ApiParameterValidator {
         val validItemTypes = setOf(
             "Movie", "Series", "Episode", "Audio", "MusicAlbum", "MusicArtist",
             "Book", "AudioBook", "Video", "Photo", "BoxSet", "CollectionFolder",
-            "Playlist", "Person", "Genre", "MusicGenre", "Studio", "Year",
+            "UserView", "Playlist", "Person", "Genre", "MusicGenre", "Studio", "Year",
         )
 
         val requestedTypes = itemTypes.split(",").map { it.trim() }
@@ -151,6 +151,33 @@ object ApiParameterValidator {
             SecureLogger.w(TAG, "No valid item types found in: $itemTypes")
             null
         }
+    }
+
+    /**
+     * Maps an API item-type name (the PascalCase strings validated by [validateItemTypes],
+     * e.g. "CollectionFolder", "MusicAlbum") back to its [BaseItemKind]. Multi-word kinds are
+     * SCREAMING_SNAKE_CASE in the enum (e.g. [BaseItemKind.COLLECTION_FOLDER]) but PascalCase
+     * on the wire, so a plain `.uppercase()` on the API name does not round-trip through
+     * [BaseItemKind.valueOf] — it drops the underscores and the lookup fails silently.
+     */
+    fun itemTypeFromApiName(name: String): BaseItemKind? = when (name.trim()) {
+        "Movie" -> BaseItemKind.MOVIE
+        "Series" -> BaseItemKind.SERIES
+        "Season" -> BaseItemKind.SEASON
+        "Episode" -> BaseItemKind.EPISODE
+        "Audio" -> BaseItemKind.AUDIO
+        "MusicAlbum" -> BaseItemKind.MUSIC_ALBUM
+        "MusicArtist" -> BaseItemKind.MUSIC_ARTIST
+        "Book" -> BaseItemKind.BOOK
+        "AudioBook" -> BaseItemKind.AUDIO_BOOK
+        "Video" -> BaseItemKind.VIDEO
+        "Photo" -> BaseItemKind.PHOTO
+        "BoxSet" -> BaseItemKind.BOX_SET
+        "CollectionFolder" -> BaseItemKind.COLLECTION_FOLDER
+        "UserView" -> BaseItemKind.USER_VIEW
+        "Playlist" -> BaseItemKind.PLAYLIST
+        "Person" -> BaseItemKind.PERSON
+        else -> runCatching { BaseItemKind.valueOf(name.trim().uppercase()) }.getOrNull()
     }
 
     /**

@@ -110,8 +110,8 @@ import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.toBitmap
-import com.rpeters.cinefintv.ui.theme.CinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
+import com.rpeters.cinefintv.ui.theme.LocalCinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
 import com.rpeters.cinefintv.ui.theme.SurfaceDark
 import com.rpeters.cinefintv.utils.formatMs
@@ -141,6 +141,7 @@ internal fun PlayerControls(
 ) {
     val spacing = LocalCinefinSpacing.current
     val expressiveColors = LocalCinefinExpressiveColors.current
+    val motion = LocalCinefinMotion.current
     val chapters = uiState.chapters
     val trickplayManifest = uiState.trickplayManifest
     val trickplayBaseUrl = uiState.trickplayBaseUrl
@@ -167,14 +168,14 @@ internal fun PlayerControls(
 
     AnimatedVisibility(
         visible = isVisible,
-        enter = fadeIn(tween(CinefinMotion.DurationMedium, easing = CinefinMotion.Emphasized)) +
+        enter = fadeIn(tween(motion.durationMedium, easing = motion.emphasized)) +
             slideInVertically(
-                animationSpec = tween(CinefinMotion.DurationMedium, easing = CinefinMotion.Emphasized),
+                animationSpec = tween(motion.durationMedium, easing = motion.emphasized),
                 initialOffsetY = { it / 4 },
             ),
-        exit = fadeOut(tween(CinefinMotion.DurationMedium, easing = CinefinMotion.Emphasized)) +
+        exit = fadeOut(tween(motion.durationMedium, easing = motion.emphasized)) +
             slideOutVertically(
-                animationSpec = tween(CinefinMotion.DurationMedium, easing = CinefinMotion.Emphasized),
+                animationSpec = tween(motion.durationMedium, easing = motion.emphasized),
                 targetOffsetY = { it / 4 },
             ),
     ) {

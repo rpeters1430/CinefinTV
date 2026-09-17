@@ -146,7 +146,7 @@ class CollectionLibraryViewModel @Inject constructor(
 ) : BaseLibraryViewModel(
     repositories,
     updateBus,
-    itemTypes = listOf(BaseItemKind.COLLECTION_FOLDER, BaseItemKind.BOX_SET),
+    itemTypes = listOf(BaseItemKind.COLLECTION_FOLDER, BaseItemKind.BOX_SET, BaseItemKind.USER_VIEW),
     // Movies/TV Shows/Music/Playlists already have dedicated nav tabs; every other
     // library (Home Videos & Photos, Books, Mixed Content, multiple libraries of the
     // same type, etc.) is listed here individually rather than flattened together.

@@ -107,7 +107,7 @@ fun PersonCircleCard(
             ) {
                 Text(
                     text = name,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Start,
                     maxLines = 1,

@@ -317,7 +317,9 @@ internal fun LibraryGridContent(
 // (expand/shrink per focused item's description length) shifted the grid's weight(1f)
 // viewport on every focus change while scrolling, which left the previous row's card
 // text/bottoms visibly poking out from under the header.
-private val LibraryMetadataHeaderHeight = 140.dp
+// Tall enough for the chip row + one-line title + two-line description + vertical
+// padding at their actual rendered sizes, so content is never clipped.
+private val LibraryMetadataHeaderHeight = 190.dp
 
 @Composable
 private fun LibraryMetadataHeader(

@@ -144,6 +144,53 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun refresh_recentlyAddedEpisodes_groupsByShowAndCountsOnlyUnwatchedEpisodes() = runTest {
+        val fakeRepositories = FakeHomeRepositories()
+        val seriesId = UUID.randomUUID()
+
+        val watchedEpisode = mockBaseItemDto("Episode 1", type = BaseItemKind.EPISODE, season = 1, episode = 1)
+        every { watchedEpisode.seriesId } returns seriesId
+        every { watchedEpisode.seriesName } returns "My Show"
+        every { watchedEpisode.userData } returns mockk {
+            every { played } returns true
+            every { playedPercentage } returns 100.0
+        }
+
+        val unwatchedEpisode = mockBaseItemDto("Episode 2", type = BaseItemKind.EPISODE, season = 1, episode = 2)
+        every { unwatchedEpisode.seriesId } returns seriesId
+        every { unwatchedEpisode.seriesName } returns "My Show"
+        every { unwatchedEpisode.userData } returns null
+
+        coEvery { fakeRepositories.media.getUserLibraries(any()) } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getContinueWatching(any(), any()) } returns ApiResult.Success(emptyList())
+        coEvery { fakeRepositories.media.getNextUp(any(), any()) } returns ApiResult.Success(emptyList())
+        stubRecentlyAddedByType(
+            fakeRepositories,
+            episodes = ApiResult.Success(listOf(watchedEpisode, unwatchedEpisode)),
+        )
+        every { fakeRepositories.stream.getLandscapeImageUrl(any()) } returns "https://img/poster.jpg"
+        every { fakeRepositories.stream.getBackdropUrl(any()) } returns "https://img/backdrop.jpg"
+
+        val viewModel = HomeViewModel(fakeRepositories.coordinator, updateBus, TestDispatcherProvider(mainDispatcherRule.dispatcher))
+        activateAuth(fakeRepositories)
+        yieldUntilContent(viewModel)
+
+        val state = viewModel.uiState.value
+        assertTrue("Expected Content state, but was ${state.javaClass.simpleName}", state is HomeUiState.Content)
+        val content = state as HomeUiState.Content
+        val episodesSection = content.sections.first { it.id == HomeSectionId.RECENT_EPISODES }
+
+        // Both episodes belong to the same show, so they collapse into a single card...
+        assertEquals(1, episodesSection.items.size)
+        val card = episodesSection.items.first()
+        assertEquals("My Show", card.title)
+        assertEquals(seriesId.toString(), card.id)
+        assertEquals("Series", card.itemType)
+        // ...and only the still-unwatched episode counts toward the badge.
+        assertEquals(1, card.unwatchedCount)
+    }
+
+    @Test
     fun refreshWatchStatus_updatesOnlyContinueWatchingSection() = runTest {
         val fakeRepositories = FakeHomeRepositories()
         val movie = mockResumableMovie("Movie 1")

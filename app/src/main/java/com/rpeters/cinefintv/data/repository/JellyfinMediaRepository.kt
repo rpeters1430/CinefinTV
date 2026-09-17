@@ -132,7 +132,7 @@ class JellyfinMediaRepository @Inject constructor(
                 startIndex = validatedParams.startIndex,
                 limit = validatedParams.limit,
                 includeItemTypes = validatedParams.itemTypes?.split(",")?.mapNotNull {
-                    runCatching { BaseItemKind.valueOf(it.trim().uppercase()) }.getOrNull()
+                    ApiParameterValidator.itemTypeFromApiName(it)
                 } ?: getDefaultTypesForCollection(validatedParams.collectionType),
                 sortBy = listOf(ItemSortBy.SORT_NAME),
                 sortOrder = listOf(SortOrder.ASCENDING),
