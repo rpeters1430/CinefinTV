@@ -3,15 +3,15 @@
 package com.rpeters.cinefintv.ui.screens.detail.cinematic
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.Composable
@@ -36,6 +36,9 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 
+private val PersonCardWidth = 150.dp
+private val PersonCardImageAspectRatio = 2f / 3f
+
 @Composable
 fun PersonCircleCard(
     name: String,
@@ -49,8 +52,11 @@ fun PersonCircleCard(
 
     Card(
         onClick = onClick,
-        modifier = modifier.onFocusChanged { if (it.isFocused) onFocus?.invoke() },
+        modifier = modifier
+            .width(PersonCardWidth)
+            .onFocusChanged { if (it.isFocused) onFocus?.invoke() },
         scale = CardDefaults.scale(focusedScale = 1.05f),
+        shape = CardDefaults.shape(RoundedCornerShape(10.dp)),
         border = CardDefaults.border(
             focusedBorder = Border(
                 border = androidx.compose.foundation.BorderStroke(
@@ -65,31 +71,23 @@ fun PersonCircleCard(
         ),
     ) {
         Column(
-            modifier = Modifier
-                .padding(horizontal = 4.dp, vertical = 2.dp)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Box(
                 modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(expressiveColors.surfaceContainerLowest)
-                    .border(
-                        width = 1.dp,
-                        color = expressiveColors.borderSubtle,
-                        shape = CircleShape,
-                    ),
+                    .fillMaxWidth()
+                    .aspectRatio(PersonCardImageAspectRatio)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(expressiveColors.surfaceContainerLowest),
                 contentAlignment = Alignment.Center,
             ) {
                 if (!imageUrl.isNullOrBlank()) {
                     AsyncImage(
                         model = imageUrl,
                         contentDescription = name,
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clip(CircleShape),
+                        modifier = Modifier.matchParentSize(),
                         contentScale = ContentScale.Crop,
                     )
                 } else {
@@ -97,31 +95,35 @@ fun PersonCircleCard(
                         imageVector = Icons.Default.Person,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(28.dp),
+                        modifier = Modifier.size(48.dp),
                     )
                 }
             }
-            Text(
-                text = name,
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                minLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Text(
-                text = role.orEmpty(),
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(16.dp),
-            )
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Start,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text = role.orEmpty(),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Start,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
 }
