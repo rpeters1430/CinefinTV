@@ -19,7 +19,7 @@ coil = "3.6.3"
 jellyfin = "1.9.1"
 retrofit = "3.0.0"
 okhttp = "5.5.0"
-navigation = "2.10.1"
+navigation = "2.10.2"
 navigation3 = "1.2.0-rc01"
 paging = "3.5.1"
 coroutines = "1.11.0"
@@ -96,7 +96,7 @@ kotlinx-serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-seria
 kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 
 # Core
-core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.19.0" }
+core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.19.1" }
 navigation3-runtime = { group = "androidx.navigation3", name = "navigation3-runtime", version.ref = "navigation3" }
 navigation3-ui = { group = "androidx.navigation3", name = "navigation3-ui", version.ref = "navigation3" }
 lifecycle-viewmodel-navigation3 = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-navigation3", version.ref = "lifecycle" }
