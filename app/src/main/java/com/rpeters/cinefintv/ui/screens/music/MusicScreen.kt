@@ -219,11 +219,18 @@ private fun MusicGridContent(
 
         if (state.items.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(
-                    text = "No ${state.viewType.name.lowercase()} found.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 48.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "No ${state.viewType.name.lowercase()} found in this library. Switch view type above or check your server.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         } else {
             gridItems(state.items, key = { it.id }) { item ->
@@ -379,7 +386,7 @@ private fun AlbumDetailContent(
         if (state.tracks.isEmpty()) {
             item {
                 Text(
-                    text = "No tracks found.",
+                    text = "No tracks found for this album. Press Back to return to albums.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 16.dp),

@@ -192,12 +192,12 @@ fun MetaFactItem(
                 Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text(
                         text = label,
-                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp),
+                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp),
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Text(
                         text = value,
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp),
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                 }

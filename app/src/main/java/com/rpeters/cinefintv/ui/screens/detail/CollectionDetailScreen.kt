@@ -39,6 +39,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -307,10 +308,12 @@ private fun CollectionFolderContent(
                 eyebrow = listOfNotNull(collection.type ?: "Collection", "${items.size} items").joinToString(" · "),
                 ratingText = null,
                 genres = chips,
-                primaryActionLabel = if (items.isEmpty()) "Collection" else "Browse Items",
+                primaryActionLabel = if (items.isEmpty()) "Back to Libraries" else "Browse Items",
                 onPrimaryAction = {
                     if (items.isNotEmpty()) {
                         gridEntryFocusRequester.requestFocus()
+                    } else {
+                        onBack()
                     }
                 },
                 secondaryActions = listOf("Delete" to { showDeleteDialog = true }),
@@ -344,11 +347,22 @@ private fun CollectionFolderContent(
                         .fillMaxWidth(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = "No items found in this collection",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Text(
+                            text = "This collection is currently empty.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Button(
+                            onClick = onBack,
+                            modifier = Modifier.focusRequester(gridEntryFocusRequester),
+                        ) {
+                            Text("Back to Libraries")
+                        }
+                    }
                 }
             } else {
                 LazyVerticalGrid(

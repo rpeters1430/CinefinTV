@@ -179,6 +179,8 @@ internal fun LibraryGridContent(
             }
 
             LibraryGridUiState.Empty -> {
+                val refreshFocusRequester = remember { FocusRequester() }
+                val destinationFocus = rememberTopLevelDestinationFocus(refreshFocusRequester)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -198,7 +200,7 @@ internal fun LibraryGridContent(
                         androidx.compose.foundation.layout.Column(
                             modifier = Modifier.padding(horizontal = 36.dp, vertical = 28.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             Text(
                                 text = emptyTitle,
@@ -211,6 +213,14 @@ internal fun LibraryGridContent(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            Button(
+                                onClick = onRetry,
+                                modifier = Modifier
+                                    .then(destinationFocus.primaryContentModifier()),
+                                scale = androidx.tv.material3.ButtonDefaults.scale(focusedScale = 1.05f)
+                            ) {
+                                Text("Refresh Library", style = MaterialTheme.typography.titleMedium)
+                            }
                         }
                     }
                 }
@@ -342,13 +352,19 @@ private fun LibraryMetadataHeader(
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        current.itemType?.let { type -> CinefinChip(label = type, strong = true) }
-                        current.year?.let { year -> CinefinChip(label = year.toString()) }
-                        current.rating?.let { rating -> CinefinChip(label = "★ $rating") }
+                    val headerChips = listOfNotNull(
+                        current.year?.toString(),
+                        current.rating?.let { "★ $it" },
+                    )
+                    if (headerChips.isNotEmpty()) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            headerChips.forEach { chipLabel ->
+                                CinefinChip(label = chipLabel)
+                            }
+                        }
                     }
 
                     Text(

@@ -72,8 +72,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Carousel
 import androidx.tv.material3.CarouselDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -450,6 +453,18 @@ private fun HomeLoadedContent(
                         sections = state.sections,
                         onMoreInfo = onOpenItem,
                         onPlay = onPlayItem,
+                        onSectionClick = { sectionId ->
+                            val sectionIndex = state.sections.indexOfFirst { it.id == sectionId }
+                            if (sectionIndex >= 0) {
+                                val targetRequester = sectionItemFocusRequesters.getOrNull(sectionIndex)?.firstOrNull()
+                                if (targetRequester != null) {
+                                    requestFocusAtListIndex(
+                                        requester = targetRequester,
+                                        listIndex = if (state.featuredItems.isNotEmpty()) sectionIndex + 1 else sectionIndex,
+                                    ).invoke()
+                                }
+                            }
+                        },
                         onItemFocused = { focusedItem = it },
                         destinationFocus = destinationFocus,
                         primaryActionFocusRequester = featuredPrimaryActionRequester,
@@ -591,6 +606,7 @@ private fun FeaturedCarousel(
     downRequester: FocusRequester?,
     onNavigateDown: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    onSectionClick: (HomeSectionId) -> Unit = {},
 ) {
     val carouselState = rememberCarouselState()
     val performanceProfile = LocalPerformanceProfile.current
@@ -640,6 +656,7 @@ private fun FeaturedCarousel(
             sections = sections,
             onMoreInfo = { onMoreInfo(item) },
             onPlay = { onPlay(item.id) },
+            onSectionClick = onSectionClick,
             destinationFocus = destinationFocus,
             primaryActionFocusRequester = if (index == carouselState.activeItemIndex) {
                 primaryActionFocusRequester
@@ -663,6 +680,7 @@ private fun HeroItem(
     primaryActionFocusRequester: FocusRequester,
     downRequester: FocusRequester?,
     modifier: Modifier = Modifier,
+    onSectionClick: (HomeSectionId) -> Unit = {},
 ) {
     val context = LocalContext.current
     val expressiveColors = LocalCinefinExpressiveColors.current
@@ -754,13 +772,14 @@ private fun HeroItem(
                 .widthIn(max = 660.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                CinefinChip(label = "Featured", strong = true)
-                item.officialRating?.let { CinefinChip(label = it) }
-                item.mediaQuality?.let { CinefinChip(label = it) }
+            val heroBadges = listOfNotNull(item.officialRating, item.mediaQuality)
+            if (heroBadges.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    heroBadges.forEach { CinefinChip(label = it) }
+                }
             }
             Text(
                 text = item.title,
@@ -875,6 +894,7 @@ private fun HeroItem(
             }
             HomeDiscoveryStrip(
                 sections = sections,
+                onSectionClick = onSectionClick,
                 modifier = Modifier.padding(top = 8.dp),
             )
         }
@@ -907,9 +927,11 @@ private fun HomeHeroMetadata(
     }
 }
 
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun HomeDiscoveryStrip(
     sections: List<HomeSectionModel>,
+    onSectionClick: (HomeSectionId) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val expressiveColors = LocalCinefinExpressiveColors.current
@@ -934,30 +956,39 @@ private fun HomeDiscoveryStrip(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         prioritySections.forEachIndexed { index, section ->
-            Column(
-                modifier = Modifier
-                    .background(
-                        color = Color.White.copy(alpha = 0.09f),
-                        shape = RoundedCornerShape(6.dp),
-                    )
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-                    .testTag(HomeTestTags.discoveryStripItem(index)),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+            Card(
+                onClick = { onSectionClick(section.id) },
+                shape = CardDefaults.shape(RoundedCornerShape(8.dp)),
+                colors = CardDefaults.colors(
+                    containerColor = Color.White.copy(alpha = 0.08f),
+                    focusedContainerColor = Color.White.copy(alpha = 0.18f),
+                ),
+                border = CardDefaults.border(
+                    border = Border(androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))),
+                    focusedBorder = Border(androidx.compose.foundation.BorderStroke(2.dp, Color.White.copy(alpha = 0.8f))),
+                ),
+                scale = CardDefaults.scale(focusedScale = 1.05f),
+                modifier = Modifier.testTag(HomeTestTags.discoveryStripItem(index)),
             ) {
-                Text(
-                    text = section.title,
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = "${section.items.size} ready",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = expressiveColors.titleAccent,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Column(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = section.title,
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = "${section.items.size} ready",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = expressiveColors.titleAccent,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }

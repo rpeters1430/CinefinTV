@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -152,7 +153,7 @@ private fun PlaylistContent(
                 eyebrow = "Playlist · ${items.size} items",
                 ratingText = null,
                 genres = chips,
-                primaryActionLabel = if (items.isEmpty()) "Playlist" else "▶ Play all",
+                primaryActionLabel = if (items.isEmpty()) "Back to Playlists" else "▶ Play all",
                 onPrimaryAction = {
                     if (items.isNotEmpty()) {
                         val first = items.first()
@@ -161,6 +162,8 @@ private fun PlaylistContent(
                             first.itemType.isPlayableVideoType() -> onPlayVideo(first.id, videoQueueIds)
                             else -> onOpenItem(first.id, first.itemType)
                         }
+                    } else {
+                        onBack()
                     }
                 },
                 secondaryActions = listOf("Delete" to { showDeleteDialog = true }),
@@ -193,11 +196,22 @@ private fun PlaylistContent(
                         .fillMaxWidth(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = "No items in this playlist yet",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Text(
+                            text = "This playlist is currently empty. Add items from your media library.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Button(
+                            onClick = onBack,
+                            modifier = Modifier.focusRequester(gridEntryFocusRequester),
+                        ) {
+                            Text("Back to Playlists")
+                        }
+                    }
                 }
             } else {
                 LazyVerticalGrid(

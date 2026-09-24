@@ -22,3 +22,14 @@ Unit tests use JUnit 4, MockK, Turbine, and coroutine test utilities. Name tests
 
 ## Commit & Pull Request Guidelines
 Recent history favors short Conventional Commit prefixes such as `feat:`, `fix:`, and `chore:`. Keep subjects imperative and scoped to one change. Pull requests should include a concise description, linked issue or design doc when relevant, test coverage notes, and screenshots or short recordings for UI changes, especially focus/navigation updates on TV surfaces.
+
+<!-- antislop:start -->
+## antislop
+For UI, copy, people, mobile layout, or code comments work, read `DESIGN.md` (direction), then `antislop.md` (core) and the skill for the task:
+- UI / visual: `skills/antislop-ui/SKILL.md`
+- Copy & text: `skills/antislop-copywriting/SKILL.md`
+- People: `skills/antislop-human/SKILL.md`
+- Mobile / responsive: `skills/antislop-layoutmobile/SKILL.md`
+- Code comments: `skills/antislop-code/SKILL.md`
+Before starting, ask the user when antislop applies: during the work, or after it is done.
+<!-- antislop:end -->

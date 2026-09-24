@@ -247,7 +247,7 @@ fun CinematicHero(
                     ratingText?.let {
                         Text(
                             text = it,
-                            style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
+                            style = MaterialTheme.typography.labelMedium.copy(fontSize = 16.sp),
                             color = expressiveColors.titleAccent,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier
