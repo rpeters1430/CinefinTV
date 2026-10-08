@@ -49,7 +49,7 @@
       "automerge": false
     },
     {
-      "description": "Enable pre-releases for AndroidX libraries",
+      "description": "Keep AndroidX libraries on stable releases",
       "matchDatasources": [
         "maven"
       ],
@@ -58,12 +58,12 @@
         "/^androidx\\..*/",
         "androidx.compose:compose-bom"
       ],
-      "ignoreUnstable": false,
+      "ignoreUnstable": true,
       "rangeStrategy": "bump",
       "versioning": "loose"
     },
     {
-      "description": "Enable pre-releases for other Android development libraries",
+      "description": "Keep Android development libraries on stable releases",
       "matchDatasources": [
         "maven"
       ],
@@ -79,7 +79,7 @@
         "/^com\\.android\\.tools\\.build\\./",
         "com.android.tools.build:gradle"
       ],
-      "ignoreUnstable": false,
+      "ignoreUnstable": true,
       "rangeStrategy": "bump",
       "versioning": "loose"
     },
