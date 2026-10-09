@@ -9,3 +9,7 @@
 # androidx.window.extensions and sidecar are optional OEM-provided implementations
 -dontwarn androidx.window.extensions.**
 -dontwarn androidx.window.sidecar.**
+
+-keep class * extends com.google.protobuf.GeneratedMessageLite {
+    *;
+}
