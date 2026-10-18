@@ -30,8 +30,8 @@ import androidx.tv.material3.lightColorScheme as TvLightColorScheme
 data class CinefinSpacing(
     val gutter: Dp = 48.dp, // Horizontal overscan safe zone
     val safeZoneVertical: Dp = 27.dp, // Vertical overscan safe zone
-    val rowGap: Dp = 24.dp,
-    val cardGap: Dp = 16.dp,
+    val rowGap: Dp = 26.dp,
+    val cardGap: Dp = 18.dp,
     val elementGap: Dp = 12.dp,
     val chipGap: Dp = 8.dp,
     val labelGap: Dp = 4.dp,

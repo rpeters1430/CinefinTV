@@ -15,10 +15,18 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
+import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -102,6 +110,7 @@ internal fun SearchScreenContent(
     val gridState = rememberLazyGridState()
     val primaryContentRequester = remember { FocusRequester() }
     val firstResultFocusRequester = remember { FocusRequester() }
+    val emptyActionFocusRequester = remember { FocusRequester() }
     var lastFocusedResultId by rememberSaveable { mutableStateOf<String?>(null) }
     var shouldRestoreFocus by rememberSaveable { mutableStateOf(false) }
     
@@ -154,7 +163,13 @@ internal fun SearchScreenContent(
                     modifier = Modifier
                         .padding(bottom = spacing.elementGap)
                         .then(destinationFocus.primaryContentModifier(
-                            down = if (uiState.results.isNotEmpty()) firstResultFocusRequester else null,
+                            down = if (uiState.results.isNotEmpty()) {
+                                firstResultFocusRequester
+                            } else if (uiState.results.isEmpty() && !uiState.isLoading && uiState.query.isNotBlank()) {
+                                emptyActionFocusRequester
+                            } else {
+                                null
+                            },
                         ))
                         .onPreviewKeyEvent { keyEvent ->
                             val nativeEvent = keyEvent.nativeKeyEvent
@@ -175,12 +190,47 @@ internal fun SearchScreenContent(
             when {
                 uiState.query.isBlank() -> {
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        Text(
-                            text = "Browse with intent: search movies, TV, music, and library content from one surface.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag(SearchTestTags.Hint),
-                        )
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp)
+                                .testTag(SearchTestTags.Hint),
+                            shape = RoundedCornerShape(spacing.cornerContainer),
+                            colors = SurfaceDefaults.colors(
+                                containerColor = expressiveColors.chromeSurface.copy(alpha = 0.40f),
+                            ),
+                            border = Border(
+                                border = BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.30f)),
+                            ),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(20.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .background(
+                                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                                            shape = RoundedCornerShape(999.dp),
+                                        ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = null,
+                                        tint = expressiveColors.titleAccent,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                }
+                                Text(
+                                    text = "Browse with intent: search movies, TV, music, and library content from one surface.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -208,12 +258,88 @@ internal fun SearchScreenContent(
 
                 uiState.results.isEmpty() && !uiState.isLoading -> {
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        Text(
-                            text = "No results found for \"${uiState.query}\"",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag(SearchTestTags.Empty),
-                        )
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp)
+                                .testTag(SearchTestTags.Empty),
+                            shape = RoundedCornerShape(spacing.cornerContainer),
+                            colors = SurfaceDefaults.colors(
+                                containerColor = expressiveColors.chromeSurface.copy(alpha = 0.55f),
+                            ),
+                            border = Border(
+                                border = BorderStroke(1.dp, expressiveColors.borderSubtle.copy(alpha = 0.40f)),
+                            ),
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp, vertical = 32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .background(
+                                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                                            shape = RoundedCornerShape(999.dp),
+                                        ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = null,
+                                        tint = expressiveColors.titleAccent,
+                                        modifier = Modifier.size(28.dp),
+                                    )
+                                }
+
+                                Text(
+                                    text = "No results found for \"${uiState.query}\"",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                )
+
+                                Text(
+                                    text = "Try checking for typos or searching by title, actor, director, or genre.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.widthIn(max = 520.dp),
+                                )
+
+                                Button(
+                                    onClick = { onQueryChange("") },
+                                    modifier = Modifier
+                                        .focusRequester(emptyActionFocusRequester)
+                                        .focusProperties {
+                                            up = primaryContentRequester
+                                        }
+                                        .padding(top = 8.dp),
+                                    colors = ButtonDefaults.colors(
+                                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
+                                        focusedContainerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = Color.White,
+                                        focusedContentColor = Color.White,
+                                    ),
+                                    shape = ButtonDefaults.shape(RoundedCornerShape(12.dp)),
+                                    border = ButtonDefaults.border(
+                                        focusedBorder = Border(BorderStroke(2.dp, Color.White.copy(alpha = 0.85f))),
+                                    ),
+                                ) {
+                                    Text(
+                                        text = "Clear Search",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                        ),
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 

@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -150,7 +152,8 @@ fun TvMediaCard(
     val metadataTextAlign = TextAlign.Start
 
     StandardCardContainer(
-        modifier = if (cardWidth != null) Modifier.width(cardWidth) else Modifier.fillMaxWidth(),
+        modifier = (if (cardWidth != null) Modifier.width(cardWidth) else Modifier.fillMaxWidth())
+            .zIndex(if (isFocused) 8f else 1f),
         imageCard = {
             Card(
                 onClick = onClick,
@@ -190,15 +193,15 @@ fun TvMediaCard(
                     focusedBorder = Border(
                         border = androidx.compose.foundation.BorderStroke(
                             width = 2.dp,
-                            color = expressiveColors.focusRing.copy(alpha = 0.82f),
+                            color = expressiveColors.focusRing.copy(alpha = 0.88f),
                         ),
                     ),
                 ),
                 glow = CardDefaults.glow(
                     focusedGlow = if (performanceProfile.tier != DevicePerformanceProfile.Tier.LOW) {
                         androidx.tv.material3.Glow(
-                            elevationColor = expressiveColors.focusGlow.copy(alpha = 0.22f),
-                            elevation = 8.dp
+                            elevationColor = expressiveColors.focusGlow.copy(alpha = 0.28f),
+                            elevation = 10.dp
                         )
                     } else {
                         androidx.tv.material3.Glow.None
@@ -206,7 +209,11 @@ fun TvMediaCard(
                 ),
                 shape = CardDefaults.shape(RoundedCornerShape(spacing.cornerCard)),
             ) {
-                Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(spacing.cornerCard))
+                ) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -233,43 +240,39 @@ fun TvMediaCard(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
-                                Brush.verticalGradient(
-                                    colorStops = if (performanceProfile.tier != DevicePerformanceProfile.Tier.LOW) {
-                                        arrayOf(
-                                            0.0f to Color.Transparent,
-                                            0.6f to Color.Black.copy(alpha = 0.08f),
-                                            0.85f to Color.Black.copy(alpha = 0.28f),
-                                            1.0f to Color.Black.copy(alpha = 0.55f),
-                                        )
-                                    } else {
-                                        arrayOf(
-                                            0.0f to Color.Transparent,
-                                            1.0f to Color.Black.copy(alpha = 0.5f),
-                                        )
-                                    }
-                                ),
+                            Brush.verticalGradient(
+                                colorStops = if (performanceProfile.tier != DevicePerformanceProfile.Tier.LOW) {
+                                    arrayOf(
+                                        0.0f to Color.Transparent,
+                                        0.55f to Color.Black.copy(alpha = 0.10f),
+                                        0.80f to Color.Black.copy(alpha = 0.35f),
+                                        1.0f to Color.Black.copy(alpha = 0.65f),
+                                    )
+                                } else {
+                                    arrayOf(
+                                        0.0f to Color.Transparent,
+                                        1.0f to Color.Black.copy(alpha = 0.5f),
+                                    )
+                                }
                             ),
+                        ),
                     )
 
                     if (isFocused && !compactMetadata) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(expressiveColors.focusGlow.copy(alpha = 0.05f))
+                                .background(expressiveColors.focusGlow.copy(alpha = 0.06f))
                         )
                     }
 
                     if (watchStatus == WatchStatus.IN_PROGRESS && playbackProgress != null && playbackProgress > 0f) {
-                        val progressTrackShape = RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp)
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
                                 .fillMaxWidth()
-                                .height(7.dp)
-                                .background(
-                                    color = expressiveColors.playerSurface.copy(alpha = 0.8f),
-                                    shape = progressTrackShape,
-                                )
+                                .height(6.dp)
+                                .background(Color.Black.copy(alpha = 0.65f))
                         ) {
                             Box(
                                 modifier = Modifier
@@ -278,11 +281,11 @@ fun TvMediaCard(
                                     .background(
                                         brush = Brush.horizontalGradient(
                                             colors = listOf(
-                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
-                                                expressiveColors.playerContentPrimary,
+                                                MaterialTheme.colorScheme.primary,
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
                                             ),
                                         ),
-                                        shape = progressTrackShape,
+                                        shape = RoundedCornerShape(topEnd = 3.dp, bottomEnd = 3.dp),
                                     )
                             )
                         }
@@ -293,14 +296,14 @@ fun TvMediaCard(
                             count = unwatchedCount,
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
-                                .zIndex(1f)
+                                .zIndex(2f)
                         )
                     } else if (watchStatus == WatchStatus.WATCHED) {
                         WatchStatusOverlay(
                             status = watchStatus,
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
-                                .zIndex(1f)
+                                .zIndex(2f)
                         )
                     }
                 }
@@ -325,7 +328,7 @@ fun TvMediaCard(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = if (compactMetadata) 14.sp else 16.sp
+                        fontSize = 16.sp
                     ),
                     color = subtitleColor,
                     maxLines = 1,
@@ -343,7 +346,6 @@ fun TvMediaCard(
 private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifier) {
     val spacing = LocalCinefinSpacing.current
     val expressiveColors = LocalCinefinExpressiveColors.current
-    // Ensure padding is non-negative and finite
     val padding = remember(spacing.chipGap) {
         (spacing.chipGap.value / 1.5f).coerceAtLeast(0f).dp
     }
@@ -352,17 +354,25 @@ private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifie
             WatchStatus.WATCHED -> {
                 Box(
                     modifier = Modifier
-                        .size(28.dp)
+                        .size(30.dp)
                         .background(
-                            color = expressiveColors.watchedGreen.copy(alpha = 0.95f),
+                            color = Color(0xDD0D1117),
+                            shape = RoundedCornerShape(999.dp),
+                        )
+                        .border(
+                            width = 1.5.dp,
+                            color = expressiveColors.watchedGreen.copy(alpha = 0.9f),
                             shape = RoundedCornerShape(999.dp),
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "✓",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        ),
+                        color = expressiveColors.watchedGreen,
                     )
                 }
             }
@@ -379,7 +389,10 @@ private fun WatchStatusOverlay(status: WatchStatus, modifier: Modifier = Modifie
                 ) {
                     Text(
                         text = "Resume",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        ),
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
@@ -396,20 +409,27 @@ private fun UnwatchedCountOverlay(count: Int, modifier: Modifier = Modifier) {
     Box(modifier = modifier.padding(spacing.chipGap.coerceAtLeast(0.dp).div(1.5f))) {
         Box(
             modifier = Modifier
-                .size(28.dp)
+                .height(28.dp)
+                .widthIn(min = 28.dp)
                 .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f),
+                    color = Color(0xEE161B22),
                     shape = RoundedCornerShape(999.dp),
-                ),
+                )
+                .border(
+                    width = 1.5.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                    shape = RoundedCornerShape(999.dp),
+                )
+                .padding(horizontal = 7.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = if (count > 99) "99+" else "$count",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = if (count > 9) 10.sp else 12.sp
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
                 ),
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
     }

@@ -154,12 +154,12 @@ fun MetaFactItem(
                         imageVector = icon,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(18.dp),
                     )
                     Text(
                         text = label.uppercase(),
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
                         maxLines = 1,
                     )
                 }
@@ -187,12 +187,12 @@ fun MetaFactItem(
                     imageVector = icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(20.dp),
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text(
                         text = label,
-                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp),
+                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 16.sp, fontWeight = FontWeight.Medium),
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Text(
@@ -523,81 +523,81 @@ fun DetailShelfPanel(
             ),
         ),
         ) {
-        Text(
-            text = primaryLabel,
-            style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        }
-        secondaryActions.forEachIndexed { index, (label, onClick) ->
-        OutlinedButton(
-            onClick = onClick,
-            modifier = Modifier
-                .focusRequester(secondaryFocusRequesters[index])
-                .requiredWidthIn(min = 140.dp)
-                .defaultMinSize(minHeight = 44.dp)
-                .focusProperties {
-                    left = when (index) {
-                        0 -> primaryFocusRequester ?: FocusRequester.Default
-                        else -> secondaryFocusRequesters[index - 1]
-                    }
-                    if (index < secondaryFocusRequesters.lastIndex) {
-                        right = secondaryFocusRequesters[index + 1]
-                    }
-                    if (primaryDownFocusRequester != null && onDownNavigation == null) {
-                        down = primaryDownFocusRequester
-                    }
-                }
-                .onPreviewKeyEvent { keyEvent ->
-                    val nativeEvent = keyEvent.nativeKeyEvent
-                    if (
-                        onDownNavigation != null &&
-                        nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                        nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
-                    ) {
-                        onDownNavigation()
-                        true
-                    } else {
-                        false
-                    }
-                },
-            scale = ButtonDefaults.scale(focusedScale = 1.03f),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            colors = ButtonDefaults.colors(
-                containerColor = expressiveColors.detailBadge,
-                contentColor = MaterialTheme.colorScheme.onBackground,
-                focusedContainerColor = expressiveColors.detailPanelFocused,
-                focusedContentColor = MaterialTheme.colorScheme.onBackground,
-            ),
-            glow = ButtonDefaults.glow(
-                focusedGlow = androidx.tv.material3.Glow(
-                    elevationColor = expressiveColors.focusGlow.copy(alpha = 0.34f),
-                    elevation = 8.dp,
-                ),
-            ),
-            border = ButtonDefaults.border(
-                border = Border(
-                    border = androidx.compose.foundation.BorderStroke(
-                        width = 1.dp,
-                        color = expressiveColors.borderSubtle.copy(alpha = 0.65f),
-                    ),
-                ),
-                focusedBorder = Border(
-                    border = androidx.compose.foundation.BorderStroke(
-                        width = 2.dp,
-                        color = expressiveColors.focusRing,
-                    ),
-                ),
-            ),
-        ) {
             Text(
-                text = label,
-                style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp),
+                text = primaryLabel,
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
+        secondaryActions.forEachIndexed { index, (label, onClick) ->
+            OutlinedButton(
+                onClick = onClick,
+                modifier = Modifier
+                    .focusRequester(secondaryFocusRequesters[index])
+                    .requiredWidthIn(min = 140.dp)
+                    .defaultMinSize(minHeight = 44.dp)
+                    .focusProperties {
+                        left = when (index) {
+                            0 -> primaryFocusRequester ?: FocusRequester.Default
+                            else -> secondaryFocusRequesters[index - 1]
+                        }
+                        if (index < secondaryFocusRequesters.lastIndex) {
+                            right = secondaryFocusRequesters[index + 1]
+                        }
+                        if (primaryDownFocusRequester != null && onDownNavigation == null) {
+                            down = primaryDownFocusRequester
+                        }
+                    }
+                    .onPreviewKeyEvent { keyEvent ->
+                        val nativeEvent = keyEvent.nativeKeyEvent
+                        if (
+                            onDownNavigation != null &&
+                            nativeEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                            nativeEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                        ) {
+                            onDownNavigation()
+                            true
+                        } else {
+                            false
+                        }
+                    },
+                scale = ButtonDefaults.scale(focusedScale = 1.03f),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                colors = ButtonDefaults.colors(
+                    containerColor = expressiveColors.detailBadge,
+                    contentColor = MaterialTheme.colorScheme.onBackground,
+                    focusedContainerColor = expressiveColors.detailPanelFocused,
+                    focusedContentColor = MaterialTheme.colorScheme.onBackground,
+                ),
+                glow = ButtonDefaults.glow(
+                    focusedGlow = androidx.tv.material3.Glow(
+                        elevationColor = expressiveColors.focusGlow.copy(alpha = 0.34f),
+                        elevation = 8.dp,
+                    ),
+                ),
+                border = ButtonDefaults.border(
+                    border = Border(
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = 1.dp,
+                            color = expressiveColors.borderSubtle.copy(alpha = 0.65f),
+                        ),
+                    ),
+                    focusedBorder = Border(
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = 2.dp,
+                            color = expressiveColors.focusRing,
+                        ),
+                    ),
+                ),
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.titleSmall.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         }
         }

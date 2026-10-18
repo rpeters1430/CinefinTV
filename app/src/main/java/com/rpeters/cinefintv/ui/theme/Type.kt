@@ -15,10 +15,10 @@ val CinefinTvTypography = Typography(
     headlineMedium= TextStyle(fontSize = 28.sp, fontWeight = FontWeight.SemiBold),
     titleLarge    = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.SemiBold),
     titleMedium   = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Medium),
-    bodyLarge     = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Normal),
-    bodyMedium    = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Normal),
-    labelLarge    = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Medium),
-    labelMedium   = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium),
+    bodyLarge     = TextStyle(fontSize = 19.sp, fontWeight = FontWeight.Normal, lineHeight = 26.sp),
+    bodyMedium    = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Normal, lineHeight = 24.sp),
+    labelLarge    = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.2.sp),
+    labelMedium   = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.15.sp),
 )
 
 val CinefinComposeTypography = ComposeTypography(
@@ -28,8 +28,8 @@ val CinefinComposeTypography = ComposeTypography(
     headlineMedium = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.SemiBold),
     titleLarge = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.SemiBold),
     titleMedium = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Medium),
-    bodyLarge = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Normal),
-    bodyMedium = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Normal),
-    labelLarge = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.2.sp),
-    labelMedium = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.15.sp),
+    bodyLarge = TextStyle(fontSize = 19.sp, fontWeight = FontWeight.Normal, lineHeight = 26.sp),
+    bodyMedium = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Normal, lineHeight = 24.sp),
+    labelLarge = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.2.sp),
+    labelMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.15.sp),
 )

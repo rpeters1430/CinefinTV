@@ -21,12 +21,14 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import kotlinx.coroutines.delay
 
+import com.rpeters.cinefintv.ui.theme.BackgroundDark
+
 @Composable
 fun ImmersiveBackground(
     backdropUrl: String?,
     modifier: Modifier = Modifier,
-    baseColor: Color = Color.Black,
-    scrimColor: Color = Color.Black,
+    baseColor: Color = BackgroundDark,
+    scrimColor: Color = BackgroundDark,
 ) {
     var stableBackdropUrl by remember { mutableStateOf<String?>(null) }
 
@@ -69,10 +71,11 @@ fun ImmersiveBackground(
                 .background(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
-                            0.0f to scrimColor.copy(alpha = 0.38f),
-                            0.35f to Color.Transparent,
-                            0.75f to scrimColor.copy(alpha = 0.52f),
-                            1.0f to scrimColor
+                            0.0f to scrimColor.copy(alpha = 0.45f),
+                            0.25f to Color.Transparent,
+                            0.65f to scrimColor.copy(alpha = 0.65f),
+                            0.90f to scrimColor.copy(alpha = 0.95f),
+                            1.0f to scrimColor,
                         )
                     )
                 )
@@ -84,9 +87,9 @@ fun ImmersiveBackground(
                 .background(
                     Brush.horizontalGradient(
                         colorStops = arrayOf(
-                            0.0f to scrimColor.copy(alpha = 0.62f),
-                            0.25f to scrimColor.copy(alpha = 0.08f),
-                            0.75f to Color.Transparent,
+                            0.0f to scrimColor.copy(alpha = 0.85f),
+                            0.35f to scrimColor.copy(alpha = 0.40f),
+                            0.65f to Color.Transparent,
                         )
                     )
                 )

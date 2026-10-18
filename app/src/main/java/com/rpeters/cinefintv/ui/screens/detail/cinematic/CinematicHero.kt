@@ -214,8 +214,8 @@ fun CinematicHero(
                     )
                     Text(
                         text = eyebrow.uppercase(),
-                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 16.sp),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
                         fontWeight = FontWeight.Bold,
                     )
                 }
@@ -233,7 +233,7 @@ fun CinematicHero(
                 } else {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.displaySmall.copy(fontSize = 32.sp),
+                        style = MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp),
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.testTag(DetailTestTags.HeroTitle),
@@ -245,18 +245,33 @@ fun CinematicHero(
                     verticalArrangement = Arrangement.spacedBy(spacing.chipGap.div(1.2f)),
                 ) {
                     ratingText?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.labelMedium.copy(fontSize = 16.sp),
-                            color = expressiveColors.titleAccent,
-                            fontWeight = FontWeight.Bold,
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                             modifier = Modifier
                                 .background(
-                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.36f),
+                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f),
                                     shape = MaterialTheme.shapes.large,
                                 )
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                        )
+                                .border(
+                                    width = 1.dp,
+                                    color = expressiveColors.titleAccent.copy(alpha = 0.35f),
+                                    shape = MaterialTheme.shapes.large,
+                                )
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                        ) {
+                            Text(
+                                text = "★",
+                                style = MaterialTheme.typography.labelMedium.copy(fontSize = 16.sp),
+                                color = expressiveColors.titleAccent,
+                            )
+                            Text(
+                                text = it.removePrefix("★").trim(),
+                                style = MaterialTheme.typography.labelMedium.copy(fontSize = 16.sp),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
                     genres.take(4).forEach { genre ->
                         CinefinChip(label = genre)

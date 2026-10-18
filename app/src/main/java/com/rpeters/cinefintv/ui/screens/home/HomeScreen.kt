@@ -98,6 +98,7 @@ import com.rpeters.cinefintv.ui.components.MediaActionDialog
 import com.rpeters.cinefintv.ui.components.MediaActionDialogItem
 import com.rpeters.cinefintv.ui.components.TvMediaCard
 import com.rpeters.cinefintv.ui.screens.detail.blockBringIntoView
+import com.rpeters.cinefintv.ui.theme.CinefinGold
 import com.rpeters.cinefintv.ui.theme.CinefinMotion
 import com.rpeters.cinefintv.ui.theme.LocalCinefinExpressiveColors
 import com.rpeters.cinefintv.ui.theme.LocalCinefinSpacing
@@ -492,11 +493,24 @@ private fun HomeLoadedContent(
                     .getOrNull(index - 1)
                     ?.firstOrNull()
 
+                val (shelfAspectRatio, shelfCardWidth) = when (section.id) {
+                    HomeSectionId.RECENT_MOVIES, HomeSectionId.RECENT_COLLECTIONS -> {
+                        (2f / 3f) to (cardWidth * 0.65f).coerceIn(160.dp, 210.dp)
+                    }
+                    HomeSectionId.RECENT_MUSIC -> {
+                        1f to (cardWidth * 0.75f).coerceIn(180.dp, 230.dp)
+                    }
+                    else -> {
+                        (16f / 9f) to cardWidth
+                    }
+                }
+
                 HomeShelf(
                     sectionIndex = index,
                     title = section.title,
                     items = section.items,
-                    cardWidth = cardWidth,
+                    cardWidth = shelfCardWidth,
+                    aspectRatio = shelfAspectRatio,
                     rowSpacing = rowSpacing,
                     onOpenItem = onOpenItem,
                     restoredFocusedItemId = if (lastFocusedSectionId == section.id) {
@@ -743,9 +757,10 @@ private fun HeroItem(
                 .background(
                     Brush.horizontalGradient(
                         colorStops = arrayOf(
-                            0.0f to Color.Black.copy(alpha = 0.52f),
-                            0.3f to Color.Black.copy(alpha = 0.22f),
-                            0.6f to Color.Transparent,
+                            0.0f to Color(0xEB0D1117),
+                            0.35f to Color(0xA60D1117),
+                            0.65f to Color(0x330D1117),
+                            1.0f to Color.Transparent,
                         ),
                     ),
                 ),
@@ -757,9 +772,11 @@ private fun HeroItem(
                 .background(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
-                            0.0f to Color.Transparent,
-                            0.7f to Color.Black.copy(alpha = 0.22f),
-                            1.0f to Color.Black.copy(alpha = 0.42f),
+                            0.0f to Color(0x440D1117),
+                            0.25f to Color.Transparent,
+                            0.60f to Color(0x660D1117),
+                            0.88f to Color(0xEE0D1117),
+                            1.0f to Color(0xFF0D1117),
                         ),
                     ),
                 ),
@@ -829,10 +846,10 @@ private fun HeroItem(
                             right = detailsButtonRequester,
                         ))
                         .testTag(HomeTestTags.FeaturedPlayButton),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(4.dp)),
+                    shape = ButtonDefaults.shape(RoundedCornerShape(12.dp)),
                     scale = ButtonDefaults.scale(focusedScale = 1f),
                     colors = ButtonDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
                         focusedContainerColor = MaterialTheme.colorScheme.primary,
                         contentColor = Color.White,
                         focusedContentColor = Color.White,
@@ -841,7 +858,7 @@ private fun HeroItem(
                         focusedBorder = androidx.tv.material3.Border(
                             border = androidx.compose.foundation.BorderStroke(
                                 2.dp,
-                                Color.White.copy(alpha = 0.5f)
+                                Color.White.copy(alpha = 0.85f)
                             )
                         )
                     )
@@ -866,7 +883,7 @@ private fun HeroItem(
                             left = primaryActionFocusRequester,
                         ))
                         .testTag(HomeTestTags.FeaturedDetailsButton),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(4.dp)),
+                    shape = ButtonDefaults.shape(RoundedCornerShape(12.dp)),
                     scale = ButtonDefaults.scale(focusedScale = 1f),
                     colors = ButtonDefaults.colors(
                         containerColor = Color.White.copy(alpha = 0.12f),
@@ -878,13 +895,13 @@ private fun HeroItem(
                         border = androidx.tv.material3.Border(
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
-                                Color.White.copy(alpha = 0.15f)
+                                Color.White.copy(alpha = 0.20f)
                             )
                         ),
                         focusedBorder = androidx.tv.material3.Border(
                             border = androidx.compose.foundation.BorderStroke(
                                 2.dp,
-                                Color.White.copy(alpha = 0.8f)
+                                Color.White.copy(alpha = 0.85f)
                             )
                         )
                     )
@@ -906,24 +923,52 @@ private fun HomeHeroMetadata(
     item: HomeCardModel,
     modifier: Modifier = Modifier,
 ) {
-    val metadata = remember(item.year, item.runtime, item.rating, item.itemType) {
-        listOfNotNull(
-            item.year?.toString(),
-            item.runtime,
-            item.rating?.let { "★ $it" },
-            item.itemType,
-        ).joinToString("  •  ")
-    }
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        val metadataParts = remember(item.year, item.runtime, item.itemType) {
+            listOfNotNull(
+                item.year?.toString(),
+                item.runtime,
+                item.itemType,
+            )
+        }
 
-    if (metadata.isNotBlank()) {
-        Text(
-            text = metadata,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.86f),
-            modifier = modifier,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        metadataParts.forEachIndexed { index, part ->
+            Text(
+                text = part,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.88f),
+            )
+            if (index < metadataParts.lastIndex || item.rating != null) {
+                Text(
+                    text = "•",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                )
+            }
+        }
+
+        item.rating?.let { rating ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = "★",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = CinefinGold,
+                )
+                Text(
+                    text = rating,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
     }
 }
 
@@ -1002,6 +1047,7 @@ private fun HomeShelf(
     title: String,
     items: List<HomeCardModel>,
     cardWidth: Dp,
+    aspectRatio: Float = 16f / 9f,
     rowSpacing: Dp,
     onOpenItem: (HomeCardModel) -> Unit,
     restoredFocusedItemId: String?,
@@ -1057,7 +1103,7 @@ private fun HomeShelf(
                     unwatchedCount = item.unwatchedCount,
                     playbackProgress = item.playbackProgress,
                     onFocus = { onItemFocused(item) },
-                    aspectRatio = 16f / 9f,
+                    aspectRatio = aspectRatio,
                     cardWidth = cardWidth,
                     modifier = Modifier
                         .testTag(HomeTestTags.sectionItem(sectionIndex, index))
