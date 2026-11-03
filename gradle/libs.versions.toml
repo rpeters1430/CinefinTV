@@ -31,14 +31,14 @@ junit = "4.13.2"
 mockk = "1.14.11"
 turbine = "1.2.1"
 coroutinesTest = "1.11.0"
-androidxTestExt = "1.4.0-alpha01"
-androidxTestCore = "1.8.0-alpha01"
-espresso = "3.8.0-alpha01"
+androidxTestExt = "1.4.0-alpha03"
+androidxTestCore = "1.8.0-alpha03"
+espresso = "3.8.0-alpha03"
 robolectric = "4.17"
 benchmarkMacro = "1.6.0-alpha01"
 profileinstaller = "1.4.1"
 uiautomator = "2.4.0"
-androidxTestRunner = "1.8.0-alpha01"
+androidxTestRunner = "1.8.0-alpha03"
 
 [libraries]
 # Compose
