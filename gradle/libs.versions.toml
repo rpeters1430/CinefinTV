@@ -1,5 +1,5 @@
 [versions]
-agp = "9.5.0"
+agp = "9.5.1"
 kotlin = "2.4.21"
 ksp = "2.3.13"
 compileSdk = "37"
@@ -37,7 +37,7 @@ espresso = "3.8.0-alpha03"
 robolectric = "4.17"
 benchmarkMacro = "1.6.0-alpha01"
 profileinstaller = "1.4.1"
-uiautomator = "2.4.0"
+uiautomator = "2.4.1"
 androidxTestRunner = "1.8.0-alpha03"
 
 [libraries]
