@@ -11,7 +11,9 @@
     "* 12-15 * * *"
   ],
   "platformAutomerge": false,
-  "dependencyDashboard": true,
+  "dependencyDashboard": {
+    "enabled": true
+  },
   "enabledManagers": [
     "gradle",
     "github-actions"
