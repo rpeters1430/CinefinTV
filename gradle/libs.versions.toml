@@ -1,11 +1,11 @@
 [versions]
-agp = "9.5.1"
+agp = "9.5.2"
 kotlin = "2.4.21"
 ksp = "2.3.14"
 compileSdk = "37"
 minSdk = "26"
 targetSdk = "35"
-composeBom = "2026.09.00"
+composeBom = "2026.11.01"
 tvMaterial = "1.1.0"
 tvFoundation = "1.0.0"
 hilt = "2.60.1"
